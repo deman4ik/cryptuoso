@@ -24,6 +24,18 @@
         },
         "logger": {
             "tags": []
+        },
+        "errors": {
+            "tags": []
+        },
+        "helpers": {
+            "tags": []
+        },
+        "ccxt-public": {
+            "tags": []
+        },
+        "service": {
+            "tags": []
         }
     }
 }
