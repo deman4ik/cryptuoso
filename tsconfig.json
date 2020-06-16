@@ -19,7 +19,8 @@
             "@cryptuoso/logger": ["libs/logger/src/index.ts"],
             "@cryptuoso/errors": ["libs/errors/src/index.ts"],
             "@cryptuoso/helpers": ["libs/helpers/src/index.ts"],
-            "@cryptuoso/ccxt-public": ["libs/ccxt-public/src/index.ts"]
+            "@cryptuoso/ccxt-public": ["libs/ccxt-public/src/index.ts"],
+            "@cryptuoso/service": ["libs/service/src/index.ts"]
         }
     },
     "exclude": ["node_modules", "tmp"]

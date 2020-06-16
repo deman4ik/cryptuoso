@@ -33,6 +33,9 @@
         },
         "ccxt-public": {
             "tags": []
+        },
+        "service": {
+            "tags": []
         }
     }
 }
