@@ -1,6 +1,31 @@
 {
     "version": 1,
-    "projects": {},
+    "projects": {
+        "dayjs": {
+            "root": "libs/dayjs",
+            "sourceRoot": "libs/dayjs/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": ["libs/dayjs/tsconfig.lib.json", "libs/dayjs/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/dayjs/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/dayjs/jest.config.js",
+                        "tsConfig": "libs/dayjs/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        }
+    },
     "cli": {
         "defaultCollection": "@nrwl/workspace"
     },
