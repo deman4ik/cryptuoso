@@ -8,13 +8,15 @@
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "importHelpers": true,
+        "esModuleInterop": true,
         "target": "ESNext",
         "module": "esnext",
         "typeRoots": ["node_modules/@types"],
         "skipLibCheck": true,
-        "skipDefaultLibCheck": true,
         "baseUrl": ".",
-        "paths": {}
+        "paths": {
+            "@cryptuoso/dayjs": ["libs/dayjs/src/index.ts"]
+        }
     },
     "exclude": ["node_modules", "tmp"]
 }
