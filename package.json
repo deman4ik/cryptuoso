@@ -30,11 +30,14 @@
         "update": "nx migrate latest",
         "workspace-schematic": "nx workspace-schematic",
         "dep-graph": "nx dep-graph",
-        "help": "nx help"
+        "help": "nx help",
+        "gen:app": "nx generate @nrwl/node:application",
+        "gen:lib": "nx generate @nrwl/node:library"
     },
     "private": true,
     "dependencies": {
-        "dayjs": "^1.8.28"
+        "dayjs": "^1.8.28",
+        "tslog": "^2.2.0"
     },
     "devDependencies": {
         "@nrwl/eslint-plugin-nx": "9.4.2",

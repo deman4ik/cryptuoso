@@ -15,7 +15,8 @@
         "skipLibCheck": true,
         "baseUrl": ".",
         "paths": {
-            "@cryptuoso/dayjs": ["libs/dayjs/src/index.ts"]
+            "@cryptuoso/dayjs": ["libs/dayjs/src/index.ts"],
+            "@cryptuoso/logger": ["libs/logger/src/index.ts"]
         }
     },
     "exclude": ["node_modules", "tmp"]

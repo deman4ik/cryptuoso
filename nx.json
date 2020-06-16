@@ -21,6 +21,9 @@
     "projects": {
         "dayjs": {
             "tags": []
+        },
+        "logger": {
+            "tags": []
         }
     }
 }
