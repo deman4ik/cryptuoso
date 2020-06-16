@@ -27,6 +27,9 @@
         },
         "errors": {
             "tags": []
+        },
+        "helpers": {
+            "tags": []
         }
     }
 }

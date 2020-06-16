@@ -17,7 +17,8 @@
         "paths": {
             "@cryptuoso/dayjs": ["libs/dayjs/src/index.ts"],
             "@cryptuoso/logger": ["libs/logger/src/index.ts"],
-            "@cryptuoso/errors": ["libs/errors/src/index.ts"]
+            "@cryptuoso/errors": ["libs/errors/src/index.ts"],
+            "@cryptuoso/helpers": ["libs/helpers/src/index.ts"]
         }
     },
     "exclude": ["node_modules", "tmp"]
