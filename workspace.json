@@ -96,6 +96,30 @@
                     }
                 }
             }
+        },
+        "ccxt-public": {
+            "root": "libs/ccxt-public",
+            "sourceRoot": "libs/ccxt-public/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": ["libs/ccxt-public/tsconfig.lib.json", "libs/ccxt-public/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/ccxt-public/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/ccxt-public/jest.config.js",
+                        "tsConfig": "libs/ccxt-public/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
         }
     },
     "cli": {
