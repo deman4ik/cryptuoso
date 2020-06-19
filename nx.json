@@ -36,6 +36,21 @@
         },
         "service": {
             "tags": []
+        },
+        "importer-runner": {
+            "tags": []
+        },
+        "importer-state": {
+            "tags": []
+        },
+        "postgres": {
+            "tags": []
+        },
+        "events": {
+            "tags": []
+        },
+        "importer-events": {
+            "tags": []
         }
     }
 }

@@ -31,12 +31,12 @@ export class HTTPService extends BaseService {
             roles: string[];
         };
     } = {};
-    constructor(config: HTTPServiceConfig) {
+    constructor(config?: HTTPServiceConfig) {
         super(config);
         try {
             this._iu = ifunless();
             this._v = new Validator();
-            this._port = config.port || +process.env.PORT || +process.env.NODE_PORT || 3000;
+            this._port = config?.port || +process.env.PORT || +process.env.NODE_PORT || 3000;
             this._server = restana({
                 errorHandler: this._errorHandler
             });
