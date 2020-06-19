@@ -17,6 +17,7 @@ export const enum Status {
     queued = "queued",
     started = "started",
     finished = "finished",
+    paused = "paused",
     failed = "failed",
     stopping = "stopping",
     canceled = "canceled"
@@ -357,6 +358,10 @@ export class Importer {
         return this._status === Status.failed;
     }
 
+    get isFinished() {
+        return this._status === Status.finished;
+    }
+
     set currentState(state) {
         this._currentState = state;
     }
@@ -386,13 +391,13 @@ export class Importer {
         this._startedAt = this._startedAt ? this._startedAt : dayjs.utc().toISOString();
     }
 
-    finish() {
+    finish(pause: boolean = false) {
         if (this.status === Status.failed) return;
         if (this.isLoaded) {
             this._status = Status.finished;
             this._endedAt = dayjs.utc().toISOString();
         } else {
-            this._status = Status.queued;
+            this._status = pause ? Status.paused : Status.queued;
         }
     }
 

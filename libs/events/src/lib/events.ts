@@ -215,7 +215,7 @@ export class Events {
                 topic,
                 this.#state[`${topic}-${group}`].grouped.lastId
             );
-            this.log.debug(rawData);
+            //  this.log.debug(rawData);
             const beacon = this.#lightship.createBeacon();
             if (rawData) {
                 const data = this._parseStreamResponse(rawData);
@@ -291,7 +291,7 @@ export class Events {
                 "+",
                 ...[this.#state[`${topic}-${group}`].pending.count]
             );
-            this.log.debug(rawData);
+            // this.log.debug(rawData);
             const beacon = this.#lightship.createBeacon();
             if (rawData) {
                 const data: {
@@ -405,7 +405,7 @@ export class Events {
                 JSON.stringify(event.format())
             ];
             const result = await this.#redis.xadd(topic, "*", ...args);
-            this.log.debug(`Emited Event ${type}`, data, result);
+            this.log.info(`Emited Event ${type}`, data, result);
         } catch (error) {
             this.log.error("Failed to emit event", error, { type, data, subject });
         }

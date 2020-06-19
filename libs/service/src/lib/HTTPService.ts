@@ -106,6 +106,7 @@ export class HTTPService extends BaseService {
             if (!this._routes[req.url].roles.includes(role))
                 throw new ActionsHandlerError("Forbidden: Invalid role", null, "FORBIDDEN", 403);
 
+            //TODO: check user in DB and cache in Redis
             next();
         } catch (err) {
             next(err);
