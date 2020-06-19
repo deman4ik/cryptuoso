@@ -404,8 +404,8 @@ export class Events {
                 "event",
                 JSON.stringify(event.format())
             ];
-            const result = await this.#redis.xadd(topic, "*", ...args);
-            this.log.info(`Emited Event ${type}`, data, result);
+            await this.#redis.xadd(topic, "*", ...args);
+            this.log.info(`Emited Event ${type}`, data);
         } catch (error) {
             this.log.error("Failed to emit event", error, { type, data, subject });
         }
