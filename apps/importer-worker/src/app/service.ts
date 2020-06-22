@@ -36,7 +36,8 @@ export default class ImporterWorkerService extends BaseService {
             this.events.subscribe({
                 [InImporterWorkerEvents.PAUSE]: {
                     handler: this.pause.bind(this),
-                    schema: ImporterWorkerSchema[InImporterWorkerEvents.PAUSE]
+                    schema: ImporterWorkerSchema[InImporterWorkerEvents.PAUSE],
+                    unbalanced: true
                 }
             });
         } catch (err) {
