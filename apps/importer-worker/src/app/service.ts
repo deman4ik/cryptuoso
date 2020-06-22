@@ -4,7 +4,7 @@ import { spawn, Pool, Worker as ThreadsWorker } from "threads";
 import { Worker, Job } from "bullmq";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
-import { Importer, Status, CandlesChunk, TradesChunk, ImporterState } from "@cryptuoso/importer-state";
+import { Importer, CandlesChunk, TradesChunk, ImporterState } from "@cryptuoso/importer-state";
 import dayjs from "@cryptuoso/dayjs";
 import { ExchangeCandle, ExchangeTrade, ExchangeCandlesInTimeframes, chunkArray } from "@cryptuoso/helpers";
 import { BaseError } from "@cryptuoso/errors";
@@ -35,7 +35,8 @@ export default class ImporterWorkerService extends BaseService {
             this.addOnStopHandler(this.onStopService);
             this.events.subscribe({
                 [InImporterWorkerEvents.PAUSE]: {
-                    handler: this.pause.bind(this)
+                    handler: this.pause.bind(this),
+                    schema: ImporterWorkerSchema[InImporterWorkerEvents.PAUSE]
                 }
             });
         } catch (err) {
@@ -43,7 +44,7 @@ export default class ImporterWorkerService extends BaseService {
         }
     }
 
-    async onStartService() {
+    async onStartService(): Promise<void> {
         this.pool = Pool(() => spawn<ImporterUtils>(new ThreadsWorker("./importerUtilsWorker")), {
             concurrency: this.cpus,
             name: "importer-utils"
@@ -55,12 +56,12 @@ export default class ImporterWorkerService extends BaseService {
         };
     }
 
-    async onStopService() {
+    async onStopService(): Promise<void> {
         await this.workers.importCandles.close();
         await this.pool.terminate();
     }
 
-    pause({ id }: ImporterWorkerPause) {
+    pause({ id }: ImporterWorkerPause): void {
         this.toPause[id] = true;
     }
 
@@ -76,7 +77,7 @@ export default class ImporterWorkerService extends BaseService {
         return this.pool.queue(async (utils: ImporterUtils) => utils.tradesToCandles({ timeframes, chunk, trades }));
     }
 
-    async process(job: Job<ImporterState, ImporterState>) {
+    async process(job: Job<ImporterState, ImporterState>): Promise<ImporterState> {
         try {
             const importer = new Importer(job.data);
             await this.connector.initConnector(importer.exchange);
@@ -125,7 +126,7 @@ export default class ImporterWorkerService extends BaseService {
         }
     }
 
-    async importTrades(job: Job<ImporterState, ImporterState>, importer: Importer) {
+    async importTrades(job: Job<ImporterState, ImporterState>, importer: Importer): Promise<void> {
         try {
             await DataStream.from(importer.tradesChunks, { maxParallel: this.cpus * 2 })
                 .while(() => importer.isStarted && !this.toPause[importer.id])
@@ -163,7 +164,7 @@ export default class ImporterWorkerService extends BaseService {
         }
     }
 
-    async importCandles(job: Job<ImporterState, ImporterState>, importer: Importer) {
+    async importCandles(job: Job<ImporterState, ImporterState>, importer: Importer): Promise<void> {
         try {
             await DataStream.from(importer.candlesChunks, { maxParallel: 10 })
                 .while(() => importer.isStarted)
@@ -183,7 +184,14 @@ export default class ImporterWorkerService extends BaseService {
         }
     }
 
-    async loadTrades(importer: Importer, chunk: TradesChunk) {
+    async loadTrades(
+        importer: Importer,
+        chunk: TradesChunk
+    ): Promise<{
+        timeframes: number[];
+        chunk: TradesChunk;
+        trades: ExchangeTrade[];
+    }> {
         try {
             this.log.info(`Importer #${importer.id} - Loading chunk ${chunk.dateFrom} - ${chunk.dateTo}`);
             let trades: ExchangeTrade[] = [];
@@ -217,7 +225,13 @@ export default class ImporterWorkerService extends BaseService {
         }
     }
 
-    async loadCandles(importer: Importer, chunk: CandlesChunk) {
+    async loadCandles(
+        importer: Importer,
+        chunk: CandlesChunk
+    ): Promise<{
+        chunk: TradesChunk;
+        candles: ExchangeCandle[];
+    }> {
         try {
             this.log.info(
                 `Importer #${importer.id} - Loading ${chunk.timeframe} chunk ${chunk.dateFrom} - ${chunk.dateTo}`
@@ -256,13 +270,13 @@ export default class ImporterWorkerService extends BaseService {
         }
     }
 
-    async upsertCandles(candles: ExchangeCandle[]) {
+    async upsertCandles(candles: ExchangeCandle[]): Promise<void> {
         try {
             const timeframe = candles[0].timeframe;
             const chunks = chunkArray(candles, 100);
             for (const chunk of chunks) {
                 await this.sql`insert into ${this.sql(`candles${timeframe}`)} ${this.sql(
-                    <any[]>chunk, //FIXME without cast
+                    chunk as any[], //FIXME without cast
                     "exchange",
                     "asset",
                     "currency",
@@ -294,7 +308,7 @@ export default class ImporterWorkerService extends BaseService {
         importer: Importer,
         chunk: CandlesChunk,
         candles: ExchangeCandle[]
-    ) {
+    ): Promise<void> {
         try {
             this.log.info(
                 `Importer #${importer.id} - Finalizing ${chunk.timeframe} candles ${candles[0].timestamp} - ${
@@ -319,11 +333,11 @@ export default class ImporterWorkerService extends BaseService {
         importer: Importer,
         chunk: TradesChunk,
         candlesInTimeframes: ExchangeCandlesInTimeframes
-    ) {
+    ): Promise<void> {
         try {
             for (const [timeframe, candles] of Object.entries(candlesInTimeframes)) {
                 this.log.info(
-                    `Importer #${importer.id} - Finalizing candles ${candles[0].timestamp} - ${
+                    `Importer #${importer.id} - Finalizing ${timeframe} candles ${candles[0].timestamp} - ${
                         candles[candles.length - 1].timestamp
                     }`
                 );

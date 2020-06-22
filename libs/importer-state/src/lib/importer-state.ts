@@ -258,6 +258,10 @@ export class Importer {
         return this._status;
     }
 
+    set status(status: Status) {
+        this._status = status;
+    }
+
     get isStarted() {
         return this._status === "started";
     }
@@ -268,6 +272,10 @@ export class Importer {
 
     get currentState() {
         return this._currentState;
+    }
+
+    set currentState(state) {
+        this._currentState = state;
     }
 
     get state(): ImporterState {
@@ -362,14 +370,6 @@ export class Importer {
         return this._status === Status.finished;
     }
 
-    set currentState(state) {
-        this._currentState = state;
-    }
-
-    set status(status: Status) {
-        this._status = status;
-    }
-
     set progress(progress: number) {
         this._progress = progress;
     }
@@ -391,7 +391,7 @@ export class Importer {
         this._startedAt = this._startedAt ? this._startedAt : dayjs.utc().toISOString();
     }
 
-    finish(pause: boolean = false) {
+    finish(pause = false) {
         if (this.status === Status.failed) return;
         if (this.isLoaded) {
             this._status = Status.finished;

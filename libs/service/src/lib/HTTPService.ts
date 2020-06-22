@@ -40,7 +40,7 @@ export class HTTPService extends BaseService {
             this._server = restana({
                 errorHandler: this._errorHandler
             });
-            this._server.use(<RequestHandler<Protocol.HTTP>>helmet());
+            this._server.use(helmet() as RequestHandler<Protocol.HTTP>);
             this._server.use(bodyParser.json());
             this._server.use(this._checkApiKey.bind(this));
             this._server.use(
@@ -138,7 +138,8 @@ export class HTTPService extends BaseService {
         }[]
     ) {
         routes.forEach((route) => {
-            let { name, handler, auth, roles, inputSchema } = route;
+            const { name, handler } = route;
+            let { auth, roles, inputSchema } = route;
             if (!name) throw new Error("Route name is required");
             if (!handler && typeof handler !== "function") throw new Error("Route handler must be a function");
             auth = auth || false;
@@ -152,6 +153,7 @@ export class HTTPService extends BaseService {
                     }
                 },
                 input: { type: "object", props: inputSchema },
+                // eslint-disable-next-line @typescript-eslint/camelcase
                 session_variables: {
                     type: "object",
                     props: {

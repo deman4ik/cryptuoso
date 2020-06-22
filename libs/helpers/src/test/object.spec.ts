@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/camelcase */
 import { keysToUnderscore, keysToCamelCase } from "../lib/object";
 
 describe("Test 'object' utils", () => {

@@ -1,8 +1,9 @@
 import { EventsCatalog, Event } from "./catalog";
-import util from "util";
-
+//import util from "util";
 //util.inspect(obj, false, null, true)
+
 let catalog: EventsCatalog;
+// eslint-disable-next-line
 const handler = async (event: Event | any): Promise<void> => {};
 process.env.SERVICE = "importer";
 describe("Test 'EventsCatalog'", () => {

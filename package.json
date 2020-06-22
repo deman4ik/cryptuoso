@@ -11,10 +11,10 @@
     ],
     "scripts": {
         "nx": "nx",
-        "start": "npm-run-all -p serve:*",
-        "build": "nx build",
-        "test": "nx test",
-        "lint": "nx workspace-lint && nx lint",
+        "start": "nx run-many --target=serve --all --parallel",
+        "build": "nx run-many --target=build --all --parallel",
+        "test": "nx run-many --target=test --all --parallel --with-deps",
+        "lint": "nx workspace-lint && nx run-many --target=lint --all --parallel",
         "e2e": "nx e2e",
         "affected:apps": "nx affected:apps",
         "affected:libs": "nx affected:libs",
@@ -79,11 +79,9 @@
         "eslint-plugin-prettier": "^3.1.4",
         "jest": "25.2.3",
         "mockdate": "^3.0.2",
-        "npm-run-all": "^4.1.5",
         "prettier": "2.0.4",
         "ts-jest": "25.2.1",
         "ts-node": "~7.0.0",
-        "tslint": "~6.0.0",
         "typescript": "^3.9.5"
     }
 }
