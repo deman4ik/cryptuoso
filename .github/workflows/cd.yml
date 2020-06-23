@@ -8,12 +8,17 @@ jobs:
     build:
         name: Build, push, and deploy
         runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                node-version: [12.x]
         steps:
             - name: Checkout
               uses: actions/checkout@master
 
-            - name: Install nx
-              run: npm install -g @nrwl/cli --unsafe-perm
+            - name: Use Node.js
+              uses: actions/setup-node@v1
+              with:
+                  node-version: ${{ matrix.node-version }}
 
             - name: List services
-              run: nx affected:apps --plain
+              run: npm run

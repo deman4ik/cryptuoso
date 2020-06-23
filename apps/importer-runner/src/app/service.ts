@@ -78,8 +78,11 @@ export default class ImporterRunnerService extends HTTPService {
 
     async start({ exchange, asset, currency, type, timeframes, dateFrom, dateTo, amount }: ImporterRunnerStart) {
         try {
-            const [{ loadFrom }] = await this
-                .sql`select load_from from markets where exchange = ${exchange} and asset = ${asset} and currency = ${currency}`;
+            const [{ loadFrom }] = await this.sql`
+            select load_from from markets 
+            where exchange = ${exchange} 
+            and asset = ${asset} and currency = ${currency}
+            `;
             this.log.info(loadFrom);
             const params: ImporterParams = {
                 timeframes

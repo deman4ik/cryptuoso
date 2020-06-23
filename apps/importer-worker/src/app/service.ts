@@ -276,7 +276,9 @@ export default class ImporterWorkerService extends BaseService {
             const timeframe = candles[0].timeframe;
             const chunks = chunkArray(candles, 100);
             for (const chunk of chunks) {
-                await this.sql`insert into ${this.sql(`candles${timeframe}`)} ${this.sql(
+                await this.sql`
+                insert into ${this.sql(`candles${timeframe}`)} 
+                ${this.sql(
                     chunk as any[], //FIXME without cast
                     "exchange",
                     "asset",
