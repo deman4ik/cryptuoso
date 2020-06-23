@@ -33,7 +33,9 @@
         "help": "nx help",
         "gen:app": "nx generate @nrwl/node:application",
         "gen:lib": "nx generate @nrwl/node:library",
+        "build:importer-runner": "nx build importer-runner --prod",
         "serve:importer-runner": "nx serve importer-runner",
+        "build:importer-worker": "nx build importer-worker --prod",
         "serve:importer-worker": "nx serve importer-worker"
     },
     "private": true,
