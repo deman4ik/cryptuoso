@@ -1,6 +1,6 @@
 import { toCamelCase, fromCamelCase } from "./text";
 
-const flattenObject = (obj: { [key: string]: any }, prefix = "") =>
+export const flattenObject = (obj: { [key: string]: any }, prefix = "") =>
     Object.keys(obj).reduce((acc: { [key: string]: any }, k) => {
         const pre = prefix.length ? prefix + "." : "";
         if (typeof obj[k] === "object") Object.assign(acc, flattenObject(obj[k], pre + k));

@@ -5,10 +5,15 @@ const loggerConfig: ISettingsParam =
         ? {
               name: process.env.SERVICE,
               type: "json",
-              exposeErrorCodeFrame: false
+              exposeErrorCodeFrame: false,
+              minLevel: "info"
           }
         : {
-              name: process.env.SERVICE
+              name: process.env.SERVICE,
+              minLevel: "debug",
+              printLogMessageInNewLine: false,
+              displayFilePath: "hidden",
+              displayFunctionName: false
           };
 
 const logger = new Logger(loggerConfig);

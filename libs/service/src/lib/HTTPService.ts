@@ -31,16 +31,16 @@ export class HTTPService extends BaseService {
             roles: string[];
         };
     } = {};
-    constructor(config: HTTPServiceConfig) {
+    constructor(config?: HTTPServiceConfig) {
         super(config);
         try {
             this._iu = ifunless();
             this._v = new Validator();
-            this._port = config.port || +process.env.PORT || +process.env.NODE_PORT || 3000;
+            this._port = config?.port || +process.env.PORT || +process.env.NODE_PORT || 3000;
             this._server = restana({
                 errorHandler: this._errorHandler
             });
-            this._server.use(<RequestHandler<Protocol.HTTP>>helmet());
+            this._server.use(helmet() as RequestHandler<Protocol.HTTP>);
             this._server.use(bodyParser.json());
             this._server.use(this._checkApiKey.bind(this));
             this._server.use(
@@ -106,6 +106,7 @@ export class HTTPService extends BaseService {
             if (!this._routes[req.url].roles.includes(role))
                 throw new ActionsHandlerError("Forbidden: Invalid role", null, "FORBIDDEN", 403);
 
+            //TODO: check user in DB and cache in Redis
             next();
         } catch (err) {
             next(err);
@@ -137,7 +138,8 @@ export class HTTPService extends BaseService {
         }[]
     ) {
         routes.forEach((route) => {
-            let { name, handler, auth, roles, inputSchema } = route;
+            const { name, handler } = route;
+            let { auth, roles, inputSchema } = route;
             if (!name) throw new Error("Route name is required");
             if (!handler && typeof handler !== "function") throw new Error("Route handler must be a function");
             auth = auth || false;
@@ -151,6 +153,7 @@ export class HTTPService extends BaseService {
                     }
                 },
                 input: { type: "object", props: inputSchema },
+                // eslint-disable-next-line @typescript-eslint/camelcase
                 session_variables: {
                     type: "object",
                     props: {

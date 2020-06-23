@@ -144,10 +144,222 @@
                     }
                 }
             }
+        },
+        "importer-runner": {
+            "root": "apps/importer-runner",
+            "sourceRoot": "apps/importer-runner/src",
+            "projectType": "application",
+            "prefix": "importer-runner",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/importer-runner",
+                        "main": "apps/importer-runner/src/main.ts",
+                        "tsConfig": "apps/importer-runner/tsconfig.app.json",
+                        "assets": ["apps/importer-runner/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/importer-runner/src/environments/environment.ts",
+                                    "with": "apps/importer-runner/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "importer-runner:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "apps/importer-runner/tsconfig.app.json",
+                            "apps/importer-runner/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!apps/importer-runner/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/importer-runner/jest.config.js",
+                        "tsConfig": "apps/importer-runner/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "importer-state": {
+            "root": "libs/importer-state",
+            "sourceRoot": "libs/importer-state/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": ["libs/importer-state/tsconfig.lib.json", "libs/importer-state/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/importer-state/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/importer-state/jest.config.js",
+                        "tsConfig": "libs/importer-state/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "postgres": {
+            "root": "libs/postgres",
+            "sourceRoot": "libs/postgres/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": ["libs/postgres/tsconfig.lib.json", "libs/postgres/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/postgres/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/postgres/jest.config.js",
+                        "tsConfig": "libs/postgres/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "events": {
+            "root": "libs/events",
+            "sourceRoot": "libs/events/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": ["libs/events/tsconfig.lib.json", "libs/events/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/events/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/events/jest.config.js",
+                        "tsConfig": "libs/events/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "importer-events": {
+            "root": "libs/importer-events",
+            "sourceRoot": "libs/importer-events/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "libs/importer-events/tsconfig.lib.json",
+                            "libs/importer-events/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!libs/importer-events/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/importer-events/jest.config.js",
+                        "tsConfig": "libs/importer-events/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "importer-worker": {
+            "root": "apps/importer-worker",
+            "sourceRoot": "apps/importer-worker/src",
+            "projectType": "application",
+            "prefix": "importer-worker",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/importer-worker",
+                        "main": "apps/importer-worker/src/main.ts",
+                        "tsConfig": "apps/importer-worker/tsconfig.app.json",
+                        "assets": ["apps/importer-worker/src/assets"],
+                        "webpackConfig": "apps/importer-worker/webpack.config.js"
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/importer-worker/src/environments/environment.ts",
+                                    "with": "apps/importer-worker/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "importer-worker:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "apps/importer-worker/tsconfig.app.json",
+                            "apps/importer-worker/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!apps/importer-worker/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/importer-worker/jest.config.js",
+                        "tsConfig": "apps/importer-worker/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
         }
     },
     "cli": {
-        "defaultCollection": "@nrwl/workspace"
+        "defaultCollection": "@nrwl/node"
     },
     "schematics": {
         "@nrwl/workspace": {
@@ -207,5 +419,6 @@
                 "linter": "eslint"
             }
         }
-    }
+    },
+    "defaultProject": "importer-runner"
 }

@@ -7,7 +7,7 @@
             "devDependencies": "*"
         },
         "tsconfig.json": "*",
-        "tslint.json": "*",
+        ".eslintrc": "*",
         "nx.json": "*"
     },
     "tasksRunnerOptions": {
@@ -35,6 +35,24 @@
             "tags": []
         },
         "service": {
+            "tags": []
+        },
+        "importer-runner": {
+            "tags": []
+        },
+        "importer-state": {
+            "tags": []
+        },
+        "postgres": {
+            "tags": []
+        },
+        "events": {
+            "tags": []
+        },
+        "importer-events": {
+            "tags": []
+        },
+        "importer-worker": {
             "tags": []
         }
     }

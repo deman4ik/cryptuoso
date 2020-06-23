@@ -1,10 +1,11 @@
-import "dotenv-safe/config";
 import { createLightship, LightshipType } from "lightship";
 import Redis from "ioredis";
 import logger, { Logger } from "@cryptuoso/logger";
+import { sql } from "@cryptuoso/postgres";
+import { Events } from "@cryptuoso/events";
 
 export interface BaseServiceConfig {
-    name: string;
+    name?: string;
 }
 
 export class BaseService {
@@ -14,19 +15,26 @@ export class BaseService {
     #onServiceStart: { (): Promise<void> }[] = [];
     #onServiceStop: { (): Promise<void> }[] = [];
     #redisConnection: Redis.Redis;
+    #sql: typeof sql;
+    #events: Events;
 
-    constructor(config: BaseServiceConfig) {
+    constructor(config?: BaseServiceConfig) {
         try {
+            //TODO: check environment variables
+            process.on("uncaughtException", this.#handleUncaughtException.bind(this));
+            process.on("unhandledRejection", this.#handleUnhandledRejection.bind(this));
             this.#log = logger;
             this.#lightship = createLightship({
                 port: +process.env.LS_PORT || 9000,
                 detectKubernetes: process.env.NODE_ENV === "production"
             });
             this.#lightship.registerShutdownHandler(this.#stopService.bind(this));
-
-            this.#name = config.name || process.env.SERVICE;
-            process.on("uncaughtException", this.#handleUncaughtException.bind(this));
-            process.on("unhandledRejection", this.#handleUnhandledRejection.bind(this));
+            this.#name = config?.name || process.env.SERVICE;
+            this.#sql = sql;
+            this.#redisConnection = new Redis(
+                process.env.REDIS_CS //,{enableReadyCheck: false}
+            );
+            this.#events = new Events(this.#redisConnection, this.#lightship);
         } catch (err) {
             console.error(err);
             process.exit(1);
@@ -39,6 +47,14 @@ export class BaseService {
 
     get name() {
         return this.#name;
+    }
+
+    get sql() {
+        return this.#sql;
+    }
+
+    get events() {
+        return this.#events;
     }
 
     #handleUncaughtException = (err: Error) => {
@@ -74,9 +90,7 @@ export class BaseService {
             } else {
                 await Promise.resolve();
             }
-            this.#redisConnection = new Redis(
-                process.env.REDIS_CS //,{enableReadyCheck: false}
-            );
+            await this.#events.start();
             this.#lightship.signalReady();
             this.#log.info(`Started ${this.#name} service`);
         } catch (err) {
@@ -98,6 +112,7 @@ export class BaseService {
                     await onStopFunc();
                 }
             }
+            await this.#sql.end({ timeout: 30000 });
         } catch (err) {
             this.#log.error(err, `Failed to correctly stop ${this.#name} service`);
             process.exit(1);

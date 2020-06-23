@@ -9,18 +9,25 @@
         "experimentalDecorators": true,
         "importHelpers": true,
         "esModuleInterop": true,
-        "target": "ESNext",
+        "noImplicitAny": true,
+        "pretty": true,
+        "target": "ES2019",
         "module": "esnext",
         "typeRoots": ["node_modules/@types"],
         "skipLibCheck": true,
         "baseUrl": ".",
         "paths": {
+            "*": ["@types/*"],
             "@cryptuoso/dayjs": ["libs/dayjs/src/index.ts"],
             "@cryptuoso/logger": ["libs/logger/src/index.ts"],
             "@cryptuoso/errors": ["libs/errors/src/index.ts"],
             "@cryptuoso/helpers": ["libs/helpers/src/index.ts"],
             "@cryptuoso/ccxt-public": ["libs/ccxt-public/src/index.ts"],
-            "@cryptuoso/service": ["libs/service/src/index.ts"]
+            "@cryptuoso/service": ["libs/service/src/index.ts"],
+            "@cryptuoso/importer-state": ["libs/importer-state/src/index.ts"],
+            "@cryptuoso/postgres": ["libs/postgres/src/index.ts"],
+            "@cryptuoso/events": ["libs/events/src/index.ts"],
+            "@cryptuoso/importer-events": ["libs/importer-events/src/index.ts"]
         }
     },
     "exclude": ["node_modules", "tmp"]
