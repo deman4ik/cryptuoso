@@ -20,6 +20,9 @@ jobs:
               with:
                   node-version: ${{ matrix.node-version }}
 
+            - name: NPM Install
+              run: npm install
+
             - name: List services
               run: npm run affected:apps
 
