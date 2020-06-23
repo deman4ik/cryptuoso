@@ -17,11 +17,6 @@ jobs:
               with:
                   fetch-depth: 2
 
-            - name: set environment variables
-              uses: allenevans/set-env@v1.0.0
-              with:
-                  NX_BASE: $(git rev-parse HEAD~1)
-
             - name: Use Node.js
               uses: actions/setup-node@v1
               with:
@@ -30,11 +25,8 @@ jobs:
             - name: NPM Install
               run: npm install
 
-            - name: Set NX Base
-              run: export NX_BASE=$(git rev-parse HEAD~1)
-
             - name: List services
-              run: npm run affected:apps -- --base=$NX_BASE
+              run: npm run affected:apps -- --base=$(git rev-parse HEAD~1)
 
             - name: Try script
               run: ./deployments/script.sh
