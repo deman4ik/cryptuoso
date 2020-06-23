@@ -1,19 +1,19 @@
 name: CD
 
 on:
-  push:
-    branches: [master, dev]
+    push:
+        branches: [master, dev]
 
 jobs:
-  build:
-    name: Build, push, and deploy
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@master
+    build:
+        name: Build, push, and deploy
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@master
 
-      - name: Install nx
-        run: npm install -g @nrwl/cli
+            - name: Install nx
+              run: npm install -g @nrwl/cli --unsafe-perm
 
-      - name: List services
-        run: nx affected:apps --plain
+            - name: List services
+              run: nx affected:apps --plain
