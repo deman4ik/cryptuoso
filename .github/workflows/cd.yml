@@ -21,4 +21,7 @@ jobs:
                   node-version: ${{ matrix.node-version }}
 
             - name: List services
-              run: npm run affeced:apps
+              run: npm run affected:apps
+
+            - name: Try script
+              run: ./deployments/script.sh
