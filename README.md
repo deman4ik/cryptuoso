@@ -12,9 +12,36 @@ Code organized using [Nx](https://nx.dev).
 
 ## Development
 
-### Generate an application
+### Services (applications)
 
-Run `npm run gen:app -- my-app` to generate an application.
+#### Creating new service
+
+1. Run `npm run gen:app -- my-app` to generate new service (application).
+
+2. Add `"build:my-app": "nx build my-app --prod"` and `"serve:my-app": "nx serve my-app"` to `package.json` scripts sections
+
+3. Create file `apps/my-app/src/app/service.ts` with class which extends `BaseService` or `HttpService` from `@cryptuoso/service`.
+
+4. Update file `apps/my-app/src/main.ts` whith service starting script:
+
+```ts
+import Service from "./app/service";
+import log from "@cryptuoso/logger";
+
+const service = new Service();
+
+async function start() {
+    try {
+        await service.startService();
+    } catch (error) {
+        log.error(error, `Failed to start service ${process.env.SERVICE}`);
+        process.exit(1);
+    }
+}
+start();
+```
+
+5. Copy `deployments/deployment-template.yaml` file to `deployments/my-app.yaml`, add environment variables and change ports
 
 ### Generate a library
 
