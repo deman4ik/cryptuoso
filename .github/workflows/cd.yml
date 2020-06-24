@@ -15,7 +15,7 @@ jobs:
             - name: Checkout
               uses: actions/checkout@master
               with:
-                  fetch-depth: 2
+                  fetch-depth: 0
             - run: |
                   git fetch origin master
 
@@ -28,6 +28,6 @@ jobs:
               run: npm install
 
             - name: List services
-              run: npm run affected:apps -- --name=origin/master --head=${{ github.event.base_ref }}
+              run: npm run affected:apps -- --base=origin/master --head=${{ github.event.base_ref }}
             ## - name: Try script
             #   run: ./deployments/script.sh
