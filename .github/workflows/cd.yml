@@ -14,8 +14,8 @@ jobs:
         steps:
             - name: Checkout
               uses: actions/checkout@master
-              with:
-                  fetch-depth: 2
+            - run: |
+                  git fetch --no-tags --prune --depth=5 origin master
 
             - name: Use Node.js
               uses: actions/setup-node@v1
@@ -26,7 +26,7 @@ jobs:
               run: npm install
 
             - name: List services
-              run: npm run affected:apps -- --base=master~1 --head=origin/master
+              run: npm run affected:apps -- --base=origin/master --head=HEAD
 
             - name: Try script
               run: ./deployments/script.sh
