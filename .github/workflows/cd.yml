@@ -15,7 +15,7 @@ jobs:
             - name: Checkout
               uses: actions/checkout@master
             - run: |
-                  git fetch --no-tags --prune --depth=5 origin master
+                  git fetch origin master
 
             - name: Use Node.js
               uses: actions/setup-node@v1
@@ -26,7 +26,6 @@ jobs:
               run: npm install
 
             - name: List services
-              run: npm run affected:apps -- --base=origin/master --head=HEAD
-
-            - name: Try script
-              run: ./deployments/script.sh
+              run: npm run affected:apps -- --head=${{ github.event.base_ref }}
+            ## - name: Try script
+            #   run: ./deployments/script.sh
