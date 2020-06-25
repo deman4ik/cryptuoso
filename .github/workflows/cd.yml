@@ -28,6 +28,10 @@ jobs:
               run: npm install
 
             - name: List services
-              run: nx affected:apps --plain --base=${{github.base_ref}}
+              id: services
+              run: echo ::set-output list=$(node ./node_modules/@nrwl/cli/bin/nx.js affected:apps --plain --all  )
+            
+            - name: Echo services
+              run: echo ${{ steps.services.outputs.list }}
             ## - name: Try script
             #   run: ./deployments/script.sh
