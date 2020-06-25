@@ -27,10 +27,40 @@ jobs:
             - name: NPM Install
               run: npm install
 
+            - name: Check history
+              uses: actions/github-script@v2
+              id: history
+              with:
+                result-encoding: string
+                github-token: ${{secrets.GITHUB_TOKEN}}
+                script: |
+                    if (context.payload.head_commit.message.includes("DEPLOY ALL")) {
+                    return "--all";
+                    } else {
+                    const branch = context.payload.ref.split("/")[2];
+                    
+                    const {data: {workflow_runs}} = await github.actions.listWorkflowRuns({
+                    owner: context.payload.repository.full_name.split("/")[0],
+                    repo: context.payload.repository.full_name.split("/")[1],
+                    workflow_id: "cd.yml"
+                    });
+                    if (workflow_runs && Array.isArray(workflow_runs) && workflow_runs.length > 0){
+                    const sha = workflow_runs.find(({ head_branch, status, conclusion }) =>
+                                   head_branch === branch &&
+                                   status === "completed" &&
+                                   conclusion === "success"
+                                   ).head_sha;
+                    return `--head=${sha} --base=branch`;
+                    }
+                    else return "--all";
+                    }
+                                   
+            - run: echo ${{steps.history.outputs.result}}
+            
             - name: List services
               id: services
-              run: echo ::set-output name=list::$(node ./node_modules/@nrwl/cli/bin/nx.js affected:apps --plain --all  )
-            
+              run: echo ::set-output name=list::$(node ./node_modules/@nrwl/cli/bin/nx.js affected:apps --plain ${{steps.history.outputs.result}} )
+              
             - name: Echo services
               run: echo ${{ steps.services.outputs.list }}
             ## - name: Try script
