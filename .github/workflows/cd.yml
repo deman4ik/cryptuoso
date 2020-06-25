@@ -50,7 +50,7 @@ jobs:
                                    status === "completed" &&
                                    conclusion === "success"
                                    ).head_sha;
-                    return `--head=${sha} --base=branch`;
+                    return `--head=${sha} --base=${branch}`;
                     }
                     else return "--all";
                     }
