@@ -29,7 +29,7 @@ jobs:
 
             - name: List services
               id: services
-              run: echo ::set-output list=$(node ./node_modules/@nrwl/cli/bin/nx.js affected:apps --plain --all  )
+              run: echo ::set-output list=::$(node ./node_modules/@nrwl/cli/bin/nx.js affected:apps --plain --all  )
             
             - name: Echo services
               run: echo ${{ steps.services.outputs.list }}
