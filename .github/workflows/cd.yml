@@ -55,7 +55,8 @@ jobs:
                     else return "--all";
                     }
                                    
-            - run: echo ${{steps.history.outputs.result}}
+            - name: Result
+              run: echo ${{steps.history.outputs.result}}
             
             - name: List services
               id: services
@@ -63,5 +64,3 @@ jobs:
               
             - name: Echo services
               run: echo ${{ steps.services.outputs.list }}
-            ## - name: Try script
-            #   run: ./deployments/script.sh
