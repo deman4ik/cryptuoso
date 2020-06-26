@@ -31,7 +31,6 @@ jobs:
                   result-encoding: string
                   github-token: ${{secrets.GITHUB_TOKEN}}
                   script: |
-                      return "--all"; //FOR DEBUG
                       if (context.payload.head_commit.message.includes("DEPLOY ALL")) {
                          return "--all";
                          } else {
