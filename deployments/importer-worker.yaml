@@ -59,36 +59,41 @@ spec:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
                                 key: API_KEY
-                      - name: PG_DBNAME
+                      - name: PGDATABASE
                         valueFrom:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
-                                key: PG_DBNAME
-                      - name: PG_USER
+                                key: PGDATABASE
+                      - name: PGUSERNAME
                         valueFrom:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
-                                key: PG_USER
-                      - name: PG_PWD
+                                key: PGUSERNAME
+                      - name: PGPASSWORD
                         valueFrom:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
-                                key: PG_PWD
-                      - name: PG_HOST
+                                key: PGPASSWORD
+                      - name: PGHOST
                         valueFrom:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
-                                key: PG_HOST
-                      - name: PG_PORT
+                                key: PGHOST
+                      - name: PGPORT
                         valueFrom:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
-                                key: PG_PORT
-                      - name: REDIS_CS
+                                key: PGPORT
+                      - name: REDISCS
                         valueFrom:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
-                                key: REDIS_CS
+                                key: REDISCS
+                      - name: PROXY_ENDPOINT
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: PROXY_ENDPOINT
                   ports:
                       - containerPort: 9000
                         protocol: TCP

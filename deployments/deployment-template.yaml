@@ -84,11 +84,11 @@ spec:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
                                 key: PG_PORT
-                      - name: REDIS_CS
+                      - name: REDISCS
                         valueFrom:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
-                                key: REDIS_CS
+                                key: REDISCS
                   ports:
                       - containerPort: 3000
                         protocol: TCP

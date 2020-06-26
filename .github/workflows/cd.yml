@@ -1,19 +1,113 @@
 name: CD
 
 on:
-  push:
-    branches: [master, dev]
+    push:
+        branches: [master, dev]
 
 jobs:
-  build:
-    name: Build, push, and deploy
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@master
+    build:
+        if: "!contains(github.event.head_commit.message, 'CD SKIP')"
+        name: Build, push, and deploy
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                node-version: [12.x]
+        steps:
+            - name: Checkout
+              uses: actions/checkout@master
 
-      - name: Install nx
-        run: npm install -g @nrwl/cli
+            - name: Use Node.js
+              uses: actions/setup-node@v1
+              with:
+                  node-version: ${{ matrix.node-version }}
 
-      - name: List services
-        run: nx affected:apps --plain
+            - name: NPM Install
+              run: npm install
+
+            - name: Check history
+              uses: actions/github-script@v2
+              id: history
+              with:
+                  result-encoding: string
+                  github-token: ${{secrets.GITHUB_TOKEN}}
+                  script: |
+                      if (context.payload.head_commit.message.includes("DEPLOY ALL")) {
+                         return "--all";
+                         } else {
+                         const branch = context.payload.ref.split("/")[2];
+
+                         const {
+                             data: { workflow_runs }
+                         } = await github.actions.listWorkflowRuns({
+                             owner: context.payload.repository.full_name.split("/")[0],
+                             repo: context.payload.repository.full_name.split("/")[1],
+                             workflow_id: "cd.yml"
+                         });
+                         if (
+                             workflow_runs &&
+                             Array.isArray(workflow_runs) &&
+                             workflow_runs.length > 0
+                         ) {
+                             const sha = workflow_runs.find(
+                             ({ head_branch, status, conclusion }) =>
+                                 head_branch === branch &&
+                                 status === "completed" &&
+                                 conclusion === "success"
+                             ).head_sha;
+                             return `--head=${sha} --base=${branch}`;
+                         } else return "--all";
+                      }
+
+            - name: List services
+              id: services
+              run: echo ::set-output name=list::$(node ./node_modules/@nrwl/cli/bin/nx.js affected:apps --plain ${{steps.history.outputs.result}} )
+
+            - name: Echo services
+              run: echo ${{ steps.services.outputs.list }}
+
+            - name: Build containers
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do docker build --build-arg SERVICE_NAME="${i}" --build-arg GITHUB_SSH_KEY="${{ secrets.GH_SSH_KEY }}" -t registry.digitalocean.com/cpz/$i:$(echo $GITHUB_SHA | head -c7) .; done;
+
+            - name: Install doctl
+              uses: digitalocean/action-doctl@v2-experiment
+              with:
+                  token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+            - name: Save DigitalOcean kubeconfig
+              run: doctl kubernetes cluster kubeconfig show cpz-cluster > $GITHUB_WORKSPACE/.kubeconfig
+
+            - name: Login to Docker
+              run: doctl registry login
+
+            - name: Push image to Docker Hub
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do docker push registry.digitalocean.com/cpz/${i}; done;
+
+            - name: Update deployment file IMAGE and TAG
+              run: services=(${{ steps.services.outputs.list }}); TAG=$(echo $GITHUB_SHA | head -c7); for i in "${services[@]}"; do sed -i 's|<IMAGE>|registry.digitalocean.com/cpz/'${i}':'${TAG}'|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
+
+            - name: Update deployment file APP dev
+              if: contains(github.ref, 'dev')
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do sed -i 's|<APP>|'${i}'-dev|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
+
+            - name: Update deployment file APP prod
+              if: contains(github.ref, 'master')
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do sed -i 's|<APP>|'${i}'|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
+
+            - name: Update deployment file ENV dev
+              if: contains(github.ref, 'dev')
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do sed -i 's|<ENV>|dev|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
+
+            - name: Update deployment file ENV prod
+              if: contains(github.ref, 'master')
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do sed -i 's|<ENV>|prod|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
+
+            - name: Deploy deployment to DigitalOcean Kubernetes
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig apply -f $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
+
+            - name: Verify deployment dev
+              if: contains(github.ref, 'dev')
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig rollout status deployment/${i}-dev; done;
+
+            - name: Verify deployment prod
+              if: contains(github.ref, 'master')
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig rollout status deployment/${i}; done;

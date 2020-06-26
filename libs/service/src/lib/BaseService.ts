@@ -32,7 +32,7 @@ export class BaseService {
             this.#name = config?.name || process.env.SERVICE;
             this.#sql = sql;
             this.#redisConnection = new Redis(
-                process.env.REDIS_CS //,{enableReadyCheck: false}
+                process.env.REDISCS //,{enableReadyCheck: false}
             );
             this.#events = new Events(this.#redisConnection, this.#lightship);
         } catch (err) {
