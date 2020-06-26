@@ -84,15 +84,15 @@ jobs:
               run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do docker push registry.digitalocean.com/cpz/${i}; done;
 
             - name: Update deployment file IMAGE and TAG
-              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE>|registry.digitalocean.com/cpz/${i}:'${TAG}'|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE>|registry.digitalocean.com/cpz/'${i}'':'${TAG}'|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
 
             - name: Update deployment file APP dev
               if: contains(github.ref, 'dev')
-              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do sed -i 's|<APP>|${i}-dev|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do sed -i 's|<APP>|'${i}-dev'|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
 
             - name: Update deployment file APP prod
               if: contains(github.ref, 'master')
-              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do sed -i 's|<APP>|cpz-platform|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do sed -i 's|<APP>|'${i}'|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
 
             - name: Update deployment file ENV dev
               if: contains(github.ref, 'dev')
