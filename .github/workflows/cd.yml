@@ -6,6 +6,7 @@ on:
 
 jobs:
     build:
+        if: "!contains(github.event.head_commit.message, 'CD SKIP')"
         name: Build, push, and deploy
         runs-on: ubuntu-latest
         strategy:
@@ -14,10 +15,6 @@ jobs:
         steps:
             - name: Checkout
               uses: actions/checkout@master
-              with:
-                  fetch-depth: 0
-            - run: |
-                  git fetch origin master
 
             - name: Use Node.js
               uses: actions/setup-node@v1
@@ -84,14 +81,14 @@ jobs:
               run: doctl registry login
 
             - name: Push image to Docker Hub
-              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do docker push registry.digitalocean.com/cpz/{$i}; done;
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do docker push registry.digitalocean.com/cpz/${i}; done;
 
             - name: Update deployment file IMAGE and TAG
               run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE>|registry.digitalocean.com/cpz/${i}:'${TAG}'|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
 
             - name: Update deployment file APP dev
               if: contains(github.ref, 'dev')
-              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do sed -i 's|<APP>|{$i}-dev|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do sed -i 's|<APP>|${i}-dev|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
 
             - name: Update deployment file APP prod
               if: contains(github.ref, 'master')
