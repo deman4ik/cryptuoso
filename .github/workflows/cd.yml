@@ -107,8 +107,8 @@ jobs:
 
             - name: Verify deployment dev
               if: contains(github.ref, 'dev')
-              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig rollout status deployment/${i}-dev
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig rollout status deployment/${i}-dev; done;
 
             - name: Verify deployment prod
               if: contains(github.ref, 'master')
-              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig rollout status deployment/${i}
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig rollout status deployment/${i}; done;
