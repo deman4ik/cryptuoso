@@ -89,6 +89,11 @@ spec:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
                                 key: REDIS_CS
+                      - name: PROXY_ENDPOINT
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: PROXY_ENDPOINT
                   ports:
                       - containerPort: 9000
                         protocol: TCP
