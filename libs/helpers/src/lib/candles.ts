@@ -3,42 +3,7 @@ import { Timeframe, ValidTimeframe } from "./timeframe";
 import { createDatesList, createDatesListWithRange } from "./time";
 import { arraysDiff } from "./array";
 import { sortAsc, sortDesc } from "./sort";
-
-export interface ExchangePrice {
-    exchange: string;
-    asset: string;
-    currency: string;
-    time: number;
-    timestamp: string;
-    price: number;
-}
-
-export interface ExchangeTrade extends ExchangePrice {
-    amount: number;
-    side: string;
-}
-
-export const enum CandleType {
-    loaded = "loaded",
-    created = "created",
-    previous = "previous",
-    history = "history"
-}
-
-export interface ExchangeCandle {
-    exchange: string;
-    asset: string;
-    currency: string;
-    timeframe: ValidTimeframe;
-    time: number;
-    timestamp: string;
-    open: number;
-    high: number;
-    low: number;
-    close: number;
-    volume: number;
-    type: CandleType;
-}
+import { CandleType, ExchangeTrade, ExchangeCandle } from "@cryptuoso/market";
 
 export interface ExchangeCandlesInTimeframes {
     [key: string]: ExchangeCandle[];

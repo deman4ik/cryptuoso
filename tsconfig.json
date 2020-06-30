@@ -28,7 +28,8 @@
             "@cryptuoso/postgres": ["libs/postgres/src/index.ts"],
             "@cryptuoso/events": ["libs/events/src/index.ts"],
             "@cryptuoso/importer-events": ["libs/importer-events/src/index.ts"],
-            "@cryptuoso/exwatcher-base": ["libs/exwatcher-base/src/index.ts"]
+            "@cryptuoso/exwatcher-base": ["libs/exwatcher-base/src/index.ts"],
+            "@cryptuoso/market": ["libs/market/src/index.ts"]
         }
     },
     "exclude": ["node_modules", "tmp"]

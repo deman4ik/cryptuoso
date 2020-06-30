@@ -69,6 +69,9 @@
         },
         "exwatcher-base": {
             "tags": []
+        },
+        "market": {
+            "tags": []
         }
     }
 }

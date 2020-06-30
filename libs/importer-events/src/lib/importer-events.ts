@@ -17,6 +17,10 @@ export const enum OutImporterWorkerEvents {
 
 export const ImporterRunnerSchema = {
     [InImporterRunnerEvents.START]: {
+        id: {
+            type: "uuid",
+            optional: true
+        },
         exchange: {
             type: "string"
         },
@@ -56,17 +60,17 @@ export const ImporterRunnerSchema = {
     },
     [InImporterRunnerEvents.STOP]: {
         id: {
-            type: "string"
+            type: "uuid"
         }
     }
 };
 
 export const ImporterWorkerSchema = {
     [InImporterWorkerEvents.PAUSE]: {
-        id: "string"
+        id: "uuid"
     },
     [OutImporterWorkerEvents.FINISHED]: {
-        id: "string",
+        id: "uuid",
         type: {
             type: "enum",
             values: ["recent", "history"]
@@ -76,7 +80,7 @@ export const ImporterWorkerSchema = {
         currency: "string"
     },
     [OutImporterWorkerEvents.FAILED]: {
-        id: "string",
+        id: "uuid",
         type: {
             type: "enum",
             values: ["recent", "history"]
@@ -89,11 +93,12 @@ export const ImporterWorkerSchema = {
 };
 
 export interface ImporterRunnerStart {
+    id?: string;
     exchange: string;
     asset: string;
     currency: string;
     type: ImportType;
-    timeframes: ValidTimeframe[];
+    timeframes?: ValidTimeframe[];
     dateFrom?: string;
     dateTo?: string;
     amount?: number;

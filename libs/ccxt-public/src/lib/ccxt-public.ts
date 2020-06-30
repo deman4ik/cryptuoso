@@ -9,12 +9,9 @@ import {
     handleCandleGaps,
     batchCandles,
     round,
-    ExchangePrice,
-    ExchangeCandle,
-    ValidTimeframe,
-    CandleType,
-    ExchangeTrade
+    ValidTimeframe
 } from "@cryptuoso/helpers";
+import { ExchangePrice, ExchangeCandle, CandleType, ExchangeTrade } from "@cryptuoso/market";
 import { createFetchMethod } from "./fetch";
 
 interface MinMax {
