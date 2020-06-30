@@ -27,7 +27,8 @@
             "@cryptuoso/importer-state": ["libs/importer-state/src/index.ts"],
             "@cryptuoso/postgres": ["libs/postgres/src/index.ts"],
             "@cryptuoso/events": ["libs/events/src/index.ts"],
-            "@cryptuoso/importer-events": ["libs/importer-events/src/index.ts"]
+            "@cryptuoso/importer-events": ["libs/importer-events/src/index.ts"],
+            "@cryptuoso/mail": ["libs/mail/src/index.ts"]
         }
     },
     "exclude": ["node_modules", "tmp"]
