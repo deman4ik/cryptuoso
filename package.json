@@ -36,7 +36,15 @@
         "build:importer-runner": "nx build importer-runner --prod",
         "serve:importer-runner": "nx serve importer-runner",
         "build:importer-worker": "nx build importer-worker --prod",
-        "serve:importer-worker": "nx serve importer-worker"
+        "serve:importer-worker": "nx serve importer-worker",
+        "build:exwatcher-runner": "nx build exwatcher-runner --prod",
+        "serve:exwatcher-runner": "nx serve exwatcher-runner",
+        "build:exwatcher-binance": "nx build exwatcher-binance --prod",
+        "serve:exwatcher-binance": "nx serve exwatcher-binance",
+        "build:exwatcher-bitfinex": "nx build exwatcher-bitfinex --prod",
+        "serve:exwatcher-bitfinex": "nx serve exwatcher-bitfinex",
+        "build:exwatcher-kraken": "nx build exwatcher-kraken --prod",
+        "serve:exwatcher-kraken": "nx serve exwatcher-kraken"
     },
     "private": true,
     "dependencies": {
