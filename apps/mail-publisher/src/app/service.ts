@@ -1,9 +1,10 @@
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 // libs
 import MailUtil, { MailUtilConfig } from "@cryptuoso/mail";
+
+import { SendWelcome, MailPublisherSchema, MailPublisherEvents } from "@cryptuoso/mail-publisher-events";
 // utils
-import mailBuilder from "./mailBuilder";
-import { from } from "scramjet";
+import mailBuild from "./mailBuild";
 
 export type MailPublisherServiceConfig = BaseServiceConfig;
 
@@ -16,14 +17,38 @@ class MailPublisherService extends BaseService {
         super(config);
         this.mailUtilInstacnce = new MailUtil(mailUtilConfig);
         this.mailUtilConfig = mailUtilConfig;
+        try {
+            this.events.subscribe({
+                [MailPublisherEvents.SEND_WELCOME]: {
+                    handler: async (data) => {
+                        await this.send(data, "welcome");
+                    },
+                    schema: MailPublisherSchema[MailPublisherEvents.SEND_WELCOME]
+                }
+            });
+        } catch (err) {
+            this.log.error(err, "While consctructing  MailPublisherService");
+        }
+
+        // test sendWelcome
+        this.testWelcome({
+            email: "modecry@yandex.ru",
+            secretCode: "Test secret code",
+            urlData: "TesturlData"
+        });
     }
 
     /*send method*/
-    send = (type: string, data: any) => {
+    private send = async (data: any, type: string) => {
         const { domain } = this.mailUtilConfig;
-        const fromProp = data.from || `Cryptuoso <noreply@${domain}>`;
-        const mail = mailBuilder(type, data);
-        this.mailUtilInstacnce.send({ ...mail, from: fromProp });
+        const fromProp = data?.from || `Cryptuoso <noreply@${domain}>`;
+        const mail = mailBuild(type, data);
+        await this.mailUtilInstacnce.send({ ...mail, from: fromProp });
+    };
+
+    public testWelcome = async (data: SendWelcome) => {
+        await this.events.emit<SendWelcome>(MailPublisherEvents.SEND_WELCOME, data);
+        console.log("Send welcome is ok!");
     };
 }
 

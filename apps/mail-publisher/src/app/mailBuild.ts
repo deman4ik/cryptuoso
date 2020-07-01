@@ -1,14 +1,12 @@
+// libs
 import { TEMPLATE_TYPES, SendProps } from "@cryptuoso/mail";
+// types
+import { SendWelcome } from "@cryptuoso/mail-publisher-events";
 
 /*====Mail builders====*/
 
 /*Сообщение об успешной регистрации*/
-interface WelcomeData {
-    email: string;
-    secretCode: string;
-    urlData: string;
-}
-const welcomeMail = ({ email, secretCode, urlData }: WelcomeData) => ({
+const welcomeMail = ({ email, secretCode, urlData }: SendWelcome) => ({
     to: email,
     subject: "🚀 Welcome to Cryptuoso Platform - Please confirm your email.",
     variables: {
@@ -27,9 +25,9 @@ const MAIL_TYPES: {
     welcome: welcomeMail
 };
 
-const mailBuilder = (type: string, data: any, templateType?: string): SendProps => ({
+const mailBuild = (type: string, data: any, templateType?: string): SendProps => ({
     ...MAIL_TYPES[type](data),
     template: TEMPLATE_TYPES[templateType] || TEMPLATE_TYPES.main
 });
 
-export default mailBuilder;
+export default mailBuild;

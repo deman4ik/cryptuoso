@@ -1,70 +1,68 @@
 {
-  "npmScope": "cryptuoso",
-  "implicitDependencies": {
-    "workspace.json": "*",
-    "package.json": {
-      "dependencies": "*",
-      "devDependencies": "*"
+    "npmScope": "cryptuoso",
+    "implicitDependencies": {
+        "workspace.json": "*",
+        "package.json": {
+            "dependencies": "*",
+            "devDependencies": "*"
+        },
+        "tsconfig.json": "*",
+        ".eslintrc": "*",
+        "nx.json": "*"
     },
-    "tsconfig.json": "*",
-    ".eslintrc": "*",
-    "nx.json": "*"
-  },
-  "tasksRunnerOptions": {
-    "default": {
-      "runner": "@nrwl/workspace/tasks-runners/default",
-      "options": {
-        "cacheableOperations": [
-          "build",
-          "lint",
-          "test",
-          "e2e"
-        ]
-      }
+    "tasksRunnerOptions": {
+        "default": {
+            "runner": "@nrwl/workspace/tasks-runners/default",
+            "options": {
+                "cacheableOperations": ["build", "lint", "test", "e2e"]
+            }
+        }
+    },
+    "projects": {
+        "dayjs": {
+            "tags": []
+        },
+        "logger": {
+            "tags": []
+        },
+        "errors": {
+            "tags": []
+        },
+        "helpers": {
+            "tags": []
+        },
+        "ccxt-public": {
+            "tags": []
+        },
+        "service": {
+            "tags": []
+        },
+        "importer-runner": {
+            "tags": []
+        },
+        "importer-state": {
+            "tags": []
+        },
+        "postgres": {
+            "tags": []
+        },
+        "events": {
+            "tags": []
+        },
+        "importer-events": {
+            "tags": []
+        },
+        "importer-worker": {
+            "tags": []
+        },
+        "mail": {
+            "tags": []
+        },
+        "mail-publisher": {
+            "tags": []
+        },
+        "mail-publisher-events": {
+            "tags": []
+        }
     }
-  },
-  "projects": {
-    "dayjs": {
-      "tags": []
-    },
-    "logger": {
-      "tags": []
-    },
-    "errors": {
-      "tags": []
-    },
-    "helpers": {
-      "tags": []
-    },
-    "ccxt-public": {
-      "tags": []
-    },
-    "service": {
-      "tags": []
-    },
-    "importer-runner": {
-      "tags": []
-    },
-    "importer-state": {
-      "tags": []
-    },
-    "postgres": {
-      "tags": []
-    },
-    "events": {
-      "tags": []
-    },
-    "importer-events": {
-      "tags": []
-    },
-    "importer-worker": {
-      "tags": []
-    },
-    "mail": {
-      "tags": []
-    },
-    "mail-publisher": {
-      "tags": []
-    }
-  }
 }
