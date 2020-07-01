@@ -23,15 +23,20 @@ export interface SubscribeProps {
 /**
  * Класс работы с отправкой email
  */
-export interface Config {
+export interface MailUtilConfig {
     apiKey: string;
     domain: string;
-    host: string;
+    host?: string;
 }
+
+/*template types*/
+export const TEMPLATE_TYPES: any = {
+    main: "main"
+};
 
 class MailUtil {
     private mailgun: Mailgun.Mailgun;
-    constructor(readonly config: Config) {
+    constructor(readonly config: MailUtilConfig) {
         try {
             this.mailgun = new Mailgun(config);
         } catch (e) {

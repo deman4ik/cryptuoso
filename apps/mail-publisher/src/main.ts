@@ -1,7 +1,9 @@
-import Service from "./app/service";
+import MailPublisherService from "./app/service";
 import log from "@cryptuoso/logger";
 
-const service = new Service();
+const { MAIL_API_KEY: apiKey, MAIL_DOMAIN: domain, MAIL_HOST: host } = process.env;
+
+const service = new MailPublisherService({ apiKey, domain, host });
 
 async function start() {
     try {
