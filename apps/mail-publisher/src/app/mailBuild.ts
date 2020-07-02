@@ -1,7 +1,12 @@
+//TODO:  расрашить строковые ключи между сервисами
 // libs
 import { TEMPLATE_TYPES, SendProps } from "@cryptuoso/mail";
 // types
 import { SendWelcome } from "@cryptuoso/mail-publisher-events";
+
+/*====Mail builders utils====*/
+// todo: Вынести в общие утилы
+const formatMessageHTML = (htmlString: string): string => htmlString.replace(/(?:\r\n|\r|\n)/g, "<br />");
 
 /*====Mail builders====*/
 
@@ -18,7 +23,7 @@ const welcomeMail = ({ email, secretCode, urlData }: SendWelcome) => ({
     tags: ["auth"]
 });
 
-/*Типы сообщений*/
+/*Билдер   обычных писем*/
 const MAIL_TYPES: {
     [key: string]: (data: any) => any;
 } = {
@@ -30,4 +35,13 @@ const mailBuild = (type: string, data: any, templateType?: string): SendProps =>
     template: TEMPLATE_TYPES[templateType] || TEMPLATE_TYPES.main
 });
 
-export default mailBuild;
+/*Билдер body для нотификаций*/
+const defaultBody = ({ message }: any) => `<div class="mail_item_container">${formatMessageHTML(message)}</div>`;
+
+const BODY_TYPES: { [key: string]: (data: any) => any } = {
+    default: defaultBody
+};
+
+const emailBodyBuilder = (bodyType: string, data: any): string => BODY_TYPES[bodyType](data);
+
+export { emailBodyBuilder, mailBuild };
