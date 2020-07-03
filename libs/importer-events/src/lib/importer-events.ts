@@ -2,22 +2,19 @@ import { ISO_DATE_REGEX, CANDLES_RECENT_AMOUNT } from "@cryptuoso/helpers";
 import { Timeframe, ValidTimeframe } from "@cryptuoso/market";
 import { ImportType } from "@cryptuoso/importer-state";
 
-export const enum InImporterRunnerEvents {
+export const enum ImporterRunnerEvents {
     START = "in-importer-runner.start",
     STOP = "in-importer-runner.stop"
 }
 
-export const enum InImporterWorkerEvents {
-    PAUSE = "in-importer-worker.pause"
-}
-
-export const enum OutImporterWorkerEvents {
+export const enum ImporterWorkerEvents {
+    PAUSE = "in-importer-worker.pause",
     FINISHED = "out-importer-worker.finished",
     FAILED = "out-importer-worker.failed"
 }
 
 export const ImporterRunnerSchema = {
-    [InImporterRunnerEvents.START]: {
+    [ImporterRunnerEvents.START]: {
         id: {
             type: "uuid",
             optional: true
@@ -59,7 +56,7 @@ export const ImporterRunnerSchema = {
             default: CANDLES_RECENT_AMOUNT
         }
     },
-    [InImporterRunnerEvents.STOP]: {
+    [ImporterRunnerEvents.STOP]: {
         id: {
             type: "uuid"
         }
@@ -67,10 +64,10 @@ export const ImporterRunnerSchema = {
 };
 
 export const ImporterWorkerSchema = {
-    [InImporterWorkerEvents.PAUSE]: {
+    [ImporterWorkerEvents.PAUSE]: {
         id: "uuid"
     },
-    [OutImporterWorkerEvents.FINISHED]: {
+    [ImporterWorkerEvents.FINISHED]: {
         id: "uuid",
         type: {
             type: "enum",
@@ -80,7 +77,7 @@ export const ImporterWorkerSchema = {
         asset: "string",
         currency: "string"
     },
-    [OutImporterWorkerEvents.FAILED]: {
+    [ImporterWorkerEvents.FAILED]: {
         id: "uuid",
         type: {
             type: "enum",

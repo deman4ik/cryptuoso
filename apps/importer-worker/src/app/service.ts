@@ -14,8 +14,7 @@ import {
     ImporterWorkerFinished,
     ImporterWorkerPause,
     ImporterWorkerSchema,
-    InImporterWorkerEvents,
-    OutImporterWorkerEvents
+    ImporterWorkerEvents
 } from "@cryptuoso/importer-events";
 import { ImporterUtils } from "./importerUtilsWorker";
 
@@ -35,9 +34,9 @@ export default class ImporterWorkerService extends BaseService {
             this.addOnStartHandler(this.onStartService);
             this.addOnStopHandler(this.onStopService);
             this.events.subscribe({
-                [InImporterWorkerEvents.PAUSE]: {
+                [ImporterWorkerEvents.PAUSE]: {
                     handler: this.pause.bind(this),
-                    schema: ImporterWorkerSchema[InImporterWorkerEvents.PAUSE],
+                    schema: ImporterWorkerSchema[ImporterWorkerEvents.PAUSE],
                     unbalanced: true
                 }
             });
@@ -102,7 +101,7 @@ export default class ImporterWorkerService extends BaseService {
             this.log.info(`Importer #${importer.id} is ${importer.status}!`);
             job.update(importer.state);
             if (importer.isFailed) {
-                await this.events.emit<ImporterWorkerFailed>(OutImporterWorkerEvents.FAILED, {
+                await this.events.emit<ImporterWorkerFailed>(ImporterWorkerEvents.FAILED, {
                     id: importer.id,
                     type: importer.type,
                     exchange: importer.exchange,
@@ -113,7 +112,7 @@ export default class ImporterWorkerService extends BaseService {
                 throw new BaseError(importer.error, { importerId: importer.id }); //TODO: requeue
             }
             if (importer.isFinished)
-                await this.events.emit<ImporterWorkerFinished>(OutImporterWorkerEvents.FINISHED, {
+                await this.events.emit<ImporterWorkerFinished>(ImporterWorkerEvents.FINISHED, {
                     id: importer.id,
                     type: importer.type,
                     exchange: importer.exchange,

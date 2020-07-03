@@ -6,10 +6,10 @@ import { getValidDate } from "@cryptuoso/helpers";
 import { Importer, Status, ImporterParams } from "@cryptuoso/importer-state";
 import {
     ImporterRunnerSchema,
-    InImporterRunnerEvents,
+    ImporterRunnerEvents,
     ImporterRunnerStart,
     ImporterRunnerStop,
-    InImporterWorkerEvents,
+    ImporterWorkerEvents,
     ImporterWorkerPause
 } from "@cryptuoso/importer-events";
 
@@ -23,27 +23,27 @@ export default class ImporterRunnerService extends HTTPService {
             this.createRoutes([
                 {
                     name: "importerStart",
-                    inputSchema: ImporterRunnerSchema[InImporterRunnerEvents.START],
+                    inputSchema: ImporterRunnerSchema[ImporterRunnerEvents.START],
                     auth: true,
                     roles: ["admin"],
                     handler: this.startHTTPHandler
                 },
                 {
                     name: "importerStop",
-                    inputSchema: ImporterRunnerSchema[InImporterRunnerEvents.STOP],
+                    inputSchema: ImporterRunnerSchema[ImporterRunnerEvents.STOP],
                     auth: true,
                     roles: ["admin"],
                     handler: this.stopHTTPHandler
                 }
             ]);
             this.events.subscribe({
-                [InImporterRunnerEvents.START]: {
+                [ImporterRunnerEvents.START]: {
                     handler: this.start.bind(this),
-                    schema: ImporterRunnerSchema[InImporterRunnerEvents.START]
+                    schema: ImporterRunnerSchema[ImporterRunnerEvents.START]
                 },
-                [InImporterRunnerEvents.STOP]: {
+                [ImporterRunnerEvents.STOP]: {
                     handler: this.stop.bind(this),
-                    schema: ImporterRunnerSchema[InImporterRunnerEvents.STOP]
+                    schema: ImporterRunnerSchema[ImporterRunnerEvents.STOP]
                 }
             });
             this.addOnStartHandler(this.onStartService);
@@ -134,7 +134,7 @@ export default class ImporterRunnerService extends HTTPService {
             const result = { id, status: Status.canceled };
             if (job) {
                 if (job.isActive) {
-                    await this.events.emit<ImporterWorkerPause>(InImporterWorkerEvents.PAUSE, {
+                    await this.events.emit<ImporterWorkerPause>(ImporterWorkerEvents.PAUSE, {
                         id
                     });
                     result.status = Status.stopping;

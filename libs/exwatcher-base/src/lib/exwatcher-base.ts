@@ -7,7 +7,7 @@ import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { Timeframe, CandleType, ExchangePrice, ExchangeCandle } from "@cryptuoso/market";
 import { createFetchMethod } from "@cryptuoso/ccxt-public";
 import { uniqueElementsBy, round } from "@cryptuoso/helpers";
-import { InImporterRunnerEvents, ImporterRunnerStart } from "@cryptuoso/importer-events";
+import { ImporterRunnerEvents, ImporterRunnerStart } from "@cryptuoso/importer-events";
 
 // !FIXME: ccxt.pro typings
 
@@ -236,6 +236,12 @@ export class ExwatcherBaseService extends BaseService {
         }
     }
 
+    async addSubscriptions(pairs: { asset: string; currency: string }[]) {
+        for (const { asset, currency } of pairs) {
+            await this.addSubscription(asset, currency);
+        }
+    }
+
     async removeSubscription(
         asset: string,
         currency: string
@@ -316,7 +322,7 @@ export class ExwatcherBaseService extends BaseService {
     async importRecentCandles(subscription: Exwatcher): Promise<string> {
         const { exchange, asset, currency } = subscription;
         const id = uuid();
-        await this.events.emit<ImporterRunnerStart>(InImporterRunnerEvents.START, {
+        await this.events.emit<ImporterRunnerStart>(ImporterRunnerEvents.START, {
             id,
             exchange,
             asset,
