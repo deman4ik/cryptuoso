@@ -1,17 +1,12 @@
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 // libs
 import MailUtil, { MailUtilConfig } from "@cryptuoso/mail";
-
-import {
-    SendWelcome,
-    SendSupportReply,
-    MailPublisherSchema,
-    MailPublisherEvents
-} from "@cryptuoso/mail-publisher-events";
+import { MailPublisherSchema, MailPublisherEvents } from "@cryptuoso/mail-publisher-events";
 // utils
 import { mailBuild, emailBodyBuilder } from "./mailBuild";
 
 export type MailPublisherServiceConfig = BaseServiceConfig;
+
 /**
  *  Сервис оптравки сообщений
  */
@@ -20,18 +15,63 @@ class MailPublisherService extends BaseService {
     constructor(readonly mailUtilConfig?: MailUtilConfig, config?: MailPublisherServiceConfig) {
         super(config);
         this.mailUtilInstacnce = new MailUtil(mailUtilConfig);
-        this.mailUtilConfig = mailUtilConfig;
         try {
             this.events.subscribe({
+                /*Subscribe to just mails*/
                 [MailPublisherEvents.SEND_WELCOME]: {
                     handler: async (data) => {
                         await this.sendMail(data, "welcome");
                     },
                     schema: MailPublisherSchema[MailPublisherEvents.SEND_WELCOME]
                 },
+                /*Subscribe to notifications*/
                 [MailPublisherEvents.SEND_SUPPORT_REPLY]: {
                     handler: this.sendNotificationsMail,
                     schema: MailPublisherSchema[MailPublisherEvents.SEND_SUPPORT_REPLY]
+                },
+                [MailPublisherEvents.SEND_SIGNAL_ALERT]: {
+                    handler: this.sendNotificationsMail,
+                    schema: MailPublisherSchema[MailPublisherEvents.SEND_SIGNAL_ALERT]
+                },
+                [MailPublisherEvents.SEND_SIGNAL_TRADE]: {
+                    handler: this.sendNotificationsMail,
+                    schema: MailPublisherSchema[MailPublisherEvents.SEND_SIGNAL_TRADE]
+                },
+                [MailPublisherEvents.SEND_USER_EX_ACC_ERROR]: {
+                    handler: this.sendNotificationsMail,
+                    schema: MailPublisherSchema[MailPublisherEvents.SEND_USER_EX_ACC_ERROR]
+                },
+                [MailPublisherEvents.SEND_USER_ROBOT_STARTED]: {
+                    handler: this.sendNotificationsMail,
+                    schema: MailPublisherSchema[MailPublisherEvents.SEND_USER_ROBOT_STARTED]
+                },
+                [MailPublisherEvents.SEND_USER_ROBOT_STOPPED]: {
+                    handler: this.sendNotificationsMail,
+                    schema: MailPublisherSchema[MailPublisherEvents.SEND_USER_ROBOT_STOPPED]
+                },
+                [MailPublisherEvents.SEND_USER_ROBOT_PAUSED]: {
+                    handler: this.sendNotificationsMail,
+                    schema: MailPublisherSchema[MailPublisherEvents.SEND_USER_ROBOT_PAUSED]
+                },
+                [MailPublisherEvents.SEND_USER_ROBOT_RESUMED]: {
+                    handler: this.sendNotificationsMail,
+                    schema: MailPublisherSchema[MailPublisherEvents.SEND_USER_ROBOT_RESUMED]
+                },
+                [MailPublisherEvents.SEND_USER_ROBOT_FAILED]: {
+                    handler: this.sendNotificationsMail,
+                    schema: MailPublisherSchema[MailPublisherEvents.SEND_USER_ROBOT_FAILED]
+                },
+                [MailPublisherEvents.SEND_ORDER_ERROR]: {
+                    handler: this.sendNotificationsMail,
+                    schema: MailPublisherSchema[MailPublisherEvents.SEND_ORDER_ERROR]
+                },
+                [MailPublisherEvents.SEND_MESSAGE_BROADCAST]: {
+                    handler: this.sendNotificationsMail,
+                    schema: MailPublisherSchema[MailPublisherEvents.SEND_MESSAGE_BROADCAST]
+                },
+                [MailPublisherEvents.SEND_NOTIFICATIONS_AGGREGATE]: {
+                    handler: this.sendNotificationsMail,
+                    schema: MailPublisherSchema[MailPublisherEvents.SEND_NOTIFICATIONS_AGGREGATE]
                 }
             });
         } catch (err) {
@@ -46,37 +86,41 @@ class MailPublisherService extends BaseService {
         const mail = mailBuild(type, data);
         await this.mailUtilInstacnce.send({ ...mail, from: fromProp });
     };
-    public testWelcome = async (data: SendWelcome) => {
-        await this.events.emit<SendWelcome>(MailPublisherEvents.SEND_WELCOME, data);
+    public testSendingMails = async (data: any, event: any) => {
+        await this.events.emit(event, data);
     };
 
     /*send notifications mail*/
     private sendNotificationsMail = async (data: any, template = "main") => {
         const { domain } = this.mailUtilConfig;
-        const { to, subject, tags, notifications } = data;
+        const { to, tags, subject, notifications } = data;
         const fromProp = data?.from || `Cryptuoso <noreply@${domain}>`;
-        let body: string = "";
-
+        let body = "";
         if (notifications) {
             notifications.forEach((notify: any) => {
                 body += emailBodyBuilder(notify.bodyType, notify);
             });
-            await this.mailUtilInstacnce.send({
-                to,
-                subject,
-                tags,
-                template,
-                from: fromProp,
-                variables: {
-                    body
-                }
-            });
+            if (body) {
+                await this.mailUtilInstacnce.send({
+                    to,
+                    subject,
+                    tags,
+                    template,
+                    from: fromProp,
+                    variables: {
+                        body
+                    }
+                });
+            }
         }
     };
 
-    public testSendNotificationsMail = async (data: SendSupportReply) => {
-        await this.events.emit<SendSupportReply>(MailPublisherEvents.SEND_SUPPORT_REPLY, data);
-        console.log("Send welcome is ok!");
+    public testSendNotificationsMail = async (data: any, event: any) => {
+        try {
+            await this.events.emit(event, data);
+        } catch (e) {
+            console.error(e);
+        }
     };
 }
 
