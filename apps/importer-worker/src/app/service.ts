@@ -6,8 +6,8 @@ import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { Importer, CandlesChunk, TradesChunk, ImporterState } from "@cryptuoso/importer-state";
 import dayjs from "@cryptuoso/dayjs";
-import { ExchangeCandlesInTimeframes, chunkArray } from "@cryptuoso/helpers";
-import { ExchangeCandle, ExchangeTrade } from "@cryptuoso/market";
+import { chunkArray } from "@cryptuoso/helpers";
+import { ExchangeCandle, ExchangeTrade, ExchangeCandlesInTimeframes } from "@cryptuoso/market";
 import { BaseError } from "@cryptuoso/errors";
 import {
     ImporterWorkerFailed,

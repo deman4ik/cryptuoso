@@ -1,4 +1,5 @@
-import { Timeframe, ISO_DATE_REGEX, CANDLES_RECENT_AMOUNT, ValidTimeframe } from "@cryptuoso/helpers";
+import { ISO_DATE_REGEX, CANDLES_RECENT_AMOUNT } from "@cryptuoso/helpers";
+import { Timeframe, ValidTimeframe } from "@cryptuoso/market";
 import { ImportType } from "@cryptuoso/importer-state";
 
 export const enum InImporterRunnerEvents {

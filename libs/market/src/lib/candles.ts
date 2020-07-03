@@ -1,9 +1,7 @@
 import dayjs from "@cryptuoso/dayjs";
+import { createDatesList, createDatesListWithRange, arraysDiff, sortAsc, sortDesc } from "@cryptuoso/helpers";
 import { Timeframe, ValidTimeframe } from "./timeframe";
-import { createDatesList, createDatesListWithRange } from "./time";
-import { arraysDiff } from "./array";
-import { sortAsc, sortDesc } from "./sort";
-import { CandleType, ExchangeTrade, ExchangeCandle } from "@cryptuoso/market";
+import { CandleType, ExchangeTrade, ExchangeCandle } from "./market";
 
 export interface ExchangeCandlesInTimeframes {
     [key: string]: ExchangeCandle[];

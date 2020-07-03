@@ -4,9 +4,9 @@ import cron from "node-cron";
 import { v4 as uuid } from "uuid";
 import dayjs from "@cryptuoso/dayjs";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
-import { CandleType, Candle, ExchangePrice, ExchangeCandle } from "@cryptuoso/market";
+import { Timeframe, CandleType, ExchangePrice, ExchangeCandle } from "@cryptuoso/market";
 import { createFetchMethod } from "@cryptuoso/ccxt-public";
-import { Timeframe, uniqueElementsBy, round } from "@cryptuoso/helpers";
+import { uniqueElementsBy, round } from "@cryptuoso/helpers";
 import { InImporterRunnerEvents, ImporterRunnerStart } from "@cryptuoso/importer-events";
 
 // !FIXME: ccxt.pro typings
@@ -41,10 +41,10 @@ interface Trade {
 
 export class ExwatcherBaseService extends BaseService {
     exchange: string;
-    connector: any; //!FIXME
+    connector: any; //!FIXME ccxtpro.Exchange;
     publicConnector: PublicConnector;
     subscriptions: { [key: string]: Exwatcher } = {};
-    candlesCurrent: { [key: string]: { [key: string]: Candle } } = {};
+    candlesCurrent: { [key: string]: { [key: string]: ExchangeCandle } } = {};
     lastTick: { [key: string]: ExchangePrice } = {};
     cronCheck: cron.ScheduledTask = cron.schedule("*/30 * * * * *", this.check.bind(this), {
         scheduled: false
@@ -62,7 +62,7 @@ export class ExwatcherBaseService extends BaseService {
         return Object.values(this.subscriptions).filter(({ status }) => status === ExwatcherStatus.subscribed);
     }
 
-    async startedService() {
+    async onStartService() {
         if (this.exchange === "binance_futures") {
             this.connector = new ccxtpro.binance({
                 enableRateLimit: true,
@@ -106,7 +106,7 @@ export class ExwatcherBaseService extends BaseService {
         this.cronCheck.start();
     }
 
-    async stoppedService() {
+    async onStopService() {
         try {
             this.cronHandleChanges.stop();
             this.cronCheck.stop();
@@ -341,10 +341,9 @@ export class ExwatcherBaseService extends BaseService {
                 );
 
                 this.candlesCurrent[id][timeframe] = {
-                    ...candle,
-                    id: uuid()
+                    ...candle
                 };
-                await this.saveCurrentCandles([this.candlesCurrent[id][timeframe]]);
+                await this.saveCandles([this.candlesCurrent[id][timeframe]]);
             })
         );
     }
@@ -390,94 +389,114 @@ export class ExwatcherBaseService extends BaseService {
             const date = dayjs.utc().add(-1, "second").startOf("second");
             // Есть ли подходящие по времени таймфреймы
             const currentTimeframes = Timeframe.timeframesByDate(date.toISOString());
-            const closedCandles: { [key: string]: Candle[] } = {};
+            const closedCandles: { [key: string]: ExchangeCandle[] } = {};
 
             await Promise.all(
                 this.activeSubscriptions.map(async ({ id, asset, currency }: Exwatcher) => {
-                    const symbol = this.getSymbol(asset, currency);
-                    const currentCandles: Candle[] = [];
-                    await Promise.all(
-                        Timeframe.validArray.map(async (timeframe) => {
-                            try {
-                                await this.connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
-                            } catch (e) {
-                                this.log.warn(symbol, timeframe, e);
-                            }
+                    try {
+                        const symbol = this.getSymbol(asset, currency);
+                        const currentCandles: ExchangeCandle[] = [];
+                        await Promise.all(
+                            Timeframe.validArray.map(async (timeframe) => {
+                                try {
+                                    try {
+                                        await this.connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
+                                    } catch (e) {
+                                        this.log.warn(symbol, timeframe, e);
+                                    }
 
-                            if (this.candlesCurrent[id][timeframe]) {
-                                const candle: [number, number, number, number, number, number] = this.connector.ohlcvs[
-                                    symbol
-                                ][Timeframe.get(timeframe).str].find(
-                                    (c: any) => c[0] === this.candlesCurrent[id][timeframe].time
-                                );
+                                    if (this.candlesCurrent[id][timeframe]) {
+                                        const candleTime = dayjs
+                                            .utc(Timeframe.validTimeframeDatePrev(date.toISOString(), timeframe))
+                                            .valueOf();
 
-                                if (candle && this.candlesCurrent[id][timeframe].time === candle[0]) {
-                                    this.candlesCurrent[id][timeframe].open = candle[1];
-                                    this.candlesCurrent[id][timeframe].high = candle[2];
-                                    this.candlesCurrent[id][timeframe].low = candle[3];
-                                    this.candlesCurrent[id][timeframe].close = candle[4];
-                                    this.candlesCurrent[id][timeframe].volume = candle[5];
-                                    this.candlesCurrent[id][timeframe].type =
-                                        this.candlesCurrent[id][timeframe].volume === 0
-                                            ? CandleType.previous
-                                            : CandleType.loaded;
-                                } else {
-                                    this.log.warn("Wrong candle!", this.candlesCurrent[id][timeframe], candle);
+                                        const candle: [
+                                            number,
+                                            number,
+                                            number,
+                                            number,
+                                            number,
+                                            number
+                                        ] = this.connector.ohlcvs[symbol][Timeframe.get(timeframe).str].find(
+                                            (c: any) => c[0] === candleTime
+                                        );
+                                        if (!candle) {
+                                            this.log.warn("No candle data", this.candlesCurrent[id][timeframe], candle);
+                                            return;
+                                        }
+
+                                        if (this.candlesCurrent[id][timeframe].time === candleTime) {
+                                            this.candlesCurrent[id][timeframe].open = candle[1];
+                                            this.candlesCurrent[id][timeframe].high = candle[2];
+                                            this.candlesCurrent[id][timeframe].low = candle[3];
+                                            this.candlesCurrent[id][timeframe].close = candle[4];
+                                            this.candlesCurrent[id][timeframe].volume = candle[5];
+                                            this.candlesCurrent[id][timeframe].type =
+                                                this.candlesCurrent[id][timeframe].volume === 0
+                                                    ? CandleType.previous
+                                                    : CandleType.loaded;
+                                        } else {
+                                            closedCandles[timeframe].push({
+                                                ...this.candlesCurrent[id][timeframe]
+                                            });
+                                            this.candlesCurrent[id][timeframe].time = candle[0];
+                                            this.candlesCurrent[id][timeframe].timestamp = dayjs
+                                                .utc(candle[0])
+                                                .toISOString();
+                                            this.candlesCurrent[id][timeframe].open = candle[1];
+                                            this.candlesCurrent[id][timeframe].high = candle[2];
+                                            this.candlesCurrent[id][timeframe].low = candle[3];
+                                            this.candlesCurrent[id][timeframe].close = candle[4];
+                                            this.candlesCurrent[id][timeframe].volume = candle[5];
+                                            this.candlesCurrent[id][timeframe].type =
+                                                this.candlesCurrent[id][timeframe].volume === 0
+                                                    ? CandleType.previous
+                                                    : CandleType.loaded;
+                                        }
+                                    } else {
+                                        const candles: [
+                                            number,
+                                            number,
+                                            number,
+                                            number,
+                                            number,
+                                            number
+                                        ][] = this.connector.ohlcvs[symbol][Timeframe.get(timeframe).str].filter(
+                                            (c: any) => c[0] < date.valueOf()
+                                        );
+                                        const candle = candles[candles.length - 1];
+                                        this.candlesCurrent[id][timeframe] = {
+                                            exchange: this.exchange,
+                                            asset,
+                                            currency,
+                                            timeframe,
+                                            time: candle[0],
+                                            timestamp: dayjs.utc(candle[0]).toISOString(),
+                                            open: candle[1],
+                                            high: candle[2],
+                                            low: candle[3],
+                                            close: candle[4],
+                                            volume: candle[5],
+                                            type: candle[5] === 0 ? CandleType.previous : CandleType.loaded
+                                        };
+                                    }
+                                    currentCandles.push(this.candlesCurrent[id][timeframe]);
+                                } catch (error) {
+                                    this.log.error(error);
                                 }
-                            } else {
-                                const candles: [
-                                    number,
-                                    number,
-                                    number,
-                                    number,
-                                    number,
-                                    number
-                                ][] = this.connector.ohlcvs[symbol][Timeframe.get(timeframe).str].filter(
-                                    (c: any) => c[0] < date.valueOf()
-                                );
-                                const candle = candles[candles.length - 1];
-                                this.candlesCurrent[id][timeframe] = {
-                                    id: uuid(),
-                                    exchange: this.exchange,
-                                    asset,
-                                    currency,
-                                    timeframe,
-                                    time: candle[0],
-                                    timestamp: dayjs.utc(candle[0]).toISOString(),
-                                    open: candle[1],
-                                    high: candle[2],
-                                    low: candle[3],
-                                    close: candle[4],
-                                    volume: candle[5],
-                                    type: candle[5] === 0 ? CandleType.previous : CandleType.loaded
-                                };
-                            }
-                            currentCandles.push(this.candlesCurrent[id][timeframe]);
-                        })
-                    );
+                            })
+                        );
 
-                    if (currentCandles.length > 0) {
-                        await this.saveCurrentCandles(currentCandles);
-                    }
+                        if (currentCandles.length > 0) {
+                            await this.saveCandles(currentCandles);
+                        }
 
-                    let tick: ExchangePrice;
-                    if (
-                        this.candlesCurrent[id][1440] &&
-                        this.lastTick[id] &&
-                        this.candlesCurrent[id][1440].close !== this.lastTick[id].price
-                    ) {
-                        const { time, timestamp, close } = this.candlesCurrent[id][1440];
-                        tick = {
-                            exchange: this.exchange,
-                            asset,
-                            currency,
-                            time,
-                            timestamp,
-                            price: close
-                        };
-                        this.lastTick[id] = tick;
-                    } else {
-                        if (this.candlesCurrent[id][1440]) {
+                        let tick: ExchangePrice;
+                        if (
+                            this.candlesCurrent[id][1440] &&
+                            this.lastTick[id] &&
+                            this.candlesCurrent[id][1440].close !== this.lastTick[id].price
+                        ) {
                             const { time, timestamp, close } = this.candlesCurrent[id][1440];
                             tick = {
                                 exchange: this.exchange,
@@ -488,11 +507,26 @@ export class ExwatcherBaseService extends BaseService {
                                 price: close
                             };
                             this.lastTick[id] = tick;
+                        } else {
+                            if (this.candlesCurrent[id][1440]) {
+                                const { time, timestamp, close } = this.candlesCurrent[id][1440];
+                                tick = {
+                                    exchange: this.exchange,
+                                    asset,
+                                    currency,
+                                    time,
+                                    timestamp,
+                                    price: close
+                                };
+                                this.lastTick[id] = tick;
+                            }
                         }
-                    }
 
-                    if (tick) {
-                        await this.publishTick(tick);
+                        if (tick) {
+                            await this.publishTick(tick);
+                        }
+                    } catch (err) {
+                        this.log.error(err);
                     }
                 })
             );
@@ -551,7 +585,7 @@ export class ExwatcherBaseService extends BaseService {
                                     ({ exchange, asset, currency }) => `${exchange}.${asset}.${currency}.${timeframe}`
                                 )} candles`
                             );
-                            await this.saveCurrentCandles(candles);
+                            await this.saveCandles(candles);
                         }
                     })
                 );
@@ -570,7 +604,7 @@ export class ExwatcherBaseService extends BaseService {
 
             // Есть ли подходящие по времени таймфреймы
             const currentTimeframes = Timeframe.timeframesByDate(date.toISOString());
-            const closedCandles: { [key: string]: Candle[] } = {};
+            const closedCandles: { [key: string]: ExchangeCandle[] } = {};
 
             await Promise.all(
                 this.activeSubscriptions.map(async ({ id, asset, currency }: Exwatcher) => {
@@ -618,9 +652,25 @@ export class ExwatcherBaseService extends BaseService {
                                 };
                                 this.lastTick[id] = tick;
                             }
-                            const currentCandles: Candle[] = [];
+                            const currentCandles: ExchangeCandle[] = [];
                             Timeframe.validArray.forEach(async (timeframe) => {
                                 if (trades.length > 0) {
+                                    const candleTime = dayjs
+                                        .utc(Timeframe.validTimeframeDatePrev(date.toISOString(), timeframe))
+                                        .valueOf();
+                                    if (this.candlesCurrent[id][timeframe].time !== candleTime) {
+                                        currentCandles.push(this.candlesCurrent[id][timeframe]);
+                                        const { close } = this.candlesCurrent[id][timeframe];
+                                        this.candlesCurrent[id][timeframe].time = candleTime;
+                                        this.candlesCurrent[id][timeframe].timestamp = dayjs
+                                            .utc(candleTime)
+                                            .toISOString();
+                                        this.candlesCurrent[id][timeframe].high = close;
+                                        this.candlesCurrent[id][timeframe].low = close;
+                                        this.candlesCurrent[id][timeframe].open = close;
+                                        this.candlesCurrent[id][timeframe].volume = 0;
+                                        this.candlesCurrent[id][timeframe].type = CandleType.previous;
+                                    }
                                     const prices = trades.map((t) => +t.price);
                                     if (this.candlesCurrent[id][timeframe].volume === 0)
                                         this.candlesCurrent[id][timeframe].open = round(+trades[0].price, 2);
@@ -651,7 +701,7 @@ export class ExwatcherBaseService extends BaseService {
                             });
 
                             if (currentCandles.length > 0) {
-                                await this.saveCurrentCandles(currentCandles);
+                                await this.saveCandles(currentCandles);
                             }
 
                             if (tick) {
@@ -698,7 +748,7 @@ export class ExwatcherBaseService extends BaseService {
                                     ({ exchange, asset, currency }) => `${exchange}.${asset}.${currency}.${timeframe}`
                                 )} candles`
                             );
-                            await this.saveCurrentCandles(candles);
+                            await this.saveCandles(candles);
                         }
                     })
                 );
@@ -710,7 +760,7 @@ export class ExwatcherBaseService extends BaseService {
         }
     }
 
-    async saveCurrentCandles(candles: Candle[]): Promise<void> {
+    async saveCandles(candles: ExchangeCandle[]): Promise<void> {
         try {
             for (const candle of candles) {
                 try {

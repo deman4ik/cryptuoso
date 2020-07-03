@@ -1,4 +1,4 @@
-import { ValidTimeframe } from "@cryptuoso/helpers";
+import { ValidTimeframe } from "./timeframe";
 
 export const enum CandleType {
     loaded = "loaded",

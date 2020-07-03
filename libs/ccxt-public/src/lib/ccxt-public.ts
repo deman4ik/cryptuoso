@@ -2,16 +2,19 @@ import ccxt, { Exchange } from "ccxt";
 import retry from "async-retry";
 import dayjs from "@cryptuoso/dayjs";
 import logger, { Logger } from "@cryptuoso/logger";
+import { round } from "@cryptuoso/helpers";
 import {
+    ExchangePrice,
+    ExchangeCandle,
+    CandleType,
+    ExchangeTrade,
     Timeframe,
+    ValidTimeframe,
     getCurrentCandleParams,
     getCandlesParams,
     handleCandleGaps,
-    batchCandles,
-    round,
-    ValidTimeframe
-} from "@cryptuoso/helpers";
-import { ExchangePrice, ExchangeCandle, CandleType, ExchangeTrade } from "@cryptuoso/market";
+    batchCandles
+} from "@cryptuoso/market";
 import { createFetchMethod } from "./fetch";
 
 interface MinMax {
