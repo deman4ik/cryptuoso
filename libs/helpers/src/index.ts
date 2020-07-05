@@ -8,3 +8,4 @@ export * from "./lib/sort";
 export * from "./lib/text";
 export * from "./lib/time";
 export * from "./lib/timeframe";
+export * from "./lib/formatHTML";

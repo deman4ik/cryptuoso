@@ -1,4 +1,3 @@
-import { extend } from "dayjs";
 /*Типы нотификаций*/
 // TODO: Расшарить между сервисами константу с типами нотификейшен
 export const enum NOTIFICATIONS_TYPES {
@@ -18,6 +17,11 @@ export const enum NOTIFICATIONS_TYPES {
 
 export const enum MailPublisherEvents {
     SEND_WELCOME = "mail-publisher.send-welcome",
+    SEND_CHANGE_EMAIL = "mail-publisher.send-change-email",
+    SEND_CHANGE_EMAIL_CONFIRM = "mail-publisher.send-change-email-confirm",
+    SEND_PASSWORD_RESET = "mail-publisher.send-password-rest",
+    SEND_PASSWORD_RESET_CONFIRMATION = "mail-publisher.send-password-reset-confirm",
+    SEND_PASSWORD_CHANGE_CONFIRMATION = "mail-publisher.send-password-change-confirm",
     SEND_SIGNAL_ALERT = `mail-publisher.send-signal-alert`,
     SEND_SIGNAL_TRADE = `mail-publisher.send-signal-trade`,
     SEND_USER_EX_ACC_ERROR = `mail-publisher.send-user-ex-acc-err`,
@@ -119,11 +123,32 @@ const supportReplyData = {
 };
 
 export const MailPublisherSchema = {
+    /*Mails*/
     [MailPublisherEvents.SEND_WELCOME]: {
         email: "string",
         secretCode: "string",
         urlData: "string"
     },
+    [MailPublisherEvents.SEND_CHANGE_EMAIL]: {
+        email: "string",
+        secretCode: "string"
+    },
+    [MailPublisherEvents.SEND_CHANGE_EMAIL_CONFIRM]: {
+        email: "string",
+        emailNew: "string"
+    },
+    [MailPublisherEvents.SEND_PASSWORD_RESET]: {
+        email: "string",
+        secretCode: "string",
+        urlData: "string"
+    },
+    [MailPublisherEvents.SEND_PASSWORD_CHANGE_CONFIRMATION]: {
+        email: "string"
+    },
+    [MailPublisherEvents.SEND_PASSWORD_RESET_CONFIRMATION]: {
+        email: "string"
+    },
+    /*Notifications*/
     [MailPublisherEvents.SEND_SIGNAL_ALERT]: {
         ...BASE_NOTIFY_DATA,
         notifications: {
@@ -224,6 +249,30 @@ export interface SendWelcome {
     email: string;
     secretCode: string;
     urlData: string;
+}
+
+export interface SendChangeEmail {
+    email: string;
+    secretCode: string;
+}
+
+export interface SendChangeEmailConfirm {
+    email: string;
+    emailNew: string;
+}
+
+export interface SendPasswordReset {
+    email: string;
+    secretCode: string;
+    urlData: string;
+}
+
+export interface SendPasswordChangeConfirm {
+    email: string;
+}
+
+export interface SendPasswordResetConfirm {
+    email: string;
 }
 
 /*notifications*/

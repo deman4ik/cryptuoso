@@ -1,43 +1,24 @@
 import MailPublisherService from "./app/service";
 import log from "@cryptuoso/logger";
+import { MAIL_SUBJECTS } from "./app/constants";
 //for test
 import { MailPublisherEvents, NOTIFICATIONS_TYPES } from "@cryptuoso/mail-publisher-events";
 
+/*work with service*/
 const { MAIL_API_KEY: apiKey, MAIL_DOMAIN: domain, MAIL_HOST: host } = process.env;
-
 const service = new MailPublisherService({ apiKey, domain, host });
 
 // for test mails
 const data = {
-    to: "modecry@yandex.ru",
-    subject: "NEWS!!!",
-    tags: ["news"],
-    notifications: [
-        {
-            message: "66666",
-            bodyType: "default"
-        },
-        {
-            code: "66666",
-            bodyType: NOTIFICATIONS_TYPES.SIGNAL_TRADE
-        },
-        {
-            code: "66666",
-            bodyType: NOTIFICATIONS_TYPES.SIGNAL_TRADE
-        },
-        {
-            code: "66666",
-            bodyType: NOTIFICATIONS_TYPES.SIGNAL_TRADE
-        }
-    ]
+    email: "modecry@yandex.ru"
 };
 
-const event = MailPublisherEvents.SEND_NOTIFICATIONS_AGGREGATE;
+const event = MailPublisherEvents.SEND_PASSWORD_RESET_CONFIRMATION;
 
 async function start() {
     try {
         await service.startService();
-        service.testSendNotificationsMail(data, event); // TEST EVENTS
+        service.testEvent(data, event); // TEST EVENTS
     } catch (error) {
         log.error(error, `Failed to start service ${process.env.SERVICE}`);
         process.exit(1);
