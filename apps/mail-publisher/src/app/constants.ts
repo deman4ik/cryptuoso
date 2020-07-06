@@ -11,5 +11,6 @@ export const MAIL_SUBJECTS = {
     USER_EX_ACC_ERROR: "❌ Error with your API Key",
     ROBOT_CHANGE_STATUS: (status: string): string => `🤖 Robot <b> is ${status}!`,
     ROBOT_FAILED: "❌ Error occurred while processing robot job",
-    ROBOT_ORDER_ERROR: "❌ Error occurred while processing order"
+    ROBOT_ORDER_ERROR: "❌ Error occurred while processing order",
+    NOTIFICATIONS_AGGREGATE: "🔔 Your notifications"
 };

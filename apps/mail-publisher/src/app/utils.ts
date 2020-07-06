@@ -111,22 +111,43 @@ const mailBuild = (type: string, data: any, templateType?: string): SendProps =>
 const defaultBody = ({ message }: any) => `<div class="mail_item_container">${formatHTML(message)}</div>`;
 
 const signalAlert = ({ code }: signalAlertDataType) =>
-    `<div class="mail_item_container"> <h3>🚨 New Signal! 🤖 Robot:#${code}</h3></div>`;
+    `<div class="mail_item_container"> 🚨 New Signal! 🤖 Robot:#${code}</div>`;
 
 const signalTrade = ({ code }: signalAlertDataType) =>
-    `<div class="mail_item_container"> <h3>🚨✅ New Signal Trade! 🤖 Robot:#${code}</h3></div>`;
+    `<div class="mail_item_container"> 🚨✅ New Signal Trade! 🤖 Robot:#${code}</div>`;
 
 const userExAccErr = ({ name, error }: userExAccErrDataType) =>
-    `<div class="mail_item_container"> ❌ Your API Key 🔐 ${name} is invalid! <br>${error} <br> Please update your API Key information in settings.</h3></div>`;
+    `<div class="mail_item_container">
+      <div class="mail_item_text">❌ Your API Key 🔐 <b>#${name}</b> is invalid!</div>
+      <div class="error mail_item_text">${error}</div> 
+      Please update your API Key information in settings
+    </div>`;
 
 const userRobotStatuses = ({ status, code, message }: userRobotStatusDataType) =>
-    `<div class="mail_item_container">🤖 Robot <b>#${code}</b> is ${status} now! <br>${message}</div>`;
+    `<div class="mail_item_container"> 
+        <div class="mail_item_text">🤖 Robot <b>#${code}</b> is ${status} now! </div>
+         <div class="mail_item_text">${message}</div>
+     </div>`;
 
 const userRobotFailed = ({ jobType, id, error, code }: userRobotFailedDataType) =>
-    `<div class="mail_item_container">❌ Error occurred while processing robot job <b>${jobType}</b>.<br>${error} 🤖 <b>#${code}</b> (${id})<br>Please contact support.</div>`;
+    `<div class="mail_item_container">
+        <div class="mail_item_text">
+            ❌ Error occurred while processing robot job
+            <b>${jobType}</b>.
+        </div>
+        <div class="mail_item_text error">${error}</div> 
+        <div class="mail_item_text">🤖<b>#${code}</b> (${id})<br>Please contact support.</div>
+     </div>`;
 
 const orderError = ({ exId, error, code, id }: orderErrorDataType) =>
-    `<div class="mail_item_container">❌ Error occurred while processing order <b>${exId}</b>.${error} <br> 🤖 <b>#${code}</b> (${id}) <br> Please check your API Keys and Robot settings or contact support.`;
+    `<div class="mail_item_container">
+        <div class="mail_item_text">
+          ❌ Error occurred while processing order
+          <b>${exId}</b>.
+        </div>
+        <div class="mail_item_text error">${error}</div>
+        <div class="mail_item_text">🤖<b>#${code}</b> (${id})<br>Please check your API Keys and Robot settings or contact support.</div>
+     </div>`;
 
 const BODY_TYPES: { [key: string]: (data: any) => any } = {
     default: defaultBody,
