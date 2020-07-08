@@ -142,13 +142,13 @@ class MailPublisherService extends BaseService {
         }
     };
 
-    public testEvent = async (data: any, event: any) => {
-        try {
-            await this.events.emit(event, data);
-        } catch (e) {
-            console.error(e);
-        }
-    };
+    // public testEvent = async (data: any, event: any) => {
+    //     try {
+    //         await this.events.emit(event, data);
+    //     } catch (e) {
+    //         console.error(e);
+    //     }
+    // };
 }
 
 export default MailPublisherService;
