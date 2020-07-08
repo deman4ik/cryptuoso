@@ -66,7 +66,7 @@ export class ExwatcherBaseService extends BaseService {
     });
     cronHandleChanges: cron.ScheduledTask;
     lastDate: number;
-    locked = false;
+
     constructor(config?: ExwatcherBaseServiceConfig) {
         super(config);
         this.exchange = config.exchange;
@@ -193,9 +193,34 @@ export class ExwatcherBaseService extends BaseService {
                         this.addSubscription({ exchange: this.exchange, asset, currency })
                     )
                 );
+
+            await this.watch();
         } catch (e) {
             this.log.error(e);
         }
+    }
+
+    async watch(): Promise<void> {
+        this.activeSubscriptions.map(async ({ asset, currency }: Exwatcher) => {
+            const symbol = this.getSymbol(asset, currency);
+            if (this.exchange === "binance_futures") {
+                await Promise.all(
+                    Timeframe.validArray.map(async (timeframe) => {
+                        try {
+                            await this.connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
+                        } catch (e) {
+                            this.log.warn(symbol, timeframe, e);
+                        }
+                    })
+                );
+            } else {
+                try {
+                    await this.connector.watchTrades(symbol);
+                } catch (e) {
+                    this.log.warn(symbol, e);
+                }
+            }
+        });
     }
 
     async resubscribe() {
@@ -445,12 +470,6 @@ export class ExwatcherBaseService extends BaseService {
                         await Promise.all(
                             Timeframe.validArray.map(async (timeframe) => {
                                 try {
-                                    try {
-                                        await this.connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
-                                    } catch (e) {
-                                        this.log.warn(symbol, timeframe, e);
-                                    }
-
                                     if (this.candlesCurrent[id][timeframe]) {
                                         const candleTime = dayjs
                                             .utc(Timeframe.validTimeframeDatePrev(date.toISOString(), timeframe))
@@ -647,10 +666,7 @@ export class ExwatcherBaseService extends BaseService {
         try {
             // Текущие дата и время - минус одна секунда
             const date = dayjs.utc().add(-1, "second").startOf("second");
-            this.log.debug(date.toISOString());
-            if (this.locked) return;
-            this.locked = true;
-            this.log.debug(date.toISOString(), "start");
+
             // Есть ли подходящие по времени таймфреймы
             const currentTimeframes = Timeframe.timeframesByDate(date.toISOString());
             const closedCandles: { [key: string]: ExchangeCandle[] } = {};
@@ -658,11 +674,7 @@ export class ExwatcherBaseService extends BaseService {
             await Promise.all(
                 this.activeSubscriptions.map(async ({ id, asset, currency }: Exwatcher) => {
                     const symbol = this.getSymbol(asset, currency);
-                    try {
-                        await this.connector.watchTrades(symbol);
-                    } catch (e) {
-                        this.log.warn(symbol, e);
-                    }
+
                     if (this.connector.trades[symbol]) {
                         // Запрашиваем все прошедшие трейды
                         const trades: Trade[] = this.connector.trades[symbol].filter(
@@ -809,7 +821,6 @@ export class ExwatcherBaseService extends BaseService {
         } catch (e) {
             this.log.error(e);
         }
-        this.locked = false;
     }
 
     async saveCandles(candles: ExchangeCandle[]): Promise<void> {
