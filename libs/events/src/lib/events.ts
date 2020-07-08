@@ -229,10 +229,7 @@ export class Events {
                 await Promise.all(
                     Object.entries(events).map(async ([msgId, event]) => {
                         try {
-                            this.log.info(
-                                `Handling "${topic}" group "${group}" event #${msgId} (${event.id})...`,
-                                event
-                            );
+                            this.log.debug(`Handling "${topic}" group "${group}" event #${msgId} (${event.id})...`);
                             const handlers: EventHandler[] = this.#catalog.getGroupHandlers(topic, group, event.type);
                             for (const { handler, validate, passFullEvent } of handlers) {
                                 const validationErrors = await validate(event.format());
@@ -247,7 +244,7 @@ export class Events {
                             }
 
                             await this.#state[`${topic}-${group}`].grouped.redis.xack(topic, group, msgId);
-                            this.log.info(`Handled "${topic}" group "${group}" event #${msgId} (${event.id})`);
+                            this.log.debug(`Handled "${topic}" group "${group}" event #${msgId} (${event.id})`);
                         } catch (error) {
                             this.log.error(
                                 error,
@@ -320,9 +317,8 @@ export class Events {
                                 this._parseEvents(this._parseMessageResponse(result))
                             );
                             try {
-                                this.log.info(
-                                    `Handling pending "${topic}" group "${group}" event #${msgId} (${event.id})...`,
-                                    event
+                                this.log.debug(
+                                    `Handling pending "${topic}" group "${group}" event #${msgId} (${event.id})...`
                                 );
                                 const handlers: EventHandler[] = this.#catalog.getGroupHandlers(
                                     topic,
@@ -341,7 +337,7 @@ export class Events {
                                         );
                                 }
                                 await this.#redis.xack(topic, group, msgId);
-                                this.log.info(
+                                this.log.debug(
                                     `Handled pending "${topic}" group "${group}" event #${msgId} (${event.id})`
                                 );
                             } catch (error) {
@@ -410,7 +406,7 @@ export class Events {
                 JSON.stringify(event.format())
             ];
             await this.#redis.xadd(topic, "*", ...args);
-            this.log.info(`Emited Event ${type}`, data);
+            this.log.debug(`Emited Event ${type}`);
         } catch (error) {
             this.log.error("Failed to emit event", error, { type, data, subject });
         }

@@ -86,7 +86,7 @@ export const ImporterWorkerSchema = {
         exchange: "string",
         asset: "string",
         currency: "string",
-        error: "string"
+        error: { type: "string", optional: true }
     }
 };
 
@@ -124,5 +124,5 @@ export interface ImporterWorkerFailed {
     asset: string;
     currency: string;
     type: ImportType;
-    error: string;
+    error?: string;
 }

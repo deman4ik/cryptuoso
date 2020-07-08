@@ -2,12 +2,27 @@ import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import ccxtpro from "ccxt.pro";
 import cron from "node-cron";
 import { v4 as uuid } from "uuid";
+import retry from "async-retry";
 import dayjs from "@cryptuoso/dayjs";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { Timeframe, CandleType, ExchangePrice, ExchangeCandle } from "@cryptuoso/market";
 import { createFetchMethod } from "@cryptuoso/ccxt-public";
-import { uniqueElementsBy, round } from "@cryptuoso/helpers";
-import { ImporterRunnerEvents, ImporterRunnerStart } from "@cryptuoso/importer-events";
+import { uniqueElementsBy, round, sleep } from "@cryptuoso/helpers";
+import {
+    ImporterRunnerEvents,
+    ImporterRunnerStart,
+    ImporterWorkerSchema,
+    ImporterWorkerEvents,
+    ImporterWorkerFinished,
+    ImporterWorkerFailed
+} from "@cryptuoso/importer-events";
+import {
+    ExwatcherWorkerEvents,
+    ExwatcherSchema,
+    ExwatcherSubscribe,
+    ExwatcherSubscribeAll,
+    ExwatcherUnsubscribeAll
+} from "@cryptuoso/exwatcher-events";
 
 // !FIXME: ccxt.pro typings
 
@@ -51,11 +66,37 @@ export class ExwatcherBaseService extends BaseService {
     });
     cronHandleChanges: cron.ScheduledTask;
     lastDate: number;
-
+    locked = false;
     constructor(config?: ExwatcherBaseServiceConfig) {
         super(config);
         this.exchange = config.exchange;
         this.publicConnector = new PublicConnector();
+        this.events.subscribe({
+            [ExwatcherWorkerEvents.SUBSCRIBE]: {
+                schema: ExwatcherSchema[ExwatcherWorkerEvents.SUBSCRIBE],
+                handler: this.addSubscription.bind(this)
+            },
+            [ExwatcherWorkerEvents.SUBSCRIBE_ALL]: {
+                schema: ExwatcherSchema[ExwatcherWorkerEvents.SUBSCRIBE_ALL],
+                handler: this.subscribeAll.bind(this)
+            },
+            [ExwatcherWorkerEvents.UNSUBSCRIBE_ALL]: {
+                schema: ExwatcherSchema[ExwatcherWorkerEvents.UNSUBSCRIBE_ALL],
+                handler: this.unsubscribeAll.bind(this)
+            },
+            [ImporterWorkerEvents.FAILED]: {
+                schema: ImporterWorkerSchema[ImporterWorkerEvents.FAILED],
+                handler: this.handleImporterFailedEvent.bind(this),
+                unbalanced: true
+            },
+            [ImporterWorkerEvents.FINISHED]: {
+                schema: ImporterWorkerSchema[ImporterWorkerEvents.FINISHED],
+                handler: this.handleImporterFinishedEvent.bind(this),
+                unbalanced: true
+            }
+        });
+        this.addOnStartHandler(this.onStartService);
+        this.addOnStopHandler(this.onStopService);
     }
 
     get activeSubscriptions() {
@@ -110,16 +151,17 @@ export class ExwatcherBaseService extends BaseService {
         try {
             this.cronHandleChanges.stop();
             this.cronCheck.stop();
-            await this.unsubscribeAll();
+            await this.unsubscribeAll({ exchange: this.exchange });
+            await sleep(5000);
             await this.connector.close();
         } catch (e) {
             this.log.error(e);
         }
     }
 
-    async handleImporterFinishedEvent(event: { id: string }) {
-        const { id: importerId } = event;
-
+    async handleImporterFinishedEvent(event: ImporterWorkerFinished) {
+        const { id: importerId, type, exchange } = event;
+        if (exchange !== this.exchange && type !== "recent") return;
         const subscription = Object.values(this.subscriptions).find((sub: Exwatcher) => sub.importerId === importerId);
         if (subscription) {
             this.log.info(`Importer ${importerId} finished!`);
@@ -127,8 +169,9 @@ export class ExwatcherBaseService extends BaseService {
         }
     }
 
-    async handleImporterFailedEvent(event: { id: string; error: any }) {
-        const { id: importerId, error } = event;
+    async handleImporterFailedEvent(event: ImporterWorkerFailed) {
+        const { id: importerId, type, exchange, error } = event;
+        if (exchange !== this.exchange && type !== "recent") return;
         const subscription = Object.values(this.subscriptions).find((sub: Exwatcher) => sub.importerId === importerId);
 
         if (subscription && subscription.id) {
@@ -147,7 +190,7 @@ export class ExwatcherBaseService extends BaseService {
             if (pendingSubscriptions.length > 0)
                 await Promise.all(
                     pendingSubscriptions.map(async ({ asset, currency }: Exwatcher) =>
-                        this.addSubscription(asset, currency)
+                        this.addSubscription({ exchange: this.exchange, asset, currency })
                     )
                 );
         } catch (e) {
@@ -159,7 +202,6 @@ export class ExwatcherBaseService extends BaseService {
         try {
             const subscriptions: Exwatcher[] = await this
                 .sql`select * from exwatchers where exchange = ${this.exchange}`;
-
             if (subscriptions && Array.isArray(subscriptions) && subscriptions.length > 0) {
                 await Promise.all(
                     subscriptions.map(async ({ id, asset, currency }: Exwatcher) => {
@@ -169,7 +211,7 @@ export class ExwatcherBaseService extends BaseService {
                                 (this.subscriptions[id].status !== ExwatcherStatus.subscribed ||
                                     this.subscriptions[id].status !== ExwatcherStatus.importing))
                         ) {
-                            await this.addSubscription(asset, currency);
+                            await this.addSubscription({ exchange: this.exchange, asset, currency });
                         }
                     })
                 );
@@ -179,27 +221,42 @@ export class ExwatcherBaseService extends BaseService {
         }
     }
 
-    async unsubscribeAll() {
+    async subscribeAll({ exchange }: ExwatcherSubscribeAll) {
         try {
+            if (exchange !== this.exchange) return;
+            const markets: { asset: string; currency: string }[] = await this.sql`
+            SELECT asset, currency 
+            FROM markets
+            WHERE exchange = ${this.exchange} AND available > 0;
+            `;
+
+            for (const { asset, currency } of markets) {
+                await this.addSubscription({ exchange: this.exchange, asset, currency });
+            }
+        } catch (e) {
+            this.log.error(e);
+            throw e;
+        }
+    }
+
+    async unsubscribeAll({ exchange }: ExwatcherUnsubscribeAll) {
+        try {
+            if (exchange !== this.exchange) return;
             await Promise.all(
                 Object.keys(this.subscriptions).map(async (id) => {
                     this.subscriptions[id].status = ExwatcherStatus.unsubscribed;
                     await this.saveSubscription(this.subscriptions[id]);
                 })
             );
-            return { success: true };
         } catch (e) {
             this.log.error(e);
-            return { success: false, error: e.message };
+            throw e;
         }
     }
 
-    async addSubscription(
-        asset: string,
-        currency: string
-    ): Promise<{ success: boolean; subscription?: Exwatcher; error?: any }> {
+    async addSubscription({ exchange, asset, currency }: ExwatcherSubscribe): Promise<void> {
+        if (exchange !== this.exchange) return;
         const id = `${this.exchange}.${asset}.${currency}`;
-        this.log.info(`Adding ${id} subscription...`);
         try {
             if (
                 !this.subscriptions[id] ||
@@ -207,6 +264,7 @@ export class ExwatcherBaseService extends BaseService {
                     this.subscriptions[id].status
                 )
             ) {
+                this.log.info(`Adding ${id} subscription...`);
                 this.subscriptions[id] = {
                     id,
                     exchange: this.exchange,
@@ -224,34 +282,13 @@ export class ExwatcherBaseService extends BaseService {
                     await this.saveSubscription(this.subscriptions[id]);
                 }
             }
-            return {
-                success: true
-            };
         } catch (e) {
             this.log.error(e);
-            return {
-                success: false,
-                error: e
-            };
+            throw e;
         }
     }
 
-    async addSubscriptions(pairs: { asset: string; currency: string }[]) {
-        for (const { asset, currency } of pairs) {
-            await this.addSubscription(asset, currency);
-        }
-    }
-
-    async removeSubscription(
-        asset: string,
-        currency: string
-    ): Promise<{
-        success: boolean;
-        exchange: string;
-        asset: string;
-        currency: string;
-        error?: any;
-    }> {
+    async removeSubscription(asset: string, currency: string): Promise<void> {
         const id = `${this.exchange}.${asset}.${currency}`;
         try {
             if (this.subscriptions[id]) {
@@ -260,44 +297,36 @@ export class ExwatcherBaseService extends BaseService {
                 delete this.subscriptions[id];
                 if (this.candlesCurrent[id]) delete this.candlesCurrent[id];
             }
-            return {
-                success: true,
-                exchange: this.exchange,
-                asset,
-                currency
-            };
         } catch (e) {
             this.log.error(e);
-            return {
-                success: false,
-                error: e.message,
-                exchange: this.exchange,
-                asset,
-                currency
-            };
+            throw e;
         }
     }
 
     async subscribe(subscription: Exwatcher) {
-        if (subscription) {
-            const { id, status } = subscription;
-            if (status !== ExwatcherStatus.subscribed) {
-                try {
-                    this.candlesCurrent[id] = {};
-                    await this.subscribeCCXT(id);
+        try {
+            if (subscription) {
+                const { id, status } = subscription;
+                if (status !== ExwatcherStatus.subscribed) {
+                    try {
+                        this.candlesCurrent[id] = {};
+                        await this.subscribeCCXT(id);
 
-                    this.subscriptions[id].status = ExwatcherStatus.subscribed;
-                    this.subscriptions[id].error = null;
-                    this.log.info(`Subscribed ${id}`);
+                        this.subscriptions[id].status = ExwatcherStatus.subscribed;
+                        this.subscriptions[id].error = null;
+                        this.log.info(`Subscribed ${id}`);
 
-                    await this.saveSubscription(this.subscriptions[id]);
-                } catch (e) {
-                    this.log.error(e);
-                    this.subscriptions[id].status = ExwatcherStatus.failed;
-                    this.subscriptions[id].error = e.message;
-                    await this.saveSubscription(this.subscriptions[id]);
+                        await this.saveSubscription(this.subscriptions[id]);
+                    } catch (e) {
+                        this.log.error(e);
+                        this.subscriptions[id].status = ExwatcherStatus.failed;
+                        this.subscriptions[id].error = e.message;
+                        await this.saveSubscription(this.subscriptions[id]);
+                    }
                 }
             }
+        } catch (err) {
+            this.log.error(`Failed to subscribe ${subscription.id}`, err);
         }
     }
 
@@ -306,16 +335,21 @@ export class ExwatcherBaseService extends BaseService {
     }
 
     async subscribeCCXT(id: string) {
-        const symbol = this.getSymbol(this.subscriptions[id].asset, this.subscriptions[id].currency);
-        if (this.exchange === "binance_futures") {
-            for (const timeframe of Timeframe.validArray) {
-                await this.connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
+        try {
+            const symbol = this.getSymbol(this.subscriptions[id].asset, this.subscriptions[id].currency);
+            if (this.exchange === "binance_futures") {
+                for (const timeframe of Timeframe.validArray) {
+                    await this.connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
+                }
+            } else if (this.exchange === "bitfinex" || this.exchange === "kraken") {
+                await this.connector.watchTrades(symbol);
+                await this.loadCurrentCandles(this.subscriptions[id]);
+            } else {
+                throw new Error("Exchange is not supported");
             }
-        } else if (this.exchange === "bitfinex" || this.exchange === "kraken") {
-            await this.connector.watchTrades(symbol);
-            await this.loadCurrentCandles(this.subscriptions[id]);
-        } else {
-            throw new Error("Exchange is not supported");
+        } catch (err) {
+            this.log.error(`CCXT Subscribe Error ${id}`, err);
+            throw err;
         }
     }
 
@@ -334,27 +368,33 @@ export class ExwatcherBaseService extends BaseService {
     }
 
     async loadCurrentCandles(subscription: Exwatcher): Promise<void> {
-        const { id, exchange, asset, currency } = subscription;
-        this.log.info(`Loading current candles ${id}`);
-        if (!this.candlesCurrent[id]) this.candlesCurrent[id] = {};
-        await Promise.all(
-            Timeframe.validArray.map(async (timeframe) => {
-                const candle: ExchangeCandle = await this.publicConnector.getCurrentCandle(
-                    exchange,
-                    asset,
-                    currency,
-                    timeframe
-                );
+        try {
+            const { id, exchange, asset, currency } = subscription;
+            this.log.info(`Loading current candles ${id}`);
+            if (!this.candlesCurrent[id]) this.candlesCurrent[id] = {};
+            await Promise.all(
+                Timeframe.validArray.map(async (timeframe) => {
+                    const candle: ExchangeCandle = await this.publicConnector.getCurrentCandle(
+                        exchange,
+                        asset,
+                        currency,
+                        timeframe
+                    );
 
-                this.candlesCurrent[id][timeframe] = {
-                    ...candle
-                };
-                await this.saveCandles([this.candlesCurrent[id][timeframe]]);
-            })
-        );
+                    this.candlesCurrent[id][timeframe] = {
+                        ...candle
+                    };
+                    await this.saveCandles([this.candlesCurrent[id][timeframe]]);
+                })
+            );
+        } catch (err) {
+            this.log.error(`Failed to load current candles ${subscription.id}`, err);
+            throw err;
+        }
     }
 
     async publishTick(tick: ExchangePrice): Promise<void> {
+        //  this.log.debug(tick);
         //TODO  await this.broker.emit(Event.TICK_NEW, tick);
     }
 
@@ -375,8 +415,8 @@ export class ExwatcherBaseService extends BaseService {
         ${asset},
         ${currency},
         ${status},
-        ${importerId},
-        ${error}
+        ${importerId || null},
+        ${error || null}
         )
         ON CONFLICT ON CONSTRAINT exwatchers_pkey 
         DO UPDATE SET updated_at = now(),
@@ -607,7 +647,10 @@ export class ExwatcherBaseService extends BaseService {
         try {
             // Текущие дата и время - минус одна секунда
             const date = dayjs.utc().add(-1, "second").startOf("second");
-
+            this.log.debug(date.toISOString());
+            if (this.locked) return;
+            this.locked = true;
+            this.log.debug(date.toISOString(), "start");
             // Есть ли подходящие по времени таймфреймы
             const currentTimeframes = Timeframe.timeframesByDate(date.toISOString());
             const closedCandles: { [key: string]: ExchangeCandle[] } = {};
@@ -626,6 +669,7 @@ export class ExwatcherBaseService extends BaseService {
                             ({ timestamp }: Trade) =>
                                 timestamp < date.valueOf() && (!this.lastDate || timestamp >= this.lastDate)
                         );
+
                         // Если были трейды
                         if (trades.length > 0) {
                             // Если было изменение цены
@@ -761,16 +805,20 @@ export class ExwatcherBaseService extends BaseService {
             }
 
             this.lastDate = date.valueOf();
+            this.log.debug(date.toISOString(), "end");
         } catch (e) {
             this.log.error(e);
         }
+        this.locked = false;
     }
 
     async saveCandles(candles: ExchangeCandle[]): Promise<void> {
         try {
             for (const candle of candles) {
                 try {
-                    await this.sql`
+                    const call = async (bail: (e: Error) => void) => {
+                        try {
+                            await this.sql`
                 insert into ${this.sql(`candles${candle.timeframe}`)} 
                 ${this.sql(
                     candle as any, //FIXME without cast
@@ -793,6 +841,21 @@ export class ExwatcherBaseService extends BaseService {
                 close = excluded.close,
                 volume = excluded.volume,
                 type = excluded.type;`;
+                        } catch (e) {
+                            if (e.message.includes("UNDEFINED_VALUE")) throw e;
+                            bail(e);
+                        }
+                    };
+                    await retry(call, {
+                        retries: 5,
+                        minTimeout: 500,
+                        maxTimeout: 30000,
+                        onRetry: (err: any, i: number) => {
+                            if (err) {
+                                this.log.warn(`Retry save candles ${i} - ${err.message}`);
+                            }
+                        }
+                    });
                 } catch (e) {
                     this.log.error(e);
                 }

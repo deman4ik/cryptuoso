@@ -20,22 +20,20 @@ export default class ImporterRunnerService extends HTTPService {
     constructor(config?: ImporterRunnerServiceConfig) {
         super(config);
         try {
-            this.createRoutes([
-                {
-                    name: "importerStart",
+            this.createRoutes({
+                importerStart: {
                     inputSchema: ImporterRunnerSchema[ImporterRunnerEvents.START],
                     auth: true,
-                    roles: ["admin"],
+                    roles: ["manager", "admin"],
                     handler: this.startHTTPHandler
                 },
-                {
-                    name: "importerStop",
+                importerStop: {
                     inputSchema: ImporterRunnerSchema[ImporterRunnerEvents.STOP],
                     auth: true,
-                    roles: ["admin"],
+                    roles: ["manager", "admin"],
                     handler: this.stopHTTPHandler
                 }
-            ]);
+            });
             this.events.subscribe({
                 [ImporterRunnerEvents.START]: {
                     handler: this.start.bind(this),
@@ -108,7 +106,7 @@ export default class ImporterRunnerService extends HTTPService {
                 jobId: importer.id,
                 removeOnComplete: true
             });
-            return { id: importer.id, status: importer.status };
+            return { result: importer.id };
         } catch (error) {
             this.log.error(error);
             throw error;
@@ -123,26 +121,23 @@ export default class ImporterRunnerService extends HTTPService {
         },
         res: any
     ) {
-        const result = await this.stop(req.body.input);
-        res.send(result);
+        await this.stop(req.body.input);
+        res.send({ result: "OK" });
         res.end();
     }
 
     async stop({ id }: ImporterRunnerStop) {
         try {
             const job = await this.queues.importCandles.getJob(id);
-            const result = { id, status: Status.canceled };
             if (job) {
                 if (job.isActive) {
                     await this.events.emit<ImporterWorkerPause>(ImporterWorkerEvents.PAUSE, {
                         id
                     });
-                    result.status = Status.stopping;
                 } else {
                     await job.remove();
                 }
             }
-            return result;
         } catch (error) {
             this.log.error(error);
             throw error;

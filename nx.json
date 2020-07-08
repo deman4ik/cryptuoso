@@ -72,6 +72,9 @@
         },
         "market": {
             "tags": []
+        },
+        "exwatcher-events": {
+            "tags": []
         }
     }
 }

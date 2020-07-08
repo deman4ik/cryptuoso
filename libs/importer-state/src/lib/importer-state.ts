@@ -361,6 +361,14 @@ export class Importer {
         return this._status === Status.finished;
     }
 
+    get error() {
+        return this._error;
+    }
+
+    set error(message: string) {
+        this._error = message;
+    }
+
     set progress(progress: number) {
         this._progress = progress;
     }
@@ -371,10 +379,6 @@ export class Importer {
 
     set endedAt(date: string) {
         this._endedAt = dayjs.utc(date).toISOString();
-    }
-
-    set error(message: string) {
-        this._error = message;
     }
 
     start() {

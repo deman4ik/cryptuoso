@@ -628,6 +628,33 @@
                     }
                 }
             }
+        },
+        "exwatcher-events": {
+            "root": "libs/exwatcher-events",
+            "sourceRoot": "libs/exwatcher-events/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "libs/exwatcher-events/tsconfig.lib.json",
+                            "libs/exwatcher-events/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!libs/exwatcher-events/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/exwatcher-events/jest.config.js",
+                        "tsConfig": "libs/exwatcher-events/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
         }
     },
     "cli": {
