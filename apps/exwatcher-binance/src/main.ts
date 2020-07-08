@@ -2,7 +2,7 @@ import { ExwatcherBaseService } from "@cryptuoso/exwatcher-base";
 import log from "@cryptuoso/logger";
 
 const service = new ExwatcherBaseService({
-    exchange: "binance"
+    exchange: "binance_futures"
 });
 
 async function start() {
