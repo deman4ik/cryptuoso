@@ -21,10 +21,11 @@ jobs:
               with:
                   node-version: ${{ matrix.node-version }}
 
-            - name: NPM Install
-              uses: webfactory/ssh-agent@v0.2.0
+            - uses: webfactory/ssh-agent@v0.2.0
               with:
                   ssh-private-key: ${{ secrets.GH_SSH_KEY }}
+
+            - name: NPM Install
               run: npm install
 
             - name: Check history
