@@ -21,7 +21,8 @@ import {
     ExwatcherSchema,
     ExwatcherSubscribe,
     ExwatcherSubscribeAll,
-    ExwatcherUnsubscribeAll
+    ExwatcherUnsubscribeAll,
+    ExwatcherTick
 } from "@cryptuoso/exwatcher-events";
 
 // !FIXME: ccxt.pro typings
@@ -419,8 +420,11 @@ export class ExwatcherBaseService extends BaseService {
     }
 
     async publishTick(tick: ExchangePrice): Promise<void> {
-        //  this.log.debug(tick);
-        //TODO  await this.broker.emit(Event.TICK_NEW, tick);
+        try {
+            await this.events.emit<ExwatcherTick>(ExwatcherWorkerEvents.TICK, tick);
+        } catch (err) {
+            this.log.error("Failed to publich tick", err);
+        }
     }
 
     async saveSubscription(subscription: Exwatcher): Promise<void> {
