@@ -69,7 +69,7 @@ jobs:
               run: echo ::set-output name=list::$(node ./node_modules/@nrwl/cli/bin/nx.js affected:apps --plain ${{steps.history.outputs.result}} )
 
             - name: Check services
-              if: steps.services.outputs.list == null || steps.services.outputs.list == ${{""}}
+              if: steps.services.outputs.list == null || steps.services.outputs.list == ${{ ' ' }}
               run: exit 1
 
             - name: Echo services
