@@ -1,4 +1,4 @@
-import { ExchangeCandle, CandleType } from "../../lib/candles";
+import { ExchangeCandle, CandleType } from "../../lib/market";
 
 const candles60: ExchangeCandle[] = [
     {

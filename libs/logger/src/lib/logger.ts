@@ -13,7 +13,8 @@ const loggerConfig: ISettingsParam =
               minLevel: "debug",
               printLogMessageInNewLine: false,
               displayFilePath: "hidden",
-              displayFunctionName: false
+              displayFunctionName: false,
+              exposeErrorCodeFrame: true
           };
 
 const logger = new Logger(loggerConfig);

@@ -356,6 +356,305 @@
                     }
                 }
             }
+        },
+        "exwatcher-runner": {
+            "root": "apps/exwatcher-runner",
+            "sourceRoot": "apps/exwatcher-runner/src",
+            "projectType": "application",
+            "prefix": "exwatcher-runner",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/exwatcher-runner",
+                        "main": "apps/exwatcher-runner/src/main.ts",
+                        "tsConfig": "apps/exwatcher-runner/tsconfig.app.json",
+                        "assets": ["apps/exwatcher-runner/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/exwatcher-runner/src/environments/environment.ts",
+                                    "with": "apps/exwatcher-runner/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "exwatcher-runner:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "apps/exwatcher-runner/tsconfig.app.json",
+                            "apps/exwatcher-runner/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!apps/exwatcher-runner/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/exwatcher-runner/jest.config.js",
+                        "tsConfig": "apps/exwatcher-runner/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "exwatcher-bitfinex": {
+            "root": "apps/exwatcher-bitfinex",
+            "sourceRoot": "apps/exwatcher-bitfinex/src",
+            "projectType": "application",
+            "prefix": "exwatcher-bitfinex",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/exwatcher-bitfinex",
+                        "main": "apps/exwatcher-bitfinex/src/main.ts",
+                        "tsConfig": "apps/exwatcher-bitfinex/tsconfig.app.json",
+                        "assets": ["apps/exwatcher-bitfinex/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/exwatcher-bitfinex/src/environments/environment.ts",
+                                    "with": "apps/exwatcher-bitfinex/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "exwatcher-bitfinex:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "apps/exwatcher-bitfinex/tsconfig.app.json",
+                            "apps/exwatcher-bitfinex/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!apps/exwatcher-bitfinex/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/exwatcher-bitfinex/jest.config.js",
+                        "tsConfig": "apps/exwatcher-bitfinex/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "exwatcher-kraken": {
+            "root": "apps/exwatcher-kraken",
+            "sourceRoot": "apps/exwatcher-kraken/src",
+            "projectType": "application",
+            "prefix": "exwatcher-kraken",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/exwatcher-kraken",
+                        "main": "apps/exwatcher-kraken/src/main.ts",
+                        "tsConfig": "apps/exwatcher-kraken/tsconfig.app.json",
+                        "assets": ["apps/exwatcher-kraken/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/exwatcher-kraken/src/environments/environment.ts",
+                                    "with": "apps/exwatcher-kraken/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "exwatcher-kraken:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "apps/exwatcher-kraken/tsconfig.app.json",
+                            "apps/exwatcher-kraken/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!apps/exwatcher-kraken/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/exwatcher-kraken/jest.config.js",
+                        "tsConfig": "apps/exwatcher-kraken/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "exwatcher-binance": {
+            "root": "apps/exwatcher-binance",
+            "sourceRoot": "apps/exwatcher-binance/src",
+            "projectType": "application",
+            "prefix": "exwatcher-binance",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/exwatcher-binance",
+                        "main": "apps/exwatcher-binance/src/main.ts",
+                        "tsConfig": "apps/exwatcher-binance/tsconfig.app.json",
+                        "assets": ["apps/exwatcher-binance/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/exwatcher-binance/src/environments/environment.ts",
+                                    "with": "apps/exwatcher-binance/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "exwatcher-binance:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "apps/exwatcher-binance/tsconfig.app.json",
+                            "apps/exwatcher-binance/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!apps/exwatcher-binance/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/exwatcher-binance/jest.config.js",
+                        "tsConfig": "apps/exwatcher-binance/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "exwatcher-base": {
+            "root": "libs/exwatcher-base",
+            "sourceRoot": "libs/exwatcher-base/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": ["libs/exwatcher-base/tsconfig.lib.json", "libs/exwatcher-base/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/exwatcher-base/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/exwatcher-base/jest.config.js",
+                        "tsConfig": "libs/exwatcher-base/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "market": {
+            "root": "libs/market",
+            "sourceRoot": "libs/market/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": ["libs/market/tsconfig.lib.json", "libs/market/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/market/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/market/jest.config.js",
+                        "tsConfig": "libs/market/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "exwatcher-events": {
+            "root": "libs/exwatcher-events",
+            "sourceRoot": "libs/exwatcher-events/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "libs/exwatcher-events/tsconfig.lib.json",
+                            "libs/exwatcher-events/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!libs/exwatcher-events/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/exwatcher-events/jest.config.js",
+                        "tsConfig": "libs/exwatcher-events/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
         }
     },
     "cli": {

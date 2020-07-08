@@ -6,10 +6,10 @@ import { getValidDate } from "@cryptuoso/helpers";
 import { Importer, Status, ImporterParams } from "@cryptuoso/importer-state";
 import {
     ImporterRunnerSchema,
-    InImporterRunnerEvents,
+    ImporterRunnerEvents,
     ImporterRunnerStart,
     ImporterRunnerStop,
-    InImporterWorkerEvents,
+    ImporterWorkerEvents,
     ImporterWorkerPause
 } from "@cryptuoso/importer-events";
 
@@ -20,30 +20,28 @@ export default class ImporterRunnerService extends HTTPService {
     constructor(config?: ImporterRunnerServiceConfig) {
         super(config);
         try {
-            this.createRoutes([
-                {
-                    name: "importerStart",
-                    inputSchema: ImporterRunnerSchema[InImporterRunnerEvents.START],
+            this.createRoutes({
+                importerStart: {
+                    inputSchema: ImporterRunnerSchema[ImporterRunnerEvents.START],
                     auth: true,
-                    roles: ["admin"],
+                    roles: ["manager", "admin"],
                     handler: this.startHTTPHandler
                 },
-                {
-                    name: "importerStop",
-                    inputSchema: ImporterRunnerSchema[InImporterRunnerEvents.STOP],
+                importerStop: {
+                    inputSchema: ImporterRunnerSchema[ImporterRunnerEvents.STOP],
                     auth: true,
-                    roles: ["admin"],
+                    roles: ["manager", "admin"],
                     handler: this.stopHTTPHandler
                 }
-            ]);
+            });
             this.events.subscribe({
-                [InImporterRunnerEvents.START]: {
+                [ImporterRunnerEvents.START]: {
                     handler: this.start.bind(this),
-                    schema: ImporterRunnerSchema[InImporterRunnerEvents.START]
+                    schema: ImporterRunnerSchema[ImporterRunnerEvents.START]
                 },
-                [InImporterRunnerEvents.STOP]: {
+                [ImporterRunnerEvents.STOP]: {
                     handler: this.stop.bind(this),
-                    schema: ImporterRunnerSchema[InImporterRunnerEvents.STOP]
+                    schema: ImporterRunnerSchema[ImporterRunnerEvents.STOP]
                 }
             });
             this.addOnStartHandler(this.onStartService);
@@ -76,14 +74,13 @@ export default class ImporterRunnerService extends HTTPService {
         res.end();
     }
 
-    async start({ exchange, asset, currency, type, timeframes, dateFrom, dateTo, amount }: ImporterRunnerStart) {
+    async start({ id, exchange, asset, currency, type, timeframes, dateFrom, dateTo, amount }: ImporterRunnerStart) {
         try {
             const [{ loadFrom }] = await this.sql`
             select load_from from markets 
             where exchange = ${exchange} 
             and asset = ${asset} and currency = ${currency}
             `;
-            this.log.info(loadFrom);
             const params: ImporterParams = {
                 timeframes
             };
@@ -95,7 +92,7 @@ export default class ImporterRunnerService extends HTTPService {
             }
 
             const importer = new Importer({
-                id: uuid(),
+                id: id || uuid(),
                 exchange,
                 asset,
                 currency,
@@ -109,7 +106,7 @@ export default class ImporterRunnerService extends HTTPService {
                 jobId: importer.id,
                 removeOnComplete: true
             });
-            return { id: importer.id, status: importer.status };
+            return { result: importer.id };
         } catch (error) {
             this.log.error(error);
             throw error;
@@ -124,26 +121,23 @@ export default class ImporterRunnerService extends HTTPService {
         },
         res: any
     ) {
-        const result = await this.stop(req.body.input);
-        res.send(result);
+        await this.stop(req.body.input);
+        res.send({ result: "OK" });
         res.end();
     }
 
     async stop({ id }: ImporterRunnerStop) {
         try {
             const job = await this.queues.importCandles.getJob(id);
-            const result = { id, status: Status.canceled };
             if (job) {
                 if (job.isActive) {
-                    await this.events.emit<ImporterWorkerPause>(InImporterWorkerEvents.PAUSE, {
+                    await this.events.emit<ImporterWorkerPause>(ImporterWorkerEvents.PAUSE, {
                         id
                     });
-                    result.status = Status.stopping;
                 } else {
                     await job.remove();
                 }
             }
-            return result;
         } catch (error) {
             this.log.error(error);
             throw error;

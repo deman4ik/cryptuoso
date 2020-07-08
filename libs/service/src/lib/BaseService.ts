@@ -58,10 +58,10 @@ export class BaseService {
     }
 
     #handleUncaughtException = (err: Error) => {
-        this.#log.error(err, "uncaughtException");
+        this.#log.error("uncaughtException", err);
     };
     #handleUnhandledRejection = (err: Error) => {
-        this.#log.error(err, "unhandledRejection");
+        this.#log.error("unhandledRejection", err);
     };
 
     #addOnStartHandler = async (func: () => Promise<void>) => {

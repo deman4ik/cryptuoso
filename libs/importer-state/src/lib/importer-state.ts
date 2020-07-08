@@ -1,15 +1,6 @@
 import dayjs from "@cryptuoso/dayjs";
-import {
-    chunkDates,
-    getValidDate,
-    Timeframe,
-    ValidTimeframe,
-    loadLimit,
-    convertExchangeTimeframes,
-    sortDesc,
-    round,
-    CANDLES_RECENT_AMOUNT
-} from "@cryptuoso/helpers";
+import { chunkDates, getValidDate, sortDesc, round, CANDLES_RECENT_AMOUNT } from "@cryptuoso/helpers";
+import { Timeframe, ValidTimeframe, loadLimit, convertExchangeTimeframes } from "@cryptuoso/market";
 
 export type ImportType = "recent" | "history";
 
@@ -370,6 +361,14 @@ export class Importer {
         return this._status === Status.finished;
     }
 
+    get error() {
+        return this._error;
+    }
+
+    set error(message: string) {
+        this._error = message;
+    }
+
     set progress(progress: number) {
         this._progress = progress;
     }
@@ -380,10 +379,6 @@ export class Importer {
 
     set endedAt(date: string) {
         this._endedAt = dayjs.utc(date).toISOString();
-    }
-
-    set error(message: string) {
-        this._error = message;
     }
 
     start() {

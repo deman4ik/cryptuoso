@@ -1,13 +1,13 @@
 import postgres from "postgres";
 //TODO: delete custom declaration type
-
+/* eslint-disable @typescript-eslint/camelcase */
 const sql = postgres({
     ssl: { rejectUnauthorized: false },
+    connect_timeout: 10,
     transform: {
         column: postgres.toCamel
     },
     connection: {
-        /* eslint-disable-next-line @typescript-eslint/camelcase */
         application_name: process.env.SERVICE
     }
 });

@@ -128,17 +128,16 @@ export class HTTPService extends BaseService {
         }
     }
 
-    private _createRoutes(
-        routes: {
-            name: string;
+    private _createRoutes(routes: {
+        [key: string]: {
             handler: (req: any, res: any) => Promise<any>;
             auth?: boolean;
             roles?: string[];
             inputSchema?: ValidationSchema;
-        }[]
-    ) {
-        routes.forEach((route) => {
-            const { name, handler } = route;
+        };
+    }) {
+        for (const [name, route] of Object.entries(routes)) {
+            const { handler } = route;
             let { auth, roles, inputSchema } = route;
             if (!name) throw new Error("Route name is required");
             if (!handler && typeof handler !== "function") throw new Error("Route handler must be a function");
@@ -168,7 +167,7 @@ export class HTTPService extends BaseService {
                 roles
             };
             this._server.post(`/actions/${name}`, handler.bind(this));
-        });
+        }
     }
 
     get createRoutes() {
