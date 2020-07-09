@@ -1,6 +1,7 @@
 import urllib from "url";
 import fetch, { RequestInit, RequestInfo } from "node-fetch";
 import createHttpsProxyAgent, { HttpsProxyAgentOptions } from "https-proxy-agent";
+import https from "https";
 
 export function createProxyAgent(proxy: string) {
     const proxyHost = urllib.parse(proxy);
@@ -10,7 +11,9 @@ export function createProxyAgent(proxy: string) {
         port: +proxyHost.port
     };
 
-    return createHttpsProxyAgent(proxyOptions);
+    const agent = new https.Agent();
+    Object.assign(agent, createHttpsProxyAgent(proxyOptions));
+    return agent;
 }
 
 export function createFetchMethod(proxy: string) {
