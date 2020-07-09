@@ -15,7 +15,7 @@ import {
     handleCandleGaps,
     batchCandles
 } from "@cryptuoso/market";
-import { createFetchMethod } from "./fetch";
+import { createSocksProxyAgent } from "./fetch";
 
 interface MinMax {
     min: number;
@@ -51,12 +51,12 @@ export class PublicConnector {
         }
     };
 
-    _fetch = createFetchMethod(process.env.PROXY_ENDPOINT);
+    _agent = createSocksProxyAgent(process.env.PROXY_ENDPOINT);
 
     async initConnector(exchange: string): Promise<void> {
         if (!(exchange in this.connectors)) {
             const config: { [key: string]: any } = {
-                fetchImplementation: this._fetch
+                agent: this._agent
             };
             if (exchange === "bitfinex" || exchange === "kraken") {
                 this.connectors[exchange] = new ccxt[exchange](config);

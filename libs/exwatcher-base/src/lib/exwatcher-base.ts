@@ -6,7 +6,7 @@ import retry from "async-retry";
 import dayjs from "@cryptuoso/dayjs";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { Timeframe, CandleType, ExchangePrice, ExchangeCandle } from "@cryptuoso/market";
-import { createFetchMethod } from "@cryptuoso/ccxt-public";
+import { createSocksProxyAgent } from "@cryptuoso/ccxt-public";
 import { uniqueElementsBy, round, sleep } from "@cryptuoso/helpers";
 import {
     ImporterRunnerEvents,
@@ -108,7 +108,7 @@ export class ExwatcherBaseService extends BaseService {
         if (this.exchange === "binance_futures") {
             this.connector = new ccxtpro.binance({
                 enableRateLimit: true,
-                fetchImplementation: createFetchMethod(process.env.PROXY_ENDPOINT),
+                agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
                 // !FIXME: ccxt.pro optional typings
                 // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
                 // @ts-ignore
@@ -120,7 +120,7 @@ export class ExwatcherBaseService extends BaseService {
         } else if (this.exchange === "bitfinex") {
             this.connector = new ccxtpro.bitfinex({
                 enableRateLimit: true,
-                fetchImplementation: createFetchMethod(process.env.PROXY_ENDPOINT),
+                agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
                 // !FIXME: ccxt.pro optional typings
                 // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
                 // @ts-ignore
@@ -132,7 +132,7 @@ export class ExwatcherBaseService extends BaseService {
         } else if (this.exchange === "kraken") {
             this.connector = new ccxtpro.kraken({
                 enableRateLimit: true,
-                fetchImplementation: createFetchMethod(process.env.PROXY_ENDPOINT),
+                agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
                 // !FIXME: ccxt.pro optional typings
                 // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
                 // @ts-ignore

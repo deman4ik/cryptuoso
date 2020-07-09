@@ -1,7 +1,16 @@
 import urllib from "url";
 import fetch, { RequestInit, RequestInfo } from "node-fetch";
 import createHttpsProxyAgent, { HttpsProxyAgentOptions } from "https-proxy-agent";
-import https from "https";
+import socks from "@luminati-io/socksv5";
+
+export function createSocksProxyAgent(proxy: string) {
+    const proxyParams = urllib.parse(proxy);
+    return new socks.HttpsAgent({
+        proxyHost: proxyParams.hostname,
+        proxyPort: 1080,
+        auths: [socks.auth.UserPassword(proxyParams.auth.split(":")[0], proxyParams.auth.split(":")[1])]
+    });
+}
 
 export function createProxyAgent(proxy: string) {
     const proxyHost = urllib.parse(proxy);
@@ -11,9 +20,7 @@ export function createProxyAgent(proxy: string) {
         port: +proxyHost.port
     };
 
-    const agent = new https.Agent();
-    Object.assign(agent, createHttpsProxyAgent(proxyOptions));
-    return agent;
+    return createHttpsProxyAgent(proxyOptions);
 }
 
 export function createFetchMethod(proxy: string) {
