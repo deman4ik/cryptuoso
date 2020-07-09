@@ -2,7 +2,9 @@
  <img align="left" width="150" height="150" src="https://support.cryptuoso.com/cryptuoso_logo.png">  
 </a> 
 <br>
+<a href="https://cryptuoso.com">
 <h2 align="center">Cryptuoso - Cryptocurrency Trading Robots</h2>
+</a> 
 <br>
 <br>
 
