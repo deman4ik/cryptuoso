@@ -7,7 +7,7 @@ import dayjs from "@cryptuoso/dayjs";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { Timeframe, CandleType, ExchangePrice, ExchangeCandle } from "@cryptuoso/market";
 import { createSocksProxyAgent } from "@cryptuoso/ccxt-public";
-import { uniqueElementsBy, round, sleep } from "@cryptuoso/helpers";
+import { uniqueElementsBy, sleep } from "@cryptuoso/helpers";
 import {
     ImporterRunnerEvents,
     ImporterRunnerStart,
@@ -226,8 +226,9 @@ export class ExwatcherBaseService extends BaseService {
 
     async resubscribe() {
         try {
-            const subscriptions: Exwatcher[] = await this
-                .sql`select * from exwatchers where exchange = ${this.exchange}`;
+            const subscriptions: Exwatcher[] = await this.db.pg.many(
+                this.db.sql`select * from exwatchers where exchange = ${this.exchange}`
+            );
             if (subscriptions && Array.isArray(subscriptions) && subscriptions.length > 0) {
                 await Promise.all(
                     subscriptions.map(async ({ id, asset, currency }: Exwatcher) => {
@@ -250,11 +251,11 @@ export class ExwatcherBaseService extends BaseService {
     async subscribeAll({ exchange }: ExwatcherSubscribeAll) {
         try {
             if (exchange !== this.exchange) return;
-            const markets: { asset: string; currency: string }[] = await this.sql`
+            const markets: { asset: string; currency: string }[] = await this.db.pg.many(this.db.sql`
             SELECT asset, currency 
             FROM markets
             WHERE exchange = ${this.exchange} AND available > 0;
-            `;
+            `);
 
             for (const { asset, currency } of markets) {
                 await this.addSubscription({ exchange: this.exchange, asset, currency });
@@ -429,7 +430,7 @@ export class ExwatcherBaseService extends BaseService {
 
     async saveSubscription(subscription: Exwatcher): Promise<void> {
         const { id, exchange, asset, currency, status, importerId, error } = subscription;
-        await this.sql`INSERT INTO exwatchers 
+        await this.db.pg.query(this.db.sql`INSERT INTO exwatchers 
         ( id, 
             exchange,
             asset,
@@ -451,11 +452,11 @@ export class ExwatcherBaseService extends BaseService {
         DO UPDATE SET updated_at = now(),
         status = excluded.status,
         importer_id = excluded.importer_id,
-        error = excluded.error;`;
+        error = excluded.error;`);
     }
 
     async deleteSubscription(id: string): Promise<void> {
-        await this.sql`DELETE FROM exwatchers WHERE id = ${id}`;
+        await this.db.pg.query(this.db.sql`DELETE FROM exwatchers WHERE id = ${id}`);
     }
 
     async handleCandles(): Promise<void> {
@@ -739,25 +740,20 @@ export class ExwatcherBaseService extends BaseService {
                                     }
                                     const prices = trades.map((t) => +t.price);
                                     if (this.candlesCurrent[id][timeframe].volume === 0)
-                                        this.candlesCurrent[id][timeframe].open = round(+trades[0].price, 2);
-                                    this.candlesCurrent[id][timeframe].high = round(
-                                        Math.max(this.candlesCurrent[id][timeframe].high, ...prices),
-                                        2
+                                        this.candlesCurrent[id][timeframe].open = +trades[0].price;
+                                    this.candlesCurrent[id][timeframe].high = Math.max(
+                                        this.candlesCurrent[id][timeframe].high,
+                                        ...prices
                                     );
-                                    this.candlesCurrent[id][timeframe].low = round(
-                                        Math.min(this.candlesCurrent[id][timeframe].low, ...prices),
-                                        2
+                                    this.candlesCurrent[id][timeframe].low = Math.min(
+                                        this.candlesCurrent[id][timeframe].low,
+                                        ...prices
                                     );
-                                    this.candlesCurrent[id][timeframe].close = +round(
-                                        trades[trades.length - 1].price,
-                                        2
-                                    );
+                                    this.candlesCurrent[id][timeframe].close = +trades[trades.length - 1].price;
                                     this.candlesCurrent[id][timeframe].volume =
-                                        round(
-                                            this.candlesCurrent[id][timeframe].volume +
-                                                +trades.map((t) => t.amount).reduce((a, b) => a + b, 0),
-                                            3
-                                        ) || this.candlesCurrent[id][timeframe].volume + 0;
+                                        this.candlesCurrent[id][timeframe].volume +
+                                            +trades.map((t) => t.amount).reduce((a, b) => a + b, 0) ||
+                                        this.candlesCurrent[id][timeframe].volume + 0;
                                     this.candlesCurrent[id][timeframe].type =
                                         this.candlesCurrent[id][timeframe].volume === 0
                                             ? CandleType.previous
@@ -821,7 +817,6 @@ export class ExwatcherBaseService extends BaseService {
             }
 
             this.lastDate = date.valueOf();
-            this.log.debug(date.toISOString(), "end");
         } catch (e) {
             this.log.error(e);
         }
@@ -833,31 +828,32 @@ export class ExwatcherBaseService extends BaseService {
                 try {
                     const call = async (bail: (e: Error) => void) => {
                         try {
-                            await this.sql`
-                insert into ${this.sql(`candles${candle.timeframe}`)} 
-                ${this.sql(
-                    candle as any, //FIXME without cast
-                    "exchange",
-                    "asset",
-                    "currency",
-                    "open",
-                    "high",
-                    "low",
-                    "close",
-                    "volume",
-                    "time",
-                    "timestamp",
-                    "type"
-                )}
-                ON CONFLICT ON CONSTRAINT ${this.sql(`candles${candle.timeframe}_time_exchange_asset_currency_key`)}
+                            await this.db.pg.query(this.db.sql`
+                            insert into ${this.db.sql.identifier([`candles${candle.timeframe}`])} 
+                (exchange, asset, currency, open, high, low, close, volume, time, timestamp, type)
+                values (
+                    ${candle.exchange},
+                    ${candle.asset},
+                    ${candle.currency},
+                    ${candle.open},
+                    ${candle.high},
+                    ${candle.low},
+                    ${candle.close},
+                    ${candle.volume},
+                    ${candle.time},
+                    ${candle.timestamp},
+                    ${candle.type}
+                )
+                ON CONFLICT ON CONSTRAINT ${this.db.sql.identifier([
+                    `candles${candle.timeframe}_time_exchange_asset_currency_key`
+                ])}
                 DO UPDATE SET open = excluded.open,
                 high = excluded.high,
                 low = excluded.low,
                 close = excluded.close,
                 volume = excluded.volume,
-                type = excluded.type;`;
+                type = excluded.type;`);
                         } catch (e) {
-                            if (e.message.includes("UNDEFINED_VALUE")) throw e;
                             bail(e);
                         }
                     };

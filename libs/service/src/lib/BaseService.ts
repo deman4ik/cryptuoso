@@ -1,7 +1,7 @@
 import { createLightship, LightshipType } from "lightship";
 import Redis from "ioredis";
 import logger, { Logger } from "@cryptuoso/logger";
-import { sql } from "@cryptuoso/postgres";
+import { sql, pg, pgUtil } from "@cryptuoso/postgres";
 import { Events } from "@cryptuoso/events";
 
 export interface BaseServiceConfig {
@@ -15,7 +15,7 @@ export class BaseService {
     #onServiceStart: { (): Promise<void> }[] = [];
     #onServiceStop: { (): Promise<void> }[] = [];
     #redisConnection: Redis.Redis;
-    #sql: typeof sql;
+    #db: { sql: typeof sql; pg: typeof pg; util: typeof pgUtil };
     #events: Events;
 
     constructor(config?: BaseServiceConfig) {
@@ -30,7 +30,11 @@ export class BaseService {
             });
             this.#lightship.registerShutdownHandler(this.#stopService.bind(this));
             this.#name = config?.name || process.env.SERVICE;
-            this.#sql = sql;
+            this.#db = {
+                sql,
+                pg: pg,
+                util: pgUtil
+            };
             this.#redisConnection = new Redis(
                 process.env.REDISCS //,{enableReadyCheck: false}
             );
@@ -49,8 +53,8 @@ export class BaseService {
         return this.#name;
     }
 
-    get sql() {
-        return this.#sql;
+    get db() {
+        return this.#db;
     }
 
     get events() {
@@ -112,7 +116,7 @@ export class BaseService {
                     await onStopFunc();
                 }
             }
-            await this.#sql.end({ timeout: 30000 });
+            await this.#db.pg.end();
         } catch (err) {
             this.#log.error(err, `Failed to correctly stop ${this.#name} service`);
             process.exit(1);

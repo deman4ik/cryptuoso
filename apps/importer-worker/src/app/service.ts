@@ -7,7 +7,6 @@ import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { Importer, CandlesChunk, TradesChunk, ImporterState } from "@cryptuoso/importer-state";
 import dayjs from "@cryptuoso/dayjs";
-import { chunkArray } from "@cryptuoso/helpers";
 import { ExchangeCandle, ExchangeTrade, ExchangeCandlesInTimeframes } from "@cryptuoso/market";
 import { BaseError } from "@cryptuoso/errors";
 import {
@@ -279,49 +278,64 @@ export default class ImporterWorkerService extends BaseService {
         try {
             if (candles && Array.isArray(candles) && candles.length > 0) {
                 const timeframe = candles[0].timeframe;
-                const chunks = chunkArray(candles, 100);
-                for (const chunk of chunks) {
-                    const call = async (bail: (e: Error) => void) => {
-                        try {
-                            await this.sql`
-                insert into ${this.sql(`candles${timeframe}`)} 
-                ${this.sql(
-                    chunk as any[], //FIXME without cast
-                    "exchange",
-                    "asset",
-                    "currency",
-                    "open",
-                    "high",
-                    "low",
-                    "close",
-                    "volume",
-                    "time",
-                    "timestamp",
-                    "type"
+
+                const call = async (bail: (e: Error) => void) => {
+                    try {
+                        await this.db.pg.query(this.db.sql`
+                insert into ${this.db.sql.identifier([`candles${timeframe}`])} 
+                (exchange, asset, currency, open, high, low, close, volume, time, timestamp, type)
+                SELECT *
+                FROM ${this.db.sql.unnest(
+                    this.db.util.prepareUnnest(candles, [
+                        "exchange",
+                        "asset",
+                        "currency",
+                        "open",
+                        "high",
+                        "low",
+                        "close",
+                        "volume",
+                        "time",
+                        "timestamp",
+                        "type"
+                    ]),
+                    [
+                        "varchar",
+                        "varchar",
+                        "varchar",
+                        "numeric",
+                        "numeric",
+                        "numeric",
+                        "numeric",
+                        "numeric",
+                        "int8",
+                        "timestamp",
+                        "varchar"
+                    ]
                 )}
-                ON CONFLICT ON CONSTRAINT ${this.sql(`candles${timeframe}_time_exchange_asset_currency_key`)}
+                ON CONFLICT ON CONSTRAINT ${this.db.sql.identifier([
+                    `candles${timeframe}_time_exchange_asset_currency_key`
+                ])}
                 DO UPDATE SET open = excluded.open,
                 high = excluded.high,
                 low = excluded.low,
                 close = excluded.close,
                 volume = excluded.volume,
-                type = excluded.type;`;
-                        } catch (e) {
-                            if (e.message.includes("UNDEFINED_VALUE")) throw e;
-                            bail(e);
+                type = excluded.type;`);
+                    } catch (e) {
+                        bail(e);
+                    }
+                };
+                await retry(call, {
+                    retries: 5,
+                    minTimeout: 500,
+                    maxTimeout: 30000,
+                    onRetry: (err: any, i: number) => {
+                        if (err) {
+                            this.log.warn(`Retry save candles ${i} - ${err.message}`);
                         }
-                    };
-                    await retry(call, {
-                        retries: 5,
-                        minTimeout: 500,
-                        maxTimeout: 30000,
-                        onRetry: (err: any, i: number) => {
-                            if (err) {
-                                this.log.warn(`Retry save candles ${i} - ${err.message}`);
-                            }
-                        }
-                    });
-                }
+                    }
+                });
             }
         } catch (err) {
             this.log.error("Failed to upsert candles", err);
