@@ -62,6 +62,10 @@ export class HTTPService extends BaseService {
                     return next(err);
                 }
             });
+            this._server.get("/", (req, res) => {
+                res.send({ service: process.env.SERVICE, routes: this._server.routes() });
+                res.end();
+            });
             this.addOnStartHandler(this._startServer);
             this.addOnStopHandler(this._stopServer);
         } catch (err) {
