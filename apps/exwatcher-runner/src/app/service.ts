@@ -43,18 +43,22 @@ export default class ExwatcherRunnerService extends HTTPService {
     ) {
         try {
             const { exchange, asset, currency } = req.body.input;
-            const { count } = await this.sql`SELECT count(1) 
-        FROM markets
-        WHERE exchange = ${exchange}
-        AND asset = ${asset}
-        AND currency = ${currency};`;
+            const { count } = await this.db.pg.one(
+                this.db.sql`SELECT count(1) 
+                         FROM markets
+                         WHERE exchange = ${exchange}
+                         AND asset = ${asset}
+                         AND currency = ${currency};`
+            );
             this.log.info("Markets count", count);
             if (count !== 1) throw new Error(`Market ${exchange} ${asset}/${currency} doesn't exists`);
-            const [exwatcher] = await this.sql`SELECT id 
-        FROM exwatchers
-        WHERE exchange = ${exchange}
-        AND asset = ${asset}
-        AND currency = ${currency};`;
+            const exwatcher = await this.db.pg.one(
+                this.db.sql`SELECT id 
+                         FROM exwatchers
+                         WHERE exchange = ${exchange}
+                         AND asset = ${asset}
+                         AND currency = ${currency};`
+            );
 
             if (!exwatcher) {
                 await this.events.emit<ExwatcherSubscribe>(ExwatcherWorkerEvents.SUBSCRIBE, {
@@ -82,10 +86,12 @@ export default class ExwatcherRunnerService extends HTTPService {
     ) {
         try {
             const { exchange } = req.body.input;
-            const [marketsCount] = await this.sql`SELECT count(1) 
-        FROM markets
-        WHERE exchange = ${exchange};`;
-            if (marketsCount === 0) throw new Error(`Market ${exchange} doesn't exists`);
+            const { count } = await this.db.pg.one(
+                this.db.sql`SELECT count(1) 
+                         FROM markets
+                         WHERE exchange = ${exchange};`
+            );
+            if (count === 0) throw new Error(`Market ${exchange} doesn't exists`);
             await this.events.emit<ExwatcherSubscribeAll>(ExwatcherWorkerEvents.SUBSCRIBE_ALL, { exchange });
             res.send({ result: "OK" });
             res.end();
@@ -105,10 +111,12 @@ export default class ExwatcherRunnerService extends HTTPService {
     ) {
         try {
             const { exchange } = req.body.input;
-            const [marketsCount] = await this.sql`SELECT count(1) 
-        FROM markets
-        WHERE exchange = ${exchange};`;
-            if (marketsCount === 0) throw new Error(`Market ${exchange} doesn't exists`);
+            const { count } = await this.db.pg.one(
+                this.db.sql`SELECT count(1) 
+                         FROM markets
+                         WHERE exchange = ${exchange};`
+            );
+            if (count === 0) throw new Error(`Market ${exchange} doesn't exists`);
             await this.events.emit<ExwatcherUnsubscribeAll>(ExwatcherWorkerEvents.UNSUBSCRIBE_ALL, { exchange });
             res.send({ result: "OK" });
             res.end();

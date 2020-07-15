@@ -38,7 +38,7 @@ export class HTTPService extends BaseService {
             this._v = new Validator();
             this._port = config?.port || +process.env.PORT || +process.env.NODE_PORT || 3000;
             this._server = restana({
-                errorHandler: this._errorHandler
+                errorHandler: this._errorHandler.bind(this)
             });
             this._server.use(helmet() as RequestHandler<Protocol.HTTP>);
             this._server.use(bodyParser.json());
@@ -55,7 +55,13 @@ export class HTTPService extends BaseService {
                     (req: any) => this._routes[req.url] && this._routes[req.url].auth
                 )
             );
-
+            this._server.use(async (req, res, next) => {
+                try {
+                    await next();
+                } catch (err) {
+                    return next(err);
+                }
+            });
             this.addOnStartHandler(this._startServer);
             this.addOnStopHandler(this._stopServer);
         } catch (err) {
@@ -80,12 +86,12 @@ export class HTTPService extends BaseService {
         if (!req.headers["x-api-key"] || req.headers["x-api-key"] !== process.env.API_KEY) {
             throw new ActionsHandlerError("Forbidden: Invalid API Key", null, "FORBIDDEN", 403);
         }
-        next();
+        return next();
     }
 
     private _checkValidation(req: Request<Protocol>, res: Response<Protocol>, next: (err?: Error) => void) {
         const validationErrors = this._routes[req.url].validate(req.body);
-        if (validationErrors === true) next();
+        if (validationErrors === true) return next();
         else
             throw new ActionsHandlerError(
                 validationErrors.map((e) => e.message).join(" "),
@@ -107,14 +113,14 @@ export class HTTPService extends BaseService {
                 throw new ActionsHandlerError("Forbidden: Invalid role", null, "FORBIDDEN", 403);
 
             //TODO: check user in DB and cache in Redis
-            next();
+            return next();
         } catch (err) {
-            next(err);
+            return next(err);
         }
     }
 
     private _errorHandler(err: Error, req: any, res: Response<Protocol>) {
-        req.log.warn(err);
+        this.log.warn(err);
         if (err instanceof ActionsHandlerError) {
             res.send(err.response, err.statusCode);
         } else {

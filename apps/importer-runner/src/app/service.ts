@@ -76,15 +76,16 @@ export default class ImporterRunnerService extends HTTPService {
 
     async start({ id, exchange, asset, currency, type, timeframes, dateFrom, dateTo, amount }: ImporterRunnerStart) {
         try {
-            const [{ loadFrom }] = await this.sql`
-            select load_from from markets 
-            where exchange = ${exchange} 
-            and asset = ${asset} and currency = ${currency}
-            `;
+            throw Error("test");
             const params: ImporterParams = {
                 timeframes
             };
             if (type === "history") {
+                const { loadFrom } = await this.db.pg.one(this.db.sql`
+            select load_from from markets 
+            where exchange = ${exchange} 
+            and asset = ${asset} and currency = ${currency}
+            `);
                 params.dateFrom = dateFrom ? getValidDate(dateFrom) : loadFrom;
                 params.dateTo = dateTo ? getValidDate(dateTo) : dayjs.utc().startOf("minute").toISOString();
             } else {

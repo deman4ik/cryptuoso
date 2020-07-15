@@ -51,7 +51,7 @@ export class PublicConnector {
         }
     };
 
-    _agent = createSocksProxyAgent(process.env.PROXY_ENDPOINT);
+    _agent = process.env.PROXY_ENDPOINT && createSocksProxyAgent(process.env.PROXY_ENDPOINT);
 
     async initConnector(exchange: string): Promise<void> {
         if (!(exchange in this.connectors)) {

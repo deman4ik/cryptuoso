@@ -1,15 +1,19 @@
-import postgres from "postgres";
-//TODO: delete custom declaration type
-/* eslint-disable @typescript-eslint/camelcase */
-const sql = postgres({
-    ssl: { rejectUnauthorized: false },
-    connect_timeout: 10,
-    transform: {
-        column: postgres.toCamel
-    },
-    connection: {
-        application_name: process.env.SERVICE
-    }
+import { createPool, sql } from "slonik";
+import { createFieldNameTransformationInterceptor } from "slonik-interceptor-field-name-transformation";
+import { prepareUnnest } from "./helpers";
+
+const interceptors = [
+    createFieldNameTransformationInterceptor({
+        format: "CAMEL_CASE"
+    })
+];
+
+const pg = createPool(process.env.PGCS, {
+    interceptors
 });
 
-export { sql };
+const pgUtil = {
+    prepareUnnest
+};
+
+export { pg, sql, pgUtil };

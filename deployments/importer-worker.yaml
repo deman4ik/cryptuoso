@@ -59,31 +59,11 @@ spec:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
                                 key: API_KEY
-                      - name: PGDATABASE
+                      - name: PGCS
                         valueFrom:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
-                                key: PGDATABASE
-                      - name: PGUSERNAME
-                        valueFrom:
-                            secretKeyRef:
-                                name: cpz-env-<ENV>
-                                key: PGUSERNAME
-                      - name: PGPASSWORD
-                        valueFrom:
-                            secretKeyRef:
-                                name: cpz-env-<ENV>
-                                key: PGPASSWORD
-                      - name: PGHOST
-                        valueFrom:
-                            secretKeyRef:
-                                name: cpz-env-<ENV>
-                                key: PGHOST
-                      - name: PGPORT
-                        valueFrom:
-                            secretKeyRef:
-                                name: cpz-env-<ENV>
-                                key: PGPORT
+                                key: PGCS
                       - name: REDISCS
                         valueFrom:
                             secretKeyRef:
