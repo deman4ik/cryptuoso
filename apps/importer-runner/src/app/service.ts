@@ -12,6 +12,7 @@ import {
     ImporterWorkerEvents,
     ImporterWorkerPause
 } from "@cryptuoso/importer-events";
+import { BaseError } from "@cryptuoso/errors";
 
 export type ImporterRunnerServiceConfig = HTTPServiceConfig;
 
@@ -79,13 +80,19 @@ export default class ImporterRunnerService extends HTTPService {
             const params: ImporterParams = {
                 timeframes
             };
-            if (type === "history") {
-                const { loadFrom } = await this.db.pg.one(this.db.sql`
+            const market: { loadFrom: string } = await this.db.pg.maybeOne(this.db.sql`
             select load_from from markets 
             where exchange = ${exchange} 
             and asset = ${asset} and currency = ${currency}
             `);
-                params.dateFrom = dateFrom ? getValidDate(dateFrom) : loadFrom;
+            if (!market)
+                throw new BaseError(
+                    `Market ${exchange} ${asset}/${currency} doesn't exists.`,
+                    { exchange, asset, currency },
+                    "NotFound"
+                );
+            if (type === "history") {
+                params.dateFrom = dateFrom ? getValidDate(dateFrom) : market.loadFrom;
                 params.dateTo = dateTo ? getValidDate(dateTo) : dayjs.utc().startOf("minute").toISOString();
             } else {
                 params.amount = amount;

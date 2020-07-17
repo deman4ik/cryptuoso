@@ -36,7 +36,6 @@ export const ImporterRunnerSchema = {
             type: "array",
             enum: Timeframe.validArray,
             empty: false,
-            optional: true,
             default: Timeframe.validArray
         },
         dateFrom: {
@@ -52,7 +51,6 @@ export const ImporterRunnerSchema = {
         amount: {
             type: "number",
             integer: true,
-            optional: true,
             default: CANDLES_RECENT_AMOUNT
         }
     },
