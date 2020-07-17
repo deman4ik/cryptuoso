@@ -2,7 +2,7 @@ import { Queue } from "bullmq";
 import { v4 as uuid } from "uuid";
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import dayjs from "@cryptuoso/dayjs";
-import { getValidDate } from "@cryptuoso/helpers";
+import { getValidDate, CANDLES_RECENT_AMOUNT } from "@cryptuoso/helpers";
 import { Importer, Status, ImporterParams } from "@cryptuoso/importer-state";
 import {
     ImporterRunnerSchema,
@@ -13,6 +13,7 @@ import {
     ImporterWorkerPause
 } from "@cryptuoso/importer-events";
 import { BaseError } from "@cryptuoso/errors";
+import { Timeframe } from "@cryptuoso/market";
 
 export type ImporterRunnerServiceConfig = HTTPServiceConfig;
 
@@ -78,7 +79,7 @@ export default class ImporterRunnerService extends HTTPService {
     async start({ id, exchange, asset, currency, type, timeframes, dateFrom, dateTo, amount }: ImporterRunnerStart) {
         try {
             const params: ImporterParams = {
-                timeframes
+                timeframes: timeframes || Timeframe.validArray
             };
             const market: { loadFrom: string } = await this.db.pg.maybeOne(this.db.sql`
             select load_from from markets 
@@ -95,7 +96,7 @@ export default class ImporterRunnerService extends HTTPService {
                 params.dateFrom = dateFrom ? getValidDate(dateFrom) : market.loadFrom;
                 params.dateTo = dateTo ? getValidDate(dateTo) : dayjs.utc().startOf("minute").toISOString();
             } else {
-                params.amount = amount;
+                params.amount = amount || CANDLES_RECENT_AMOUNT;
             }
 
             const importer = new Importer({
