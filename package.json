@@ -72,7 +72,7 @@
         "slonik": "^22.4.11",
         "slonik-interceptor-field-name-transformation": "^1.5.3",
         "threads": "^1.6.3",
-        "tslog": "^2.6.0",
+        "tslog": "^2.6.2",
         "uuid": "^8.2.0"
     },
     "devDependencies": {
