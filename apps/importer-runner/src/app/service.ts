@@ -76,7 +76,6 @@ export default class ImporterRunnerService extends HTTPService {
 
     async start({ id, exchange, asset, currency, type, timeframes, dateFrom, dateTo, amount }: ImporterRunnerStart) {
         try {
-            throw Error("test");
             const params: ImporterParams = {
                 timeframes
             };
