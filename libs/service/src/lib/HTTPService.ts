@@ -94,9 +94,12 @@ export class HTTPService extends BaseService {
     }
 
     private _checkValidation(req: Request<Protocol>, res: Response<Protocol>, next: (err?: Error) => void) {
-        const validationErrors = this._routes[req.url].validate(req.body);
-        if (validationErrors === true) return next();
-        else
+        const body = req.body;
+        const validationErrors = this._routes[req.url].validate(body);
+        if (validationErrors === true) {
+            req.body = body;
+            return next();
+        } else
             throw new ActionsHandlerError(
                 validationErrors.map((e) => e.message).join(" "),
                 { validationErrors },
@@ -107,6 +110,7 @@ export class HTTPService extends BaseService {
 
     private _checkAuth(req: any, res: Response<Protocol>, next: (err?: Error) => void) {
         try {
+            this.log.debug(req.body);
             const userId = req.body.session_variables["x-hasura-user-id"];
             if (!userId)
                 throw new ActionsHandlerError("Unauthorized: Invalid session variables", null, "UNAUTHORIZED", 401);
