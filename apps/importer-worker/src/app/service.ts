@@ -101,23 +101,29 @@ export default class ImporterWorkerService extends BaseService {
             this.log.info(`Importer #${importer.id} is ${importer.status}!`);
             job.update(importer.state);
             if (importer.isFailed) {
-                await this.events.emit<ImporterWorkerFailed>(ImporterWorkerEvents.FAILED, {
-                    id: importer.id,
-                    type: importer.type,
-                    exchange: importer.exchange,
-                    asset: importer.asset,
-                    currency: importer.currency,
-                    error: importer.error
+                await this.events.emit<ImporterWorkerFailed>({
+                    type: ImporterWorkerEvents.FAILED,
+                    data: {
+                        id: importer.id,
+                        type: importer.type,
+                        exchange: importer.exchange,
+                        asset: importer.asset,
+                        currency: importer.currency,
+                        error: importer.error
+                    }
                 });
                 throw new BaseError(importer.error, { importerId: importer.id }); //TODO: requeue
             }
             if (importer.isFinished)
-                await this.events.emit<ImporterWorkerFinished>(ImporterWorkerEvents.FINISHED, {
-                    id: importer.id,
-                    type: importer.type,
-                    exchange: importer.exchange,
-                    asset: importer.asset,
-                    currency: importer.currency
+                await this.events.emit<ImporterWorkerFinished>({
+                    type: ImporterWorkerEvents.FINISHED,
+                    data: {
+                        id: importer.id,
+                        type: importer.type,
+                        exchange: importer.exchange,
+                        asset: importer.asset,
+                        currency: importer.currency
+                    }
                 });
             return importer.state;
         } catch (err) {

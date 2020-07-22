@@ -139,8 +139,11 @@ export default class ImporterRunnerService extends HTTPService {
             const job = await this.queues.importCandles.getJob(id);
             if (job) {
                 if (job.isActive) {
-                    await this.events.emit<ImporterWorkerPause>(ImporterWorkerEvents.PAUSE, {
-                        id
+                    await this.events.emit<ImporterWorkerPause>({
+                        type: ImporterWorkerEvents.PAUSE,
+                        data: {
+                            id
+                        }
                     });
                 } else {
                     await job.remove();

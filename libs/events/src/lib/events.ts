@@ -10,6 +10,12 @@ import { BaseError } from "@cryptuoso/errors";
 import { EventsCatalog, EventHandler, BASE_REDIS_PREFIX } from "./catalog";
 
 export { CE as Event };
+export interface NewEvent<T> {
+    type: string;
+    data: T;
+    subject?: string;
+}
+
 const BLOCK_TIMEOUT = 60000;
 
 type StreamMsgVals = string[];
@@ -383,11 +389,12 @@ export class Events {
         }
     }
 
-    async emit<T>(type: string, data: T, subject?: string) {
+    async emit<T>(event: NewEvent<T>) {
         try {
+            const { type, data, subject } = event;
             const [topicName] = type.split(".", 1);
             const topic = `${BASE_REDIS_PREFIX}${topicName}`;
-            const event = new CloudEvent({
+            const cloudEvent = new CloudEvent({
                 source: `https://${process.env.SERVICE || "events"}.cryptuoso.com`,
                 specversion: "1.0",
                 dataContentType: "application/json",
@@ -397,18 +404,18 @@ export class Events {
             });
             const args = [
                 "id",
-                event.id,
+                cloudEvent.id,
                 "type",
-                event.type,
+                cloudEvent.type,
                 "timestamp",
-                event.time,
+                cloudEvent.time,
                 "event",
-                JSON.stringify(event.format())
+                JSON.stringify(cloudEvent.format())
             ];
             await this.#redis.xadd(topic, "*", ...args);
             this.log.debug(`Emited Event ${type}`);
         } catch (error) {
-            this.log.error("Failed to emit event", error, { type, data, subject });
+            this.log.error("Failed to emit event", error, event);
         }
     }
 

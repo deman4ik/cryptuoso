@@ -75,6 +75,24 @@
         },
         "exwatcher-events": {
             "tags": []
+        },
+        "backtester-runner": {
+            "tags": []
+        },
+        "backtester-worker": {
+            "tags": []
+        },
+        "backtester-state": {
+            "tags": []
+        },
+        "robot-state": {
+            "tags": []
+        },
+        "robot-indicators": {
+            "tags": []
+        },
+        "robot-events": {
+            "tags": []
         }
     }
 }
