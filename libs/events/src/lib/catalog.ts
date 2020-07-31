@@ -1,5 +1,5 @@
 import Validator, { ValidationSchema, ValidationError } from "fastest-validator";
-import { CloudEvent as Event } from "cloudevents-sdk/lib/cloudevent";
+import { CloudEvent as Event } from "cloudevents";
 import { flattenArray } from "@cryptuoso/helpers";
 export { Event };
 export type EventHandler = {
