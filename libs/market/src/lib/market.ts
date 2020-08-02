@@ -54,3 +54,25 @@ export interface Candle extends DBCandle {
     id: string;
     timeframe: number;
 }
+
+export interface CandleProps {
+    open: number[];
+    high: number[];
+    low: number[];
+    close: number[];
+    volume: number[];
+}
+
+export const enum OrderType {
+    stop = "stop",
+    limit = "limit",
+    market = "market",
+    forceMarket = "forceMarket"
+}
+
+export const enum TradeAction {
+    long = "long",
+    short = "short",
+    closeLong = "closeLong",
+    closeShort = "closeShort"
+}

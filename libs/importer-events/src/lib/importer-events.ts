@@ -1,6 +1,6 @@
 import { ISO_DATE_REGEX, CANDLES_RECENT_AMOUNT } from "@cryptuoso/helpers";
 import { Timeframe, ValidTimeframe } from "@cryptuoso/market";
-import { ImportType } from "@cryptuoso/importer-state";
+import { ImportType, Status } from "@cryptuoso/importer-state";
 
 export const enum ImporterRunnerEvents {
     START = "in-importer-runner.start",
@@ -8,7 +8,7 @@ export const enum ImporterRunnerEvents {
 }
 
 export const enum ImporterWorkerEvents {
-    PAUSE = "in-importer-worker.pause",
+    CANCEL = "in-importer-worker.cancel",
     FINISHED = "out-importer-worker.finished",
     FAILED = "out-importer-worker.failed"
 }
@@ -62,7 +62,7 @@ export const ImporterRunnerSchema = {
 };
 
 export const ImporterWorkerSchema = {
-    [ImporterWorkerEvents.PAUSE]: {
+    [ImporterWorkerEvents.CANCEL]: {
         id: "uuid"
     },
     [ImporterWorkerEvents.FINISHED]: {
@@ -73,7 +73,8 @@ export const ImporterWorkerSchema = {
         },
         exchange: "string",
         asset: "string",
-        currency: "string"
+        currency: "string",
+        status: "string"
     },
     [ImporterWorkerEvents.FAILED]: {
         id: "uuid",
@@ -104,7 +105,7 @@ export interface ImporterRunnerStop {
     id: string;
 }
 
-export interface ImporterWorkerPause {
+export interface ImporterWorkerCancel {
     id: string;
 }
 
@@ -114,6 +115,7 @@ export interface ImporterWorkerFinished {
     asset: string;
     currency: string;
     type: ImportType;
+    status: Status;
 }
 
 export interface ImporterWorkerFailed {

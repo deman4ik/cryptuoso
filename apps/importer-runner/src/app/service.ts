@@ -10,7 +10,7 @@ import {
     ImporterRunnerStart,
     ImporterRunnerStop,
     ImporterWorkerEvents,
-    ImporterWorkerPause
+    ImporterWorkerCancel
 } from "@cryptuoso/importer-events";
 import { BaseError } from "@cryptuoso/errors";
 import { Timeframe } from "@cryptuoso/market";
@@ -139,8 +139,11 @@ export default class ImporterRunnerService extends HTTPService {
             const job = await this.queues.importCandles.getJob(id);
             if (job) {
                 if (job.isActive) {
-                    await this.events.emit<ImporterWorkerPause>(ImporterWorkerEvents.PAUSE, {
-                        id
+                    await this.events.emit<ImporterWorkerCancel>({
+                        type: ImporterWorkerEvents.CANCEL,
+                        data: {
+                            id
+                        }
                     });
                 } else {
                     await job.remove();

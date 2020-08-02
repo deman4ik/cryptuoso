@@ -12,7 +12,7 @@ import { BaseError } from "@cryptuoso/errors";
 import {
     ImporterWorkerFailed,
     ImporterWorkerFinished,
-    ImporterWorkerPause,
+    ImporterWorkerCancel,
     ImporterWorkerSchema,
     ImporterWorkerEvents
 } from "@cryptuoso/importer-events";
@@ -22,7 +22,7 @@ export type ImporterWorkerServiceConfig = BaseServiceConfig;
 
 export default class ImporterWorkerService extends BaseService {
     connector: PublicConnector;
-    toPause: { [key: string]: boolean } = {};
+    abort: { [key: string]: boolean } = {};
     cpus: number;
     pool: Pool<any>;
     workers: { [key: string]: Worker };
@@ -34,14 +34,14 @@ export default class ImporterWorkerService extends BaseService {
             this.addOnStartHandler(this.onStartService);
             this.addOnStopHandler(this.onStopService);
             this.events.subscribe({
-                [ImporterWorkerEvents.PAUSE]: {
+                [ImporterWorkerEvents.CANCEL]: {
                     handler: this.pause.bind(this),
-                    schema: ImporterWorkerSchema[ImporterWorkerEvents.PAUSE],
+                    schema: ImporterWorkerSchema[ImporterWorkerEvents.CANCEL],
                     unbalanced: true
                 }
             });
         } catch (err) {
-            this.log.error(err, "While consctructing ImporterWorkerService");
+            this.log.error("Error in ImporterWorkerService constructor", err);
         }
     }
 
@@ -62,8 +62,8 @@ export default class ImporterWorkerService extends BaseService {
         await this.pool.terminate();
     }
 
-    pause({ id }: ImporterWorkerPause): void {
-        this.toPause[id] = true;
+    pause({ id }: ImporterWorkerCancel): void {
+        this.abort[id] = true;
     }
 
     async tradesToCandles({
@@ -97,27 +97,35 @@ export default class ImporterWorkerService extends BaseService {
                 importer.fail(err.message);
                 this.log.warn(err, `Importer #${importer.id}`);
             }
-            importer.finish(this.toPause[importer.id]);
+            importer.finish(this.abort[importer.id]);
+            if (this.abort[importer.id]) delete this.abort[importer.id];
             this.log.info(`Importer #${importer.id} is ${importer.status}!`);
             job.update(importer.state);
             if (importer.isFailed) {
-                await this.events.emit<ImporterWorkerFailed>(ImporterWorkerEvents.FAILED, {
-                    id: importer.id,
-                    type: importer.type,
-                    exchange: importer.exchange,
-                    asset: importer.asset,
-                    currency: importer.currency,
-                    error: importer.error
+                await this.events.emit<ImporterWorkerFailed>({
+                    type: ImporterWorkerEvents.FAILED,
+                    data: {
+                        id: importer.id,
+                        type: importer.type,
+                        exchange: importer.exchange,
+                        asset: importer.asset,
+                        currency: importer.currency,
+                        error: importer.error
+                    }
                 });
                 throw new BaseError(importer.error, { importerId: importer.id }); //TODO: requeue
             }
             if (importer.isFinished)
-                await this.events.emit<ImporterWorkerFinished>(ImporterWorkerEvents.FINISHED, {
-                    id: importer.id,
-                    type: importer.type,
-                    exchange: importer.exchange,
-                    asset: importer.asset,
-                    currency: importer.currency
+                await this.events.emit<ImporterWorkerFinished>({
+                    type: ImporterWorkerEvents.FINISHED,
+                    data: {
+                        id: importer.id,
+                        type: importer.type,
+                        exchange: importer.exchange,
+                        asset: importer.asset,
+                        currency: importer.currency,
+                        status: importer.status
+                    }
                 });
             return importer.state;
         } catch (err) {
@@ -129,9 +137,9 @@ export default class ImporterWorkerService extends BaseService {
     async importTrades(job: Job<ImporterState, ImporterState>, importer: Importer): Promise<void> {
         try {
             await DataStream.from(importer.tradesChunks, { maxParallel: this.cpus * 2 })
-                .while(() => importer.isStarted && !this.toPause[importer.id])
+                .while(() => importer.isStarted && !this.abort[importer.id])
                 .map(async (chunk: TradesChunk) => this.loadTrades(importer, chunk))
-                .while(() => importer.isStarted && !this.toPause[importer.id])
+                .while(() => importer.isStarted && !this.abort[importer.id])
                 .map(
                     async ({
                         timeframes,
@@ -143,7 +151,7 @@ export default class ImporterWorkerService extends BaseService {
                         trades: ExchangeTrade[];
                     }) => this.tradesToCandles({ timeframes, chunk, trades })
                 )
-                .while(() => importer.isStarted && !this.toPause[importer.id])
+                .while(() => importer.isStarted && !this.abort[importer.id])
                 .each(
                     async ({
                         chunk,
@@ -156,7 +164,7 @@ export default class ImporterWorkerService extends BaseService {
                 .catch((err: Error) => {
                     importer.fail(err.message);
                 })
-                .while(() => importer.isStarted && !this.toPause[importer.id])
+                .while(() => importer.isStarted && !this.abort[importer.id])
                 .whenEnd();
         } catch (err) {
             this.log.error(`Importer #${importer.id} - Failed while importing trades`, err);

@@ -8,9 +8,7 @@ export const enum Status {
     queued = "queued",
     started = "started",
     finished = "finished",
-    paused = "paused",
     failed = "failed",
-    stopping = "stopping",
     canceled = "canceled"
 }
 
@@ -254,7 +252,7 @@ export class Importer {
     }
 
     get isStarted() {
-        return this._status === "started";
+        return this._status === Status.started;
     }
 
     get params() {
@@ -358,7 +356,7 @@ export class Importer {
     }
 
     get isFinished() {
-        return this._status === Status.finished;
+        return this._status === Status.finished || this._status === Status.canceled;
     }
 
     get error() {
@@ -386,13 +384,15 @@ export class Importer {
         this._startedAt = this._startedAt ? this._startedAt : dayjs.utc().toISOString();
     }
 
-    finish(pause = false) {
+    finish(cancel = false) {
+        this._endedAt = dayjs.utc().toISOString();
         if (this.status === Status.failed) return;
+        if (cancel) {
+            this._status = Status.canceled;
+            return;
+        }
         if (this.isLoaded) {
             this._status = Status.finished;
-            this._endedAt = dayjs.utc().toISOString();
-        } else {
-            this._status = pause ? Status.paused : Status.queued;
         }
     }
 

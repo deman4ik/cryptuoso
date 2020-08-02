@@ -61,10 +61,13 @@ export default class ExwatcherRunnerService extends HTTPService {
             );
 
             if (!exwatcher) {
-                await this.events.emit<ExwatcherSubscribe>(ExwatcherWorkerEvents.SUBSCRIBE, {
-                    exchange,
-                    asset,
-                    currency
+                await this.events.emit<ExwatcherSubscribe>({
+                    type: ExwatcherWorkerEvents.SUBSCRIBE,
+                    data: {
+                        exchange,
+                        asset,
+                        currency
+                    }
                 });
             }
 
@@ -92,7 +95,10 @@ export default class ExwatcherRunnerService extends HTTPService {
                          WHERE exchange = ${exchange};`
             );
             if (count === 0) throw new Error(`Market ${exchange} doesn't exists`);
-            await this.events.emit<ExwatcherSubscribeAll>(ExwatcherWorkerEvents.SUBSCRIBE_ALL, { exchange });
+            await this.events.emit<ExwatcherSubscribeAll>({
+                type: ExwatcherWorkerEvents.SUBSCRIBE_ALL,
+                data: { exchange }
+            });
             res.send({ result: "OK" });
             res.end();
         } catch (err) {
@@ -117,7 +123,10 @@ export default class ExwatcherRunnerService extends HTTPService {
                          WHERE exchange = ${exchange};`
             );
             if (count === 0) throw new Error(`Market ${exchange} doesn't exists`);
-            await this.events.emit<ExwatcherUnsubscribeAll>(ExwatcherWorkerEvents.UNSUBSCRIBE_ALL, { exchange });
+            await this.events.emit<ExwatcherUnsubscribeAll>({
+                type: ExwatcherWorkerEvents.UNSUBSCRIBE_ALL,
+                data: { exchange }
+            });
             res.send({ result: "OK" });
             res.end();
         } catch (err) {

@@ -383,12 +383,15 @@ export class ExwatcherBaseService extends BaseService {
     async importRecentCandles(subscription: Exwatcher): Promise<string> {
         const { exchange, asset, currency } = subscription;
         const id = uuid();
-        await this.events.emit<ImporterRunnerStart>(ImporterRunnerEvents.START, {
-            id,
-            exchange,
-            asset,
-            currency,
-            type: "recent"
+        await this.events.emit<ImporterRunnerStart>({
+            type: ImporterRunnerEvents.START,
+            data: {
+                id,
+                exchange,
+                asset,
+                currency,
+                type: "recent"
+            }
         });
 
         return id;
@@ -422,7 +425,7 @@ export class ExwatcherBaseService extends BaseService {
 
     async publishTick(tick: ExchangePrice): Promise<void> {
         try {
-            await this.events.emit<ExwatcherTick>(ExwatcherWorkerEvents.TICK, tick);
+            await this.events.emit<ExwatcherTick>({ type: ExwatcherWorkerEvents.TICK, data: tick });
         } catch (err) {
             this.log.error("Failed to publich tick", err);
         }

@@ -30,7 +30,12 @@
             "@cryptuoso/importer-events": ["libs/importer-events/src/index.ts"],
             "@cryptuoso/exwatcher-base": ["libs/exwatcher-base/src/index.ts"],
             "@cryptuoso/market": ["libs/market/src/index.ts"],
-            "@cryptuoso/exwatcher-events": ["libs/exwatcher-events/src/index.ts"]
+            "@cryptuoso/exwatcher-events": ["libs/exwatcher-events/src/index.ts"],
+            "@cryptuoso/backtester-state": ["libs/backtester-state/src/index.ts"],
+            "@cryptuoso/robot-state": ["libs/robot-state/src/index.ts"],
+            "@cryptuoso/robot-indicators": ["libs/robot-indicators/src/index.ts"],
+            "@cryptuoso/robot-events": ["libs/robot-events/src/index.ts"],
+            "@cryptuoso/backtester-events": ["libs/backtester-events/src/index.ts"]
         }
     },
     "exclude": ["node_modules", "tmp"]
