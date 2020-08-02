@@ -34,7 +34,8 @@
             "@cryptuoso/backtester-state": ["libs/backtester-state/src/index.ts"],
             "@cryptuoso/robot-state": ["libs/robot-state/src/index.ts"],
             "@cryptuoso/robot-indicators": ["libs/robot-indicators/src/index.ts"],
-            "@cryptuoso/robot-events": ["libs/robot-events/src/index.ts"]
+            "@cryptuoso/robot-events": ["libs/robot-events/src/index.ts"],
+            "@cryptuoso/backtester-events": ["libs/backtester-events/src/index.ts"]
         }
     },
     "exclude": ["node_modules", "tmp"]

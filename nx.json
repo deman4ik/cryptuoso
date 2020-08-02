@@ -93,6 +93,9 @@
         },
         "robot-events": {
             "tags": []
+        },
+        "backtester-events": {
+            "tags": []
         }
     }
 }

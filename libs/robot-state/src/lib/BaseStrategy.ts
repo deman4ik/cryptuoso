@@ -2,11 +2,12 @@ import { ValidationSchema } from "fastest-validator";
 import dayjs from "@cryptuoso/dayjs";
 import { v4 as uuid } from "uuid";
 import { validate, sortAsc } from "@cryptuoso/helpers";
-import { RobotPosition, PositionDirection, RobotPositionStatus, RobotTradeStatus } from "./RobotPosition";
-import { Candle, CandleProps, OrderType, TradeAction, ValidTimeframe, AlertInfo, SignalInfo } from "@cryptuoso/market";
+import { RobotPosition, RobotPositionStatus, RobotPositionState } from "./RobotPosition";
+import { Candle, CandleProps, OrderType, TradeAction, ValidTimeframe, SignalInfo } from "@cryptuoso/market";
 import { IndicatorState, IndicatorType } from "@cryptuoso/robot-indicators";
 import { NewEvent } from "@cryptuoso/events";
-import { RobotWorkerEvents } from "@cryptuoso/robot-events";
+import { RobotWorkerEvents, Signal } from "@cryptuoso/robot-events";
+import logger from "@cryptuoso/logger";
 
 interface RobotSettings {
     strategyParameters?: { [key: string]: any };
@@ -19,36 +20,6 @@ interface RobotsPostionInternalState {
     highestHigh?: number;
     lowestLow?: number;
     stop?: number;
-}
-
-export interface RobotPositionState {
-    id: string;
-    robotId: string;
-    timeframe: ValidTimeframe;
-    volume: number;
-    prefix: string;
-    code: string;
-    parentId?: string;
-    direction?: PositionDirection;
-    status?: RobotPositionStatus;
-    entryStatus?: RobotTradeStatus;
-    entryPrice?: number;
-    entryDate?: string;
-    entryOrderType?: OrderType;
-    entryAction?: TradeAction;
-    entryCandleTimestamp?: string;
-    exitStatus?: RobotTradeStatus;
-    exitPrice?: number;
-    exitDate?: string;
-    exitOrderType?: OrderType;
-    exitAction?: TradeAction;
-    exitCandleTimestamp?: string;
-    alerts?: { [key: string]: AlertInfo };
-    profit?: number;
-    barsHeld?: number;
-    fee?: number;
-    backtest?: boolean;
-    internalState?: RobotsPostionInternalState;
 }
 
 export interface StrategyProps {
@@ -97,11 +68,10 @@ export class BaseStrategy {
     _consts: { [key: string]: string };
     _eventsToSend: NewEvent<any>[];
     _positionsToSave: RobotPositionState[];
-    _log = console.log;
+    _log = logger.debug;
     _dayjs = dayjs;
 
     constructor(state: StrategyState) {
-        this._log = state.log || console.log;
         this._initialized = state.initialized || false; // стратегия инициализирована
         this._parameters = state.parameters || {};
         this._robotSettings = state.robotSettings;
@@ -218,7 +188,7 @@ export class BaseStrategy {
     }
 
     _createSignalEvent(signal: SignalInfo, type: RobotWorkerEvents.SIGNAL_ALERT | RobotWorkerEvents.SIGNAL_TRADE) {
-        const signalData: RobotWorkerEvents.Signal = {
+        const signalData: Signal = {
             ...signal,
             id: uuid(),
             robotId: this._robotId,
