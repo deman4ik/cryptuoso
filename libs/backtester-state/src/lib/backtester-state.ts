@@ -75,10 +75,12 @@ export class Backtester {
 
     constructor(state: BacktesterState) {
         this._id = state.id;
+        this._robotId = state.robotId;
         this._exchange = state.exchange;
         this._asset = state.asset;
         this._currency = state.currency;
         this._timeframe = state.timeframe;
+        this._strategyName = state.strategyName;
         this._dateFrom = state.dateFrom;
         this._dateTo = state.dateTo;
         this._settings = {
@@ -88,18 +90,18 @@ export class Backtester {
             saveLogs: defaultValue(state.settings.saveLogs, false)
         };
         this._robotSettings = state.robotSettings;
-        this._totalBars = state.totalBars;
-        this._processedBars = state.processedBars || 0;
-        this._leftBars = state.leftBars || state.totalBars;
-        this._completedPercent = state.completedPercent || 0;
+        this._totalBars = defaultValue(state.totalBars, 0);
+        this._processedBars = defaultValue(state.processedBars, 0);
+        this._leftBars = defaultValue(state.leftBars, this._totalBars);
+        this._completedPercent = defaultValue(state.completedPercent, 0);
         this._status = state.status;
-        this._startedAt = state.startedAt;
-        this._finishedAt = state.finishedAt;
+        this._startedAt = state.startedAt || null;
+        this._finishedAt = state.finishedAt || null;
         this._statistics = state.statistics;
         this._equity = state.equity;
         this._robotState = state.robotState;
         this._robotIndicators = state.robotIndicators;
-        this._error = state.error;
+        this._error = state.error || null;
     }
 
     get state(): BacktesterState {
