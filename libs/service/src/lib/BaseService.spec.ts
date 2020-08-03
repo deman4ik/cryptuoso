@@ -4,15 +4,7 @@ import logger, { Logger } from "@cryptuoso/logger";
 import { sql } from "@cryptuoso/postgres";
 import { Events } from "@cryptuoso/events";
 
-const setProperty = (object: any, property: any, value: any) => {
-    const originalProperty = Object.getOwnPropertyDescriptor(object, property)
-    Object.defineProperty(object, property, { value })
-    return originalProperty
-}
-
-const mockExit = jest.fn()
-setProperty(process, 'exit', mockExit);
-const ERROR_CODE = 1;
+import {BaseService, BaseServiceConfig} from "./BaseService";
 
 const mockLightshipType = {
     registerShutdownHandler: jest.fn(),
@@ -34,7 +26,16 @@ jest.mock('@cryptuoso/logger');
 jest.mock('@cryptuoso/postgres');
 jest.mock('@cryptuoso/events');
 
-import {BaseService, BaseServiceConfig} from "./BaseService";
+
+const setProperty = (object: any, property: any, value: any) => {
+    const originalProperty = Object.getOwnPropertyDescriptor(object, property)
+    Object.defineProperty(object, property, { value })
+    return originalProperty
+}
+
+const mockExit = jest.fn()
+setProperty(process, 'exit', mockExit);
+const ERROR_CODE = 1;
 
 describe("Test 'BaseService' class", () => {
     describe("Test constructor", () => {
@@ -136,49 +137,40 @@ describe("Test 'BaseService' class", () => {
                 expect(mockLightshipType.signalReady).toHaveBeenCalledTimes(1);
                 await baseService.stopService();
             });
+        });
 
-            test("Testing Logger.info calls count is 2", async () => {
+        describe("Testing outer errors", () => {
+            test("Testing Logger.error calls count is 1 by uncaughtException", async () => {
                 const baseService = new BaseService();
-
+                const proto = Object.getPrototypeOf(baseService);
+                
                 jest.clearAllMocks();
-        
-                await baseService.startService();
 
-                expect(logger.info).toHaveBeenCalledTimes(2);
-                await baseService.stopService();
+                try {
+                    new Error('mock error');
+                } catch(error) {
+                    expect(proto["#handleUncaughtException"]).toHaveBeenCalledTimes(1);
+                }
             });
         });
 
         describe("Testing outer errors", () => {
             test("Testing Logger.error calls count is 1 by unhandledRejection", async () => {
                 const baseService = new BaseService();
+                const proto = Object.getPrototypeOf(baseService);
 
                 jest.clearAllMocks();
 
                 try {
                     Promise.reject(new Error('mock error'));
                 } catch(error) {
-                    expect(logger.error).toHaveBeenCalledTimes(1);
+                    expect(proto["#handleUnhandledRejection"]).toHaveBeenCalledTimes(1);
                 }
             });
         });
 
-        describe("Testing outer errors", () => {
-            test("Testing Logger.error calls count is 1 by uncaughtException", async () => {
-                const baseService = new BaseService();
-
-                jest.clearAllMocks();
-
-                try {
-                    new Error('mock error');
-                } catch(error) {
-                    expect(logger.error).toHaveBeenCalledTimes(1);
-                }
-            });
-        });
-
-        describe("Testing addOnStartHandler", () => {
-            test("Testing w/o error throwing", async () => {
+        describe("Test addOnStartHandler method", () => {
+            test("Testing just one handler", async () => {
                 const baseService = new BaseService();
                 const f = jest.fn();
                 
@@ -187,6 +179,22 @@ describe("Test 'BaseService' class", () => {
                 await baseService.startService();
 
                 expect(f).toHaveBeenCalledTimes(1);
+            });
+            
+            test("Testing several handlers right order", async () => {
+                const baseService = new BaseService();
+                let checkedIndex: number = -1;
+                let count = 10;
+
+                for(let i=0; i<count; ++i)
+                    await baseService.addOnStartHandler(async () => {
+                        if(i == ++checkedIndex)
+                            --count;
+                    });
+
+                await baseService.startService();
+
+                expect(count).toStrictEqual(0);
             });
 
             test("Testing with error throwing", async () => {
@@ -204,8 +212,8 @@ describe("Test 'BaseService' class", () => {
             });
         });
 
-        describe("Testing addOnStopHandler", () => {
-            test("Testing w/o error throwing", async () => {
+        describe("Test addOnStopHandler method", () => {
+            test("Testing just one handler", async () => {
                 const baseService = new BaseService();
                 const f = jest.fn();
                 
@@ -214,6 +222,22 @@ describe("Test 'BaseService' class", () => {
                 await baseService.stopService();
 
                 expect(f).toHaveBeenCalledTimes(1);
+            });
+            
+            test("Testing several handlers right order", async () => {
+                const baseService = new BaseService();
+                let checkedIndex: number = -1;
+                let count = 10;
+
+                for(let i=0; i<count; ++i)
+                    await baseService.addOnStopHandler(async () => {
+                        if(i == ++checkedIndex)
+                            --count;
+                    });
+
+                await baseService.stopService();
+
+                expect(count).toStrictEqual(0);
             });
 
             test("Testing with error throwing", async () => {
@@ -247,16 +271,6 @@ describe("Test 'BaseService' class", () => {
                 expect(sql.end).toHaveBeenCalledTimes(1);
             });
 
-            test("Testing Logger.info calls count is 1", async () => {
-                const baseService = new BaseService();
-        
-                await baseService.startService();
-                jest.clearAllMocks();
-                await baseService.stopService();
-
-                expect(logger.info).toHaveBeenCalledTimes(1);
-            });
-
             test("Testing mockLightshipType.shutdown calls count is 1", async () => {
                 const baseService = new BaseService();
         
@@ -267,14 +281,14 @@ describe("Test 'BaseService' class", () => {
                 expect(mockLightshipType.shutdown).toHaveBeenCalledTimes(1);
             });
 
-            test("Testing Redis.shutdown calls count is 1", async () => {
+            test("Testing Redis.quit calls count is 1", async () => {
                 const baseService = new BaseService();
         
                 await baseService.startService();
                 jest.clearAllMocks();
                 await baseService.stopService();
 
-                expect(baseService.redis.shutdown).toHaveBeenCalledTimes(1);
+                expect(baseService.redis.quit).toHaveBeenCalledTimes(1);
             });
         });
 
