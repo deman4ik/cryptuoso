@@ -99,7 +99,6 @@
     "eslint-config-prettier": "6.0.0",
     "eslint-plugin-prettier": "^3.1.4",
     "jest": "25.2.3",
-    "jest-extended": "^0.11.5",
     "mockdate": "^3.0.2",
     "prettier": "2.0.4",
     "ts-jest": "25.2.1",

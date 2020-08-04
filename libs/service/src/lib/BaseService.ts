@@ -116,13 +116,16 @@ export class BaseService {
                     await onStopFunc();
                 }
             }
-            await this.#redisConnection.quit();
             await this.#db.pg.end();
         } catch (err) {
             this.#log.error(err, `Failed to correctly stop ${this.#name} service`);
             process.exit(1);
         }
     };
+
+    get stopService() {
+        return this.#stopService;
+    }
 
     get redis() {
         return this.#redisConnection;
