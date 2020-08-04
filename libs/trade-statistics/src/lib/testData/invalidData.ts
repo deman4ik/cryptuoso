@@ -1,4 +1,4 @@
-import {RobotStats, PositionDataForStats} from "../trade-statistics"
+import { RobotStats, PositionDataForStats } from "../trade-statistics";
 
 export const invalidStatistics: RobotStats = {
     lastUpdatedAt: null,
@@ -28,7 +28,7 @@ export const invalidStatistics: RobotStats = {
     recoveryFactor: null,
     payoffRatio: null,
     lastPositionExitDate: null
-}
+};
 
 export const invalidPosition: PositionDataForStats = {
     id: null,
