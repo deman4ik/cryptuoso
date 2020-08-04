@@ -896,6 +896,33 @@
                     }
                 }
             }
+        },
+        "trade-statistics": {
+            "root": "libs/trade-statistics",
+            "sourceRoot": "libs/trade-statistics/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "libs/trade-statistics/tsconfig.lib.json",
+                            "libs/trade-statistics/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!libs/trade-statistics/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/trade-statistics/jest.config.js",
+                        "tsConfig": "libs/trade-statistics/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
         }
     },
     "cli": {
