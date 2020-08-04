@@ -18,6 +18,9 @@
         "plugin:prettier/recommended"
     ],
     "rules": {
+        "prettier/prettier": ["error", {
+            "endOfLine":"auto"
+        }],
         "@nrwl/nx/enforce-module-boundaries": [
             "error",
             {
