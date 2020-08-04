@@ -1,27 +1,16 @@
-process.env.PGCS = "localhost:5349";
-
-import "jest-extended";
-
 import { createLightship, LightshipType } from "lightship";
 import Redis from "ioredis";
 import logger, { Logger } from "@cryptuoso/logger";
-import { sql, pg } from "@cryptuoso/postgres";
+import { sql } from "@cryptuoso/postgres";
 import { Events } from "@cryptuoso/events";
 
 import {BaseService, BaseServiceConfig} from "./BaseService";
-
-
 
 const mockLightshipType = {
     registerShutdownHandler: jest.fn(),
     signalReady: jest.fn(),
     shutdown: jest.fn()
 };
-function getLastRegisterShutdownHandler() {
-    const calls = mockLightshipType.registerShutdownHandler.mock.calls;
-    return calls[calls.length-1][0];
-}
-
 jest.mock('lightship', () => {
     return {
         LightshipType: jest.fn().mockImplementation(() => {
@@ -44,21 +33,35 @@ const setProperty = (object: any, property: any, value: any) => {
     return originalProperty
 }
 
-const ERROR_CODE = 1;
 const mockExit = jest.fn()
 setProperty(process, 'exit', mockExit);
-
-setProperty(console, 'error', () => {});
+const ERROR_CODE = 1;
 
 describe("Test 'BaseService' class", () => {
     describe("Test constructor", () => {
         describe("Test constructor with argument", () => {
             const config = { name: "my_name" };
             const baseService = new BaseService(config);
+            
+            /* it("Should call 'createLightship' 1 time", () => {
+                expect(createLightship).toHaveBeenCalledTimes(1);
+            });
+
+            it("Should call 'Redis' 1 time", () => {
+                expect(Redis).toHaveBeenCalledTimes(1);
+            });
+            
+            it("Should call 'Events' 1 time", () => {
+                expect(Events).toHaveBeenCalledTimes(1);
+            });
+            
+            it("Should call 'createLightship.registerShutdownHandler' 1 time", () => {
+                expect(mockLightshipType.registerShutdownHandler).toHaveBeenCalledTimes(1);
+            }); */
 
             describe("Testing sql property", () => {
                 it("Should be type of sql", () => {
-                    expect(typeof baseService.db.sql).toStrictEqual(typeof sql);
+                    expect(typeof baseService.sql).toStrictEqual(typeof sql);
                 });
             });
             
@@ -126,14 +129,13 @@ describe("Test 'BaseService' class", () => {
         describe("Testing startService", () => {
             test("Testing mockLightshipType.signalReady calls count is 1", async () => {
                 const baseService = new BaseService();
-                const methodStopService = getLastRegisterShutdownHandler();
 
                 mockLightshipType.signalReady.mockClear();
         
                 await baseService.startService();
                 
                 expect(mockLightshipType.signalReady).toHaveBeenCalledTimes(1);
-                await methodStopService();
+                await baseService.stopService();
             });
         });
 
@@ -181,17 +183,18 @@ describe("Test 'BaseService' class", () => {
             
             test("Testing several handlers right order", async () => {
                 const baseService = new BaseService();
-                const fs: jest.Mock[] = new Array(10);
+                let checkedIndex: number = -1;
+                let count = 10;
 
-                for(let i=0; i<fs.length; ++i) {
-                    fs[i] = jest.fn();
-                    await baseService.addOnStartHandler(fs[i]);
-                }
+                for(let i=0; i<count; ++i)
+                    await baseService.addOnStartHandler(async () => {
+                        if(i == ++checkedIndex)
+                            --count;
+                    });
 
                 await baseService.startService();
 
-                for(let i=1; i<fs.length; ++i)
-                    expect(fs[i]).toHaveBeenCalledAfter(fs[i-1]);
+                expect(count).toStrictEqual(0);
             });
 
             test("Testing with error throwing", async () => {
@@ -212,35 +215,33 @@ describe("Test 'BaseService' class", () => {
         describe("Test addOnStopHandler method", () => {
             test("Testing just one handler", async () => {
                 const baseService = new BaseService();
-                const methodStopService = getLastRegisterShutdownHandler();
                 const f = jest.fn();
                 
                 baseService.addOnStopHandler(f);
 
-                await methodStopService();
+                await baseService.stopService();
 
                 expect(f).toHaveBeenCalledTimes(1);
             });
             
             test("Testing several handlers right order", async () => {
                 const baseService = new BaseService();
-                const methodStopService = getLastRegisterShutdownHandler();
-                const fs: jest.Mock[] = new Array(10);
+                let checkedIndex: number = -1;
+                let count = 10;
 
-                for(let i=0; i<fs.length; ++i) {
-                    fs[i] = jest.fn();
-                    await baseService.addOnStopHandler(fs[i]);
-                }
+                for(let i=0; i<count; ++i)
+                    await baseService.addOnStopHandler(async () => {
+                        if(i == ++checkedIndex)
+                            --count;
+                    });
 
-                await methodStopService();
+                await baseService.stopService();
 
-                for(let i=1; i<fs.length; ++i)
-                    expect(fs[i]).toHaveBeenCalledAfter(fs[i-1]);
+                expect(count).toStrictEqual(0);
             });
 
             test("Testing with error throwing", async () => {
                 const baseService = new BaseService();
-                const methodStopService = getLastRegisterShutdownHandler();
 
                 jest.clearAllMocks();
                 
@@ -248,7 +249,7 @@ describe("Test 'BaseService' class", () => {
                     throw new Error("error");
                 });
 
-                await methodStopService().catch(() => {});
+                await baseService.stopService().catch(e => {});
 
                 expect(mockExit).toHaveBeenCalledWith(ERROR_CODE);
             });
@@ -261,34 +262,31 @@ describe("Test 'BaseService' class", () => {
         describe("Testing stopService called after startService", () => {
             test("Testing sql.end calls count is 1", async () => {
                 const baseService = new BaseService();
-                const methodStopService = getLastRegisterShutdownHandler();
                 
                 jest.clearAllMocks();
         
                 await baseService.startService();
-                await methodStopService();
+                await baseService.stopService();
                 
-                expect(pg.end).toHaveBeenCalledTimes(1);
+                expect(sql.end).toHaveBeenCalledTimes(1);
             });
 
-            /* test("Testing mockLightshipType.shutdown calls count is 1", async () => {
+            test("Testing mockLightshipType.shutdown calls count is 1", async () => {
                 const baseService = new BaseService();
-                const methodStopService = getLastRegisterShutdownHandler();
         
                 await baseService.startService();
                 jest.clearAllMocks();
-                await methodStopService();
+                await baseService.stopService();
 
                 expect(mockLightshipType.shutdown).toHaveBeenCalledTimes(1);
-            }); */
+            });
 
             test("Testing Redis.quit calls count is 1", async () => {
                 const baseService = new BaseService();
-                const methodStopService = getLastRegisterShutdownHandler();
         
                 await baseService.startService();
                 jest.clearAllMocks();
-                await methodStopService();
+                await baseService.stopService();
 
                 expect(baseService.redis.quit).toHaveBeenCalledTimes(1);
             });
@@ -297,19 +295,17 @@ describe("Test 'BaseService' class", () => {
         describe("Testing stopService called w/o startService calling", () => {
             test("Testing success ending stopService", async () => {
                 const baseService = new BaseService();
-                const methodStopService = getLastRegisterShutdownHandler();
                 
-                expect(await methodStopService().then(() => "success")).toStrictEqual("success");
+                expect(await baseService.stopService().then(() => "success")).toStrictEqual("success");
             });
         });
 
         describe("Testing startService after stopService calling", () => {
             test("Testing success start", async () => {
                 const baseService = new BaseService();
-                const methodStopService = getLastRegisterShutdownHandler();
                 
                 await baseService.startService();
-                await methodStopService();
+                await baseService.stopService();
                 
                 expect(await baseService.startService().then(() => "success")).toStrictEqual("success");
             });
@@ -318,10 +314,9 @@ describe("Test 'BaseService' class", () => {
         describe("Testing startService at the new class instance after stopService calling at the old one", () => {
             test("Testing success start of the new class instance", async () => {
                 const baseService = new BaseService();
-                const methodStopService = getLastRegisterShutdownHandler();
                 
                 await baseService.startService();
-                await methodStopService();
+                await baseService.stopService();
 
                 const baseService2 = new BaseService();
                 
