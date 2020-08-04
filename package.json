@@ -45,7 +45,9 @@
     "build:exwatcher-bitfinex": "nx build exwatcher-bitfinex --prod",
     "serve:exwatcher-bitfinex": "nx serve exwatcher-bitfinex",
     "build:exwatcher-kraken": "nx build exwatcher-kraken --prod",
-    "serve:exwatcher-kraken": "nx serve exwatcher-kraken"
+    "serve:exwatcher-kraken": "nx serve exwatcher-kraken",
+    "build:trade-statistics": "nx build trade-statistics --prod",
+    "serve:trade-statistics": "nx serve trade-statistics"
   },
   "private": true,
   "dependencies": {
