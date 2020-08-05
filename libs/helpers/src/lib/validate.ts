@@ -3,7 +3,13 @@ import { BaseError } from "@cryptuoso/errors";
 
 const v = new Validator();
 
-function validate(data: object, schema: ValidationSchema): void {
+/**
+ * Throws error if provided object does not match provided validation schema.
+ * @param data
+ * @param schema
+ * @example
+ */
+export function validate(data: object, schema: ValidationSchema): void {
     const validationErrors = v.validate(data, schema);
     if (Array.isArray(validationErrors)) {
         throw new BaseError(
@@ -13,5 +19,3 @@ function validate(data: object, schema: ValidationSchema): void {
         );
     }
 }
-
-export { validate };
