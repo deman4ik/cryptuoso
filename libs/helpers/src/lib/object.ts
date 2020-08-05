@@ -1,5 +1,13 @@
 import { toCamelCase, fromCamelCase } from "./text";
 
+/**
+ * Flatten an object with the paths for keys.
+ *
+ * @param obj
+ * @param prefix
+ * @example
+ * flattenObject({ a: { b: { c: 1 } }, d: 1 }); // { 'a.b.c': 1, d: 1 }
+ */
 export const flattenObject = (obj: { [key: string]: any }, prefix = "") =>
     Object.keys(obj).reduce((acc: { [key: string]: any }, k) => {
         const pre = prefix.length ? prefix + "." : "";
@@ -8,6 +16,38 @@ export const flattenObject = (obj: { [key: string]: any }, prefix = "") =>
         return acc;
     }, {});
 
+/**
+ * Deep maps an object's keys.
+ *
+ * @param obj
+ * @param f
+ * @example
+ * const obj = {
+ *  foo: '1',
+ *  nested: {
+ *      child: {
+ *          withArray: [
+ *              {
+ *                  grandChild: ['hello']
+ *              }
+ *          ]
+ *      }
+ *   }
+ * };
+ * const upperKeysObj = deepMapKeys(obj, key => key.toUpperCase()); ->
+ * {
+ * "FOO":"1",
+ * "NESTED":{
+ *   "CHILD":{
+ *     "WITHARRAY":[
+ *       {
+ *         "GRANDCHILD":[ 'hello' ]
+ *       }
+ *     ]
+ *   }
+ *  }
+ * }
+ */
 export const deepMapKeys = (obj: { [key: string]: any }, f: (key: string) => string): { [key: string]: any } =>
     Array.isArray(obj)
         ? obj.map((val) => deepMapKeys(val, f))
@@ -18,14 +58,29 @@ export const deepMapKeys = (obj: { [key: string]: any }, f: (key: string) => str
           }, {})
         : obj;
 
+/**
+ * Converts keys of the object to camelCase.
+ * @param obj
+ */
 export const keysToCamelCase = (obj: { [key: string]: any }): { [key: string]: any } =>
     deepMapKeys(obj, (key) => toCamelCase(key));
 
+/**
+ * Converts the object's keys' parts from camelCase to underscore-divided.
+ *
+ * @param obj
+ * @example
+ * keysToUnderscore({keyOne: 1, keyTwo:2}); // {key_one:1, key_two:2}
+ */
 export const keysToUnderscore = (obj: { [key: string]: any }): { [key: string]: any } =>
     deepMapKeys(obj, (key) => fromCamelCase(key));
 
-export const datesToISOString = (data: { [key: string]: any } | any[]) =>
-    JSON.parse(JSON.stringify(data), (key, value) => {
+/**
+ * Converts legal date values array to ISO strings.
+ * @param date
+ */
+export const datesToISOString = (date: { [key: string]: any } | any[]) =>
+    JSON.parse(JSON.stringify(date), (key, value) => {
         if (value instanceof Date) {
             return value.toISOString();
         } else {
@@ -38,6 +93,9 @@ export const datesToISOString = (data: { [key: string]: any } | any[]) =>
  *
  * @param {any} a
  * @param {any} b
+ * @example
+ * equals({ a: [2, { e: 3 }], b: [4], c: 'foo' }, { a: [2, { e: 3 }], b: [4], c: 'foo' }); // true
+ * equals([1, 2, 3], { 0: 1, 1: 2, 2: 3 }); // true
  */
 export const equals = (a: any, b: any): boolean => {
     if (a === b) return true;
@@ -50,6 +108,12 @@ export const equals = (a: any, b: any): boolean => {
     return keys.every((k) => equals(a[k], b[k]));
 };
 
+/**
+ * 
+ * @param source 
+ * @param flattened 
+ * @param keySoFar 
+ */
 export const flatten = (source: any, flattened: { [key: string]: any } = {}, keySoFar = "") => {
     const getNextKey = (key: string) => `${keySoFar}${keySoFar ? "." : ""}${key}`;
 
@@ -63,8 +127,18 @@ export const flatten = (source: any, flattened: { [key: string]: any } = {}, key
     return flattened;
 };
 
+/**
+ * 
+ * @param source 
+ * @param delim 
+ */
 export const valuesString = (source: any, delim = " ") => Object.values(flatten(source)).join(delim);
 
+/**
+ * Calls JSON.parse and handles errors.
+ * 
+ * @param string 
+ */
 export const JSONParse = (string: string) => {
     try {
         return JSON.parse(string);

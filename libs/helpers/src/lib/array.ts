@@ -1,18 +1,24 @@
+import { round } from "./number";
+
 /**
- * Сравнение двух массивов
+ * Returns an array of elements contained in the first array that are not contained in the second.
  *
- * @param {Array} full
- * @param {Array} part
+ * @param {Array} first
+ * @param {Array} second
+ * @example
+ * arraysDiff([1,2,3],[3,4,5]); // [1,2]
  */
-export function arraysDiff<T>(full: T[], part: T[]): T[] {
-    return full.filter((v) => !part.includes(v));
+export function arraysDiff<T>(first: T[], second: T[]): T[] {
+    return first.filter((v) => !second.includes(v));
 }
 
 /**
- * Разделение массива по пачкам
- * @example chunkArray([1,2,3,4,5,6],2) -> [[1,2],[3,4],[5,6]]
+ * Splits an array into chunks of specified size.
+ *
  * @param {Array} array
- * @param {number} chunkSize размер пачкм
+ * @param {number} chunkSize
+ * @example
+ * chunkArray([1,2,3,4,5,6],2); // [[1,2],[3,4],[5,6]]
  */
 export function chunkArray<T>(array: T[], chunkSize: number): T[][] {
     const arrayToChunk = [...array];
@@ -24,11 +30,12 @@ export function chunkArray<T>(array: T[], chunkSize: number): T[][] {
 }
 
 /**
- * Разделение массива по пачкам инкрементально с конца
- * @example chunkArrayIncrEnd([1,2,3,4,5,6],2) -> [[1,2],[2,3],[3,4],[4,5],[5,6]]
+ * Incrementally splits an array into chunks of specified size until the last element is met.
  *
  * @param {Array} array
- * @param {number} chunkSize размер пачкм
+ * @param {number} chunkSize
+ * @example
+ * chunkArrayIncrEnd([1,2,3,4,5,6],2); // [[1,2],[2,3],[3,4],[4,5],[5,6]]
  */
 export function chunkArrayIncrEnd<T>(array: T[], chunkSize: number): T[][] {
     const arrayToChunk = [...array];
@@ -44,15 +51,21 @@ export function chunkArrayIncrEnd<T>(array: T[], chunkSize: number): T[][] {
 }
 
 /**
- * Разбивка числа по пачкам
+ * Iteratively decreases an integer by the provided value untill possible.
+ * The value is pushed into an array on each iteration.
+ * If there is a remainder, it's pushed into the array last.
  *
- * @param {number} number
- * @param {number} chunkSize
+ * @param {number} number The integer being decreased (if the value is decimal, it's rounded first)
+ * @param {number} reducer The value by which the number is decreased
  * @returns {number[]}
+ * @example
+ * chunkNumberToArray(6, 2); // [2,2,2]
+ * chunkNumberToArray(15,6); // [6,6,3]
+ * chunkNumberToArray(45, 25); // [25, 20]
  */
-export function chunkNumberToArray(number: number, chunkSize: number): number[] {
-    const array = [...Array(number + 1).keys()].slice(1);
-    return chunkArray(array, chunkSize).map((val) => val.length);
+export function chunkNumberToArray(number: number, reducer: number): number[] {
+    const array = [...Array(round(number) + 1).keys()].slice(1);
+    return chunkArray(array, reducer).map((val) => val.length);
 }
 
 /**
@@ -60,8 +73,15 @@ export function chunkNumberToArray(number: number, chunkSize: number): number[] 
  *
  * @template T
  * @param {T[]} arr
- * @param {(a: T, b: T) => boolean} fn
+ * @param {(a: T, b: T) => boolean} fn Comparator function
  * @returns {T[]}
+ * @example
+ * const objects: MyType[] = [{id: 1, value: "a"},
+ *                            {id: 2, value: "b"},
+ *                            {id: 1, value: "c"},
+ *                            {id: 3, value: "d"}];
+ * // [{id:1, value: "a"}, {id: 2, value: "b"}, {id: 3, value: "d"}]
+ * uniqueElementsBy<MyType>(objects, (a,b) => a.id == b.id);
  */
 export function uniqueElementsBy<T>(arr: T[], fn: (a: T, b: T) => boolean): T[] {
     return arr.reduce((acc, v) => {
@@ -71,11 +91,16 @@ export function uniqueElementsBy<T>(arr: T[], fn: (a: T, b: T) => boolean): T[] 
 }
 
 /**
- * Find last element where property is max
+ * Returns the last element in the array with max property value.
  *
- * @param {{ [key: string]: any }[]} arr
- * @param {string} propName
- * @returns
+ * @param {{ [key: string]: any }[]} arr Array of objects
+ * @param {string} propName Name of the property
+ * @returns {Object} The object with max property value
+ * @example
+ * const objects = [{key: 1, val: 5},
+ *                  {key: 2, val: 6},
+ *                  {key: 3, val: 6}];
+ * findLastByMaxProp(objects, "val"); // {key:3, val:6}
  */
 export function findLastByMaxProp(arr: { [key: string]: any }[], propName: string) {
     return arr
@@ -84,11 +109,16 @@ export function findLastByMaxProp(arr: { [key: string]: any }[], propName: strin
 }
 
 /**
- * Find last element where property is min
+ * Returns the last element in the array with min property value.
  *
- * @param {{ [key: string]: any }[]} arr
- * @param {string} propName
- * @returns
+ * @param {{ [key: string]: any }[]} arr Array of objects
+ * @param {string} propName Name of the property
+ * @returns {Object} The object with min property value
+ * @example
+ * const objects = [{key: 1, val: 5},
+ *                  {key: 2, val: 4},
+ *                  {key: 3, val: 4}];
+ * findLastByMinProp(objects, "val"); // {key: 3, val: 4}
  */
 export function findLastByMinProp(arr: { [key: string]: any }[], propName: string) {
     return arr
@@ -100,14 +130,26 @@ export function findLastByMinProp(arr: { [key: string]: any }[], propName: strin
  * Flattens an array up to the specified depth.
  *
  * @param {any[]} arr
- * @param {number} [depth=1]
+ * @param {number} [depth=1] The depth of the targer array. Default value is 1.
  * @returns {any[]}
+ * @example
+ * flattenArray([1, [2], 3, 4]); // [1, 2, 3, 4]
+ * flattenArray([1, [2, [3, [4, 5], 6], 7], 8], 2); // [1, 2, 3, [4, 5], 6, 7, 8]
  */
 export function flattenArray(arr: any[], depth = 1): any[] {
     if (!arr || !Array.isArray(arr) || arr.length === 0) return arr;
     return arr.reduce((a, v) => a.concat(depth > 1 && Array.isArray(v) ? flattenArray(v, depth - 1) : v), []);
 }
 
+/**
+ * Groups the elements of an array based on the output of the given function.
+ *
+ * @param arr
+ * @param fn
+ * @example
+ * groupBy([6.1, 4.2, 6.3], Math.floor); // {4: [4.2], 6: [6.1, 6.3]}
+ * groupBy(["one", "two", "three"], "length"); // {3: ["one","two"], 5: ["three"]}
+ */
 export const groupBy = (arr: { [key: string]: any }[], fn: (...params: any[]) => any | string) =>
     arr.map(typeof fn === "function" ? fn : (val) => val[fn]).reduce((acc, val, i) => {
         acc[val] = (acc[val] || []).concat(arr[i]);
