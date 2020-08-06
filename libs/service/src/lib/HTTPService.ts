@@ -117,7 +117,7 @@ export class HTTPService extends BaseService {
 
             const role = req.body.session_variables["x-hasura-role"];
 
-            if (!(this._routes[req.url].roles.length > 0) || !this._routes[req.url].roles.includes(role))
+            if (this._routes[req.url].roles.length > 0 && !this._routes[req.url].roles.includes(role))
                 throw new ActionsHandlerError("Forbidden: Invalid role", null, "FORBIDDEN", 403);
 
             //TODO: check user in DB and cache in Redis
