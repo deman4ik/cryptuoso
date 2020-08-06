@@ -175,6 +175,7 @@ describe("Test 'BaseService' class", () => {
                             {
                                 action: { name: "my" },
                                 input: {},
+                                // eslint-disable-next-line @typescript-eslint/camelcase
                                 session_variables: {}
                             }
                         );
@@ -203,6 +204,7 @@ describe("Test 'BaseService' class", () => {
                             {
                                 action: { name: "wrong" },
                                 input: {},
+                                // eslint-disable-next-line @typescript-eslint/camelcase
                                 session_variables: {}
                             }
                         );
@@ -256,6 +258,7 @@ describe("Test 'BaseService' class", () => {
                                 {
                                     action: { name: "my" },
                                     input: {},
+                                    // eslint-disable-next-line @typescript-eslint/camelcase
                                     session_variables: { "x-hasura-user-id": "user-id", "x-hasura-role": "my-role" }
                                 }
                             );
@@ -282,6 +285,7 @@ describe("Test 'BaseService' class", () => {
                                 {
                                     action: { name: "my" },
                                     input: {},
+                                    // eslint-disable-next-line @typescript-eslint/camelcase
                                     session_variables: { "x-hasura-user-id": "user-id" }
                                 }
                             );
@@ -316,6 +320,7 @@ describe("Test 'BaseService' class", () => {
                                 {
                                     action: { name: "my" },
                                     input: {},
+                                    // eslint-disable-next-line @typescript-eslint/camelcase
                                     session_variables: { "x-hasura-user-id": "", "x-hasura-role": "my-role" }
                                 }
                             );
@@ -348,6 +353,7 @@ describe("Test 'BaseService' class", () => {
                                 {
                                     action: { name: "my" },
                                     input: {},
+                                    // eslint-disable-next-line @typescript-eslint/camelcase
                                     session_variables: { "x-hasura-user-id": "user-id", "x-hasura-role": "" }
                                 }
                             );
@@ -380,6 +386,7 @@ describe("Test 'BaseService' class", () => {
                                 {
                                     action: { name: "my" },
                                     input: {},
+                                    // eslint-disable-next-line @typescript-eslint/camelcase
                                     session_variables: { "x-hasura-user-id": "user-id", "x-hasura-role": "wrong" }
                                 }
                             );
@@ -481,31 +488,24 @@ describe("Test 'BaseService' class", () => {
                     });
                 });
 
-                describe("Test adding handler to existing route", () => {
-                    test("Should return first right response", async () => {
+                describe("Adding handler to existing route", () => {
+                    test("Should throw error", async () => {
                         const httpService = new HTTPService(CONFIG);
-                        const shutdownHandler = getLastRegisterShutdownHandler();
-                        const firstightResponse = { first: true };
-                        const secondRightResponse = { second: true };
+                        const rightResponse = { first: true };
 
-                        createRoute(httpService, "my", firstightResponse, [], true);
-                        createRoute(httpService, "my", secondRightResponse, [], true);
+                        createRoute(httpService, "my", rightResponse, [], true);
+                        expect(() => createRoute(httpService, "my", rightResponse, [], true)).toThrowError();
+                        expect(() => createRoute(httpService, "my3", rightResponse, [], true)).not.toThrowError();
+                    });
+                });
 
-                        await httpService.startService();
+                describe("Adding several handlers", () => {
+                    test("Should not throw error", async () => {
+                        const httpService = new HTTPService(CONFIG);
+                        const rightResponse = { first: true };
 
-                        const res = await ajax.post(
-                            `http://localhost:${CONFIG.port}/actions/my`,
-                            { "x-api-key": process.env.API_KEY },
-                            {
-                                action: { name: "my" },
-                                input: {},
-                                session_variables: { "x-hasura-user-id": "user-id" }
-                            }
-                        );
-
-                        await shutdownHandler();
-
-                        expect(res.parsedBody).toEqual(firstightResponse);
+                        createRoute(httpService, "my1", rightResponse, [], true);
+                        expect(() => createRoute(httpService, "my2", rightResponse, [], true)).not.toThrowError();
                     });
                 });
             });
