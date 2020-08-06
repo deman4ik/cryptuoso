@@ -36,16 +36,16 @@ export const flattenObject = (obj: { [key: string]: any }, prefix = "") =>
  * };
  * const upperKeysObj = deepMapKeys(obj, key => key.toUpperCase()); ->
  * {
- * "FOO":"1",
- * "NESTED":{
- *   "CHILD":{
- *     "WITHARRAY":[
- *       {
- *         "GRANDCHILD":[ 'hello' ]
- *       }
- *     ]
+ *  "FOO":"1",
+ *  "NESTED":{
+ *      "CHILD":{
+ *          "WITHARRAY":[
+ *              {
+ *                  "GRANDCHILD":[ 'hello' ]
+ *              }
+ *          ]
+ *      }
  *   }
- *  }
  * }
  */
 export const deepMapKeys = (obj: { [key: string]: any }, f: (key: string) => string): { [key: string]: any } =>
@@ -59,14 +59,14 @@ export const deepMapKeys = (obj: { [key: string]: any }, f: (key: string) => str
         : obj;
 
 /**
- * Converts keys of the object to camelCase.
+ * Converts underscored keys of the object to camelCase.
  * @param obj
  */
 export const keysToCamelCase = (obj: { [key: string]: any }): { [key: string]: any } =>
     deepMapKeys(obj, (key) => toCamelCase(key));
 
 /**
- * Converts the object's keys' parts from camelCase to underscore-divided.
+ * Converts the object's keys' parts from camel case to underscore-divided.
  *
  * @param obj
  * @example
@@ -76,7 +76,7 @@ export const keysToUnderscore = (obj: { [key: string]: any }): { [key: string]: 
     deepMapKeys(obj, (key) => fromCamelCase(key));
 
 /**
- * Converts legal date values array to ISO strings.
+ * Converts legal date values array to ISO strings array.
  * @param date
  */
 export const datesToISOString = (date: { [key: string]: any } | any[]) =>
@@ -109,10 +109,11 @@ export const equals = (a: any, b: any): boolean => {
 };
 
 /**
- * 
- * @param source 
- * @param flattened 
- * @param keySoFar 
+ * Flatten an object with the paths for keys.
+ *
+ * @param source
+ * @example
+ * flattenObject({ a: { b: { c: 1 } }, d: 1 }); // { 'a.b.c': 1, d: 1 }
  */
 export const flatten = (source: any, flattened: { [key: string]: any } = {}, keySoFar = "") => {
     const getNextKey = (key: string) => `${keySoFar}${keySoFar ? "." : ""}${key}`;
@@ -128,16 +129,19 @@ export const flatten = (source: any, flattened: { [key: string]: any } = {}, key
 };
 
 /**
- * 
- * @param source 
- * @param delim 
+ * Returns a string of values extracted from the provided object, divided by the provided divider.
+ *
+ * @param source
+ * @param divider A char or a string that values are divided by. Default is " ".
+ * @example
+ * valuesString({ a: { b: { c: 5 } }, b: 5, c: { a: 2 } }); // "5 5 2"
  */
-export const valuesString = (source: any, delim = " ") => Object.values(flatten(source)).join(delim);
+export const valuesString = (source: any, divider = " ") => Object.values(flatten(source)).join(divider);
 
 /**
  * Calls JSON.parse and handles errors.
- * 
- * @param string 
+ *
+ * @param string
  */
 export const JSONParse = (string: string) => {
     try {

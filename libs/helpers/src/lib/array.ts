@@ -55,8 +55,8 @@ export function chunkArrayIncrEnd<T>(array: T[], chunkSize: number): T[][] {
  * The value is pushed into an array on each iteration.
  * If there is a remainder, it's pushed into the array last.
  *
- * @param {number} number The integer being decreased (if the value is decimal, it's rounded first)
- * @param {number} reducer The value by which the number is decreased
+ * @param {number} number The integer being decreased. If the value is decimal, it's rounded first.
+ * @param {number} reducer The value by which the number is decreased. Only the integer part of the value is used.
  * @returns {number[]}
  * @example
  * chunkNumberToArray(6, 2); // [2,2,2]
@@ -142,13 +142,14 @@ export function flattenArray(arr: any[], depth = 1): any[] {
 }
 
 /**
- * Groups the elements of an array based on the output of the given function.
+ * Groups an array of objects based on the output of the given function.
  *
  * @param arr
- * @param fn
+ * @param fn A mapping function.
+ * @returns {Object} An object where the keys are produced from the mapped results.
  * @example
- * groupBy([6.1, 4.2, 6.3], Math.floor); // {4: [4.2], 6: [6.1, 6.3]}
- * groupBy(["one", "two", "three"], "length"); // {3: ["one","two"], 5: ["three"]}
+ * const objects = [{foo:1, bar:2}, {foo:1, bar:3, tar:5}, {foo: 5, tar: 1}]
+ * groupBy(objects, (el)=>el.foo); // {1: [{foo:1, bar:2}, {foo:1, bar:3, tar:5}], 5: [{foo: 5, tar: 1}]}
  */
 export const groupBy = (arr: { [key: string]: any }[], fn: (...params: any[]) => any | string) =>
     arr.map(typeof fn === "function" ? fn : (val) => val[fn]).reduce((acc, val, i) => {
