@@ -1,10 +1,10 @@
 /**
  * Returnts a number rounded to a specified amout of digits.
  *
- * @param n
- * @param decimals
+ * @param n A number to be rounded.
+ * @param decimals Number of decimals. Default value is 0.
  * @example
- * round(12.345, 2) -> 12.35
+ * round(12.345, 2); // 12.35
  */
 export const round = (n: number, decimals = 0): number => +Number(`${Math.round(+`${n}e${decimals}`)}e-${decimals}`);
 
@@ -13,7 +13,7 @@ export const round = (n: number, decimals = 0): number => +Number(`${Math.round(
  *
  * @param nums
  * @example
- * sum(1,2,3,4,5) -> 15
+ * sum(1,2,3,4,5); // 15
  */
 export const sum = (...nums: number[]) => nums.reduce((acc, val) => acc + val, 0);
 
@@ -22,7 +22,7 @@ export const sum = (...nums: number[]) => nums.reduce((acc, val) => acc + val, 0
  *
  * @param nums
  * @example
- * average(1,2,3) -> 2
+ * average(1,2,3); // 2
  */
 export const average = (...nums: number[]) => sum(...nums) / nums.length;
 
@@ -31,7 +31,7 @@ export const average = (...nums: number[]) => sum(...nums) / nums.length;
  *
  * @param nums
  * @example
- * averageRound(2,5,10) -> 6
+ * averageRound(2,5,10); // 6
  */
 export const averageRound = (...nums: number[]) => +round(average(...nums));
 
@@ -41,7 +41,7 @@ export const averageRound = (...nums: number[]) => +round(average(...nums));
  * @param a
  * @param b
  * @example
- * divideRound(10,3) -> 3.33
+ * divideRound(10,3); // 3.33
  */
 export function divideRound(a: number, b: number): number | 0 {
     if (!a || !b || a === 0 || b === 0) return 0;
@@ -55,7 +55,7 @@ export function divideRound(a: number, b: number): number | 0 {
  * @param num
  * @param perc
  * @example
- * addPercent(10, 50) -> 15
+ * addPercent(10, 50); // 15
  */
 export function addPercent(num: number, perc: number) {
     const number = +num || 0;

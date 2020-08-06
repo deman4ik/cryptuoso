@@ -8,11 +8,11 @@
 export const capitalize = (string: string) => string.charAt(0).toUpperCase() + string.slice(1);
 
 /**
- * Converts a string to camelcase.
+ * Converts an underscored string to camelcase.
  *
  * @param str
  * @example
- * toCamelCase("lowercasekey"); // lowerCaseKey
+ * toCamelCase("underscore_key"); // underscoreKey
  */
 export const toCamelCase = (str: string) => {
     const s =
