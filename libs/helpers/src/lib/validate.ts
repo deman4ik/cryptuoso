@@ -8,6 +8,12 @@ const v = new Validator();
  * @param data
  * @param schema
  * @example
+ * const Schema: ValidationSchema = {
+ *       foo: "number",
+ *       bar: "string",
+ *       tar: { type: "object", optional: true }
+ *   };
+ * validate({foo: "bar", tar: 1}) // throws error;
  */
 export function validate(data: object, schema: ValidationSchema): void {
     const validationErrors = v.validate(data, schema);
