@@ -1,6 +1,6 @@
 process.env.PGCS = "localhost:5349";
 
-import { HTTPService, HTTPServiceConfig } from "./HTTPService";
+import { HTTPService, HTTPServiceConfig } from "../lib/HTTPService";
 import { ActionsHandlerError } from "@cryptuoso/errors";
 
 import { ajax, setProperty, getServerFromService, createRoute } from "./HTTPService.spec.helpers";

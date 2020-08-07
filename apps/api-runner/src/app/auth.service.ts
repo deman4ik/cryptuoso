@@ -1,43 +1,125 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { v4 as uuid } from "uuid";
-import dayjs from "../libs/dayjs/src";
+import dayjs from "@cryptuoso/dayjs";
 
-import { cpz } from "../@types";
-import { formatTgName, checkTgLogin, getAccessValue } from "../utils/auth";
+import { cpz } from "../../../../@types";
+import { formatTgName, checkTgLogin, getAccessValue } from "@cryptuoso/helpers";
 
-import MyBroker from "../utils/my-broker";
+import { sql, pg, pgUtil } from "@cryptuoso/postgres";
+import { stringify } from 'querystring';
 
 export class AuthService {
-    private broker: MyBroker;
+    db: { sql: typeof sql; pg: typeof pg; util: typeof pgUtil };
 
-    constructor(broker: MyBroker) {
-        this.broker = broker;
+    constructor(db: {
+        sql: typeof sql;
+        pg: typeof pg;
+        util: typeof pgUtil
+    }) {
+        this.db = db;
+    }
 
-        this.broker.parseSchema({
-            name: cpz.Service.AUTH,
-            actions: {
-                login: this.login.bind(this),
-                loginTg: this.loginTg.bind(this),
-                register: this.register.bind(this),
-                activateAccount: this.activateAccount.bind(this),
-                passwordReset: this.passwordReset.bind(this),
-                confirmPasswordReset: this.confirmPasswordReset.bind(this),
-                registerTg: this.registerTg.bind(this),
-                refreshToken: this.refreshToken.bind(this)
-            }
-        });
+    private async _find(params: {
+        query: {
+            [key: string]: any;
+        }
+    }): Promise<cpz.User[]> {
+        let i = 0;
+        const search = Object.keys(params.query)
+            .map((name: string):string => `${name} = $${++i}`)
+            .join(" AND ");
+
+        // May it replaced by "SELECT * ..." ?
+        return await this.db.pg.any(this.db.sql`
+            SELECT  id,
+                    name,
+                    email,
+                    emailNew,
+                    telegramId,
+                    telegramUsername,
+                    status,
+                    passwordHash,
+                    passwordHashNew,
+                    secretCode,
+                    secretCodeExpireAt,
+                    refreshToken,
+                    refreshTokenExpireAt,
+                    roles,
+                    settings
+            FROM users
+            WHERE ${search};
+        `, Object.values(params.query));
+    }
+
+    private async _get(params: {
+        id: string
+    }): Promise<cpz.User> {
+        // May it replaced by "SELECT * ..." ?
+        return await this.db.pg.maybeOne(this.db.sql`
+            SELECT  id,
+                    name,
+                    email,
+                    emailNew,
+                    telegramId,
+                    telegramUsername,
+                    status,
+                    passwordHash,
+                    passwordHashNew,
+                    secretCode,
+                    secretCodeExpireAt,
+                    refreshToken,
+                    refreshTokenExpireAt,
+                    roles,
+                    settings
+            FROM users
+            WHERE id = $1;
+        `, [params.id]);
+    }
+
+    private async _update(fields: {
+        id: string;
+        [key: string]: any;
+    }) {
+        const acceptedFields = Object.keys(fields)
+            .filter((name) => name != "id");
+        let i = 0;
+        const update = acceptedFields
+            .map((name) => `${name} = $${++i}`)
+            .join(", ");
+
+        return await this.db.pg.query(this.db.sql`
+            UPDATE users SET ${update}
+            WHERE id = ${fields.id};
+        `, acceptedFields.map((name) => fields[name]));
+    }
+
+    private async _insert(params: {
+        entity: cpz.User;
+    }) {
+        const fields = Object.keys(params.entity)
+            .join(", ");
+        let i = 0;
+        const marks = Object.keys(params.entity)
+            .map(() => `$${++i}`)
+            .join(", ");
+
+        return await this.db.pg.query(this.db.sql`
+            INSERT INTO users (${fields})
+            VALUES(${marks});
+        `, Object.values(params.entity));
+    }
+
+    private async _mail(action: string, params: any) {
+
     }
 
     async login(params: any) {
         const { email, password } = params;
         
-        const [user]: cpz.User[] = await this.broker.call(
-            `${cpz.Service.DB_USERS}.find`,
-            {
-                query: { email }
-            }
-        );
+        const [user]: cpz.User[] = await this._find({
+            query: { email }
+        });
         if (!user) throw new Error("User account is not found.");
         if (user.status === cpz.UserStatus.blocked)
             throw new Error("User account is blocked.");
@@ -65,7 +147,7 @@ export class AuthService {
                 .utc()
                 .add(+process.env.REFRESH_TOKEN_EXPIRES, cpz.TimeUnit.day)
                 .toISOString();
-            await this.broker.call(`${cpz.Service.DB_USERS}.update`, {
+            await this._update({
                 id: user.id,
                 refreshToken,
                 refreshTokenExpireAt
@@ -94,13 +176,11 @@ export class AuthService {
         } = loginData;
         const name = formatTgName(telegramUsername, firstName, lastName);
 
-        const user: cpz.User = await this.registerTg(
-            {
+        const user: cpz.User = await this.registerTg({
             telegramId,
             telegramUsername,
             name
-            }
-        );
+        });
         if (!user) throw new Error("User account is not found.");
         if (user.status === cpz.UserStatus.blocked)
             throw new Error("User account is blocked.");
@@ -122,10 +202,10 @@ export class AuthService {
             .utc()
             .add(+process.env.REFRESH_TOKEN_EXPIRES, cpz.TimeUnit.day)
             .toISOString();
-            await this.broker.call(`${cpz.Service.DB_USERS}.update`, {
-            id: user.id,
-            refreshToken,
-            refreshTokenExpireAt
+            await this._update({
+                id: user.id,
+                refreshToken,
+                refreshTokenExpireAt
             });
         } else {
             refreshToken = user.refreshToken;
@@ -146,12 +226,9 @@ export class AuthService {
     async register(params: any) {
         const { email, password, name } = params;
 
-        const [userExists]: cpz.User[] = await this.broker.call(
-            `${cpz.Service.DB_USERS}.find`,
-            {
+        const [userExists]: cpz.User[] = await this._find({
             query: { email }
-            }
-        );
+        });
         if (userExists) throw new Error("User account already exists");
         const newUser: cpz.User = {
             id: uuid(),
@@ -161,23 +238,23 @@ export class AuthService {
             passwordHash: await bcrypt.hash(password, 10),
             secretCode: this.generateCode(),
             roles: {
-            allowedRoles: [cpz.UserRoles.user],
-            defaultRole: cpz.UserRoles.user
+                allowedRoles: [cpz.UserRoles.user],
+                defaultRole: cpz.UserRoles.user
             },
             settings: {
-            notifications: {
-                signals: {
-                telegram: false,
-                email: true
-                },
-                trading: {
-                telegram: false,
-                email: true
+                notifications: {
+                        signals: {
+                        telegram: false,
+                        email: true
+                    },
+                        trading: {
+                        telegram: false,
+                        email: true
+                    }
                 }
             }
-            }
         };
-        await this.broker.call(`${cpz.Service.DB_USERS}.insert`, {
+        await this._insert({
             entity: newUser
         });
 
@@ -185,7 +262,7 @@ export class AuthService {
             userId: newUser.id,
             secretCode: newUser.secretCode
         });
-        await this.broker.call(`${cpz.Service.MAIL}.send`, {
+        await this._mail(`${cpz.Service.MAIL}.send`, {
             to: email,
             subject:
             "🚀 Welcome to Cryptuoso Platform - Please confirm your email.",
@@ -202,35 +279,32 @@ export class AuthService {
 
     async refreshToken(params: any) {
         const { refreshToken } = params;
-        const [user]: cpz.User[] = await this.broker.call(
-          `${cpz.Service.DB_USERS}.find`,
-          {
+        const [user]: cpz.User[] = await this._find({
             query: {
-              refreshToken,
-              refreshTokenExpireAt: {
-                $gt: dayjs.utc().toISOString()
-              }
+                refreshToken,
+                refreshTokenExpireAt: {
+                    $gt: dayjs.utc().toISOString()
+                }
             }
-          }
-        );
+        });
         if (!user)
-          throw new Error("Refresh token expired or user account is not found.");
+            throw new Error("Refresh token expired or user account is not found.");
         if (user.status === cpz.UserStatus.new)
-          throw new Error("User account is not activated.");
+            throw new Error("User account is not activated.");
         if (user.status === cpz.UserStatus.blocked)
-          throw new Error("User account is blocked.");
-  
+            throw new Error("User account is blocked.");
+
         return {
-          accessToken: this.generateAccessToken(user),
-          refreshToken: user.refreshToken,
-          refreshTokenExpireAt: user.refreshTokenExpireAt
+            accessToken: this.generateAccessToken(user),
+            refreshToken: user.refreshToken,
+            refreshTokenExpireAt: user.refreshTokenExpireAt
         };
     }
 
     async activateAccount(params: any) {
         const { userId, secretCode } = params;
 
-        const user: cpz.User = await this.broker.call(`${cpz.Service.DB_USERS}.get`, {
+        const user: cpz.User = await this._get({
             id: userId
         });
 
@@ -249,7 +323,7 @@ export class AuthService {
             .add(+process.env.REFRESH_TOKEN_EXPIRES, cpz.TimeUnit.day)
             .toISOString();
 
-        await this.broker.call(`${cpz.Service.DB_USERS}.update`, {
+        await this._update({
             id: userId,
             secretCode: null,
             secretCodeExpireAt: null,
@@ -257,14 +331,14 @@ export class AuthService {
             refreshToken,
             refreshTokenExpireAt
         });
-        await this.broker.call(
+        await this._mail(
             `${cpz.Service.MAIL}.subscribeToList`,
             {
-            list: "cpz-beta@mg.cryptuoso.com",
-            email: user.email
+                list: "cpz-beta@mg.cryptuoso.com",
+                email: user.email
             }
         );
-        await this.broker.call(`${cpz.Service.MAIL}.send`, {
+        await this._mail(`${cpz.Service.MAIL}.send`, {
             to: user.email,
             subject: "🚀 Welcome to Cryptuoso Platform - User Account Activated.",
             variables: {
@@ -285,12 +359,9 @@ export class AuthService {
     async passwordReset(params: any) {
         const { email } = params;
 
-        const [user]: cpz.User[] = await this.broker.call(
-            `${cpz.Service.DB_USERS}.find`,
-            {
+        const [user]: cpz.User[] = await this._find({
             query: { email }
-            }
-        );
+        });
 
         if (!user) throw new Error("User account not found.");
         if (user.status === cpz.UserStatus.blocked)
@@ -307,10 +378,10 @@ export class AuthService {
             .utc()
             .add(1, cpz.TimeUnit.hour)
             .toISOString();
-            await this.broker.call(`${cpz.Service.DB_USERS}.update`, {
-            id: user.id,
-            secretCode,
-            secretCodeExpireAt
+            await this._update({
+                id: user.id,
+                secretCode,
+                secretCodeExpireAt
             });
         }
 
@@ -318,7 +389,7 @@ export class AuthService {
             userId: user.id,
             secretCode
         });
-        await this.broker.call(`${cpz.Service.MAIL}.send`, {
+        await this._mail(`${cpz.Service.MAIL}.send`, {
             to: user.email,
             subject: "🔐 Cryptuoso - Password Reset Request.",
             variables: {
@@ -336,7 +407,7 @@ export class AuthService {
     async confirmPasswordReset(params: any) {
         const { userId, secretCode, password } = params;
 
-        const user: cpz.User = await this.broker.call(`${cpz.Service.DB_USERS}.get`, {
+        const user: cpz.User = await this._get({
             id: userId
         });
 
@@ -354,14 +425,14 @@ export class AuthService {
             newSecretCodeExpireAt = user.secretCodeExpireAt;
         }
 
-        await this.broker.call(`${cpz.Service.DB_USERS}.update`, {
+        await this._update({
             id: userId,
             passwordHash: await bcrypt.hash(password, 10),
             secretCode: newSecretCode,
             secretCodeExpireAt: newSecretCodeExpireAt
         });
 
-        await this.broker.call(`${cpz.Service.MAIL}.send`, {
+        await this._mail(`${cpz.Service.MAIL}.send`, {
             to: user.email,
             subject: "🔐 Cryptuoso - Reset Password Confirmation.",
             variables: {
@@ -380,42 +451,39 @@ export class AuthService {
     }
 
     async registerTg(params: any) {
-      const { telegramId, telegramUsername, name } = params;
-  
-      const [userExists]: cpz.User[] = await this.broker.call(
-        `${cpz.Service.DB_USERS}.find`,
-        {
-          query: { telegramId }
-        }
-      );
-      if (userExists) return userExists;
-      const newUser: cpz.User = {
-        id: uuid(),
-        telegramId,
-        telegramUsername,
-        name,
-        status: cpz.UserStatus.enabled,
-        roles: {
-          allowedRoles: [cpz.UserRoles.user],
-          defaultRole: cpz.UserRoles.user
-        },
-        settings: {
-          notifications: {
-            signals: {
-              telegram: true,
-              email: false
+        const { telegramId, telegramUsername, name } = params;
+    
+        const [userExists]: cpz.User[] = await this._find({
+            query: { telegramId }
+        });
+        if (userExists) return userExists;
+        const newUser: cpz.User = {
+            id: uuid(),
+            telegramId,
+            telegramUsername,
+            name,
+            status: cpz.UserStatus.enabled,
+            roles: {
+            allowedRoles: [cpz.UserRoles.user],
+            defaultRole: cpz.UserRoles.user
             },
-            trading: {
-              telegram: true,
-              email: false
+            settings: {
+            notifications: {
+                signals: {
+                telegram: true,
+                email: false
+                },
+                trading: {
+                telegram: true,
+                email: false
+                }
             }
-          }
-        }
-      };
-      await this.broker.call(`${cpz.Service.DB_USERS}.insert`, {
-        entity: newUser
-      });
-      return newUser;
+            }
+        };
+        await this._insert({
+            entity: newUser
+        });
+        return newUser;
     }
 
     generateAccessToken(user: cpz.User) {

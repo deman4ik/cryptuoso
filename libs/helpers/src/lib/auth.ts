@@ -1,4 +1,4 @@
-import { cpz } from "../@types";
+import { cpz } from "../../../../@types";
 import crypto from "crypto";
 
 async function checkTgLogin(
