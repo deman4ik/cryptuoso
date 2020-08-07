@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    labels:
+        app: auth
+        env: <ENV>
+    name: auth
+    namespace: default
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: auth
+            env: <ENV>
+    template:
+        metadata:
+            labels:
+                app: auth
+                env: <ENV>
+        spec:
+            imagePullSecrets:
+                - name: cpz-registry
+            containers:
+                - image: <IMAGE>
+                  imagePullPolicy: IfNotPresent
+                  name: auth
+                  readinessProbe:
+                      httpGet:
+                          path: /ready
+                          port: 9025
+                      failureThreshold: 1
+                      initialDelaySeconds: 5
+                      periodSeconds: 5
+                      successThreshold: 1
+                      timeoutSeconds: 5
+                  livenessProbe:
+                      httpGet:
+                          path: /live
+                          port: 9025
+                      failureThreshold: 3
+                      initialDelaySeconds: 10
+                      periodSeconds: 30
+                      successThreshold: 1
+                      timeoutSeconds: 5
+                  startupProbe:
+                      httpGet:
+                          path: /live
+                          port: 9025
+                      failureThreshold: 3
+                      initialDelaySeconds: 10
+                      periodSeconds: 30
+                      successThreshold: 1
+                      timeoutSeconds: 5
+                  env:
+                      - name: SERVICE
+                        value: auth
+                      - name: API_KEY
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: API_KEY
+                      - name: PGCS
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: PGCS
+                      - name: REDISCS
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: REDISCS
+                  ports:
+                      - containerPort: 3025
+                        protocol: TCP
+                      - containerPort: 9025
+                        protocol: TCP
+                  resources:
+                      limits:
+                          memory: 512Mi
+                          cpu: "256m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+    labels:
+        app: auth
+        env: <ENV>
+    name: auth
+    namespace: default
+spec:
+    ports:
+        - name: "api"
+          port: 3025
+          targetPort: 3025
+        - name: "check"
+          port: 9025
+          targetPort: 9025
+    selector:
+        app: auth
+        env: <ENV>
+    type: ClusterIP

@@ -99,6 +99,9 @@
         },
         "trade-statistics": {
             "tags": []
+        },
+        "auth": {
+            "tags": []
         }
     }
 }

@@ -6,120 +6,21 @@ import dayjs from "@cryptuoso/dayjs";
 import { cpz } from "../../../../@types";
 import { formatTgName, checkTgLogin, getAccessValue } from "@cryptuoso/helpers";
 
-import { sql, pg, pgUtil } from "@cryptuoso/postgres";
-import { stringify } from 'querystring';
+import { DBFunctions } from "./service";
 
-export class AuthService {
-    db: { sql: typeof sql; pg: typeof pg; util: typeof pgUtil };
+export class Auth {
+    constructor() {
 
-    constructor(db: {
-        sql: typeof sql;
-        pg: typeof pg;
-        util: typeof pgUtil
-    }) {
-        this.db = db;
-    }
-
-    private async _find(params: {
-        query: {
-            [key: string]: any;
-        }
-    }): Promise<cpz.User[]> {
-        let i = 0;
-        const search = Object.keys(params.query)
-            .map((name: string):string => `${name} = $${++i}`)
-            .join(" AND ");
-
-        // May it replaced by "SELECT * ..." ?
-        return await this.db.pg.any(this.db.sql`
-            SELECT  id,
-                    name,
-                    email,
-                    emailNew,
-                    telegramId,
-                    telegramUsername,
-                    status,
-                    passwordHash,
-                    passwordHashNew,
-                    secretCode,
-                    secretCodeExpireAt,
-                    refreshToken,
-                    refreshTokenExpireAt,
-                    roles,
-                    settings
-            FROM users
-            WHERE ${search};
-        `, Object.values(params.query));
-    }
-
-    private async _get(params: {
-        id: string
-    }): Promise<cpz.User> {
-        // May it replaced by "SELECT * ..." ?
-        return await this.db.pg.maybeOne(this.db.sql`
-            SELECT  id,
-                    name,
-                    email,
-                    emailNew,
-                    telegramId,
-                    telegramUsername,
-                    status,
-                    passwordHash,
-                    passwordHashNew,
-                    secretCode,
-                    secretCodeExpireAt,
-                    refreshToken,
-                    refreshTokenExpireAt,
-                    roles,
-                    settings
-            FROM users
-            WHERE id = $1;
-        `, [params.id]);
-    }
-
-    private async _update(fields: {
-        id: string;
-        [key: string]: any;
-    }) {
-        const acceptedFields = Object.keys(fields)
-            .filter((name) => name != "id");
-        let i = 0;
-        const update = acceptedFields
-            .map((name) => `${name} = $${++i}`)
-            .join(", ");
-
-        return await this.db.pg.query(this.db.sql`
-            UPDATE users SET ${update}
-            WHERE id = ${fields.id};
-        `, acceptedFields.map((name) => fields[name]));
-    }
-
-    private async _insert(params: {
-        entity: cpz.User;
-    }) {
-        const fields = Object.keys(params.entity)
-            .join(", ");
-        let i = 0;
-        const marks = Object.keys(params.entity)
-            .map(() => `$${++i}`)
-            .join(", ");
-
-        return await this.db.pg.query(this.db.sql`
-            INSERT INTO users (${fields})
-            VALUES(${marks});
-        `, Object.values(params.entity));
     }
 
     private async _mail(action: string, params: any) {
 
     }
 
-    async login(params: any) {
-        const { email, password } = params;
-        
-        const [user]: cpz.User[] = await this._find({
-            query: { email }
-        });
+    async login(params: any, db: DBFunctions) {
+        const { password } = params;
+
+        const user: cpz.User = await db.getUserByEmail(params);
         if (!user) throw new Error("User account is not found.");
         if (user.status === cpz.UserStatus.blocked)
             throw new Error("User account is blocked.");
@@ -131,7 +32,7 @@ export class AuthService {
             );
         const passwordChecked = await bcrypt.compare(password, user.passwordHash);
         if (!passwordChecked) throw new Error("Invalid password.");
-  
+
         let refreshToken;
         let refreshTokenExpireAt;
         if (
@@ -147,16 +48,16 @@ export class AuthService {
                 .utc()
                 .add(+process.env.REFRESH_TOKEN_EXPIRES, cpz.TimeUnit.day)
                 .toISOString();
-            await this._update({
-                id: user.id,
-                refreshToken,
-                refreshTokenExpireAt
-            });
         } else {
             refreshToken = user.refreshToken;
             refreshTokenExpireAt = user.refreshTokenExpireAt;
+            await db.updateUserRefreshToken({
+                refreshToken,
+                refreshTokenExpireAt,
+                userId: user.id
+            });
         }
-  
+
         return {
             accessToken: this.generateAccessToken(user),
             refreshToken,
@@ -164,7 +65,7 @@ export class AuthService {
         };
     }
 
-    async loginTg(params: any) {
+    async loginTg(params: any, db: DBFunctions) {
         const loginData = await checkTgLogin(params, process.env.BOT_TOKEN);
         if (!loginData) throw new Error("Invalid login data.");
 
@@ -176,11 +77,14 @@ export class AuthService {
         } = loginData;
         const name = formatTgName(telegramUsername, firstName, lastName);
 
-        const user: cpz.User = await this.registerTg({
-            telegramId,
-            telegramUsername,
-            name
-        });
+        const user: cpz.User = await this.registerTg(
+            {
+                telegramId,
+                telegramUsername,
+                name
+            },
+            db
+        );
         if (!user) throw new Error("User account is not found.");
         if (user.status === cpz.UserStatus.blocked)
             throw new Error("User account is blocked.");
@@ -193,19 +97,19 @@ export class AuthService {
             !user.refreshToken ||
             !user.refreshTokenExpireAt ||
             dayjs
-            .utc(user.refreshTokenExpireAt)
-            .add(-1, cpz.TimeUnit.day)
-            .valueOf() < dayjs.utc().valueOf()
+                .utc(user.refreshTokenExpireAt)
+                .add(-1, cpz.TimeUnit.day)
+                .valueOf() < dayjs.utc().valueOf()
         ) {
             refreshToken = uuid();
             refreshTokenExpireAt = dayjs
-            .utc()
-            .add(+process.env.REFRESH_TOKEN_EXPIRES, cpz.TimeUnit.day)
-            .toISOString();
-            await this._update({
-                id: user.id,
+                .utc()
+                .add(+process.env.REFRESH_TOKEN_EXPIRES, cpz.TimeUnit.day)
+                .toISOString();
+            await db.updateUserRefreshToken({
                 refreshToken,
-                refreshTokenExpireAt
+                refreshTokenExpireAt,
+                userId: user.id
             });
         } else {
             refreshToken = user.refreshToken;
@@ -220,15 +124,13 @@ export class AuthService {
     }
 
     async logout(params: any) {
-        
+
     }
 
-    async register(params: any) {
+    async register(params: any, db: DBFunctions) {
         const { email, password, name } = params;
 
-        const [userExists]: cpz.User[] = await this._find({
-            query: { email }
-        });
+        const userExists: cpz.User = await db.getUserByEmail(params);
         if (userExists) throw new Error("User account already exists");
         const newUser: cpz.User = {
             id: uuid(),
@@ -243,20 +145,18 @@ export class AuthService {
             },
             settings: {
                 notifications: {
-                        signals: {
+                    signals: {
                         telegram: false,
                         email: true
                     },
-                        trading: {
+                    trading: {
                         telegram: false,
                         email: true
                     }
                 }
             }
         };
-        await this._insert({
-            entity: newUser
-        });
+        await db.registerUser(newUser);
 
         const urlData = this.encodeData({
             userId: newUser.id,
@@ -265,9 +165,9 @@ export class AuthService {
         await this._mail(`${cpz.Service.MAIL}.send`, {
             to: email,
             subject:
-            "🚀 Welcome to Cryptuoso Platform - Please confirm your email.",
+                "🚀 Welcome to Cryptuoso Platform - Please confirm your email.",
             variables: {
-            params: `<p>Greetings!</p>
+                params: `<p>Greetings!</p>
                 <p>Your user account is successfully created!</p>
                 <p>Activate your account by confirming your email please click <b><a href="https://cryptuoso.com/auth/activate-account/${urlData}">this link</a></b></p>
                 <p>or enter this code <b>${newUser.secretCode}</b> manually on confirmation page.</p>`
@@ -277,16 +177,9 @@ export class AuthService {
         return newUser.id;
     }
 
-    async refreshToken(params: any) {
-        const { refreshToken } = params;
-        const [user]: cpz.User[] = await this._find({
-            query: {
-                refreshToken,
-                refreshTokenExpireAt: {
-                    $gt: dayjs.utc().toISOString()
-                }
-            }
-        });
+    async refreshToken(params: any, db: DBFunctions) {
+        /* const { refreshToken } = params; */
+        const user: cpz.User = await db.getUserByToken(params);
         if (!user)
             throw new Error("Refresh token expired or user account is not found.");
         if (user.status === cpz.UserStatus.new)
@@ -301,12 +194,10 @@ export class AuthService {
         };
     }
 
-    async activateAccount(params: any) {
+    async activateAccount(params: any, db: DBFunctions) {
         const { userId, secretCode } = params;
 
-        const user: cpz.User = await this._get({
-            id: userId
-        });
+        const user: cpz.User = await db.getUserById(params);
 
         if (!user) throw new Error("User account not found.");
         if (user.status === cpz.UserStatus.blocked)
@@ -323,13 +214,10 @@ export class AuthService {
             .add(+process.env.REFRESH_TOKEN_EXPIRES, cpz.TimeUnit.day)
             .toISOString();
 
-        await this._update({
-            id: userId,
-            secretCode: null,
-            secretCodeExpireAt: null,
-            status: cpz.UserStatus.enabled,
+        await db.activateUser({
             refreshToken,
-            refreshTokenExpireAt
+            refreshTokenExpireAt,
+            userId
         });
         await this._mail(
             `${cpz.Service.MAIL}.subscribeToList`,
@@ -342,7 +230,7 @@ export class AuthService {
             to: user.email,
             subject: "🚀 Welcome to Cryptuoso Platform - User Account Activated.",
             variables: {
-            params: `<p>Congratulations!</p>
+                params: `<p>Congratulations!</p>
                 <p>Your user account is successfully activated!</p>
                 <p>Now you can login to <b><a href="https://cryptuoso.com/auth/login">your account</a></b> using your email and password.</p>
                 <p>Please check out our <b><a href="https://support.cryptuoso.com">Documentation Site</a></b> to get started!</p>`
@@ -356,12 +244,8 @@ export class AuthService {
         };
     }
 
-    async passwordReset(params: any) {
-        const { email } = params;
-
-        const [user]: cpz.User[] = await this._find({
-            query: { email }
-        });
+    async passwordReset(params: any, db: DBFunctions) {
+        const user: cpz.User = await db.getUserByEmail(params);
 
         if (!user) throw new Error("User account not found.");
         if (user.status === cpz.UserStatus.blocked)
@@ -375,13 +259,14 @@ export class AuthService {
         } else {
             secretCode = this.generateCode();
             secretCodeExpireAt = dayjs
-            .utc()
-            .add(1, cpz.TimeUnit.hour)
-            .toISOString();
-            await this._update({
-                id: user.id,
+                .utc()
+                .add(1, cpz.TimeUnit.hour)
+                .toISOString();
+
+            db.updateUserSecretCode({
                 secretCode,
-                secretCodeExpireAt
+                secretCodeExpireAt,
+                userId: user.id
             });
         }
 
@@ -393,7 +278,7 @@ export class AuthService {
             to: user.email,
             subject: "🔐 Cryptuoso - Password Reset Request.",
             variables: {
-            params: `
+                params: `
                 <p>We received a request to reset your password. Please create a new password by clicking <a href="https://cryptuoso.com/auth/confirm-password-reset/${urlData}">this link</a></p>
                 <p>or enter this code <b>${secretCode}</b> manually on reset password confirmation page.</p>
                 <p>This request will expire in 1 hour.</p>
@@ -404,12 +289,10 @@ export class AuthService {
         return user.id;
     }
 
-    async confirmPasswordReset(params: any) {
+    async confirmPasswordReset(params: any, db: DBFunctions) {
         const { userId, secretCode, password } = params;
 
-        const user: cpz.User = await this._get({
-            id: userId
-        });
+        const user: cpz.User = await db.getUserById(params);
 
         if (!user) throw new Error("User account not found.");
         if (user.status === cpz.UserStatus.blocked)
@@ -424,19 +307,18 @@ export class AuthService {
             newSecretCode = user.secretCode;
             newSecretCodeExpireAt = user.secretCodeExpireAt;
         }
-
-        await this._update({
-            id: userId,
+        await db.updateUserPassword({
             passwordHash: await bcrypt.hash(password, 10),
-            secretCode: newSecretCode,
-            secretCodeExpireAt: newSecretCodeExpireAt
+            newSecretCode,
+            newSecretCodeExpireAt,
+            userId
         });
 
         await this._mail(`${cpz.Service.MAIL}.send`, {
             to: user.email,
             subject: "🔐 Cryptuoso - Reset Password Confirmation.",
             variables: {
-            params: `
+                params: `
                 <p>Your password successfully changed!</p>
                 <p>If you did not request this change, please contact support <a href="mailto:support@cryptuoso.com">support@cryptuoso.com</a></p>`
             },
@@ -450,12 +332,10 @@ export class AuthService {
         };
     }
 
-    async registerTg(params: any) {
+    async registerTg(params: any, db: DBFunctions) {
         const { telegramId, telegramUsername, name } = params;
-    
-        const [userExists]: cpz.User[] = await this._find({
-            query: { telegramId }
-        });
+
+        const userExists: cpz.User = await db.getUserTg({ telegramId });
         if (userExists) return userExists;
         const newUser: cpz.User = {
             id: uuid(),
@@ -464,25 +344,24 @@ export class AuthService {
             name,
             status: cpz.UserStatus.enabled,
             roles: {
-            allowedRoles: [cpz.UserRoles.user],
-            defaultRole: cpz.UserRoles.user
+                allowedRoles: [cpz.UserRoles.user],
+                defaultRole: cpz.UserRoles.user
             },
             settings: {
-            notifications: {
-                signals: {
-                telegram: true,
-                email: false
-                },
-                trading: {
-                telegram: true,
-                email: false
+                notifications: {
+                    signals: {
+                        telegram: true,
+                        email: false
+                    },
+                    trading: {
+                        telegram: true,
+                        email: false
+                    }
                 }
             }
-            }
         };
-        await this._insert({
-            entity: newUser
-        });
+        await db.registerUserTg(newUser);
+
         return newUser;
     }
 
@@ -494,21 +373,21 @@ export class AuthService {
         const access = getAccessValue(user);
         return jwt.sign(
             {
-            userId: id,
-            role: defaultRole,
-            allowedRoles: allowedRoles,
-            access,
-            "https://hasura.io/jwt/claims": {
-                "x-hasura-default-role": defaultRole,
-                "x-hasura-allowed-roles": allowedRoles,
-                "x-hasura-user-id": id,
-                "x-hasura-access": `${access}`
-            }
+                userId: id,
+                role: defaultRole,
+                allowedRoles: allowedRoles,
+                access,
+                "https://hasura.io/jwt/claims": {
+                    "x-hasura-default-role": defaultRole,
+                    "x-hasura-allowed-roles": allowedRoles,
+                    "x-hasura-user-id": id,
+                    "x-hasura-access": `${access}`
+                }
             },
             process.env.JWT_SECRET,
             {
-            algorithm: "HS256",
-            expiresIn: `${process.env.JWT_TOKEN_EXPIRES}m`
+                algorithm: "HS256",
+                expiresIn: `${process.env.JWT_TOKEN_EXPIRES}m`
             }
         );
     }
