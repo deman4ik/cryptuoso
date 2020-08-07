@@ -91,42 +91,6 @@ export function uniqueElementsBy<T>(arr: T[], fn: (a: T, b: T) => boolean): T[] 
 }
 
 /**
- * Returns the last element in the array with max property value.
- *
- * @param {{ [key: string]: any }[]} arr Array of objects
- * @param {string} propName Name of the property
- * @returns {Object} The object with max property value
- * @example
- * const objects = [{key: 1, val: 5},
- *                  {key: 2, val: 6},
- *                  {key: 3, val: 6}];
- * findLastByMaxProp(objects, "val"); // {key:3, val:6}
- */
-export function findLastByMaxProp(arr: { [key: string]: any }[], propName: string) {
-    return arr
-        .filter((el) => el[propName] === arr.reduce((max, p) => (p[propName] > max ? p[propName] : max), 0))
-        .pop();
-}
-
-/**
- * Returns the last element in the array with min property value.
- *
- * @param {{ [key: string]: any }[]} arr Array of objects
- * @param {string} propName Name of the property
- * @returns {Object} The object with min property value
- * @example
- * const objects = [{key: 1, val: 5},
- *                  {key: 2, val: 4},
- *                  {key: 3, val: 4}];
- * findLastByMinProp(objects, "val"); // {key: 3, val: 4}
- */
-export function findLastByMinProp(arr: { [key: string]: any }[], propName: string) {
-    return arr
-        .filter((el) => el[propName] === arr.reduce((min, p) => (p[propName] < min ? p[propName] : min), 0))
-        .pop();
-}
-
-/**
  * Flattens an array up to the specified depth.
  *
  * @param {any[]} arr
