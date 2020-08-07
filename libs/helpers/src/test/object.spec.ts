@@ -175,4 +175,17 @@ describe("Test 'object' utils", () => {
             expect(valuesString({ a: { b: { c: 5 } }, b: 5, c: { a: 2 } }, "_")).toStrictEqual("5_5_2");
         });
     });
+
+    describe("Test 'JSONParse'", () => {
+        it("Should parse a valid JSON string to object", () => {
+            const obj = { a: 0, b: "c", d: { e: "f" } };
+            const stringObj = JSON.stringify(obj);
+            expect(JSONParse(stringObj)).toStrictEqual(obj);
+        });
+        it("Should not throw error and return the passed string", () => {
+            const str = "{invalid = 'object',]";
+            expect(() => JSONParse(str)).not.toThrowError();
+            expect(JSONParse(str)).toStrictEqual(str);
+        });
+    });
 });
