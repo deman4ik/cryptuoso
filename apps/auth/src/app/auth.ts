@@ -3,28 +3,32 @@ import bcrypt from "bcrypt";
 import { v4 as uuid } from "uuid";
 import dayjs from "@cryptuoso/dayjs";
 
-import { cpz } from "../../../../@types";
-import { formatTgName, checkTgLogin, getAccessValue } from "@cryptuoso/helpers";
+import { UserState } from "@cryptuoso/user-state";
+import { formatTgName, checkTgLogin, getAccessValue } from "@cryptuoso/auth";
 
-import { DBFunctions } from "./service";
+import { DBFunctions } from "@cryptuoso/auth";
 
 export class Auth {
-    constructor() {
-
+    #db: DBFunctions;
+    constructor(db: DBFunctions) {
+        this.#db = db;
     }
 
     private async _mail(action: string, params: any) {
 
     }
 
-    async login(params: any, db: DBFunctions) {
+    async login(params: {
+        email: string;
+        password: string;
+    }) {
         const { password } = params;
 
-        const user: cpz.User = await db.getUserByEmail(params);
+        const user: UserState.User = await this.#db.getUserByEmail(params);
         if (!user) throw new Error("User account is not found.");
-        if (user.status === cpz.UserStatus.blocked)
+        if (user.status === UserState.UserStatus.blocked)
             throw new Error("User account is blocked.");
-        if (user.status === cpz.UserStatus.new)
+        if (user.status === UserState.UserStatus.new)
             throw new Error("User account is not activated.");
         if (!user.passwordHash)
             throw new Error(
@@ -40,18 +44,18 @@ export class Auth {
             !user.refreshTokenExpireAt ||
             dayjs
                 .utc(user.refreshTokenExpireAt)
-                .add(-1, cpz.TimeUnit.day)
+                .add(-1, UserState.TimeUnit.day)
                 .valueOf() < dayjs.utc().valueOf()
         ) {
             refreshToken = uuid();
             refreshTokenExpireAt = dayjs
                 .utc()
-                .add(+process.env.REFRESH_TOKEN_EXPIRES, cpz.TimeUnit.day)
+                .add(+process.env.REFRESH_TOKEN_EXPIRES, UserState.TimeUnit.day)
                 .toISOString();
         } else {
             refreshToken = user.refreshToken;
             refreshTokenExpireAt = user.refreshTokenExpireAt;
-            await db.updateUserRefreshToken({
+            await this.#db.updateUserRefreshToken({
                 refreshToken,
                 refreshTokenExpireAt,
                 userId: user.id
@@ -65,7 +69,15 @@ export class Auth {
         };
     }
 
-    async loginTg(params: any, db: DBFunctions) {
+    async loginTg(params: {
+        id: number;
+        first_name?: string;
+        last_name?: string;
+        username?: string;
+        photo_url?: string;
+        auth_date: number;
+        hash: string;
+      }) {
         const loginData = await checkTgLogin(params, process.env.BOT_TOKEN);
         if (!loginData) throw new Error("Invalid login data.");
 
@@ -77,18 +89,15 @@ export class Auth {
         } = loginData;
         const name = formatTgName(telegramUsername, firstName, lastName);
 
-        const user: cpz.User = await this.registerTg(
-            {
-                telegramId,
-                telegramUsername,
-                name
-            },
-            db
-        );
+        const user: UserState.User = await this.registerTg({
+            telegramId,
+            telegramUsername,
+            name
+        });
         if (!user) throw new Error("User account is not found.");
-        if (user.status === cpz.UserStatus.blocked)
+        if (user.status === UserState.UserStatus.blocked)
             throw new Error("User account is blocked.");
-        if (user.status === cpz.UserStatus.new)
+        if (user.status === UserState.UserStatus.new)
             throw new Error("User account is not activated.");
 
         let refreshToken;
@@ -98,15 +107,15 @@ export class Auth {
             !user.refreshTokenExpireAt ||
             dayjs
                 .utc(user.refreshTokenExpireAt)
-                .add(-1, cpz.TimeUnit.day)
+                .add(-1, UserState.TimeUnit.day)
                 .valueOf() < dayjs.utc().valueOf()
         ) {
             refreshToken = uuid();
             refreshTokenExpireAt = dayjs
                 .utc()
-                .add(+process.env.REFRESH_TOKEN_EXPIRES, cpz.TimeUnit.day)
+                .add(+process.env.REFRESH_TOKEN_EXPIRES, UserState.TimeUnit.day)
                 .toISOString();
-            await db.updateUserRefreshToken({
+            await this.#db.updateUserRefreshToken({
                 refreshToken,
                 refreshTokenExpireAt,
                 userId: user.id
@@ -127,21 +136,25 @@ export class Auth {
 
     }
 
-    async register(params: any, db: DBFunctions) {
+    async register(params: {
+        email: string;
+        password: string;
+        name: string;
+    }) {
         const { email, password, name } = params;
 
-        const userExists: cpz.User = await db.getUserByEmail(params);
+        const userExists: UserState.User = await this.#db.getUserByEmail(params);
         if (userExists) throw new Error("User account already exists");
-        const newUser: cpz.User = {
+        const newUser: UserState.User = {
             id: uuid(),
             name,
             email,
-            status: cpz.UserStatus.new,
+            status: UserState.UserStatus.new,
             passwordHash: await bcrypt.hash(password, 10),
             secretCode: this.generateCode(),
             roles: {
-                allowedRoles: [cpz.UserRoles.user],
-                defaultRole: cpz.UserRoles.user
+                allowedRoles: [UserState.UserRoles.user],
+                defaultRole: UserState.UserRoles.user
             },
             settings: {
                 notifications: {
@@ -156,13 +169,13 @@ export class Auth {
                 }
             }
         };
-        await db.registerUser(newUser);
+        await this.#db.registerUser(newUser);
 
         const urlData = this.encodeData({
             userId: newUser.id,
             secretCode: newUser.secretCode
         });
-        await this._mail(`${cpz.Service.MAIL}.send`, {
+        await this._mail(`send`, {
             to: email,
             subject:
                 "🚀 Welcome to Cryptuoso Platform - Please confirm your email.",
@@ -177,14 +190,15 @@ export class Auth {
         return newUser.id;
     }
 
-    async refreshToken(params: any, db: DBFunctions) {
-        /* const { refreshToken } = params; */
-        const user: cpz.User = await db.getUserByToken(params);
+    async refreshToken(params: {
+        refreshToken: string;
+    }) {
+        const user: UserState.User = await this.#db.getUserByToken(params);
         if (!user)
             throw new Error("Refresh token expired or user account is not found.");
-        if (user.status === cpz.UserStatus.new)
+        if (user.status === UserState.UserStatus.new)
             throw new Error("User account is not activated.");
-        if (user.status === cpz.UserStatus.blocked)
+        if (user.status === UserState.UserStatus.blocked)
             throw new Error("User account is blocked.");
 
         return {
@@ -194,15 +208,18 @@ export class Auth {
         };
     }
 
-    async activateAccount(params: any, db: DBFunctions) {
+    async activateAccount(params: {
+        userId: string;
+        secretCode: string;
+    }) {
         const { userId, secretCode } = params;
 
-        const user: cpz.User = await db.getUserById(params);
+        const user: UserState.User = await this.#db.getUserById(params);
 
         if (!user) throw new Error("User account not found.");
-        if (user.status === cpz.UserStatus.blocked)
+        if (user.status === UserState.UserStatus.blocked)
             throw new Error("User account is blocked.");
-        if (user.status === cpz.UserStatus.enabled)
+        if (user.status === UserState.UserStatus.enabled)
             throw new Error("User account is already activated.");
         if (!user.secretCode) throw new Error("Confirmation code is not set.");
         if (user.secretCode !== secretCode)
@@ -211,22 +228,22 @@ export class Auth {
         const refreshToken = uuid();
         const refreshTokenExpireAt = dayjs
             .utc()
-            .add(+process.env.REFRESH_TOKEN_EXPIRES, cpz.TimeUnit.day)
+            .add(+process.env.REFRESH_TOKEN_EXPIRES, UserState.TimeUnit.day)
             .toISOString();
 
-        await db.activateUser({
+        await this.#db.activateUser({
             refreshToken,
             refreshTokenExpireAt,
             userId
         });
         await this._mail(
-            `${cpz.Service.MAIL}.subscribeToList`,
+            `subscribeToList`,
             {
                 list: "cpz-beta@mg.cryptuoso.com",
                 email: user.email
             }
         );
-        await this._mail(`${cpz.Service.MAIL}.send`, {
+        await this._mail(`send`, {
             to: user.email,
             subject: "🚀 Welcome to Cryptuoso Platform - User Account Activated.",
             variables: {
@@ -244,26 +261,28 @@ export class Auth {
         };
     }
 
-    async passwordReset(params: any, db: DBFunctions) {
-        const user: cpz.User = await db.getUserByEmail(params);
+    async passwordReset(params: {
+        email: string;
+    }) {
+        const user: UserState.User = await this.#db.getUserByEmail(params);
 
         if (!user) throw new Error("User account not found.");
-        if (user.status === cpz.UserStatus.blocked)
+        if (user.status === UserState.UserStatus.blocked)
             throw new Error("User account is blocked.");
 
         let secretCode;
         let secretCodeExpireAt;
-        if (user.status === cpz.UserStatus.new) {
+        if (user.status === UserState.UserStatus.new) {
             secretCode = user.secretCode;
             secretCodeExpireAt = user.secretCodeExpireAt;
         } else {
             secretCode = this.generateCode();
             secretCodeExpireAt = dayjs
                 .utc()
-                .add(1, cpz.TimeUnit.hour)
+                .add(1, UserState.TimeUnit.hour)
                 .toISOString();
 
-            db.updateUserSecretCode({
+            this.#db.updateUserSecretCode({
                 secretCode,
                 secretCodeExpireAt,
                 userId: user.id
@@ -274,7 +293,7 @@ export class Auth {
             userId: user.id,
             secretCode
         });
-        await this._mail(`${cpz.Service.MAIL}.send`, {
+        await this._mail(`send`, {
             to: user.email,
             subject: "🔐 Cryptuoso - Password Reset Request.",
             variables: {
@@ -289,13 +308,17 @@ export class Auth {
         return user.id;
     }
 
-    async confirmPasswordReset(params: any, db: DBFunctions) {
+    async confirmPasswordReset(params: {
+        userId: string,
+        secretCode: string,
+        password: string
+    }) {
         const { userId, secretCode, password } = params;
 
-        const user: cpz.User = await db.getUserById(params);
+        const user: UserState.User = await this.#db.getUserById(params);
 
         if (!user) throw new Error("User account not found.");
-        if (user.status === cpz.UserStatus.blocked)
+        if (user.status === UserState.UserStatus.blocked)
             throw new Error("User account is blocked.");
         if (!user.secretCode) throw new Error("Confirmation code is not set.");
         if (user.secretCode !== secretCode)
@@ -303,18 +326,18 @@ export class Auth {
 
         let newSecretCode = null;
         let newSecretCodeExpireAt = null;
-        if (user.status === cpz.UserStatus.new) {
+        if (user.status === UserState.UserStatus.new) {
             newSecretCode = user.secretCode;
             newSecretCodeExpireAt = user.secretCodeExpireAt;
         }
-        await db.updateUserPassword({
+        await this.#db.updateUserPassword({
             passwordHash: await bcrypt.hash(password, 10),
             newSecretCode,
             newSecretCodeExpireAt,
             userId
         });
 
-        await this._mail(`${cpz.Service.MAIL}.send`, {
+        await this._mail(`send`, {
             to: user.email,
             subject: "🔐 Cryptuoso - Reset Password Confirmation.",
             variables: {
@@ -332,20 +355,24 @@ export class Auth {
         };
     }
 
-    async registerTg(params: any, db: DBFunctions) {
+    async registerTg(params: {
+        telegramId: number,
+        telegramUsername: string,
+        name: string
+    }) {
         const { telegramId, telegramUsername, name } = params;
 
-        const userExists: cpz.User = await db.getUserTg({ telegramId });
+        const userExists: UserState.User = await this.#db.getUserTg({ telegramId });
         if (userExists) return userExists;
-        const newUser: cpz.User = {
+        const newUser: UserState.User = {
             id: uuid(),
             telegramId,
             telegramUsername,
             name,
-            status: cpz.UserStatus.enabled,
+            status: UserState.UserStatus.enabled,
             roles: {
-                allowedRoles: [cpz.UserRoles.user],
-                defaultRole: cpz.UserRoles.user
+                allowedRoles: [UserState.UserRoles.user],
+                defaultRole: UserState.UserRoles.user
             },
             settings: {
                 notifications: {
@@ -360,12 +387,12 @@ export class Auth {
                 }
             }
         };
-        await db.registerUserTg(newUser);
+        await this.#db.registerUserTg(newUser);
 
         return newUser;
     }
 
-    generateAccessToken(user: cpz.User) {
+    generateAccessToken(user: UserState.User) {
         const {
             id,
             roles: { defaultRole, allowedRoles }

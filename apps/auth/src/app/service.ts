@@ -1,13 +1,11 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 /* import { IncomingMessage, ServerResponse } from 'http'; */
 import { Request, Response, Protocol } from "restana";
-
 import Cookies from "cookies";
-import { cpz } from "../../../../@types";
+import { UserState } from "@cryptuoso/user-state";
+import { DBFunctions } from "@cryptuoso/auth";
 import { Auth } from "./auth";
-
 import { sql } from "@cryptuoso/postgres";
-
 import dayjs from "@cryptuoso/dayjs";
 
 interface HttpRequest extends Request<Protocol.HTTP>/* , IncomingMessage */ {
@@ -16,44 +14,6 @@ interface HttpRequest extends Request<Protocol.HTTP>/* , IncomingMessage */ {
 
 interface HttpResponse extends Response<Protocol.HTTP>/* , ServerResponse */ {
 
-}
-
-export interface DBFunctions {
-    getUserByEmail: { (params: { email: string }): Promise<cpz.User> };
-    getUserById: { (params: { userId: string }): Promise<cpz.User> };
-    getUserTg: { (params: { telegramId: string }): Promise<cpz.User> };
-    getUserByToken: { (params: { refreshToken: string }): Promise<cpz.User> };
-    registerUser: { (newUser: cpz.User): Promise<any> };
-    registerUserTg: { (newUser: cpz.User): Promise<any> };
-    updateUserRefreshToken: {
-        (params: {
-            userId: string,
-            refreshToken: string,
-            refreshTokenExpireAt: string
-        }): Promise<any>
-    };
-    updateUserSecretCode: {
-        (params: {
-            userId: string
-            secretCode: string,
-            secretCodeExpireAt: string
-        }): Promise<any>
-    };
-    updateUserPassword: {
-        (params: {
-            userId: string,
-            passwordHash: string,
-            newSecretCode: string,
-            newSecretCodeExpireAt: string,
-        }): Promise<any>
-    };
-    activateUser: {
-        (params: {
-            refreshToken: string,
-            refreshTokenExpireAt: string,
-            userId: string
-        }): Promise<any>
-    };
 }
 
 export default class AuthService extends HTTPService {
@@ -74,12 +34,12 @@ export default class AuthService extends HTTPService {
     constructor(config?: HTTPServiceConfig) {
         super(config);
         try {
-            this.#auth = new Auth();
+            this.#auth = new Auth(this.#dbFunctions);
 
             this.createRoutes({
                 "login": {
                     handler: this.login.bind(this),
-                    roles: [cpz.UserRoles.anonymous],
+                    roles: [UserState.UserRoles.anonymous],
                     inputSchema: {
                         email: { type: "email", normalize: true },
                         password: { type: "string", empty: false, trim: true }
@@ -87,7 +47,7 @@ export default class AuthService extends HTTPService {
                 },
                 "loginTg": {
                     handler: this.loginTg.bind(this),
-                    roles: [cpz.UserRoles.anonymous],
+                    roles: [UserState.UserRoles.anonymous],
                     inputSchema: {
                         id: "number",
                         first_name: { type: "string", optional: true },
@@ -100,12 +60,12 @@ export default class AuthService extends HTTPService {
                 },
                 "logout": {
                     handler: this.logout.bind(this),
-                    roles: [cpz.UserRoles.user],
+                    roles: [UserState.UserRoles.user],
                     auth: true
                 },
                 "register": {
                     handler: this.register.bind(this),
-                    roles: [cpz.UserRoles.anonymous],
+                    roles: [UserState.UserRoles.anonymous],
                     inputSchema: {
                         email: { type: "email", normalize: true },
                         password: {
@@ -120,7 +80,7 @@ export default class AuthService extends HTTPService {
                 },
                 "refreshToken": {
                     handler: this.refreshToken.bind(this),
-                    roles: [cpz.UserRoles.user],
+                    roles: [UserState.UserRoles.user],
                     auth: true,
                     inputSchema: {
                         refreshToken: "string"
@@ -128,7 +88,7 @@ export default class AuthService extends HTTPService {
                 },
                 "activateAccount": {
                     handler: this.activateAccount.bind(this),
-                    roles: [cpz.UserRoles.anonymous],
+                    roles: [UserState.UserRoles.anonymous],
                     inputSchema: {
                         userId: "string",
                         secretCode: { type: "string", empty: false, trim: true }
@@ -136,14 +96,14 @@ export default class AuthService extends HTTPService {
                 },
                 "passwordReset": {
                     handler: this.passwordReset.bind(this),
-                    roles: [cpz.UserRoles.anonymous],
+                    roles: [UserState.UserRoles.anonymous],
                     inputSchema: {
                         email: { type: "email", normalize: true }
                     }
                 },
                 "confirmPasswordReset": {
                     handler: this.confirmPasswordReset.bind(this),
-                    roles: [cpz.UserRoles.anonymous],
+                    roles: [UserState.UserRoles.anonymous],
                     inputSchema: {
                         userId: "string",
                         secretCode: { type: "string", empty: false, trim: true },
@@ -163,17 +123,11 @@ export default class AuthService extends HTTPService {
     }
 
     async login(req: HttpRequest, res: HttpResponse) {
-        const { email } = req.body;
-
-        const user: cpz.User = await this.db.pg.maybeOne(sql`
-            SELECT * FROM users
-            WHERE email = ${email}
-        `);
         const {
             accessToken,
             refreshToken,
             refreshTokenExpireAt
-        } = await this.#auth.login(req.body, this.#dbFunctions);
+        } = await this.#auth.login(req.body.input);
 
         const cookies = new Cookies(req, res);
 
@@ -197,7 +151,7 @@ export default class AuthService extends HTTPService {
             accessToken,
             refreshToken,
             refreshTokenExpireAt
-        } = await this.#auth.loginTg(req.body, this.#dbFunctions);
+        } = await this.#auth.loginTg(req.body.input);
 
         const cookies = new Cookies(req, res);
 
@@ -231,7 +185,7 @@ export default class AuthService extends HTTPService {
     }
 
     async register(req: HttpRequest, res: HttpResponse) {
-        const userId = await this.#auth.register(req.body, this.#dbFunctions);
+        const userId = await this.#auth.register(req.body.input);
         res.send({ success: true, userId });
         res.end();
     }
@@ -246,7 +200,7 @@ export default class AuthService extends HTTPService {
             accessToken,
             refreshToken,
             refreshTokenExpireAt
-        } = await this.#auth.refreshToken(req.body, this.#dbFunctions);
+        } = await this.#auth.refreshToken(req.body.input);
 
         cookies.set("refresh_token", refreshToken, {
             expires: new Date(refreshTokenExpireAt),
@@ -269,7 +223,7 @@ export default class AuthService extends HTTPService {
             accessToken,
             refreshToken,
             refreshTokenExpireAt
-        } = await this.#auth.activateAccount(req.body, this.#dbFunctions);
+        } = await this.#auth.activateAccount(req.body.input);
 
         const cookies = new Cookies(req, res);
 
@@ -288,7 +242,7 @@ export default class AuthService extends HTTPService {
     }
 
     async passwordReset(req: HttpRequest, res: HttpResponse) {
-        const userId = await this.#auth.passwordReset(req.body, this.#dbFunctions);
+        const userId = await this.#auth.passwordReset(req.body.input);
         res.send({ success: true, userId });
         res.end();
     }
@@ -296,7 +250,7 @@ export default class AuthService extends HTTPService {
     async confirmPasswordReset(req: HttpRequest, res: HttpResponse) {
         const {
             accessToken
-        } = await this.#auth.confirmPasswordReset(req.body, this.#dbFunctions);
+        } = await this.#auth.confirmPasswordReset(req.body.input);
 
         const cookies = new Cookies(req, res);
 
@@ -317,7 +271,7 @@ export default class AuthService extends HTTPService {
 
     
 
-    private async _dbGetUserByEmail(params: any): Promise<cpz.User> {
+    private async _dbGetUserByEmail(params: { email: string }): Promise<UserState.User> {
         const { email } = params;
 
         return await this.db.pg.maybeOne(sql`
@@ -326,7 +280,7 @@ export default class AuthService extends HTTPService {
         `);
     }
 
-    private async _dbGetUserById(params: any): Promise<cpz.User> {
+    private async _dbGetUserById(params: { userId: string }): Promise<UserState.User> {
         const { userId } = params;
 
         return await this.db.pg.maybeOne(sql`
@@ -335,17 +289,7 @@ export default class AuthService extends HTTPService {
         `);
     }
 
-    private async _dbUpdateUserRefreshToken(params: any): Promise<any> {
-        const { refreshToken, refreshTokenExpireAt, userId } = params;
-
-        return await this.db.pg.query(sql`
-            UPDATE users
-            SET refreshToken = ${refreshToken}, refreshTokenExpireAt = ${refreshTokenExpireAt}
-            WHERE id = ${userId}
-        `);
-    }
-
-    private async _dbGetUserTg(params: any): Promise<cpz.User> {
+    private async _dbGetUserTg(params: { telegramId: number }): Promise<UserState.User> {
         const { telegramId } = params;
 
         return await this.db.pg.maybeOne(this.db.sql`
@@ -354,8 +298,31 @@ export default class AuthService extends HTTPService {
         `);
     }
 
-    private async _dbRegisterUserTg(newUser: cpz.User) {
-        return await this.db.pg.query(sql`
+    private async _dbGetUserByToken(params: { refreshToken: string }): Promise<UserState.User> {
+        const { refreshToken } = params;
+
+        return await this.db.pg.maybeOne(sql`
+            SELECT * FROM users
+            WHERE refreshToken = ${refreshToken} AND refreshTokenExpireAt > ${dayjs.utc().toISOString()};
+        `);
+    }
+
+    private async _dbUpdateUserRefreshToken(params: {
+        refreshToken: string,
+        refreshTokenExpireAt: string,
+        userId: string
+    }): Promise<any> {
+        const { refreshToken, refreshTokenExpireAt, userId } = params;
+
+        await this.db.pg.query(sql`
+            UPDATE users
+            SET refreshToken = ${refreshToken}, refreshTokenExpireAt = ${refreshTokenExpireAt}
+            WHERE id = ${userId}
+        `);
+    }
+
+    private async _dbRegisterUserTg(newUser: UserState.User): Promise<any> {
+        await this.db.pg.query(sql`
             INSERT INTO users
                 (id, telegramId, telegramUsername, name, status, roles, settings)
                 VALUES(
@@ -370,8 +337,8 @@ export default class AuthService extends HTTPService {
         `);
     }
 
-    private async _dbRegisterUser(newUser: cpz.User): Promise<any> {
-        return await this.db.pg.query(sql`
+    private async _dbRegisterUser(newUser: UserState.User): Promise<any> {
+        await this.db.pg.query(sql`
             INSERT INTO users
                 (id, name, email, status, passwordHash, secretCode, roles, settings)
                 VALUES(
@@ -387,43 +354,47 @@ export default class AuthService extends HTTPService {
         `);
     }
 
-    private async _dbGetUserByToken(params: any): Promise<cpz.User> {
-        const { refreshToken } = params;
-
-        return await this.db.pg.maybeOne(sql`
-            SELECT * FROM users
-            WHERE refreshToken = ${refreshToken} AND refreshTokenExpireAt > ${dayjs.utc().toISOString()};
-        `);
-    }
-
-    private async _dbActivateUser(params: any): Promise<any> {
+    private async _dbActivateUser(params: {
+        refreshToken: string,
+        refreshTokenExpireAt: string,
+        userId: string
+    }): Promise<any> {
         const { refreshToken, refreshTokenExpireAt, userId } = params;
 
-        return await await this.db.pg.query(sql`
+        await await this.db.pg.query(sql`
             UPDATE users
             SET secretCode = ${null},
                 secretCodeExpireAt = ${null},
-                status = ${cpz.UserStatus.enabled},
+                status = ${UserState.UserStatus.enabled},
                 refreshToken = ${refreshToken},
                 refreshTokenExpireAt = ${refreshTokenExpireAt}
             WHERE id = ${userId};
         `);
     }
 
-    private async _dbUpdateUserSecretCode(params: any): Promise<any> {
+    private async _dbUpdateUserSecretCode(params: {
+        secretCode: string,
+        secretCodeExpireAt: string,
+        userId: string
+    }): Promise<any> {
         const { secretCode, secretCodeExpireAt, userId } = params;
 
-        return await this.db.pg.query(sql`
+        await this.db.pg.query(sql`
             UPDATE users
             SET secretCode = ${secretCode}, secretCodeExpireAt = ${secretCodeExpireAt}
             WHERE id = ${userId}
         `);
     }
 
-    private async _dbUpdateUserPassword(params: any): Promise<any> {
+    private async _dbUpdateUserPassword(params: {
+        passwordHash: string,
+        newSecretCode: string,
+        newSecretCodeExpireAt: string,
+        userId: string
+    }): Promise<any> {
         const { passwordHash, newSecretCode, newSecretCodeExpireAt, userId } = params;
 
-        return await this.db.pg.query(sql`
+        await this.db.pg.query(sql`
             UPDATE users
             SET passwordHash = ${passwordHash},
                 secretCode = ${newSecretCode},
