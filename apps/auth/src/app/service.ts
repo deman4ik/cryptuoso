@@ -80,7 +80,7 @@ export default class AuthService extends HTTPService {
                         name: { type: "string", optional: true, empty: false, trim: true }
                     }
                 },
-                "refreshToken": {
+                "refresh-token": {
                     handler: this.refreshToken.bind(this),
                     roles: [UserState.UserRoles.user],
                     auth: true,
@@ -88,7 +88,7 @@ export default class AuthService extends HTTPService {
                         refreshToken: "string"
                     }
                 },
-                "activateAccount": {
+                "activate-account": {
                     handler: this.activateAccount.bind(this),
                     roles: [UserState.UserRoles.anonymous],
                     inputSchema: {
@@ -96,14 +96,14 @@ export default class AuthService extends HTTPService {
                         secretCode: { type: "string", empty: false, trim: true }
                     }
                 },
-                "passwordReset": {
+                "password-reset": {
                     handler: this.passwordReset.bind(this),
                     roles: [UserState.UserRoles.anonymous],
                     inputSchema: {
                         email: { type: "email", normalize: true }
                     }
                 },
-                "confirmPasswordReset": {
+                "confirm-password-reset": {
                     handler: this.confirmPasswordReset.bind(this),
                     roles: [UserState.UserRoles.anonymous],
                     inputSchema: {
@@ -118,16 +118,16 @@ export default class AuthService extends HTTPService {
                         }
                     }
                 },
-                "changeMail": {
-                    handler: this.passwordReset.bind(this),
+                "change-email": {
+                    handler: this.changeEmail.bind(this),
                     roles: [UserState.UserRoles.anonymous],
                     auth: true,
                     inputSchema: {
                         email: { type: "email", normalize: true }
                     }
                 },
-                "confirmChangeMail": {
-                    handler: this.confirmPasswordReset.bind(this),
+                "confirm-change-mail": {
+                    handler: this.confirmChangeEmail.bind(this),
                     roles: [UserState.UserRoles.anonymous],
                     auth: true,
                     inputSchema: {
