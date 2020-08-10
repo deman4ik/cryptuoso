@@ -47,7 +47,7 @@ export default class AuthService extends HTTPService {
                         password: { type: "string", empty: false, trim: true }
                     }
                 },
-                "loginTg": {
+                "login-tg": {
                     handler: this.loginTg.bind(this),
                     roles: [UserState.UserRoles.anonymous],
                     inputSchema: {
