@@ -3,7 +3,7 @@ import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import { Request, Response, Protocol } from "restana";
 import Cookies from "cookies";
 import { UserState } from "@cryptuoso/user-state";
-import { DBFunctions } from "@cryptuoso/auth";
+import { DBFunctions } from "./types";
 import { Auth } from "./auth";
 import { sql } from "@cryptuoso/postgres";
 import dayjs from "@cryptuoso/dayjs";

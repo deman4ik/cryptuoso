@@ -4,7 +4,8 @@ import { v4 as uuid } from "uuid";
 import dayjs from "@cryptuoso/dayjs";
 
 import { UserState } from "@cryptuoso/user-state";
-import { formatTgName, checkTgLogin, getAccessValue, DBFunctions } from "@cryptuoso/auth";
+import { formatTgName, checkTgLogin, getAccessValue } from "./auth-helper";
+import { DBFunctions } from "./types";
 
 export class Auth {
     #db: DBFunctions;
@@ -54,9 +55,9 @@ export class Auth {
             refreshToken = user.refreshToken;
             refreshTokenExpireAt = user.refreshTokenExpireAt;
             await this.#db.updateUserRefreshToken({
+                userId: user.id,
                 refreshToken,
-                refreshTokenExpireAt,
-                userId: user.id
+                refreshTokenExpireAt
             });
         }
 
@@ -249,7 +250,7 @@ export class Auth {
     }) {
         const { userId, secretCode } = params;
 
-        const user: UserState.User = await this.#db.getUserById(params);
+        const user: UserState.User = await this.#db.getUserById({ userId });
 
         if (!user) throw new Error("User account not found.");
         if (user.status === UserState.UserStatus.blocked)
