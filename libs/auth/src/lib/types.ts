@@ -27,6 +27,28 @@ export interface DBFunctions {
             passwordHash: string,
             newSecretCode: string,
             newSecretCodeExpireAt: string,
+            refreshToken: string,
+            refreshTokenExpireAt: string
+        }): Promise<any>
+    };
+    changeUserEmail: {
+        (params: {
+            userId: string,
+            emailNew: string,
+            secretCode: string,
+            secretCodeExpireAt: string
+        }): Promise<any>
+    };
+    confirmChangeUserEmail: {
+        (params: {
+            userId: string,
+            email: string,
+            emailNew: string,
+            secretCode: string,
+            secretCodeExpireAt: string,
+            refreshToken: string,
+            refreshTokenExpireAt: string,
+            status: UserState.UserStatus
         }): Promise<any>
     };
     activateUser: {

@@ -4,9 +4,7 @@ import { v4 as uuid } from "uuid";
 import dayjs from "@cryptuoso/dayjs";
 
 import { UserState } from "@cryptuoso/user-state";
-import { formatTgName, checkTgLogin, getAccessValue } from "@cryptuoso/auth";
-
-import { DBFunctions } from "@cryptuoso/auth";
+import { formatTgName, checkTgLogin, getAccessValue, DBFunctions } from "@cryptuoso/auth";
 
 export class Auth {
     #db: DBFunctions;
@@ -22,9 +20,9 @@ export class Auth {
         email: string;
         password: string;
     }) {
-        const { password } = params;
+        const { email, password } = params;
 
-        const user: UserState.User = await this.#db.getUserByEmail(params);
+        const user: UserState.User = await this.#db.getUserByEmail({ email });
         if (!user) throw new Error("User account is not found.");
         if (user.status === UserState.UserStatus.blocked)
             throw new Error("User account is blocked.");
@@ -100,8 +98,8 @@ export class Auth {
         if (user.status === UserState.UserStatus.new)
             throw new Error("User account is not activated.");
 
-        let refreshToken;
-        let refreshTokenExpireAt;
+        let refreshToken = null;
+        let refreshTokenExpireAt = null;
         if (
             !user.refreshToken ||
             !user.refreshTokenExpireAt ||
@@ -143,7 +141,7 @@ export class Auth {
     }) {
         const { email, password, name } = params;
 
-        const userExists: UserState.User = await this.#db.getUserByEmail(params);
+        const userExists: UserState.User = await this.#db.getUserByEmail({ email });
         if (userExists) throw new Error("User account already exists");
         const newUser: UserState.User = {
             id: uuid(),
@@ -188,6 +186,43 @@ export class Auth {
             tags: ["auth"]
         });
         return newUser.id;
+    }
+
+    async registerTg(params: {
+        telegramId: number,
+        telegramUsername: string,
+        name: string
+    }) {
+        const { telegramId, telegramUsername, name } = params;
+
+        const userExists: UserState.User = await this.#db.getUserTg({ telegramId });
+        if (userExists) return userExists;
+        const newUser: UserState.User = {
+            id: uuid(),
+            telegramId,
+            telegramUsername,
+            name,
+            status: UserState.UserStatus.enabled,
+            roles: {
+                allowedRoles: [UserState.UserRoles.user],
+                defaultRole: UserState.UserRoles.user
+            },
+            settings: {
+                notifications: {
+                    signals: {
+                        telegram: true,
+                        email: false
+                    },
+                    trading: {
+                        telegram: true,
+                        email: false
+                    }
+                }
+            }
+        };
+        await this.#db.registerUserTg(newUser);
+
+        return newUser;
     }
 
     async refreshToken(params: {
@@ -264,7 +299,8 @@ export class Auth {
     async passwordReset(params: {
         email: string;
     }) {
-        const user: UserState.User = await this.#db.getUserByEmail(params);
+        const { email } = params;
+        const user: UserState.User = await this.#db.getUserByEmail({ email });
 
         if (!user) throw new Error("User account not found.");
         if (user.status === UserState.UserStatus.blocked)
@@ -315,7 +351,7 @@ export class Auth {
     }) {
         const { userId, secretCode, password } = params;
 
-        const user: UserState.User = await this.#db.getUserById(params);
+        const user: UserState.User = await this.#db.getUserById({ userId });
 
         if (!user) throw new Error("User account not found.");
         if (user.status === UserState.UserStatus.blocked)
@@ -324,6 +360,12 @@ export class Auth {
         if (user.secretCode !== secretCode)
             throw new Error("Wrong confirmation code.");
 
+        const refreshToken = uuid();
+        const refreshTokenExpireAt = dayjs
+            .utc()
+            .add(+process.env.REFRESH_TOKEN_EXPIRES, UserState.TimeUnit.day)
+            .toISOString();
+
         let newSecretCode = null;
         let newSecretCodeExpireAt = null;
         if (user.status === UserState.UserStatus.new) {
@@ -331,10 +373,12 @@ export class Auth {
             newSecretCodeExpireAt = user.secretCodeExpireAt;
         }
         await this.#db.updateUserPassword({
+            userId,
             passwordHash: await bcrypt.hash(password, 10),
             newSecretCode,
             newSecretCodeExpireAt,
-            userId
+            refreshToken,
+            refreshTokenExpireAt
         });
 
         await this._mail(`send`, {
@@ -350,46 +394,117 @@ export class Auth {
 
         return {
             accessToken: this.generateAccessToken(user),
-            refreshToken: user.refreshToken,
-            refreshTokenExpireAt: user.refreshTokenExpireAt
+            refreshToken,
+            refreshTokenExpireAt
         };
     }
 
-    async registerTg(params: {
-        telegramId: number,
-        telegramUsername: string,
-        name: string
-    }) {
-        const { telegramId, telegramUsername, name } = params;
+    async changeEmail(
+        params: {
+            email: string;
+        },
+        session_variables: {
+            "x-hasura-user-id": string
+        }
+    ) {
+        const { email } = params;
+        const userExists: UserState.User = await this.#db.getUserByEmail({ email });
+        if (userExists) throw new Error("User already exists.");
 
-        const userExists: UserState.User = await this.#db.getUserTg({ telegramId });
-        if (userExists) return userExists;
-        const newUser: UserState.User = {
-            id: uuid(),
-            telegramId,
-            telegramUsername,
-            name,
-            status: UserState.UserStatus.enabled,
-            roles: {
-                allowedRoles: [UserState.UserRoles.user],
-                defaultRole: UserState.UserRoles.user
+        const userId = session_variables["x-hasura-user-id"];
+
+        const user: UserState.User = await this.#db.getUserById({ userId });
+        if (!user) throw new Error("User account is not found.");
+        if (user.status === UserState.UserStatus.blocked)
+            throw new Error("User account is blocked.");
+
+        let { secretCode, secretCodeExpireAt } = user;
+        if (
+            secretCode &&
+            secretCodeExpireAt &&
+            dayjs.utc().valueOf() < dayjs.utc(secretCodeExpireAt).valueOf()
+        ) {
+            secretCode = user.secretCode;
+            secretCodeExpireAt = user.secretCodeExpireAt;
+        } else {
+            secretCode = this.generateCode();
+            secretCodeExpireAt = dayjs
+                .utc()
+                .add(1, UserState.TimeUnit.hour)
+                .toISOString();
+        }
+        await this.#db.changeUserEmail({
+            userId, emailNew: email, secretCode, secretCodeExpireAt
+        });
+
+        await this._mail(`send`, {
+            to: email,
+            subject: "🔐 Cryptuoso - Change Email Request.",
+            variables: {
+                body: `<p>We received a request to change your email.</p>
+                <p>Please enter this code <b>${secretCode}</b> to confirm.</p>
+                <p>This request will expire in 1 hour.</p>
+                <p>If you did not request this change, no changes have been made to your user account.</p>`
             },
-            settings: {
-                notifications: {
-                    signals: {
-                        telegram: true,
-                        email: false
-                    },
-                    trading: {
-                        telegram: true,
-                        email: false
-                    }
-                }
-            }
-        };
-        await this.#db.registerUserTg(newUser);
+            tags: ["auth"]
+        });
 
-        return newUser;
+        return { success: true };
+    }
+
+    async confirmChangeEmail(
+        params: {
+            secretCode: string
+        },
+        session_variables: {
+            "x-hasura-user-id": string
+        }
+    ) {
+        const { secretCode } = params;
+        const userId = session_variables["x-hasura-user-id"];
+        const user: UserState.User = await this.#db.getUserById({ userId });
+
+        if (!user) throw new Error("User account not found.");
+        if (user.status === UserState.UserStatus.blocked)
+            throw new Error("User account is blocked.");
+        if (!user.emailNew) throw new Error("New email is not set.");
+        if (!user.secretCode) throw new Error("Confirmation code is not set.");
+        if (user.secretCode !== secretCode)
+            throw new Error("Wrong confirmation code.");
+
+        const refreshToken = uuid();
+        const refreshTokenExpireAt = dayjs
+            .utc()
+            .add(+process.env.REFRESH_TOKEN_EXPIRES, UserState.TimeUnit.day)
+            .toISOString();
+
+        await this.#db.confirmChangeUserEmail({
+            userId,
+            email: user.emailNew,
+            emailNew: null,
+            secretCode: null,
+            secretCodeExpireAt: null,
+            refreshToken,
+            refreshTokenExpireAt,
+            status: UserState.UserStatus.enabled
+        });
+
+        await this._mail(`send`, {
+            to: user.email || user.emailNew,
+            subject: "🔐 Cryptuoso - Email Change Confirmation.",
+            variables: {
+            body: `
+                <p>Your email successfully changed to ${user.emailNew}!</p>
+                <p>If you did not request this change, please contact support <a href="mailto:support@cryptuoso.com">support@cryptuoso.com</a></p>`
+            },
+            tags: ["auth"]
+        });
+
+        return {
+            accessToken: this.generateAccessToken(user),
+            refreshToken,
+            refreshTokenExpireAt
+        };
     }
 
     generateAccessToken(user: UserState.User) {

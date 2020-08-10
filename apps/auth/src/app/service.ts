@@ -28,6 +28,8 @@ export default class AuthService extends HTTPService {
         updateUserRefreshToken: this._dbUpdateUserRefreshToken.bind(this),
         updateUserSecretCode: this._dbUpdateUserSecretCode.bind(this),
         updateUserPassword: this._dbUpdateUserPassword.bind(this),
+        changeUserEmail: this._dbChangeUserEmail.bind(this),
+        confirmChangeUserEmail: this._dbConfirmChangeUserEmail.bind(this),
         activateUser: this._dbActivateUser.bind(this)
     };
 
@@ -114,6 +116,23 @@ export default class AuthService extends HTTPService {
                             alphanum: true,
                             trim: true
                         }
+                    }
+                },
+                "changeMail": {
+                    handler: this.passwordReset.bind(this),
+                    roles: [UserState.UserRoles.anonymous],
+                    auth: true,
+                    inputSchema: {
+                        email: { type: "email", normalize: true }
+                    }
+                },
+                "confirmChangeMail": {
+                    handler: this.confirmPasswordReset.bind(this),
+                    roles: [UserState.UserRoles.anonymous],
+                    auth: true,
+                    inputSchema: {
+                        userId: "string",
+                        secretCode: { type: "string", empty: false, trim: true }
                     }
                 }
             });
@@ -249,13 +268,50 @@ export default class AuthService extends HTTPService {
 
     async confirmPasswordReset(req: HttpRequest, res: HttpResponse) {
         const {
-            accessToken
+            accessToken,
+            refreshToken,
+            refreshTokenExpireAt
         } = await this.#auth.confirmPasswordReset(req.body.input);
 
         const cookies = new Cookies(req, res);
 
-        cookies.set("refresh_token", "", {
-            expires: new Date(0),
+        cookies.set("refresh_token", refreshToken, {
+            expires: new Date(refreshTokenExpireAt),
+            httpOnly: true,
+            sameSite: "lax",
+            domain: ".cryptuoso.com",
+            overwrite: true
+        });
+        res.send({
+            success: true,
+            accessToken
+        });
+        res.end();
+    }
+
+    async changeEmail(req: HttpRequest, res: HttpResponse) {
+        /* const response =  */await this.#auth.changeEmail(
+            req.body.input,
+            req.body.session_variables
+        );
+        res.send({ success: true });
+        res.end();
+    }
+
+    async confirmChangeEmail(req: HttpRequest, res: HttpResponse) {
+        const {
+            accessToken,
+            refreshToken,
+            refreshTokenExpireAt
+        } = await this.#auth.confirmChangeEmail(
+            req.body.input,
+            req.body.session_variables
+        );
+
+        const cookies = new Cookies(req, res);
+
+        cookies.set("refresh_token", refreshToken, {
+            expires: new Date(refreshTokenExpireAt),
             httpOnly: true,
             sameSite: "lax",
             domain: ".cryptuoso.com",
@@ -373,11 +429,11 @@ export default class AuthService extends HTTPService {
     }
 
     private async _dbUpdateUserSecretCode(params: {
+        userId: string,
         secretCode: string,
-        secretCodeExpireAt: string,
-        userId: string
+        secretCodeExpireAt: string
     }): Promise<any> {
-        const { secretCode, secretCodeExpireAt, userId } = params;
+        const { userId, secretCode, secretCodeExpireAt } = params;
 
         await this.db.pg.query(sql`
             UPDATE users
@@ -386,19 +442,81 @@ export default class AuthService extends HTTPService {
         `);
     }
 
+    private async _dbChangeUserEmail(params: {
+        userId: string,
+        emailNew: string,
+        secretCode: string,
+        secretCodeExpireAt: string
+    }): Promise<any> {
+        const { secretCode, secretCodeExpireAt, userId, emailNew } = params;
+
+        await this.db.pg.query(sql`
+            UPDATE users
+            SET emailNew = ${emailNew},
+                secretCode = ${secretCode},
+                secretCodeExpireAt = ${secretCodeExpireAt}
+            WHERE id = ${userId}
+        `);
+    }
+
+    private async _dbConfirmChangeUserEmail(params: {
+        userId: string,
+        email: string,
+        emailNew: string,
+        secretCode: string,
+        secretCodeExpireAt: string,
+        refreshToken: string,
+        refreshTokenExpireAt: string,
+        status: UserState.UserStatus
+    }): Promise<any> {
+        const {
+            userId,
+            email,
+            emailNew,
+            secretCode,
+            secretCodeExpireAt,
+            refreshToken,
+            refreshTokenExpireAt,
+            status
+        } = params;
+
+        await this.db.pg.query(sql`
+            UPDATE users
+            SET email = ${email},
+                emailNew = ${emailNew},
+                secretCode = ${secretCode},
+                secretCodeExpireAt = ${secretCodeExpireAt}
+                refreshToken = ${refreshToken},
+                refreshTokenExpireAt = ${refreshTokenExpireAt},
+                status = ${status}
+            WHERE id = ${userId}
+        `);
+    }
+
     private async _dbUpdateUserPassword(params: {
+        userId: string,
         passwordHash: string,
         newSecretCode: string,
         newSecretCodeExpireAt: string,
-        userId: string
+        refreshToken: string,
+        refreshTokenExpireAt: string
     }): Promise<any> {
-        const { passwordHash, newSecretCode, newSecretCodeExpireAt, userId } = params;
+        const {
+            userId,
+            passwordHash,
+            newSecretCode,
+            newSecretCodeExpireAt, 
+            refreshToken,
+            refreshTokenExpireAt
+        } = params;
 
         await this.db.pg.query(sql`
             UPDATE users
             SET passwordHash = ${passwordHash},
                 secretCode = ${newSecretCode},
-                secretCodeExpireAt = ${newSecretCodeExpireAt}
+                secretCodeExpireAt = ${newSecretCodeExpireAt},
+                refreshToken = ${refreshToken},
+                refreshTokenExpireAt = ${refreshTokenExpireAt}
             WHERE id = ${userId};
         `);
     }
