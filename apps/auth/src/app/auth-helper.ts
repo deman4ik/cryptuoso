@@ -37,6 +37,37 @@ async function checkTgLogin(
     }
 }
 
+async function makeTgHash(
+    loginData: {
+        id: number;
+        first_name?: string;
+        last_name?: string;
+        username?: string;
+        photo_url?: string;
+        auth_date: number;
+    },
+    token: string
+) {
+    const secret = crypto
+        .createHash("sha256")
+        .update(token)
+        .digest();
+    let data: { [key: string]: any } = loginData;
+    delete data.hash;
+    let array = [];
+    for (let key in data) {
+        array.push(key + "=" + data[key]);
+    }
+    array = array.sort();
+    const checkString = array.join("\n");
+    const checkHash = crypto
+        .createHmac("sha256", secret)
+        .update(checkString)
+        .digest("hex");
+    
+    return checkHash;
+}
+
 function roleToAccesValue(role: UserState.UserRoles) {
     switch (role) {
         case UserState.UserRoles.anonymous:
@@ -76,4 +107,10 @@ function formatTgName(
     return name;
 }
 
-export { checkTgLogin, roleToAccesValue, getAccessValue, formatTgName };
+export {
+    checkTgLogin,
+    makeTgHash,
+    roleToAccesValue,
+    getAccessValue,
+    formatTgName
+};

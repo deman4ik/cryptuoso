@@ -5,7 +5,7 @@ import Cookies from "cookies";
 import { UserState } from "@cryptuoso/user-state";
 import { DBFunctions } from "./types";
 import { Auth } from "./auth";
-import { sql } from "@cryptuoso/postgres";
+import { sql } from "slonik";
 import dayjs from "@cryptuoso/dayjs";
 
 interface HttpRequest extends Request<Protocol.HTTP>/* , IncomingMessage */ {
@@ -13,6 +13,10 @@ interface HttpRequest extends Request<Protocol.HTTP>/* , IncomingMessage */ {
 }
 
 interface HttpResponse extends Response<Protocol.HTTP>/* , ServerResponse */ {
+
+}
+
+export interface AuthServiceConfig extends HTTPServiceConfig {
 
 }
 
@@ -33,7 +37,7 @@ export default class AuthService extends HTTPService {
         activateUser: this._dbActivateUser.bind(this)
     };
 
-    constructor(config?: HTTPServiceConfig) {
+    constructor(config?: AuthServiceConfig) {
         super(config);
         try {
             this.#auth = new Auth(this.#dbFunctions);
@@ -137,7 +141,7 @@ export default class AuthService extends HTTPService {
                 }
             });
         } catch (err) {
-            this.log.error(err, "While consctructing ImporterRunnerService");
+            this.log.error(err, "While consctructing AuthService");
         }
     }
 
@@ -157,12 +161,11 @@ export default class AuthService extends HTTPService {
             domain: ".cryptuoso.com",
             overwrite: true
         });
-        res.end(
-            JSON.stringify({
-                success: true,
-                accessToken
-            })
-        );
+        res.end({
+            success: true,
+            accessToken
+        });
+        res.end();
     }
 
     async loginTg(req: HttpRequest, res: HttpResponse) {
@@ -181,12 +184,11 @@ export default class AuthService extends HTTPService {
             domain: ".cryptuoso.com",
             overwrite: true
         });
-        res.end(
-            JSON.stringify({
-                success: true,
-                accessToken
-            })
-        );
+        res.end({
+            success: true,
+            accessToken
+        });
+        res.end();
     }
 
     async logout(req: HttpRequest, res: HttpResponse) {
@@ -219,7 +221,9 @@ export default class AuthService extends HTTPService {
             accessToken,
             refreshToken,
             refreshTokenExpireAt
-        } = await this.#auth.refreshToken(req.body.input);
+        } = await this.#auth.refreshToken({
+            refreshToken: oldRefreshToken
+        });
 
         cookies.set("refresh_token", refreshToken, {
             expires: new Date(refreshTokenExpireAt),
