@@ -150,8 +150,8 @@ export class HTTPService extends BaseService {
             inputSchema?: ValidationSchema;
         };
     }) {
-        for(const name of Object.keys(routes)) {
-            if(this._routes[`/actions/${name}`]) {
+        for (const name of Object.keys(routes)) {
+            if (this._routes[`/actions/${name}`]) {
                 throw new Error(`This route ${name} is occupied`);
             }
         }

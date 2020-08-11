@@ -1,4 +1,8 @@
-export declare namespace UserState {
+export interface GenericObject<T> {
+    [key: string]: T;
+}
+
+declare namespace UserState {
     const enum TimeUnit {
         second = "second",
         minute = "minute",
