@@ -27,24 +27,24 @@ export class Auth {
         const user: UserState.User = await this.#db.getUserByEmail({ email });
         if (!user)
             throw new ActionsHandlerError(
-                "Not found: User account is not found.", null, "NOT_FOUND", 404
+                "User account is not found.", null, "NOT_FOUND", 404
             );
         if (user.status === UserState.UserStatus.blocked)
             throw new ActionsHandlerError(
-                "Forbidden: User account is blocked.", null, "FORBIDDEN", 403
+                "User account is blocked.", null, "FORBIDDEN", 403
             );
         if (user.status === UserState.UserStatus.new)
             throw new ActionsHandlerError(
-                "Forbidden: User account is not activated.", null, "FORBIDDEN", 403
+                "User account is not activated.", null, "FORBIDDEN", 403
             );
         if (!user.passwordHash)
             throw new ActionsHandlerError(
-                "Forbidden: Password is not set. Login with Telegram and change password.", null, "FORBIDDEN", 403
+                "Password is not set. Login with Telegram and change password.", null, "FORBIDDEN", 403
             );
         const passwordChecked = await bcrypt.compare(password, user.passwordHash);
         if (!passwordChecked)
             throw new ActionsHandlerError(
-                "Forbidden: Invalid password.", null, "FORBIDDEN", 403
+                "Invalid password.", null, "FORBIDDEN", 403
             );
 
         let refreshToken;
@@ -89,7 +89,10 @@ export class Auth {
         hash: string;
       }) {
         const loginData = await checkTgLogin(params, process.env.BOT_TOKEN);
-        if (!loginData) throw new Error("Invalid login data.");
+        if (!loginData)
+            throw new ActionsHandlerError(
+                "Invalid login data.", null, "FORBIDDEN", 403
+            );
 
         const {
             id: telegramId,
@@ -106,15 +109,15 @@ export class Auth {
         });
         if (!user)
             throw new ActionsHandlerError(
-                "Not found: User account is not found.", null, "NOT_FOUND", 404
+                "User account is not found.", null, "NOT_FOUND", 404
             );
         if (user.status === UserState.UserStatus.blocked)
             throw new ActionsHandlerError(
-                "Forbidden: User account is blocked.", null, "FORBIDDEN", 403
+                "User account is blocked.", null, "FORBIDDEN", 403
             );
         if (user.status === UserState.UserStatus.new)
             throw new ActionsHandlerError(
-                "Forbidden: User account is not activated.", null, "FORBIDDEN", 403
+                "User account is not activated.", null, "FORBIDDEN", 403
             );
 
         let refreshToken = null;
@@ -159,7 +162,7 @@ export class Auth {
         const userExists: UserState.User = await this.#db.getUserByEmail({ email });
         if (userExists)
             throw new ActionsHandlerError(
-                "Conflict: User account already exists.", null, "CONFLICT", 409
+                "User account already exists.", null, "CONFLICT", 409
             );
         const newUser: UserState.User = {
             id: uuid(),
@@ -249,15 +252,15 @@ export class Auth {
         const user: UserState.User = await this.#db.getUserByToken(params);
         if (!user)
             throw new ActionsHandlerError(
-                "Not found: Refresh token expired or user account is not found.", null, "NOT_FOUND", 404
+                "Refresh token expired or user account is not found.", null, "NOT_FOUND", 404
             );
         if (user.status === UserState.UserStatus.blocked)
             throw new ActionsHandlerError(
-                "Forbidden: User account is blocked.", null, "FORBIDDEN", 403
+                "User account is blocked.", null, "FORBIDDEN", 403
             );
         if (user.status === UserState.UserStatus.new)
             throw new ActionsHandlerError(
-                "Forbidden: User account is not activated.", null, "FORBIDDEN", 403
+                "User account is not activated.", null, "FORBIDDEN", 403
             );
 
         return {
@@ -277,23 +280,23 @@ export class Auth {
 
         if (!user)
             throw new ActionsHandlerError(
-                "Not found: User account not found.", null, "NOT_FOUND", 404
+                "User account not found.", null, "NOT_FOUND", 404
             );
         if (user.status === UserState.UserStatus.blocked)
             throw new ActionsHandlerError(
-                "Forbidden: User account is blocked.", null, "FORBIDDEN", 403
+                "User account is blocked.", null, "FORBIDDEN", 403
             );
         if (user.status === UserState.UserStatus.enabled)
             throw new ActionsHandlerError(
-                "Forbidden: User account is already activated.", null, "FORBIDDEN", 403
+                "User account is already activated.", null, "FORBIDDEN", 403
             );
         if (!user.secretCode)
             throw new ActionsHandlerError(
-                "Forbidden: Confirmation code is not set.", null, "FORBIDDEN", 403
+                "Confirmation code is not set.", null, "FORBIDDEN", 403
             );
         if (user.secretCode !== secretCode)
             throw new ActionsHandlerError(
-                "Forbidden: Wrong confirmation code.", null, "FORBIDDEN", 403
+                "Wrong confirmation code.", null, "FORBIDDEN", 403
             );
 
         const refreshToken = uuid();
@@ -340,11 +343,11 @@ export class Auth {
 
         if (!user)
             throw new ActionsHandlerError(
-                "Not found: User account not found.", null, "NOT_FOUND", 404
+                "User account not found.", null, "NOT_FOUND", 404
             );
         if (user.status === UserState.UserStatus.blocked)
             throw new ActionsHandlerError(
-                "Forbidden: User account is blocked.", null, "FORBIDDEN", 403
+                "User account is blocked.", null, "FORBIDDEN", 403
             );
 
         let secretCode;
@@ -396,19 +399,19 @@ export class Auth {
 
         if (!user)
             throw new ActionsHandlerError(
-                "Not found: User account not found.", null, "NOT_FOUND", 404
+                "User account not found.", null, "NOT_FOUND", 404
             );
         if (user.status === UserState.UserStatus.blocked)
             throw new ActionsHandlerError(
-                "Forbidden: User account is blocked.", null, "FORBIDDEN", 403
+                "User account is blocked.", null, "FORBIDDEN", 403
             );
         if (!user.secretCode)
             throw new ActionsHandlerError(
-                "Forbidden: Confirmation code is not set.", null, "FORBIDDEN", 403
+                "Confirmation code is not set.", null, "FORBIDDEN", 403
             );
         if (user.secretCode !== secretCode)
             throw new ActionsHandlerError(
-                "Forbidden: Wrong confirmation code.", null, "FORBIDDEN", 403
+                "Wrong confirmation code.", null, "FORBIDDEN", 403
             );
 
         const refreshToken = uuid();
@@ -456,16 +459,19 @@ export class Auth {
     }) {
         const { userId, email } = params;
         const userExists: UserState.User = await this.#db.getUserByEmail({ email });
-        if (userExists) throw new Error("User already exists.");
+        if (userExists)
+            throw new ActionsHandlerError(
+                "User already exists.", null, "CONFLICT", 409
+            );
 
         const user: UserState.User = await this.#db.getUserById({ userId });
         if (!user)
             throw new ActionsHandlerError(
-                "Not found: User account not found.", null, "NOT_FOUND", 404
+                "User account not found.", null, "NOT_FOUND", 404
             );
         if (user.status === UserState.UserStatus.blocked)
             throw new ActionsHandlerError(
-                "Forbidden: User account is blocked.", null, "FORBIDDEN", 403
+                "User account is blocked.", null, "FORBIDDEN", 403
             );
 
         let secretCode;
@@ -512,23 +518,23 @@ export class Auth {
 
         if (!user)
             throw new ActionsHandlerError(
-                "Not found: User account not found.", null, "NOT_FOUND", 404
+                "User account not found.", null, "NOT_FOUND", 404
             );
         if (user.status === UserState.UserStatus.blocked)
             throw new ActionsHandlerError(
-                "Forbidden: User account is blocked.", null, "FORBIDDEN", 403
+                "User account is blocked.", null, "FORBIDDEN", 403
             );
         if (!user.emailNew)
             throw new ActionsHandlerError(
-                "Forbidden: New email is not set.", null, "FORBIDDEN", 403
+                "New email is not set.", null, "FORBIDDEN", 403
             );
         if (!user.secretCode)
             throw new ActionsHandlerError(
-                "Forbidden: Confirmation code is not set.", null, "FORBIDDEN", 403
+                "Confirmation code is not set.", null, "FORBIDDEN", 403
             );
         if (user.secretCode !== secretCode)
             throw new ActionsHandlerError(
-                "Forbidden: Wrong confirmation code.", null, "FORBIDDEN", 403
+                "Wrong confirmation code.", null, "FORBIDDEN", 403
             );
 
         const refreshToken = uuid();
