@@ -13,23 +13,17 @@ async function checkTgLogin(
     },
     token: string
 ) {
-    const secret = crypto
-        .createHash("sha256")
-        .update(token)
-        .digest();
+    const secret = crypto.createHash("sha256").update(token).digest();
     const inputHash = loginData.hash;
-    let data: { [key: string]: any } = loginData;
+    const data: { [key: string]: any } = loginData;
     delete data.hash;
     let array = [];
-    for (let key in data) {
+    for (const key in data) {
         array.push(key + "=" + data[key]);
     }
     array = array.sort();
     const checkString = array.join("\n");
-    const checkHash = crypto
-        .createHmac("sha256", secret)
-        .update(checkString)
-        .digest("hex");
+    const checkHash = crypto.createHmac("sha256", secret).update(checkString).digest("hex");
     if (checkHash === inputHash) {
         return data;
     } else {
@@ -60,25 +54,15 @@ function getAccessValue(user: {
     const {
         roles: { allowedRoles }
     } = user;
-    const accessValues = allowedRoles.map(role => roleToAccesValue(role));
+    const accessValues = allowedRoles.map((role) => roleToAccesValue(role));
     return Math.min(...accessValues);
 }
 
-function formatTgName(
-    userName?: string,
-    firstName?: string,
-    lastName?: string
-) {
+function formatTgName(userName?: string, firstName?: string, lastName?: string) {
     let name = "";
-    if (firstName || lastName)
-        name = `${firstName || ""} ${lastName || ""}`.trim();
+    if (firstName || lastName) name = `${firstName || ""} ${lastName || ""}`.trim();
     else if (userName) name = userName;
     return name;
 }
 
-export {
-    checkTgLogin,
-    roleToAccesValue,
-    getAccessValue,
-    formatTgName
-};
+export { checkTgLogin, roleToAccesValue, getAccessValue, formatTgName };

@@ -72,22 +72,16 @@ export async function makeTgHash(
     },
     token: string
 ) {
-    const secret = crypto
-        .createHash("sha256")
-        .update(token)
-        .digest();
-    let data: { [key: string]: any } = loginData;
+    const secret = crypto.createHash("sha256").update(token).digest();
+    const data: { [key: string]: any } = loginData;
     delete data.hash;
     let array = [];
-    for (let key in data) {
+    for (const key in data) {
         array.push(key + "=" + data[key]);
     }
     array = array.sort();
     const checkString = array.join("\n");
-    const checkHash = crypto
-        .createHmac("sha256", secret)
-        .update(checkString)
-        .digest("hex");
-    
+    const checkHash = crypto.createHmac("sha256", secret).update(checkString).digest("hex");
+
     return checkHash;
 }

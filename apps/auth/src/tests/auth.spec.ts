@@ -14,7 +14,7 @@ const UserSettings: UserState.UserSettings = {
             email: true
         }
     }
-}
+};
 
 process.env.REFRESH_TOKEN_EXPIRES = "1";
 process.env.JWT_SECRET = "secret";
@@ -45,16 +45,16 @@ describe("Test Auth class methods", () => {
                         getUserByEmail: jest.fn(async () => dbUser),
                         updateUserRefreshToken: jest.fn()
                     } as any);
-    
+
                     const result = await auth.login(params);
-    
+
                     expect(result).toHaveProperty("accessToken");
                     expect(result).toHaveProperty("refreshToken");
                     expect(result).toHaveProperty("refreshTokenExpireAt");
                 });
             });
         });
-    
+
         describe("With valid refreshToken in DB", () => {
             test("Should return object with defined props", async () => {
                 const params = {
@@ -66,8 +66,8 @@ describe("Test Auth class methods", () => {
                     email: params.email,
                     status: UserState.UserStatus.enabled,
                     passwordHash: await bcrypt.hash(params.password, 10),
-                    refreshToken: '48e39a56-ba3a-4009-9d8a-9f23dd071ee2',
-                    refreshTokenExpireAt: '2120-08-11T12:50:21.055Z',
+                    refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
+                    refreshTokenExpireAt: "2120-08-11T12:50:21.055Z",
                     roles: {
                         defaultRole: UserState.UserRoles.user,
                         allowedRoles: [UserState.UserRoles.user]
@@ -86,7 +86,7 @@ describe("Test Auth class methods", () => {
                 expect(result.refreshTokenExpireAt).toStrictEqual(dbUser.refreshTokenExpireAt);
             });
         });
-        
+
         describe("With invalid refreshToken in DB", () => {
             test("Should return object with defined props", async () => {
                 const params = {
@@ -98,8 +98,8 @@ describe("Test Auth class methods", () => {
                     email: params.email,
                     status: UserState.UserStatus.enabled,
                     passwordHash: await bcrypt.hash(params.password, 10),
-                    refreshToken: '48e39a56-ba3a-4009-9d8a-9f23dd071ee2',
-                    refreshTokenExpireAt: '1970-08-11T12:50:21.055Z',
+                    refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
+                    refreshTokenExpireAt: "1970-08-11T12:50:21.055Z",
                     roles: {
                         defaultRole: UserState.UserRoles.user,
                         allowedRoles: [UserState.UserRoles.user]
@@ -118,7 +118,7 @@ describe("Test Auth class methods", () => {
                 expect(result.refreshTokenExpireAt).not.toEqual(dbUser.refreshTokenExpireAt);
             });
         });
-    
+
         describe("With wrong params provided", () => {
             describe("With wrong password", () => {
                 test("Should to throw error", async () => {
@@ -145,7 +145,7 @@ describe("Test Auth class methods", () => {
                     await expect(auth.login(params)).rejects.toThrow();
                 });
             });
-            
+
             describe("With user status != enabled", () => {
                 test("Should to throw error", async () => {
                     const params = {
@@ -171,7 +171,7 @@ describe("Test Auth class methods", () => {
                     await expect(auth.login(params)).rejects.toThrow();
                 });
             });
-            
+
             describe("With not existing email provided", () => {
                 test("Should to throw error", async () => {
                     const params = {
@@ -196,6 +196,7 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
+                        // eslint-disable-next-line @typescript-eslint/camelcase
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -204,8 +205,8 @@ describe("Test Auth class methods", () => {
                         id: "id",
                         telegramId: params.id,
                         status: UserState.UserStatus.enabled,
-                        refreshToken: '48e39a56-ba3a-4009-9d8a-9f23dd071ee2',
-                        refreshTokenExpireAt: '2120-08-11T12:50:21.055Z',
+                        refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
+                        refreshTokenExpireAt: "2120-08-11T12:50:21.055Z",
                         roles: {
                             defaultRole: UserState.UserRoles.user,
                             allowedRoles: [UserState.UserRoles.user]
@@ -231,6 +232,7 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
+                        // eslint-disable-next-line @typescript-eslint/camelcase
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -239,8 +241,8 @@ describe("Test Auth class methods", () => {
                         id: "id",
                         telegramId: params.id,
                         status: UserState.UserStatus.enabled,
-                        refreshToken: '48e39a56-ba3a-4009-9d8a-9f23dd071ee2',
-                        refreshTokenExpireAt: '1970-08-11T12:50:21.055Z',
+                        refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
+                        refreshTokenExpireAt: "1970-08-11T12:50:21.055Z",
                         roles: {
                             defaultRole: UserState.UserRoles.user,
                             allowedRoles: [UserState.UserRoles.user]
@@ -266,9 +268,13 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
+                        // eslint-disable-next-line @typescript-eslint/camelcase
                         first_name: "first_name",
+                        // eslint-disable-next-line @typescript-eslint/camelcase
                         last_name: "last_name",
+                        // eslint-disable-next-line @typescript-eslint/camelcase
                         photo_url: "photo_url",
+                        // eslint-disable-next-line @typescript-eslint/camelcase
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -277,8 +283,8 @@ describe("Test Auth class methods", () => {
                         id: "id",
                         telegramId: params.id,
                         status: UserState.UserStatus.enabled,
-                        refreshToken: '48e39a56-ba3a-4009-9d8a-9f23dd071ee2',
-                        refreshTokenExpireAt: '1970-08-11T12:50:21.055Z',
+                        refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
+                        refreshTokenExpireAt: "1970-08-11T12:50:21.055Z",
                         roles: {
                             defaultRole: UserState.UserRoles.user,
                             allowedRoles: [UserState.UserRoles.user]
@@ -304,9 +310,13 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
+                        // eslint-disable-next-line @typescript-eslint/camelcase
                         first_name: "first_name",
+                        // eslint-disable-next-line @typescript-eslint/camelcase
                         last_name: "last_name",
+                        // eslint-disable-next-line @typescript-eslint/camelcase
                         photo_url: "photo_url",
+                        // eslint-disable-next-line @typescript-eslint/camelcase
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -332,13 +342,14 @@ describe("Test Auth class methods", () => {
                 });
             });
         });
-        
+
         describe("With wrong params provided", () => {
             describe("With wrong hash", () => {
                 test("Should to throw error", async () => {
                     const params = {
                         id: 123,
                         username: "username",
+                        // eslint-disable-next-line @typescript-eslint/camelcase
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -347,8 +358,8 @@ describe("Test Auth class methods", () => {
                         id: "id",
                         telegramId: params.id,
                         status: UserState.UserStatus.enabled,
-                        refreshToken: '48e39a56-ba3a-4009-9d8a-9f23dd071ee2',
-                        refreshTokenExpireAt: '2120-08-11T12:50:21.055Z',
+                        refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
+                        refreshTokenExpireAt: "2120-08-11T12:50:21.055Z",
                         roles: {
                             defaultRole: UserState.UserRoles.user,
                             allowedRoles: [UserState.UserRoles.user]
@@ -360,16 +371,17 @@ describe("Test Auth class methods", () => {
                         registerUserTg: jest.fn(),
                         updateUserRefreshToken: jest.fn()
                     } as any);
-                    
+
                     await expect(auth.loginTg(params)).rejects.toThrowError();
                 });
             });
-            
+
             describe("With wrong status", () => {
                 test("Should to throw error", async () => {
                     const params = {
                         id: 123,
                         username: "username",
+                        // eslint-disable-next-line @typescript-eslint/camelcase
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -378,8 +390,8 @@ describe("Test Auth class methods", () => {
                         id: "id",
                         telegramId: params.id,
                         status: UserState.UserStatus.blocked,
-                        refreshToken: '48e39a56-ba3a-4009-9d8a-9f23dd071ee2',
-                        refreshTokenExpireAt: '2120-08-11T12:50:21.055Z',
+                        refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
+                        refreshTokenExpireAt: "2120-08-11T12:50:21.055Z",
                         roles: {
                             defaultRole: UserState.UserRoles.user,
                             allowedRoles: [UserState.UserRoles.user]
@@ -391,14 +403,13 @@ describe("Test Auth class methods", () => {
                         registerUserTg: jest.fn(),
                         updateUserRefreshToken: jest.fn()
                     } as any);
-                    
+
                     await expect(auth.loginTg(params)).rejects.toThrowError();
                 });
             });
         });
     });
 
-    
     describe("register method", () => {
         describe("With non-existing email", () => {
             test("Should create new account", async () => {
@@ -414,17 +425,15 @@ describe("Test Auth class methods", () => {
                 const auth = new Auth(dbf as any);
 
                 await expect(auth.register(params)).resolves.toBeDefined();
-                
+
                 const newUser: UserState.User = dbf.registerUser.mock.calls.pop()[0];
 
                 expect(params.email).toStrictEqual(newUser.email);
                 expect(params.name).toStrictEqual(newUser.name);
-                expect(
-                    await bcrypt.compare(params.password, newUser.passwordHash)
-                ).toBeTruthy();
+                expect(await bcrypt.compare(params.password, newUser.passwordHash)).toBeTruthy();
             });
         });
-        
+
         describe("With existing email", () => {
             test("Should to throw error", async () => {
                 const params = {
@@ -453,7 +462,6 @@ describe("Test Auth class methods", () => {
         });
     });
 
-    
     describe("refreshToken method", () => {
         describe("With active token", () => {
             test("Should create new access token", async () => {
@@ -477,13 +485,13 @@ describe("Test Auth class methods", () => {
                 } as any);
 
                 const result = await auth.refreshToken(params);
-                
+
                 expect(result).toHaveProperty("accessToken");
                 expect(result.refreshToken).toStrictEqual(dbUser.refreshToken);
                 expect(result.refreshTokenExpireAt).toStrictEqual(dbUser.refreshTokenExpireAt);
             });
         });
-        
+
         describe("With inactive token", () => {
             test("Should to throw error", async () => {
                 const params = {
@@ -496,7 +504,7 @@ describe("Test Auth class methods", () => {
                 await expect(auth.refreshToken(params)).rejects.toThrowError();
             });
         });
-        
+
         describe("With status != enabled", () => {
             test("Should to throw error", async () => {
                 const params = {
@@ -523,7 +531,6 @@ describe("Test Auth class methods", () => {
         });
     });
 
-    
     describe("activateAccount method", () => {
         describe("With existing id and right secretCode", () => {
             test("Should create new access token", async () => {
@@ -550,7 +557,7 @@ describe("Test Auth class methods", () => {
                 } as any);
 
                 const result = await auth.activateAccount(params);
-                
+
                 expect(result).toHaveProperty("accessToken");
                 expect(result).toHaveProperty("refreshToken");
                 expect(result).toHaveProperty("refreshTokenExpireAt");
@@ -629,7 +636,6 @@ describe("Test Auth class methods", () => {
         });
     });
 
-    
     describe("passwordReset method", () => {
         describe("With existing email", () => {
             test("Should prepare DB data and return userId", async () => {
@@ -695,7 +701,6 @@ describe("Test Auth class methods", () => {
         });
     });
 
-    
     describe("confirmPasswordReset method", () => {
         describe("With right data", () => {
             test("Should update DB data and return new access token", async () => {
@@ -776,7 +781,6 @@ describe("Test Auth class methods", () => {
         });
     });
 
-    
     describe("changeEmail method", () => {
         describe("With right data and unique email", () => {
             test("Should prepare DB data and return success object", async () => {
@@ -802,8 +806,7 @@ describe("Test Auth class methods", () => {
                     changeUserEmail: jest.fn()
                 } as any);
 
-                await expect(auth.changeEmail(params)).resolves
-                    .toStrictEqual({ success: true });
+                await expect(auth.changeEmail(params)).resolves.toStrictEqual({ success: true });
             });
         });
 
@@ -819,8 +822,7 @@ describe("Test Auth class methods", () => {
                     changeUserEmail: jest.fn()
                 } as any);
 
-                await expect(auth.changeEmail(params))
-                    .rejects.toThrowError();
+                await expect(auth.changeEmail(params)).rejects.toThrowError();
             });
         });
 
@@ -848,19 +850,15 @@ describe("Test Auth class methods", () => {
                     changeUserEmail: jest.fn()
                 } as any);
 
-                await expect(auth.changeEmail(params))
-                    .rejects.toThrowError();
+                await expect(auth.changeEmail(params)).rejects.toThrowError();
             });
         });
-        
+
         describe("With right data and wrong status", () => {
             test("Should prepare DB data and return success object", async () => {
                 const params = {
                     email: "new@inbox.com",
                     userId: "id"
-                };
-                const session_variables = {
-                    "x-hasura-user-id": "id"
                 };
                 const dbUser: UserState.User = {
                     id: params.userId,
@@ -880,13 +878,11 @@ describe("Test Auth class methods", () => {
                     changeUserEmail: jest.fn()
                 } as any);
 
-                await expect(auth.changeEmail(params))
-                    .rejects.toThrowError();
+                await expect(auth.changeEmail(params)).rejects.toThrowError();
             });
         });
     });
 
-    
     describe("confirmChangeEmail method", () => {
         describe("With right data", () => {
             test("Should prepare DB data and return success object", async () => {
@@ -946,8 +942,7 @@ describe("Test Auth class methods", () => {
                     confirmChangeUserEmail: jest.fn()
                 } as any);
 
-                await expect(auth.confirmChangeEmail(params))
-                    .rejects.toThrowError();
+                await expect(auth.confirmChangeEmail(params)).rejects.toThrowError();
             });
         });
 
@@ -976,8 +971,7 @@ describe("Test Auth class methods", () => {
                     confirmChangeUserEmail: jest.fn()
                 } as any);
 
-                await expect(auth.confirmChangeEmail(params))
-                    .rejects.toThrowError();
+                await expect(auth.confirmChangeEmail(params)).rejects.toThrowError();
             });
         });
 
@@ -1006,11 +1000,10 @@ describe("Test Auth class methods", () => {
                     confirmChangeUserEmail: jest.fn()
                 } as any);
 
-                await expect(auth.confirmChangeEmail(params))
-                    .rejects.toThrowError();
+                await expect(auth.confirmChangeEmail(params)).rejects.toThrowError();
             });
         });
-        
+
         describe("With right data and wrong status", () => {
             test("Should prepare DB data and return success object", async () => {
                 const params = {
@@ -1022,8 +1015,7 @@ describe("Test Auth class methods", () => {
                     confirmChangeUserEmail: jest.fn()
                 } as any);
 
-                await expect(auth.confirmChangeEmail(params))
-                    .rejects.toThrowError();
+                await expect(auth.confirmChangeEmail(params)).rejects.toThrowError();
             });
         });
     });

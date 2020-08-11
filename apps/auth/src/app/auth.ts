@@ -14,48 +14,34 @@ export class Auth {
         this.#db = db;
     }
 
-    private async _mail(action: string, params: any) {
+    // eslint-disable-next-line
+    private async _mail(action: string, params: any) {}
 
-    }
-
-    async login(params: {
-        email: string;
-        password: string;
-    }) {
+    async login(params: { email: string; password: string }) {
         const { email, password } = params;
 
         const user: UserState.User = await this.#db.getUserByEmail({ email });
-        if (!user)
-            throw new ActionsHandlerError(
-                "User account is not found.", null, "NOT_FOUND", 404
-            );
+        if (!user) throw new ActionsHandlerError("User account is not found.", null, "NOT_FOUND", 404);
         if (user.status === UserState.UserStatus.blocked)
-            throw new ActionsHandlerError(
-                "User account is blocked.", null, "FORBIDDEN", 403
-            );
+            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
         if (user.status === UserState.UserStatus.new)
-            throw new ActionsHandlerError(
-                "User account is not activated.", null, "FORBIDDEN", 403
-            );
+            throw new ActionsHandlerError("User account is not activated.", null, "FORBIDDEN", 403);
         if (!user.passwordHash)
             throw new ActionsHandlerError(
-                "Password is not set. Login with Telegram and change password.", null, "FORBIDDEN", 403
+                "Password is not set. Login with Telegram and change password.",
+                null,
+                "FORBIDDEN",
+                403
             );
         const passwordChecked = await bcrypt.compare(password, user.passwordHash);
-        if (!passwordChecked)
-            throw new ActionsHandlerError(
-                "Invalid password.", null, "FORBIDDEN", 403
-            );
+        if (!passwordChecked) throw new ActionsHandlerError("Invalid password.", null, "FORBIDDEN", 403);
 
         let refreshToken;
         let refreshTokenExpireAt;
         if (
             !user.refreshToken ||
             !user.refreshTokenExpireAt ||
-            dayjs
-                .utc(user.refreshTokenExpireAt)
-                .add(-1, UserState.TimeUnit.day)
-                .valueOf() < dayjs.utc().valueOf()
+            dayjs.utc(user.refreshTokenExpireAt).add(-1, UserState.TimeUnit.day).valueOf() < dayjs.utc().valueOf()
         ) {
             refreshToken = uuid();
             refreshTokenExpireAt = dayjs
@@ -87,19 +73,11 @@ export class Auth {
         photo_url?: string;
         auth_date: number;
         hash: string;
-      }) {
+    }) {
         const loginData = await checkTgLogin(params, process.env.BOT_TOKEN);
-        if (!loginData)
-            throw new ActionsHandlerError(
-                "Invalid login data.", null, "FORBIDDEN", 403
-            );
+        if (!loginData) throw new ActionsHandlerError("Invalid login data.", null, "FORBIDDEN", 403);
 
-        const {
-            id: telegramId,
-            first_name: firstName,
-            last_name: lastName,
-            username: telegramUsername
-        } = loginData;
+        const { id: telegramId, first_name: firstName, last_name: lastName, username: telegramUsername } = loginData;
         const name = formatTgName(telegramUsername, firstName, lastName);
 
         const user: UserState.User = await this.registerTg({
@@ -107,28 +85,18 @@ export class Auth {
             telegramUsername,
             name
         });
-        if (!user)
-            throw new ActionsHandlerError(
-                "User account is not found.", null, "NOT_FOUND", 404
-            );
+        if (!user) throw new ActionsHandlerError("User account is not found.", null, "NOT_FOUND", 404);
         if (user.status === UserState.UserStatus.blocked)
-            throw new ActionsHandlerError(
-                "User account is blocked.", null, "FORBIDDEN", 403
-            );
+            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
         if (user.status === UserState.UserStatus.new)
-            throw new ActionsHandlerError(
-                "User account is not activated.", null, "FORBIDDEN", 403
-            );
+            throw new ActionsHandlerError("User account is not activated.", null, "FORBIDDEN", 403);
 
         let refreshToken = null;
         let refreshTokenExpireAt = null;
         if (
             !user.refreshToken ||
             !user.refreshTokenExpireAt ||
-            dayjs
-                .utc(user.refreshTokenExpireAt)
-                .add(-1, UserState.TimeUnit.day)
-                .valueOf() < dayjs.utc().valueOf()
+            dayjs.utc(user.refreshTokenExpireAt).add(-1, UserState.TimeUnit.day).valueOf() < dayjs.utc().valueOf()
         ) {
             refreshToken = uuid();
             refreshTokenExpireAt = dayjs
@@ -152,18 +120,11 @@ export class Auth {
         };
     }
 
-    async register(params: {
-        email: string;
-        password: string;
-        name: string;
-    }) {
+    async register(params: { email: string; password: string; name: string }) {
         const { email, password, name } = params;
 
         const userExists: UserState.User = await this.#db.getUserByEmail({ email });
-        if (userExists)
-            throw new ActionsHandlerError(
-                "User account already exists.", null, "CONFLICT", 409
-            );
+        if (userExists) throw new ActionsHandlerError("User account already exists.", null, "CONFLICT", 409);
         const newUser: UserState.User = {
             id: uuid(),
             name,
@@ -196,8 +157,7 @@ export class Auth {
         });
         await this._mail(`send`, {
             to: email,
-            subject:
-                "🚀 Welcome to Cryptuoso Platform - Please confirm your email.",
+            subject: "🚀 Welcome to Cryptuoso Platform - Please confirm your email.",
             variables: {
                 params: `<p>Greetings!</p>
                 <p>Your user account is successfully created!</p>
@@ -209,11 +169,7 @@ export class Auth {
         return newUser.id;
     }
 
-    async registerTg(params: {
-        telegramId: number,
-        telegramUsername: string,
-        name: string
-    }) {
+    async registerTg(params: { telegramId: number; telegramUsername: string; name: string }) {
         const { telegramId, telegramUsername, name } = params;
 
         const userExists: UserState.User = await this.#db.getUserTg({ telegramId });
@@ -246,22 +202,19 @@ export class Auth {
         return newUser;
     }
 
-    async refreshToken(params: {
-        refreshToken: string;
-    }) {
+    async refreshToken(params: { refreshToken: string }) {
         const user: UserState.User = await this.#db.getUserByToken(params);
         if (!user)
             throw new ActionsHandlerError(
-                "Refresh token expired or user account is not found.", null, "NOT_FOUND", 404
+                "Refresh token expired or user account is not found.",
+                null,
+                "NOT_FOUND",
+                404
             );
         if (user.status === UserState.UserStatus.blocked)
-            throw new ActionsHandlerError(
-                "User account is blocked.", null, "FORBIDDEN", 403
-            );
+            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
         if (user.status === UserState.UserStatus.new)
-            throw new ActionsHandlerError(
-                "User account is not activated.", null, "FORBIDDEN", 403
-            );
+            throw new ActionsHandlerError("User account is not activated.", null, "FORBIDDEN", 403);
 
         return {
             accessToken: this.generateAccessToken(user),
@@ -270,34 +223,19 @@ export class Auth {
         };
     }
 
-    async activateAccount(params: {
-        userId: string;
-        secretCode: string;
-    }) {
+    async activateAccount(params: { userId: string; secretCode: string }) {
         const { userId, secretCode } = params;
 
         const user: UserState.User = await this.#db.getUserById({ userId });
 
-        if (!user)
-            throw new ActionsHandlerError(
-                "User account not found.", null, "NOT_FOUND", 404
-            );
+        if (!user) throw new ActionsHandlerError("User account not found.", null, "NOT_FOUND", 404);
         if (user.status === UserState.UserStatus.blocked)
-            throw new ActionsHandlerError(
-                "User account is blocked.", null, "FORBIDDEN", 403
-            );
+            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
         if (user.status === UserState.UserStatus.enabled)
-            throw new ActionsHandlerError(
-                "User account is already activated.", null, "FORBIDDEN", 403
-            );
-        if (!user.secretCode)
-            throw new ActionsHandlerError(
-                "Confirmation code is not set.", null, "FORBIDDEN", 403
-            );
+            throw new ActionsHandlerError("User account is already activated.", null, "FORBIDDEN", 403);
+        if (!user.secretCode) throw new ActionsHandlerError("Confirmation code is not set.", null, "FORBIDDEN", 403);
         if (user.secretCode !== secretCode)
-            throw new ActionsHandlerError(
-                "Wrong confirmation code.", null, "FORBIDDEN", 403
-            );
+            throw new ActionsHandlerError("Wrong confirmation code.", null, "FORBIDDEN", 403);
 
         const refreshToken = uuid();
         const refreshTokenExpireAt = dayjs
@@ -310,13 +248,10 @@ export class Auth {
             refreshTokenExpireAt,
             userId
         });
-        await this._mail(
-            `subscribeToList`,
-            {
-                list: "cpz-beta@mg.cryptuoso.com",
-                email: user.email
-            }
-        );
+        await this._mail(`subscribeToList`, {
+            list: "cpz-beta@mg.cryptuoso.com",
+            email: user.email
+        });
         await this._mail(`send`, {
             to: user.email,
             subject: "🚀 Welcome to Cryptuoso Platform - User Account Activated.",
@@ -335,20 +270,13 @@ export class Auth {
         };
     }
 
-    async passwordReset(params: {
-        email: string;
-    }) {
+    async passwordReset(params: { email: string }) {
         const { email } = params;
         const user: UserState.User = await this.#db.getUserByEmail({ email });
 
-        if (!user)
-            throw new ActionsHandlerError(
-                "User account not found.", null, "NOT_FOUND", 404
-            );
+        if (!user) throw new ActionsHandlerError("User account not found.", null, "NOT_FOUND", 404);
         if (user.status === UserState.UserStatus.blocked)
-            throw new ActionsHandlerError(
-                "User account is blocked.", null, "FORBIDDEN", 403
-            );
+            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
 
         let secretCode;
         let secretCodeExpireAt;
@@ -357,10 +285,7 @@ export class Auth {
             secretCodeExpireAt = user.secretCodeExpireAt;
         } else {
             secretCode = this.generateCode();
-            secretCodeExpireAt = dayjs
-                .utc()
-                .add(1, UserState.TimeUnit.hour)
-                .toISOString();
+            secretCodeExpireAt = dayjs.utc().add(1, UserState.TimeUnit.hour).toISOString();
 
             this.#db.updateUserSecretCode({
                 secretCode,
@@ -388,31 +313,17 @@ export class Auth {
         return user.id;
     }
 
-    async confirmPasswordReset(params: {
-        userId: string,
-        secretCode: string,
-        password: string
-    }) {
+    async confirmPasswordReset(params: { userId: string; secretCode: string; password: string }) {
         const { userId, secretCode, password } = params;
 
         const user: UserState.User = await this.#db.getUserById({ userId });
 
-        if (!user)
-            throw new ActionsHandlerError(
-                "User account not found.", null, "NOT_FOUND", 404
-            );
+        if (!user) throw new ActionsHandlerError("User account not found.", null, "NOT_FOUND", 404);
         if (user.status === UserState.UserStatus.blocked)
-            throw new ActionsHandlerError(
-                "User account is blocked.", null, "FORBIDDEN", 403
-            );
-        if (!user.secretCode)
-            throw new ActionsHandlerError(
-                "Confirmation code is not set.", null, "FORBIDDEN", 403
-            );
+            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
+        if (!user.secretCode) throw new ActionsHandlerError("Confirmation code is not set.", null, "FORBIDDEN", 403);
         if (user.secretCode !== secretCode)
-            throw new ActionsHandlerError(
-                "Wrong confirmation code.", null, "FORBIDDEN", 403
-            );
+            throw new ActionsHandlerError("Wrong confirmation code.", null, "FORBIDDEN", 403);
 
         const refreshToken = uuid();
         const refreshTokenExpireAt = dayjs
@@ -453,26 +364,15 @@ export class Auth {
         };
     }
 
-    async changeEmail(params: {
-        userId: string,
-        email: string
-    }) {
+    async changeEmail(params: { userId: string; email: string }) {
         const { userId, email } = params;
         const userExists: UserState.User = await this.#db.getUserByEmail({ email });
-        if (userExists)
-            throw new ActionsHandlerError(
-                "User already exists.", null, "CONFLICT", 409
-            );
+        if (userExists) throw new ActionsHandlerError("User already exists.", null, "CONFLICT", 409);
 
         const user: UserState.User = await this.#db.getUserById({ userId });
-        if (!user)
-            throw new ActionsHandlerError(
-                "User account not found.", null, "NOT_FOUND", 404
-            );
+        if (!user) throw new ActionsHandlerError("User account not found.", null, "NOT_FOUND", 404);
         if (user.status === UserState.UserStatus.blocked)
-            throw new ActionsHandlerError(
-                "User account is blocked.", null, "FORBIDDEN", 403
-            );
+            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
 
         let secretCode;
         let secretCodeExpireAt;
@@ -485,13 +385,13 @@ export class Auth {
             secretCodeExpireAt = user.secretCodeExpireAt;
         } else {
             secretCode = this.generateCode();
-            secretCodeExpireAt = dayjs
-                .utc()
-                .add(1, UserState.TimeUnit.hour)
-                .toISOString();
+            secretCodeExpireAt = dayjs.utc().add(1, UserState.TimeUnit.hour).toISOString();
         }
         await this.#db.changeUserEmail({
-            userId, emailNew: email, secretCode, secretCodeExpireAt
+            userId,
+            emailNew: email,
+            secretCode,
+            secretCodeExpireAt
         });
 
         await this._mail(`send`, {
@@ -509,33 +409,17 @@ export class Auth {
         return { success: true };
     }
 
-    async confirmChangeEmail(params: {
-        userId: string,
-        secretCode: string
-    }) {
+    async confirmChangeEmail(params: { userId: string; secretCode: string }) {
         const { userId, secretCode } = params;
         const user: UserState.User = await this.#db.getUserById({ userId });
 
-        if (!user)
-            throw new ActionsHandlerError(
-                "User account not found.", null, "NOT_FOUND", 404
-            );
+        if (!user) throw new ActionsHandlerError("User account not found.", null, "NOT_FOUND", 404);
         if (user.status === UserState.UserStatus.blocked)
-            throw new ActionsHandlerError(
-                "User account is blocked.", null, "FORBIDDEN", 403
-            );
-        if (!user.emailNew)
-            throw new ActionsHandlerError(
-                "New email is not set.", null, "FORBIDDEN", 403
-            );
-        if (!user.secretCode)
-            throw new ActionsHandlerError(
-                "Confirmation code is not set.", null, "FORBIDDEN", 403
-            );
+            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
+        if (!user.emailNew) throw new ActionsHandlerError("New email is not set.", null, "FORBIDDEN", 403);
+        if (!user.secretCode) throw new ActionsHandlerError("Confirmation code is not set.", null, "FORBIDDEN", 403);
         if (user.secretCode !== secretCode)
-            throw new ActionsHandlerError(
-                "Wrong confirmation code.", null, "FORBIDDEN", 403
-            );
+            throw new ActionsHandlerError("Wrong confirmation code.", null, "FORBIDDEN", 403);
 
         const refreshToken = uuid();
         const refreshTokenExpireAt = dayjs
@@ -558,7 +442,7 @@ export class Auth {
             to: user.email || user.emailNew,
             subject: "🔐 Cryptuoso - Email Change Confirmation.",
             variables: {
-            body: `
+                body: `
                 <p>Your email successfully changed to ${user.emailNew}!</p>
                 <p>If you did not request this change, please contact support <a href="mailto:support@cryptuoso.com">support@cryptuoso.com</a></p>`
             },

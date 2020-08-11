@@ -24,7 +24,7 @@ const UserSettings: UserState.UserSettings = {
             email: true
         }
     }
-}
+};
 
 const mockPG = {
     maybeOne: pg.maybeOne as jest.Mock,
@@ -109,11 +109,10 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(200);
                 expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("accessToken");
-                expect(
-                    res.headers.get("set-cookie").includes("refresh_token")
-                ).toBeTruthy();
+                expect(res.headers.get("set-cookie").includes("refresh_token")).toBeTruthy();
 
                 await shutdownHandler();
             });
@@ -147,6 +146,7 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(404);
                 expect(res.parsedBody).not.toHaveProperty("success");
 
                 await shutdownHandler();
@@ -192,6 +192,7 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(403);
                 expect(res.parsedBody).not.toHaveProperty("success");
 
                 await shutdownHandler();
@@ -209,6 +210,7 @@ describe("Test 'AuthService' class methods", () => {
 
                 const params = {
                     id: 123,
+                    // eslint-disable-next-line @typescript-eslint/camelcase
                     auth_date: Date.now(),
                     hash: ""
                 };
@@ -240,11 +242,10 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(200);
                 expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("accessToken");
-                expect(
-                    res.headers.get("set-cookie").includes("refresh_token")
-                ).toBeTruthy();
+                expect(res.headers.get("set-cookie").includes("refresh_token")).toBeTruthy();
 
                 await shutdownHandler();
             });
@@ -260,6 +261,7 @@ describe("Test 'AuthService' class methods", () => {
                 const params = {
                     id: 123,
                     username: "username",
+                    // eslint-disable-next-line @typescript-eslint/camelcase
                     auth_date: Date.now(),
                     hash: ""
                 };
@@ -281,11 +283,10 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(200);
                 expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("accessToken");
-                expect(
-                    res.headers.get("set-cookie").includes("refresh_token")
-                ).toBeTruthy();
+                expect(res.headers.get("set-cookie").includes("refresh_token")).toBeTruthy();
 
                 await shutdownHandler();
             });
@@ -301,6 +302,7 @@ describe("Test 'AuthService' class methods", () => {
                 const params = {
                     id: 123,
                     username: "username",
+                    // eslint-disable-next-line @typescript-eslint/camelcase
                     auth_date: Date.now(),
                     hash: "WRONG_HASH"
                 };
@@ -333,6 +335,7 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(403);
                 expect(res.parsedBody).not.toHaveProperty("success");
 
                 await shutdownHandler();
@@ -348,9 +351,7 @@ describe("Test 'AuthService' class methods", () => {
 
                 await authService.startService();
 
-                const params = {
-
-                };
+                const params = {};
 
                 const res = await ajax.post(
                     `http://localhost:${CONFIG.port}/actions/logout`,
@@ -366,10 +367,9 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(200);
                 expect(res.parsedBody).toHaveProperty("success", true);
-                expect(
-                    res.headers.get("set-cookie").includes("refresh_token=;")
-                ).toBeTruthy();
+                expect(res.headers.get("set-cookie").includes("refresh_token=;")).toBeTruthy();
 
                 await shutdownHandler();
             });
@@ -406,6 +406,7 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(200);
                 expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("userId");
 
@@ -452,6 +453,7 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(409);
                 expect(res.parsedBody).not.toHaveProperty("success");
 
                 await shutdownHandler();
@@ -468,7 +470,7 @@ describe("Test 'AuthService' class methods", () => {
                 await authService.startService();
 
                 const params = {
-                    "refreshToken": "1"
+                    refreshToken: "1"
                 };
                 const dbUser: UserState.User = {
                     id: "id",
@@ -499,11 +501,10 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(200);
                 expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("accessToken");
-                expect(
-                    res.headers.get("set-cookie").includes("refresh_token")
-                ).toBeTruthy();
+                expect(res.headers.get("set-cookie").includes("refresh_token")).toBeTruthy();
 
                 await shutdownHandler();
             });
@@ -516,9 +517,7 @@ describe("Test 'AuthService' class methods", () => {
 
                 await authService.startService();
 
-                const params = {
-                    "refreshToken": "1"
-                };
+                const params = {};
 
                 mockPG.maybeOne.mockImplementation(async () => null);
 
@@ -526,7 +525,7 @@ describe("Test 'AuthService' class methods", () => {
                     `http://localhost:${CONFIG.port}/actions/refresh-token`,
                     {
                         "x-api-key": process.env.API_KEY,
-                        "x-refresh-token": params["refreshToken"]
+                        "x-refresh-token": "token"
                     },
                     {
                         action: { name: "refresh-token" },
@@ -539,6 +538,7 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(404);
                 expect(res.parsedBody).not.toHaveProperty("success");
 
                 await shutdownHandler();
@@ -585,11 +585,10 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(200);
                 expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("accessToken");
-                expect(
-                    res.headers.get("set-cookie").includes("refresh_token")
-                ).toBeTruthy();
+                expect(res.headers.get("set-cookie").includes("refresh_token")).toBeTruthy();
 
                 await shutdownHandler();
             });
@@ -623,6 +622,7 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(404);
                 expect(res.parsedBody).not.toHaveProperty("success");
 
                 await shutdownHandler();
@@ -667,6 +667,7 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(403);
                 expect(res.parsedBody).not.toHaveProperty("success");
 
                 await shutdownHandler();
@@ -712,6 +713,7 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(200);
                 expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("userId", dbUser.id);
 
@@ -746,6 +748,7 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(404);
                 expect(res.parsedBody).not.toHaveProperty("success");
 
                 await shutdownHandler();
@@ -793,11 +796,10 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(200);
                 expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("accessToken");
-                expect(
-                    res.headers.get("set-cookie").includes("refresh_token")
-                ).toBeTruthy();
+                expect(res.headers.get("set-cookie").includes("refresh_token")).toBeTruthy();
 
                 await shutdownHandler();
             });
@@ -832,6 +834,7 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(404);
                 expect(res.parsedBody).not.toHaveProperty("success");
 
                 await shutdownHandler();
@@ -877,6 +880,7 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(403);
                 expect(res.parsedBody).not.toHaveProperty("success");
 
                 await shutdownHandler();
@@ -922,6 +926,8 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                // from HttpService._checkValidation
+                expect(res.status).toStrictEqual(400);
                 expect(res.parsedBody).not.toHaveProperty("success");
 
                 await shutdownHandler();
@@ -968,6 +974,7 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(200);
                 expect(res.parsedBody).toHaveProperty("success", true);
 
                 await shutdownHandler();
@@ -975,7 +982,7 @@ describe("Test 'AuthService' class methods", () => {
         });
 
         describe("With wrong email", () => {
-            test("Should return userId", async () => {
+            test("Should return error", async () => {
                 const authService = new AuthService(CONFIG);
                 const shutdownHandler = getLastRegisterShutdownHandler();
 
@@ -1012,6 +1019,7 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(409);
                 expect(res.parsedBody).not.toHaveProperty("success");
 
                 await shutdownHandler();
@@ -1045,6 +1053,7 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(404);
                 expect(res.parsedBody).not.toHaveProperty("success");
 
                 await shutdownHandler();
@@ -1091,11 +1100,10 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(200);
                 expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("accessToken");
-                expect(
-                    res.headers.get("set-cookie").includes("refresh_token")
-                ).toBeTruthy();
+                expect(res.headers.get("set-cookie").includes("refresh_token")).toBeTruthy();
 
                 await shutdownHandler();
             });
@@ -1129,6 +1137,7 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(404);
                 expect(res.parsedBody).not.toHaveProperty("success");
 
                 await shutdownHandler();
@@ -1173,6 +1182,7 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
 
+                expect(res.status).toStrictEqual(403);
                 expect(res.parsedBody).not.toHaveProperty("success");
 
                 await shutdownHandler();

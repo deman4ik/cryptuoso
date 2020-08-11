@@ -5,7 +5,7 @@ export declare namespace UserState {
         hour = "hour",
         day = "day"
     }
-    
+
     const enum UserRoles {
         admin = "admin",
         manager = "manager",

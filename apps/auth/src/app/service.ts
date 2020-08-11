@@ -8,17 +8,16 @@ import { Auth } from "./auth";
 import { sql } from "slonik";
 import dayjs from "@cryptuoso/dayjs";
 
-interface HttpRequest extends Request<Protocol.HTTP>/* , IncomingMessage */ {
-    body: any
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+interface HttpRequest extends Request<Protocol.HTTP> /* , IncomingMessage */ {
+    body: any;
 }
 
-interface HttpResponse extends Response<Protocol.HTTP>/* , ServerResponse */ {
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+interface HttpResponse extends Response<Protocol.HTTP> /* , ServerResponse */ {}
 
-}
-
-export interface AuthServiceConfig extends HTTPServiceConfig {
-
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface AuthServiceConfig extends HTTPServiceConfig {}
 
 export default class AuthService extends HTTPService {
     #auth: Auth;
@@ -43,7 +42,7 @@ export default class AuthService extends HTTPService {
             this.#auth = new Auth(this.#dbFunctions);
 
             this.createRoutes({
-                "login": {
+                login: {
                     handler: this.login.bind(this),
                     roles: [UserState.UserRoles.anonymous],
                     inputSchema: {
@@ -56,20 +55,24 @@ export default class AuthService extends HTTPService {
                     roles: [UserState.UserRoles.anonymous],
                     inputSchema: {
                         id: "number",
+                        // eslint-disable-next-line @typescript-eslint/camelcase
                         first_name: { type: "string", optional: true },
+                        // eslint-disable-next-line @typescript-eslint/camelcase
                         last_name: { type: "string", optional: true },
                         username: { type: "string", optional: true },
+                        // eslint-disable-next-line @typescript-eslint/camelcase
                         photo_url: { type: "string", optional: true },
+                        // eslint-disable-next-line @typescript-eslint/camelcase
                         auth_date: "number",
                         hash: "string"
                     }
                 },
-                "logout": {
+                logout: {
                     handler: this.logout.bind(this),
                     roles: [UserState.UserRoles.user],
                     auth: true
                 },
-                "register": {
+                register: {
                     handler: this.register.bind(this),
                     roles: [UserState.UserRoles.anonymous],
                     inputSchema: {
@@ -88,9 +91,7 @@ export default class AuthService extends HTTPService {
                     handler: this.refreshToken.bind(this),
                     roles: [UserState.UserRoles.user],
                     auth: true,
-                    inputSchema: {
-                        refreshToken: "string"
-                    }
+                    inputSchema: {}
                 },
                 "activate-account": {
                     handler: this.activateAccount.bind(this),
@@ -145,11 +146,7 @@ export default class AuthService extends HTTPService {
     }
 
     async login(req: HttpRequest, res: HttpResponse) {
-        const {
-            accessToken,
-            refreshToken,
-            refreshTokenExpireAt
-        } = await this.#auth.login(req.body.input);
+        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.#auth.login(req.body.input);
 
         const cookies = new Cookies(req, res);
 
@@ -168,11 +165,7 @@ export default class AuthService extends HTTPService {
     }
 
     async loginTg(req: HttpRequest, res: HttpResponse) {
-        const {
-            accessToken,
-            refreshToken,
-            refreshTokenExpireAt
-        } = await this.#auth.loginTg(req.body.input);
+        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.#auth.loginTg(req.body.input);
 
         const cookies = new Cookies(req, res);
 
@@ -216,11 +209,7 @@ export default class AuthService extends HTTPService {
         if (!oldRefreshToken) {
             oldRefreshToken = req.headers["x-refresh-token"] as string;
         }
-        const {
-            accessToken,
-            refreshToken,
-            refreshTokenExpireAt
-        } = await this.#auth.refreshToken({
+        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.#auth.refreshToken({
             refreshToken: oldRefreshToken
         });
 
@@ -241,11 +230,7 @@ export default class AuthService extends HTTPService {
     }
 
     async activateAccount(req: HttpRequest, res: HttpResponse) {
-        const {
-            accessToken,
-            refreshToken,
-            refreshTokenExpireAt
-        } = await this.#auth.activateAccount(req.body.input);
+        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.#auth.activateAccount(req.body.input);
 
         const cookies = new Cookies(req, res);
 
@@ -270,11 +255,9 @@ export default class AuthService extends HTTPService {
     }
 
     async confirmPasswordReset(req: HttpRequest, res: HttpResponse) {
-        const {
-            accessToken,
-            refreshToken,
-            refreshTokenExpireAt
-        } = await this.#auth.confirmPasswordReset(req.body.input);
+        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.#auth.confirmPasswordReset(
+            req.body.input
+        );
 
         const cookies = new Cookies(req, res);
 
@@ -293,7 +276,7 @@ export default class AuthService extends HTTPService {
     }
 
     async changeEmail(req: HttpRequest, res: HttpResponse) {
-        /* const response =  */await this.#auth.changeEmail({
+        /* const response =  */ await this.#auth.changeEmail({
             userId: req.body.session_variables["x-hasura-user-id"],
             email: req.body.input.email
         });
@@ -302,11 +285,7 @@ export default class AuthService extends HTTPService {
     }
 
     async confirmChangeEmail(req: HttpRequest, res: HttpResponse) {
-        const {
-            accessToken,
-            refreshToken,
-            refreshTokenExpireAt
-        } = await this.#auth.confirmChangeEmail({
+        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.#auth.confirmChangeEmail({
             userId: req.body.session_variables["x-hasura-user-id"],
             secretCode: req.body.input.secretCode
         });
@@ -326,9 +305,6 @@ export default class AuthService extends HTTPService {
         });
         res.end();
     }
-
-
-    
 
     private async _dbGetUserByEmail(params: { email: string }): Promise<UserState.User> {
         const { email } = params;
@@ -367,9 +343,9 @@ export default class AuthService extends HTTPService {
     }
 
     private async _dbUpdateUserRefreshToken(params: {
-        refreshToken: string,
-        refreshTokenExpireAt: string,
-        userId: string
+        refreshToken: string;
+        refreshTokenExpireAt: string;
+        userId: string;
     }): Promise<any> {
         const { refreshToken, refreshTokenExpireAt, userId } = params;
 
@@ -414,9 +390,9 @@ export default class AuthService extends HTTPService {
     }
 
     private async _dbActivateUser(params: {
-        refreshToken: string,
-        refreshTokenExpireAt: string,
-        userId: string
+        refreshToken: string;
+        refreshTokenExpireAt: string;
+        userId: string;
     }): Promise<any> {
         const { refreshToken, refreshTokenExpireAt, userId } = params;
 
@@ -432,9 +408,9 @@ export default class AuthService extends HTTPService {
     }
 
     private async _dbUpdateUserSecretCode(params: {
-        userId: string,
-        secretCode: string,
-        secretCodeExpireAt: string
+        userId: string;
+        secretCode: string;
+        secretCodeExpireAt: string;
     }): Promise<any> {
         const { userId, secretCode, secretCodeExpireAt } = params;
 
@@ -446,10 +422,10 @@ export default class AuthService extends HTTPService {
     }
 
     private async _dbChangeUserEmail(params: {
-        userId: string,
-        emailNew: string,
-        secretCode: string,
-        secretCodeExpireAt: string
+        userId: string;
+        emailNew: string;
+        secretCode: string;
+        secretCodeExpireAt: string;
     }): Promise<any> {
         const { secretCode, secretCodeExpireAt, userId, emailNew } = params;
 
@@ -463,14 +439,14 @@ export default class AuthService extends HTTPService {
     }
 
     private async _dbConfirmChangeUserEmail(params: {
-        userId: string,
-        email: string,
-        emailNew: string,
-        secretCode: string,
-        secretCodeExpireAt: string,
-        refreshToken: string,
-        refreshTokenExpireAt: string,
-        status: UserState.UserStatus
+        userId: string;
+        email: string;
+        emailNew: string;
+        secretCode: string;
+        secretCodeExpireAt: string;
+        refreshToken: string;
+        refreshTokenExpireAt: string;
+        status: UserState.UserStatus;
     }): Promise<any> {
         const {
             userId,
@@ -497,18 +473,18 @@ export default class AuthService extends HTTPService {
     }
 
     private async _dbUpdateUserPassword(params: {
-        userId: string,
-        passwordHash: string,
-        newSecretCode: string,
-        newSecretCodeExpireAt: string,
-        refreshToken: string,
-        refreshTokenExpireAt: string
+        userId: string;
+        passwordHash: string;
+        newSecretCode: string;
+        newSecretCodeExpireAt: string;
+        refreshToken: string;
+        refreshTokenExpireAt: string;
     }): Promise<any> {
         const {
             userId,
             passwordHash,
             newSecretCode,
-            newSecretCodeExpireAt, 
+            newSecretCodeExpireAt,
             refreshToken,
             refreshTokenExpireAt
         } = params;
