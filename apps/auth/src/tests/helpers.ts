@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { Service, Protocol } from "restana";
 import fetch, { Response } from "node-fetch";
 import AuthService from "../app/service";
@@ -58,4 +59,35 @@ export function getProperty(obj: any, prop: string) {
 }
 export function getServerFromService(service: AuthService): Service<Protocol.HTTP> {
     return getProperty(service, "_server");
+}
+
+export async function makeTgHash(
+    loginData: {
+        id: number;
+        first_name?: string;
+        last_name?: string;
+        username?: string;
+        photo_url?: string;
+        auth_date: number;
+    },
+    token: string
+) {
+    const secret = crypto
+        .createHash("sha256")
+        .update(token)
+        .digest();
+    let data: { [key: string]: any } = loginData;
+    delete data.hash;
+    let array = [];
+    for (let key in data) {
+        array.push(key + "=" + data[key]);
+    }
+    array = array.sort();
+    const checkString = array.join("\n");
+    const checkHash = crypto
+        .createHmac("sha256", secret)
+        .update(checkString)
+        .digest("hex");
+    
+    return checkHash;
 }

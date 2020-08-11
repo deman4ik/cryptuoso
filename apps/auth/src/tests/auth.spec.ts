@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
 import { UserState } from "@cryptuoso/user-state";
-import { makeTgHash } from "../app/auth-helper";
+import { makeTgHash } from "./helpers";
 import { Auth } from "../app/auth";
 
 const UserSettings: UserState.UserSettings = {
@@ -31,7 +31,7 @@ describe("Test Auth class methods", () => {
                         password: "password"
                     };
                     const dbUser: UserState.User = {
-                        id: "123",
+                        id: "id",
                         email: params.email,
                         status: UserState.UserStatus.enabled,
                         passwordHash: await bcrypt.hash(params.password, 10),
@@ -62,7 +62,7 @@ describe("Test Auth class methods", () => {
                     password: "password"
                 };
                 const dbUser: UserState.User = {
-                    id: "123",
+                    id: "id",
                     email: params.email,
                     status: UserState.UserStatus.enabled,
                     passwordHash: await bcrypt.hash(params.password, 10),
@@ -94,7 +94,7 @@ describe("Test Auth class methods", () => {
                     password: "password"
                 };
                 const dbUser: UserState.User = {
-                    id: "123",
+                    id: "id",
                     email: params.email,
                     status: UserState.UserStatus.enabled,
                     passwordHash: await bcrypt.hash(params.password, 10),
@@ -127,7 +127,7 @@ describe("Test Auth class methods", () => {
                         password: "password"
                     };
                     const dbUser: UserState.User = {
-                        id: "123",
+                        id: "id",
                         email: params.email,
                         status: UserState.UserStatus.enabled,
                         passwordHash: "wrong hash",
@@ -153,7 +153,7 @@ describe("Test Auth class methods", () => {
                         password: "password"
                     };
                     const dbUser: UserState.User = {
-                        id: "123",
+                        id: "id",
                         email: params.email,
                         status: UserState.UserStatus.new,
                         passwordHash: await bcrypt.hash(params.password, 10),
@@ -201,7 +201,7 @@ describe("Test Auth class methods", () => {
                     };
                     params.hash = await makeTgHash(params, process.env.BOT_TOKEN);
                     const dbUser: UserState.User = {
-                        id: "uuid",
+                        id: "id",
                         telegramId: params.id,
                         status: UserState.UserStatus.enabled,
                         refreshToken: '48e39a56-ba3a-4009-9d8a-9f23dd071ee2',
@@ -236,7 +236,7 @@ describe("Test Auth class methods", () => {
                     };
                     params.hash = await makeTgHash(params, process.env.BOT_TOKEN);
                     const dbUser: UserState.User = {
-                        id: "uuid",
+                        id: "id",
                         telegramId: params.id,
                         status: UserState.UserStatus.enabled,
                         refreshToken: '48e39a56-ba3a-4009-9d8a-9f23dd071ee2',
@@ -274,7 +274,7 @@ describe("Test Auth class methods", () => {
                     };
                     params.hash = await makeTgHash(params, process.env.BOT_TOKEN);
                     const dbUser: UserState.User = {
-                        id: "uuid",
+                        id: "id",
                         telegramId: params.id,
                         status: UserState.UserStatus.enabled,
                         refreshToken: '48e39a56-ba3a-4009-9d8a-9f23dd071ee2',
@@ -344,7 +344,7 @@ describe("Test Auth class methods", () => {
                     };
                     //params.hash = await makeTgHash(params, process.env.BOT_TOKEN);
                     const dbUser: UserState.User = {
-                        id: "uuid",
+                        id: "id",
                         telegramId: params.id,
                         status: UserState.UserStatus.enabled,
                         refreshToken: '48e39a56-ba3a-4009-9d8a-9f23dd071ee2',
@@ -375,7 +375,7 @@ describe("Test Auth class methods", () => {
                     };
                     params.hash = await makeTgHash(params, process.env.BOT_TOKEN);
                     const dbUser: UserState.User = {
-                        id: "uuid",
+                        id: "id",
                         telegramId: params.id,
                         status: UserState.UserStatus.blocked,
                         refreshToken: '48e39a56-ba3a-4009-9d8a-9f23dd071ee2',
@@ -433,7 +433,7 @@ describe("Test Auth class methods", () => {
                     name: "Name"
                 };
                 const dbUser: UserState.User = {
-                    id: "123",
+                    id: "id",
                     email: params.email,
                     status: UserState.UserStatus.new,
                     passwordHash: await bcrypt.hash(params.password, 10),
@@ -464,7 +464,7 @@ describe("Test Auth class methods", () => {
                     id: "id",
                     email: "example@inbox.com",
                     status: UserState.UserStatus.enabled,
-                    passwordHash: "pass",
+                    passwordHash: "password",
                     refreshToken: "token",
                     roles: {
                         defaultRole: UserState.UserRoles.user,
@@ -506,7 +506,7 @@ describe("Test Auth class methods", () => {
                     id: "id",
                     email: "example@inbox.com",
                     status: UserState.UserStatus.blocked,
-                    passwordHash: "pass",
+                    passwordHash: "password",
                     refreshToken: "token",
                     roles: {
                         defaultRole: UserState.UserRoles.user,
@@ -702,7 +702,7 @@ describe("Test Auth class methods", () => {
                 const params = {
                     userId: "id",
                     secretCode: "code",
-                    password: "pass"
+                    password: "password"
                 };
                 const dbUser: UserState.User = {
                     id: params.userId,
@@ -735,7 +735,7 @@ describe("Test Auth class methods", () => {
                 const params = {
                     userId: "id",
                     secretCode: "code",
-                    password: "pass"
+                    password: "password"
                 };
                 const dbUser: UserState.User = {
                     id: "id",
@@ -768,7 +768,7 @@ describe("Test Auth class methods", () => {
                 const params = {
                     userId: "id",
                     secretCode: "code",
-                    password: "pass"
+                    password: "password"
                 };
 
                 expect(auth.confirmPasswordReset(params)).rejects.toThrowError();
@@ -781,13 +781,11 @@ describe("Test Auth class methods", () => {
         describe("With right data and unique email", () => {
             test("Should prepare DB data and return success object", async () => {
                 const params = {
-                    email: "new@inbox.com"
-                };
-                const session_variables = {
-                    "x-hasura-user-id": "id"
+                    email: "new@inbox.com",
+                    userId: "id"
                 };
                 const dbUser: UserState.User = {
-                    id: session_variables["x-hasura-user-id"],
+                    id: params.userId,
                     email: "example@inbox.com",
                     status: UserState.UserStatus.enabled,
                     passwordHash: "hash",
@@ -804,7 +802,7 @@ describe("Test Auth class methods", () => {
                     changeUserEmail: jest.fn()
                 } as any);
 
-                await expect(auth.changeEmail(params, session_variables)).resolves
+                await expect(auth.changeEmail(params)).resolves
                     .toStrictEqual({ success: true });
             });
         });
@@ -812,10 +810,8 @@ describe("Test Auth class methods", () => {
         describe("With unique email and with invalid id", () => {
             test("Should to throw error", async () => {
                 const params = {
-                    email: "new@inbox.com"
-                };
-                const session_variables = {
-                    "x-hasura-user-id": "id"
+                    email: "new@inbox.com",
+                    userId: "id"
                 };
                 const auth = new Auth({
                     getUserByEmail: jest.fn(async () => null),
@@ -823,7 +819,7 @@ describe("Test Auth class methods", () => {
                     changeUserEmail: jest.fn()
                 } as any);
 
-                await expect(auth.changeEmail(params, session_variables))
+                await expect(auth.changeEmail(params))
                     .rejects.toThrowError();
             });
         });
@@ -831,13 +827,11 @@ describe("Test Auth class methods", () => {
         describe("With non-unique email", () => {
             test("Should to throw error", async () => {
                 const params = {
-                    email: "new@inbox.com"
-                };
-                const session_variables = {
-                    "x-hasura-user-id": "id"
+                    email: "new@inbox.com",
+                    userId: "id"
                 };
                 const dbUser: UserState.User = {
-                    id: session_variables["x-hasura-user-id"],
+                    id: params.userId,
                     email: "example@inbox.com",
                     status: UserState.UserStatus.enabled,
                     passwordHash: "hash",
@@ -854,7 +848,7 @@ describe("Test Auth class methods", () => {
                     changeUserEmail: jest.fn()
                 } as any);
 
-                await expect(auth.changeEmail(params, session_variables))
+                await expect(auth.changeEmail(params))
                     .rejects.toThrowError();
             });
         });
@@ -862,13 +856,14 @@ describe("Test Auth class methods", () => {
         describe("With right data and wrong status", () => {
             test("Should prepare DB data and return success object", async () => {
                 const params = {
-                    email: "new@inbox.com"
+                    email: "new@inbox.com",
+                    userId: "id"
                 };
                 const session_variables = {
                     "x-hasura-user-id": "id"
                 };
                 const dbUser: UserState.User = {
-                    id: session_variables["x-hasura-user-id"],
+                    id: params.userId,
                     email: "example@inbox.com",
                     status: UserState.UserStatus.blocked,
                     passwordHash: "hash",
@@ -885,7 +880,7 @@ describe("Test Auth class methods", () => {
                     changeUserEmail: jest.fn()
                 } as any);
 
-                await expect(auth.changeEmail(params, session_variables))
+                await expect(auth.changeEmail(params))
                     .rejects.toThrowError();
             });
         });
@@ -896,13 +891,11 @@ describe("Test Auth class methods", () => {
         describe("With right data", () => {
             test("Should prepare DB data and return success object", async () => {
                 const params = {
-                    secretCode: "code"
-                };
-                const session_variables = {
-                    "x-hasura-user-id": "id"
+                    secretCode: "code",
+                    userId: "id"
                 };
                 const dbUser: UserState.User = {
-                    id: session_variables["x-hasura-user-id"],
+                    id: params.userId,
                     email: "example@inbox.com",
                     emailNew: "new@inbox.com",
                     status: UserState.UserStatus.enabled,
@@ -920,7 +913,7 @@ describe("Test Auth class methods", () => {
                     confirmChangeUserEmail: jest.fn()
                 } as any);
 
-                const result = await auth.confirmChangeEmail(params, session_variables)
+                const result = await auth.confirmChangeEmail(params);
 
                 expect(result).toHaveProperty("accessToken");
                 expect(result).toHaveProperty("refreshToken");
@@ -931,13 +924,11 @@ describe("Test Auth class methods", () => {
         describe("W/o changeMail calling (w/o emailNew)", () => {
             test("Should to throw error", async () => {
                 const params = {
-                    secretCode: "code"
-                };
-                const session_variables = {
-                    "x-hasura-user-id": "id"
+                    secretCode: "code",
+                    userId: "id"
                 };
                 const dbUser: UserState.User = {
-                    id: session_variables["x-hasura-user-id"],
+                    id: params.userId,
                     email: "example@inbox.com",
                     /* emailNew: "new@inbox.com", */
                     status: UserState.UserStatus.enabled,
@@ -955,7 +946,7 @@ describe("Test Auth class methods", () => {
                     confirmChangeUserEmail: jest.fn()
                 } as any);
 
-                await expect(auth.confirmChangeEmail(params, session_variables))
+                await expect(auth.confirmChangeEmail(params))
                     .rejects.toThrowError();
             });
         });
@@ -963,13 +954,11 @@ describe("Test Auth class methods", () => {
         describe("With wrong secret code", () => {
             test("Should to throw error", async () => {
                 const params = {
-                    secretCode: "code"
-                };
-                const session_variables = {
-                    "x-hasura-user-id": "id"
+                    secretCode: "code",
+                    userId: "id"
                 };
                 const dbUser: UserState.User = {
-                    id: session_variables["x-hasura-user-id"],
+                    id: params.userId,
                     email: "example@inbox.com",
                     emailNew: "new@inbox.com",
                     status: UserState.UserStatus.enabled,
@@ -987,7 +976,7 @@ describe("Test Auth class methods", () => {
                     confirmChangeUserEmail: jest.fn()
                 } as any);
 
-                await expect(auth.confirmChangeEmail(params, session_variables))
+                await expect(auth.confirmChangeEmail(params))
                     .rejects.toThrowError();
             });
         });
@@ -995,13 +984,11 @@ describe("Test Auth class methods", () => {
         describe("With wrong status", () => {
             test("Should to throw error", async () => {
                 const params = {
-                    secretCode: "code"
-                };
-                const session_variables = {
-                    "x-hasura-user-id": "id"
+                    secretCode: "code",
+                    userId: "id"
                 };
                 const dbUser: UserState.User = {
-                    id: session_variables["x-hasura-user-id"],
+                    id: params.userId,
                     email: "example@inbox.com",
                     emailNew: "new@inbox.com",
                     status: UserState.UserStatus.blocked,
@@ -1019,7 +1006,7 @@ describe("Test Auth class methods", () => {
                     confirmChangeUserEmail: jest.fn()
                 } as any);
 
-                await expect(auth.confirmChangeEmail(params, session_variables))
+                await expect(auth.confirmChangeEmail(params))
                     .rejects.toThrowError();
             });
         });
@@ -1027,17 +1014,15 @@ describe("Test Auth class methods", () => {
         describe("With right data and wrong status", () => {
             test("Should prepare DB data and return success object", async () => {
                 const params = {
-                    secretCode: "code"
-                };
-                const session_variables = {
-                    "x-hasura-user-id": "id"
+                    secretCode: "code",
+                    userId: "id"
                 };
                 const auth = new Auth({
                     getUserById: jest.fn(async () => null),
                     confirmChangeUserEmail: jest.fn()
                 } as any);
 
-                await expect(auth.confirmChangeEmail(params, session_variables))
+                await expect(auth.confirmChangeEmail(params))
                     .rejects.toThrowError();
             });
         });

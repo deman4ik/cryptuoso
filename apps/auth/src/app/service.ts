@@ -124,18 +124,17 @@ export default class AuthService extends HTTPService {
                 },
                 "change-email": {
                     handler: this.changeEmail.bind(this),
-                    roles: [UserState.UserRoles.anonymous],
+                    roles: [UserState.UserRoles.user],
                     auth: true,
                     inputSchema: {
                         email: { type: "email", normalize: true }
                     }
                 },
-                "confirm-change-mail": {
+                "confirm-change-email": {
                     handler: this.confirmChangeEmail.bind(this),
-                    roles: [UserState.UserRoles.anonymous],
+                    roles: [UserState.UserRoles.user],
                     auth: true,
                     inputSchema: {
-                        userId: "string",
                         secretCode: { type: "string", empty: false, trim: true }
                     }
                 }
@@ -161,7 +160,7 @@ export default class AuthService extends HTTPService {
             domain: ".cryptuoso.com",
             overwrite: true
         });
-        res.end({
+        res.send({
             success: true,
             accessToken
         });
@@ -184,7 +183,7 @@ export default class AuthService extends HTTPService {
             domain: ".cryptuoso.com",
             overwrite: true
         });
-        res.end({
+        res.send({
             success: true,
             accessToken
         });
@@ -294,10 +293,10 @@ export default class AuthService extends HTTPService {
     }
 
     async changeEmail(req: HttpRequest, res: HttpResponse) {
-        /* const response =  */await this.#auth.changeEmail(
-            req.body.input,
-            req.body.session_variables
-        );
+        /* const response =  */await this.#auth.changeEmail({
+            userId: req.body.session_variables["x-hasura-user-id"],
+            email: req.body.input.email
+        });
         res.send({ success: true });
         res.end();
     }
@@ -307,10 +306,10 @@ export default class AuthService extends HTTPService {
             accessToken,
             refreshToken,
             refreshTokenExpireAt
-        } = await this.#auth.confirmChangeEmail(
-            req.body.input,
-            req.body.session_variables
-        );
+        } = await this.#auth.confirmChangeEmail({
+            userId: req.body.session_variables["x-hasura-user-id"],
+            secretCode: req.body.input.secretCode
+        });
 
         const cookies = new Cookies(req, res);
 

@@ -7,10 +7,29 @@ process.env.JWT_SECRET = "secret";
 process.env.JWT_TOKEN_EXPIRES = "1";
 process.env.BOT_TOKEN = "BOT_TOKEN";
 
+import bcrypt from "bcrypt";
 import AuthService, { AuthServiceConfig } from "../app/service";
-import { ActionsHandlerError } from "@cryptuoso/errors";
+import { UserState } from "@cryptuoso/user-state";
+import { pg } from "@cryptuoso/postgres";
+import { ajax, setProperty, makeTgHash } from "./helpers";
 
-import { ajax, setProperty, getServerFromService } from "./AuthService.spec.helpers";
+const UserSettings: UserState.UserSettings = {
+    notifications: {
+        signals: {
+            telegram: true,
+            email: true
+        },
+        trading: {
+            telegram: true,
+            email: true
+        }
+    }
+}
+
+const mockPG = {
+    maybeOne: pg.maybeOne as jest.Mock,
+    query: pg.query as jest.Mock
+};
 
 const mockExit = jest.fn();
 const mockLightshipType = {
@@ -25,7 +44,7 @@ function getLastRegisterShutdownHandler(): { (): Promise<any> } {
 }
 
 setProperty(process, "exit", mockExit);
-setProperty(console, "error", jest.fn());
+//setProperty(console, "error", jest.fn());
 jest.mock("lightship", () => {
     return {
         LightshipType: jest.fn().mockImplementation(() => {
@@ -41,367 +60,1122 @@ jest.mock("@cryptuoso/logger");
 jest.mock("@cryptuoso/postgres");
 jest.mock("@cryptuoso/events");
 
-describe("Test 'BaseService' class", () => {
+describe("Test 'AuthService' class methods", () => {
     const CONFIG: AuthServiceConfig = { port: 4000 };
 
-    describe("Testing constructor", () => {
-        describe("Test with valid input", () => {
-            describe("Test with right config provided", () => {
-                test("Should initialize correctly and doesn't call process.exit", async () => {
-                    new AuthService(CONFIG);
+    describe("Test constructor", () => {
+        test("Should not to throw", async () => {
+            expect(() => new AuthService(CONFIG)).not.toThrowError();
+        });
+    });
 
-                    expect(mockExit).toHaveBeenCalledTimes(0);
-                });
+    describe("login method", () => {
+        describe("With right email and password", () => {
+            test("Should return accessToken and set cookie refreshToken", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
+
+                await authService.startService();
+
+                const params = {
+                    email: "example@inbox.com",
+                    password: "password"
+                };
+                const dbUser: UserState.User = {
+                    id: "id",
+                    email: params.email,
+                    status: UserState.UserStatus.enabled,
+                    passwordHash: await bcrypt.hash(params.password, 10),
+                    roles: {
+                        defaultRole: UserState.UserRoles.user,
+                        allowedRoles: [UserState.UserRoles.user]
+                    },
+                    settings: UserSettings
+                };
+
+                mockPG.maybeOne.mockImplementation(async () => dbUser);
+
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/login`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "login" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": dbUser.id,
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
+
+                expect(res.parsedBody).toHaveProperty("success", true);
+                expect(res.parsedBody).toHaveProperty("accessToken");
+                expect(
+                    res.headers.get("set-cookie").includes("refresh_token")
+                ).toBeTruthy();
+
+                await shutdownHandler();
             });
         });
 
-        describe("Test with valid input", () => {
-            describe("Test with right config provided", () => {
-                test("Should initialize correctly and doesn't call process.exit", async () => {
-                    const authService = new AuthService(CONFIG);
-                    const shutdownHandler = getLastRegisterShutdownHandler();
-                    const app = getServerFromService(authService);
+        describe("With wrong email", () => {
+            test("Should return error", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
 
-                    await authService.startService();
+                await authService.startService();
 
-                    expect(mockExit).toHaveBeenCalledTimes(0);
-                    expect(app.getServer().address().port).toEqual(CONFIG.port);
+                const params = {
+                    email: "example@inbox.com",
+                    password: "password"
+                };
 
-                    await shutdownHandler();
-                });
+                mockPG.maybeOne.mockImplementation(async () => null);
+
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/login`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "login" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": "id",
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
+
+                expect(res.parsedBody).not.toHaveProperty("success");
+
+                await shutdownHandler();
             });
+        });
 
-            describe("Test with w/o config", () => {
-                test("Should initialize correctly and doesn't call process.exit", async () => {
-                    const authService = new AuthService();
-                    const shutdownHandler = getLastRegisterShutdownHandler();
-                    const app = getServerFromService(authService);
+        describe("With wrong password", () => {
+            test("Should return error", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
 
-                    await authService.startService();
+                await authService.startService();
 
-                    expect(mockExit).toHaveBeenCalledTimes(0);
-                    expect(app.getServer().address().port).toEqual(3000);
+                const params = {
+                    email: "example@inbox.com",
+                    password: "password"
+                };
+                const dbUser: UserState.User = {
+                    id: "id",
+                    email: params.email,
+                    status: UserState.UserStatus.enabled,
+                    passwordHash: "OTHER",
+                    roles: {
+                        defaultRole: UserState.UserRoles.user,
+                        allowedRoles: [UserState.UserRoles.user]
+                    },
+                    settings: UserSettings
+                };
 
-                    await shutdownHandler();
-                });
+                mockPG.maybeOne.mockImplementation(async () => dbUser);
+
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/login`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "login" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": dbUser.id,
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
+
+                expect(res.parsedBody).not.toHaveProperty("success");
+
+                await shutdownHandler();
             });
         });
     });
 
-    describe("Testing methods", () => {
-        describe("Testing _stopServer method calling w/o _startServer method calling", () => {
-            test("Shold quit correctly", async () => {
+    describe("loginTg method", () => {
+        describe("With right telegramId and hash", () => {
+            test("Should return accessToken and set cookie refreshToken", async () => {
                 const authService = new AuthService(CONFIG);
                 const shutdownHandler = getLastRegisterShutdownHandler();
-                const app = getServerFromService(authService);
+
+                await authService.startService();
+
+                const params = {
+                    id: 123,
+                    auth_date: Date.now(),
+                    hash: ""
+                };
+                params.hash = await makeTgHash(params, process.env.BOT_TOKEN);
+                const dbUser: UserState.User = {
+                    id: "id",
+                    telegramId: params.id,
+                    status: UserState.UserStatus.enabled,
+                    roles: {
+                        defaultRole: UserState.UserRoles.user,
+                        allowedRoles: [UserState.UserRoles.user]
+                    },
+                    settings: UserSettings
+                };
+
+                mockPG.maybeOne.mockImplementation(async () => dbUser);
+
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/login-tg`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "login-tg" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": dbUser.id,
+                            "x-hasura-role": UserState.UserRoles.anonymous
+                        }
+                    }
+                );
+
+                expect(res.parsedBody).toHaveProperty("success", true);
+                expect(res.parsedBody).toHaveProperty("accessToken");
+                expect(
+                    res.headers.get("set-cookie").includes("refresh_token")
+                ).toBeTruthy();
 
                 await shutdownHandler();
-
-                expect(app.getServer().listening).toStrictEqual(false);
             });
         });
 
-        describe("Testing _checkApiKey method", () => {
-            describe("Testing with right requests", () => {
-                describe("Should return right response", () => {
-                    test("", async () => {
-                        const authService = new AuthService(CONFIG);
-                        const shutdownHandler = getLastRegisterShutdownHandler();
-                        const app = getServerFromService(authService);
+        describe("With new user", () => {
+            test("Should create new account and return new tokens", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
 
-                        await authService.startService();
+                await authService.startService();
 
-                        const res = await ajax.get(`http://localhost:${CONFIG.port}`, {
-                            "x-api-key": process.env.API_KEY
-                        });
+                const params = {
+                    id: 123,
+                    username: "username",
+                    auth_date: Date.now(),
+                    hash: ""
+                };
+                params.hash = await makeTgHash(params, process.env.BOT_TOKEN);
 
-                        await shutdownHandler();
+                mockPG.maybeOne.mockImplementation(async () => null);
 
-                        expect(res.ok).toStrictEqual(true);
-                        expect(res.parsedBody).toStrictEqual({ service: process.env.SERVICE, routes: app.routes() });
-                    });
-                });
-            });
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/login-tg`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "login-tg" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": "id",
+                            "x-hasura-role": UserState.UserRoles.anonymous
+                        }
+                    }
+                );
 
-            describe("Testing with wrong requests", () => {
-                describe("With wrong 'x-api-key' header", () => {
-                    test("Should return error response", async () => {
-                        const authService = new AuthService(CONFIG);
-                        const shutdownHandler = getLastRegisterShutdownHandler();
+                expect(res.parsedBody).toHaveProperty("success", true);
+                expect(res.parsedBody).toHaveProperty("accessToken");
+                expect(
+                    res.headers.get("set-cookie").includes("refresh_token")
+                ).toBeTruthy();
 
-                        await authService.startService();
-
-                        const res = await ajax.get(`http://localhost:${CONFIG.port}`, { "x-api-key": "wrong_key" });
-
-                        await shutdownHandler();
-
-                        expect(res.status).toStrictEqual(403);
-                        expect(res.parsedBody).toStrictEqual(
-                            new ActionsHandlerError("Forbidden: Invalid API Key", null, "FORBIDDEN", 403).response
-                        );
-                    });
-                });
-
-                describe("Testing w/o 'x-api-key' header", () => {
-                    test("Should return error response", async () => {
-                        const authService = new AuthService(CONFIG);
-                        const shutdownHandler = getLastRegisterShutdownHandler();
-
-                        await authService.startService();
-
-                        const res = await ajax.get(`http://localhost:${CONFIG.port}`);
-
-                        await shutdownHandler();
-
-                        expect(res.status).toStrictEqual(403);
-                        expect(res.parsedBody).toStrictEqual(
-                            new ActionsHandlerError("Forbidden: Invalid API Key", null, "FORBIDDEN", 403).response
-                        );
-                    });
-                });
+                await shutdownHandler();
             });
         });
 
-        describe("Testing _checkValidation method", () => {
-            describe("Testing with right requests", () => {
-                describe("Test with right schema", () => {
-                    test("Should return right response", async () => {
-                        const authService = new AuthService(CONFIG);
-                        const shutdownHandler = getLastRegisterShutdownHandler();
-                        const rightResponse = { success: true };
+        describe("With wrong hash", () => {
+            test("Should return error", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
 
-                        createRoute(authService, "my", rightResponse);
+                await authService.startService();
 
-                        await authService.startService();
+                const params = {
+                    id: 123,
+                    username: "username",
+                    auth_date: Date.now(),
+                    hash: "WRONG_HASH"
+                };
+                //params.hash = await makeTgHash(params, process.env.BOT_TOKEN);
 
-                        const res = await ajax.post(
-                            `http://localhost:${CONFIG.port}/actions/my`,
-                            { "x-api-key": process.env.API_KEY },
-                            {
-                                action: { name: "my" },
-                                input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
-                                session_variables: {}
-                            }
-                        );
+                const dbUser: UserState.User = {
+                    id: "id",
+                    telegramId: params.id,
+                    status: UserState.UserStatus.enabled,
+                    roles: {
+                        defaultRole: UserState.UserRoles.user,
+                        allowedRoles: [UserState.UserRoles.user]
+                    },
+                    settings: UserSettings
+                };
 
-                        await shutdownHandler();
+                mockPG.maybeOne.mockImplementation(async () => dbUser);
 
-                        expect(res.parsedBody).toEqual(rightResponse);
-                    });
-                });
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/login-tg`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "login-tg" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": "id",
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
+
+                expect(res.parsedBody).not.toHaveProperty("success");
+
+                await shutdownHandler();
             });
+        });
+    });
 
-            describe("Testing with wrong requests", () => {
-                describe("Test with wrong schema", () => {
-                    test("Should return error response with validation code", async () => {
-                        const authService = new AuthService(CONFIG);
-                        const shutdownHandler = getLastRegisterShutdownHandler();
-                        const rightResponse = { success: true };
+    describe("logout method", () => {
+        describe("With any params", () => {
+            test("Should clear refreshToken", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
 
-                        createRoute(authService, "my", rightResponse);
+                await authService.startService();
 
-                        await authService.startService();
+                const params = {
 
-                        const res = await ajax.post(
-                            `http://localhost:${CONFIG.port}/actions/my`,
-                            { "x-api-key": process.env.API_KEY },
-                            {
-                                action: { name: "wrong" },
-                                input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
-                                session_variables: {}
-                            }
-                        );
+                };
 
-                        await shutdownHandler();
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/logout`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "logout" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": "id",
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
 
-                        expect(res.status).toStrictEqual(400);
-                        expect(res.parsedBody["code"]).toEqual("VALIDATION");
-                    });
+                expect(res.parsedBody).toHaveProperty("success", true);
+                expect(
+                    res.headers.get("set-cookie").includes("refresh_token=;")
+                ).toBeTruthy();
 
-                    test("Should return error response with validation code", async () => {
-                        const authService = new AuthService(CONFIG);
-                        const shutdownHandler = getLastRegisterShutdownHandler();
-                        const rightResponse = { success: true };
-
-                        createRoute(authService, "my", rightResponse);
-
-                        await authService.startService();
-
-                        const res = await ajax.post(
-                            `http://localhost:${CONFIG.port}/actions/my`,
-                            { "x-api-key": process.env.API_KEY },
-                            {
-                                wrong: "wrong"
-                            }
-                        );
-
-                        await shutdownHandler();
-
-                        expect(res.status).toStrictEqual(400);
-                        expect(res.parsedBody["code"]).toEqual("VALIDATION");
-                    });
-                });
+                await shutdownHandler();
             });
+        });
+    });
 
-            describe("Testing _checkAuth method", () => {
-                describe("Testing with right requests", () => {
-                    describe("Testing with right roles; user-id passed", () => {
-                        test("Should return right response", async () => {
-                            const authService = new AuthService(CONFIG);
-                            const shutdownHandler = getLastRegisterShutdownHandler();
-                            const rightResponse = { success: true };
+    describe("register method", () => {
+        describe("With unique email", () => {
+            test("Should return userId", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
 
-                            createRoute(authService, "my", rightResponse, ["my-role"], true);
+                await authService.startService();
 
-                            await authService.startService();
+                const params = {
+                    email: "example@inbox.com",
+                    password: "password",
+                    name: "Name"
+                };
 
-                            const res = await ajax.post(
-                                `http://localhost:${CONFIG.port}/actions/my`,
-                                { "x-api-key": process.env.API_KEY },
-                                {
-                                    action: { name: "my" },
-                                    input: {},
-                                    // eslint-disable-next-line @typescript-eslint/camelcase
-                                    session_variables: { "x-hasura-user-id": "user-id", "x-hasura-role": "my-role" }
-                                }
-                            );
+                mockPG.maybeOne.mockImplementation(async () => null);
 
-                            await shutdownHandler();
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/register`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "register" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": "id",
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
 
-                            expect(res.parsedBody).toEqual(rightResponse);
-                        });
-                    });
+                expect(res.parsedBody).toHaveProperty("success", true);
+                expect(res.parsedBody).toHaveProperty("userId");
 
-                    describe("Testing w/o roles", () => {
-                        test("Should return right response", async () => {
-                            const authService = new AuthService(CONFIG);
-                            const shutdownHandler = getLastRegisterShutdownHandler();
-                            const rightResponse = { success: true };
+                await shutdownHandler();
+            });
+        });
 
-                            createRoute(authService, "my", rightResponse, [], true);
+        describe("With non-unique email", () => {
+            test("Should return error", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
 
-                            await authService.startService();
+                await authService.startService();
 
-                            const res = await ajax.post(
-                                `http://localhost:${CONFIG.port}/actions/my`,
-                                { "x-api-key": process.env.API_KEY },
-                                {
-                                    action: { name: "my" },
-                                    input: {},
-                                    // eslint-disable-next-line @typescript-eslint/camelcase
-                                    session_variables: { "x-hasura-user-id": "user-id" }
-                                }
-                            );
+                const params = {
+                    email: "example@inbox.com",
+                    password: "password",
+                    name: "Name"
+                };
 
-                            await shutdownHandler();
+                const dbUser: UserState.User = {
+                    id: "id",
+                    status: UserState.UserStatus.enabled,
+                    roles: {
+                        defaultRole: UserState.UserRoles.user,
+                        allowedRoles: [UserState.UserRoles.user]
+                    },
+                    settings: UserSettings
+                };
 
-                            expect(res.parsedBody).toEqual(rightResponse);
-                        });
-                    });
-                });
+                mockPG.maybeOne.mockImplementation(async () => dbUser);
 
-                describe("Testing with wrong requests", () => {
-                    describe("Testing with empty 'user-id'", () => {
-                        test("Should return error response", async () => {
-                            const authService = new AuthService(CONFIG);
-                            const shutdownHandler = getLastRegisterShutdownHandler();
-                            const rightResponse = { success: true };
-                            const errorResponse = new ActionsHandlerError(
-                                "Unauthorized: Invalid session variables",
-                                null,
-                                "UNAUTHORIZED",
-                                401
-                            ).response;
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/register`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "register" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": "id",
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
 
-                            createRoute(authService, "my", rightResponse, ["my-role"], true);
+                expect(res.parsedBody).not.toHaveProperty("success");
 
-                            await authService.startService();
+                await shutdownHandler();
+            });
+        });
+    });
 
-                            const res = await ajax.post(
-                                `http://localhost:${CONFIG.port}/actions/my`,
-                                { "x-api-key": process.env.API_KEY },
-                                {
-                                    action: { name: "my" },
-                                    input: {},
-                                    // eslint-disable-next-line @typescript-eslint/camelcase
-                                    session_variables: { "x-hasura-user-id": "", "x-hasura-role": "my-role" }
-                                }
-                            );
+    describe("refreshToken method", () => {
+        describe("With right refreshToken", () => {
+            test("Should return accessToken and set cookie refreshToken", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
 
-                            await shutdownHandler();
+                await authService.startService();
 
-                            expect(res.parsedBody).toEqual(errorResponse);
-                        });
-                    });
+                const params = {
+                    "refreshToken": "1"
+                };
+                const dbUser: UserState.User = {
+                    id: "id",
+                    status: UserState.UserStatus.enabled,
+                    roles: {
+                        defaultRole: UserState.UserRoles.user,
+                        allowedRoles: [UserState.UserRoles.user]
+                    },
+                    settings: UserSettings
+                };
 
-                    describe("Testing with empty 'role'", () => {
-                        test("Should return error response", async () => {
-                            const authService = new AuthService(CONFIG);
-                            const shutdownHandler = getLastRegisterShutdownHandler();
-                            const rightResponse = { success: true };
-                            const errorResponse = new ActionsHandlerError(
-                                "Forbidden: Invalid role",
-                                null,
-                                "FORBIDDEN",
-                                403
-                            ).response;
+                mockPG.maybeOne.mockImplementation(async () => dbUser);
 
-                            createRoute(authService, "my", rightResponse, ["my-role"], true);
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/refresh-token`,
+                    {
+                        "x-api-key": process.env.API_KEY,
+                        "x-refresh-token": params["refreshToken"]
+                    },
+                    {
+                        action: { name: "refresh-token" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": dbUser.id,
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
 
-                            await authService.startService();
+                expect(res.parsedBody).toHaveProperty("success", true);
+                expect(res.parsedBody).toHaveProperty("accessToken");
+                expect(
+                    res.headers.get("set-cookie").includes("refresh_token")
+                ).toBeTruthy();
 
-                            const res = await ajax.post(
-                                `http://localhost:${CONFIG.port}/actions/my`,
-                                { "x-api-key": process.env.API_KEY },
-                                {
-                                    action: { name: "my" },
-                                    input: {},
-                                    // eslint-disable-next-line @typescript-eslint/camelcase
-                                    session_variables: { "x-hasura-user-id": "user-id", "x-hasura-role": "" }
-                                }
-                            );
+                await shutdownHandler();
+            });
+        });
 
-                            await shutdownHandler();
+        describe("With bad refreshToken", () => {
+            test("Should return error", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
 
-                            expect(res.parsedBody).toEqual(errorResponse);
-                        });
-                    });
+                await authService.startService();
 
-                    describe("Testing with wrong 'role'", () => {
-                        test("Should return error response", async () => {
-                            const authService = new AuthService(CONFIG);
-                            const shutdownHandler = getLastRegisterShutdownHandler();
-                            const rightResponse = { success: true };
-                            const errorResponse = new ActionsHandlerError(
-                                "Forbidden: Invalid role",
-                                null,
-                                "FORBIDDEN",
-                                403
-                            ).response;
+                const params = {
+                    "refreshToken": "1"
+                };
 
-                            createRoute(authService, "my", rightResponse, ["my-role"], true);
+                mockPG.maybeOne.mockImplementation(async () => null);
 
-                            await authService.startService();
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/refresh-token`,
+                    {
+                        "x-api-key": process.env.API_KEY,
+                        "x-refresh-token": params["refreshToken"]
+                    },
+                    {
+                        action: { name: "refresh-token" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": "id",
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
 
-                            const res = await ajax.post(
-                                `http://localhost:${CONFIG.port}/actions/my`,
-                                { "x-api-key": process.env.API_KEY },
-                                {
-                                    action: { name: "my" },
-                                    input: {},
-                                    // eslint-disable-next-line @typescript-eslint/camelcase
-                                    session_variables: { "x-hasura-user-id": "user-id", "x-hasura-role": "wrong" }
-                                }
-                            );
+                expect(res.parsedBody).not.toHaveProperty("success");
 
-                            await shutdownHandler();
+                await shutdownHandler();
+            });
+        });
+    });
 
-                            expect(res.parsedBody).toEqual(errorResponse);
-                        });
-                    });
-                });
+    describe("activateAccount method", () => {
+        describe("With right userId and secretCode", () => {
+            test("Should return accessToken and set cookie refreshToken", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
+
+                await authService.startService();
+
+                const params = {
+                    userId: "id",
+                    secretCode: "secret"
+                };
+                const dbUser: UserState.User = {
+                    id: params.userId,
+                    status: UserState.UserStatus.new,
+                    secretCode: params.secretCode,
+                    roles: {
+                        defaultRole: UserState.UserRoles.user,
+                        allowedRoles: [UserState.UserRoles.user]
+                    },
+                    settings: UserSettings
+                };
+
+                mockPG.maybeOne.mockImplementation(async () => dbUser);
+
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/activate-account`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "activate-account" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": dbUser.id,
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
+
+                expect(res.parsedBody).toHaveProperty("success", true);
+                expect(res.parsedBody).toHaveProperty("accessToken");
+                expect(
+                    res.headers.get("set-cookie").includes("refresh_token")
+                ).toBeTruthy();
+
+                await shutdownHandler();
+            });
+        });
+
+        describe("With wrong userId", () => {
+            test("Should return error", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
+
+                await authService.startService();
+
+                const params = {
+                    userId: "id",
+                    secretCode: "secret"
+                };
+
+                mockPG.maybeOne.mockImplementation(async () => null);
+
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/activate-account`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "activate-account" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": "id",
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
+
+                expect(res.parsedBody).not.toHaveProperty("success");
+
+                await shutdownHandler();
+            });
+        });
+
+        describe("With wrong secretCode", () => {
+            test("Should return error", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
+
+                await authService.startService();
+
+                const params = {
+                    userId: "id",
+                    secretCode: "secret"
+                };
+                const dbUser: UserState.User = {
+                    id: params.userId,
+                    status: UserState.UserStatus.new,
+                    secretCode: "OTHER",
+                    roles: {
+                        defaultRole: UserState.UserRoles.user,
+                        allowedRoles: [UserState.UserRoles.user]
+                    },
+                    settings: UserSettings
+                };
+
+                mockPG.maybeOne.mockImplementation(async () => dbUser);
+
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/activate-account`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "activate-account" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": dbUser.id,
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
+
+                expect(res.parsedBody).not.toHaveProperty("success");
+
+                await shutdownHandler();
+            });
+        });
+    });
+
+    describe("passwordReset method", () => {
+        describe("With right email", () => {
+            test("Should return userId", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
+
+                await authService.startService();
+
+                const params = {
+                    email: "example@inbox.com"
+                };
+                const dbUser: UserState.User = {
+                    id: "id",
+                    email: params.email,
+                    status: UserState.UserStatus.enabled,
+                    roles: {
+                        defaultRole: UserState.UserRoles.user,
+                        allowedRoles: [UserState.UserRoles.user]
+                    },
+                    settings: UserSettings
+                };
+
+                mockPG.maybeOne.mockImplementation(async () => dbUser);
+
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/password-reset`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "password-reset" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": dbUser.id,
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
+
+                expect(res.parsedBody).toHaveProperty("success", true);
+                expect(res.parsedBody).toHaveProperty("userId", dbUser.id);
+
+                await shutdownHandler();
+            });
+        });
+
+        describe("With bad refreshToken", () => {
+            test("Should return error", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
+
+                await authService.startService();
+
+                const params = {
+                    email: "example@inbox.com"
+                };
+
+                mockPG.maybeOne.mockImplementation(async () => null);
+
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/password-reset`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "password-reset" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": "id",
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
+
+                expect(res.parsedBody).not.toHaveProperty("success");
+
+                await shutdownHandler();
+            });
+        });
+    });
+
+    describe("confirmPasswordReset method", () => {
+        describe("With right userId, secretCode and password", () => {
+            test("Should return accessToken and set cookie refreshToken", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
+
+                await authService.startService();
+
+                const params = {
+                    userId: "id",
+                    secretCode: "secret",
+                    password: "password"
+                };
+                const dbUser: UserState.User = {
+                    id: params.userId,
+                    status: UserState.UserStatus.enabled,
+                    secretCode: params.secretCode,
+                    roles: {
+                        defaultRole: UserState.UserRoles.user,
+                        allowedRoles: [UserState.UserRoles.user]
+                    },
+                    settings: UserSettings
+                };
+
+                mockPG.maybeOne.mockImplementation(async () => dbUser);
+
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/confirm-password-reset`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "confirm-password-reset" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": dbUser.id,
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
+
+                expect(res.parsedBody).toHaveProperty("success", true);
+                expect(res.parsedBody).toHaveProperty("accessToken");
+                expect(
+                    res.headers.get("set-cookie").includes("refresh_token")
+                ).toBeTruthy();
+
+                await shutdownHandler();
+            });
+        });
+
+        describe("With wrong userId", () => {
+            test("Should return error", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
+
+                await authService.startService();
+
+                const params = {
+                    userId: "id",
+                    secretCode: "secret",
+                    password: "password"
+                };
+
+                mockPG.maybeOne.mockImplementation(async () => null);
+
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/confirm-password-reset`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "confirm-password-reset" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": "id",
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
+
+                expect(res.parsedBody).not.toHaveProperty("success");
+
+                await shutdownHandler();
+            });
+        });
+
+        describe("With wrong secretCode", () => {
+            test("Should return error", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
+
+                await authService.startService();
+
+                const params = {
+                    userId: "id",
+                    secretCode: "secret",
+                    password: "password"
+                };
+                const dbUser: UserState.User = {
+                    id: params.userId,
+                    status: UserState.UserStatus.enabled,
+                    secretCode: "OTHER",
+                    roles: {
+                        defaultRole: UserState.UserRoles.user,
+                        allowedRoles: [UserState.UserRoles.user]
+                    },
+                    settings: UserSettings
+                };
+
+                mockPG.maybeOne.mockImplementation(async () => dbUser);
+
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/confirm-password-reset`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "confirm-password-reset" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": dbUser.id,
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
+
+                expect(res.parsedBody).not.toHaveProperty("success");
+
+                await shutdownHandler();
+            });
+        });
+
+        describe("With wrong password", () => {
+            test("Should return error", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
+
+                await authService.startService();
+
+                const params = {
+                    userId: "id",
+                    secretCode: "secret",
+                    password: ""
+                };
+                const dbUser: UserState.User = {
+                    id: params.userId,
+                    status: UserState.UserStatus.enabled,
+                    secretCode: "OTHER",
+                    roles: {
+                        defaultRole: UserState.UserRoles.user,
+                        allowedRoles: [UserState.UserRoles.user]
+                    },
+                    settings: UserSettings
+                };
+
+                mockPG.maybeOne.mockImplementation(async () => dbUser);
+
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/confirm-password-reset`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "confirm-password-reset" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": dbUser.id,
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
+
+                expect(res.parsedBody).not.toHaveProperty("success");
+
+                await shutdownHandler();
+            });
+        });
+    });
+
+    describe("changeEmail method", () => {
+        describe("With right email", () => {
+            test("Should return userId", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
+
+                await authService.startService();
+
+                const params = {
+                    email: "example@inbox.com"
+                };
+                const dbUser: UserState.User = {
+                    id: "id",
+                    email: params.email,
+                    status: UserState.UserStatus.enabled,
+                    roles: {
+                        defaultRole: UserState.UserRoles.user,
+                        allowedRoles: [UserState.UserRoles.user]
+                    },
+                    settings: UserSettings
+                };
+
+                mockPG.maybeOne.mockImplementation(async () => dbUser);
+                mockPG.maybeOne.mockImplementationOnce(async () => null);
+
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/change-email`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "change-email" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": dbUser.id,
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
+
+                expect(res.parsedBody).toHaveProperty("success", true);
+
+                await shutdownHandler();
+            });
+        });
+
+        describe("With wrong email", () => {
+            test("Should return userId", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
+
+                await authService.startService();
+
+                const params = {
+                    email: "example@inbox.com"
+                };
+                const dbUser: UserState.User = {
+                    id: "id",
+                    email: params.email,
+                    status: UserState.UserStatus.enabled,
+                    roles: {
+                        defaultRole: UserState.UserRoles.user,
+                        allowedRoles: [UserState.UserRoles.user]
+                    },
+                    settings: UserSettings
+                };
+
+                mockPG.maybeOne.mockImplementation(async () => dbUser);
+                //mockPG.maybeOne.mockImplementationOnce(async () => null);
+
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/change-email`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "change-email" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": dbUser.id,
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
+
+                expect(res.parsedBody).not.toHaveProperty("success");
+
+                await shutdownHandler();
+            });
+        });
+
+        describe("With wrong x-hasura-user-id", () => {
+            test("Should return userId", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
+
+                await authService.startService();
+
+                const params = {
+                    email: "example@inbox.com"
+                };
+
+                mockPG.maybeOne.mockImplementation(async () => null);
+
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/change-email`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "change-email" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": "WRONG",
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
+
+                expect(res.parsedBody).not.toHaveProperty("success");
+
+                await shutdownHandler();
+            });
+        });
+    });
+
+    describe("confirmChangeEmail method", () => {
+        describe("With right x-hasura-user-id and secretCode", () => {
+            test("Should return accessToken and set cookie refreshToken", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
+
+                await authService.startService();
+
+                const params = {
+                    secretCode: "secret"
+                };
+                const dbUser: UserState.User = {
+                    id: "id",
+                    emailNew: "example@inbox.com",
+                    status: UserState.UserStatus.enabled,
+                    secretCode: params.secretCode,
+                    roles: {
+                        defaultRole: UserState.UserRoles.user,
+                        allowedRoles: [UserState.UserRoles.user]
+                    },
+                    settings: UserSettings
+                };
+
+                mockPG.maybeOne.mockImplementation(async () => dbUser);
+
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/confirm-change-email`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "confirm-change-email" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": dbUser.id,
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
+
+                expect(res.parsedBody).toHaveProperty("success", true);
+                expect(res.parsedBody).toHaveProperty("accessToken");
+                expect(
+                    res.headers.get("set-cookie").includes("refresh_token")
+                ).toBeTruthy();
+
+                await shutdownHandler();
+            });
+        });
+
+        describe("With wrong userId", () => {
+            test("Should return error", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
+
+                await authService.startService();
+
+                const params = {
+                    userId: "id",
+                    secretCode: "secret"
+                };
+
+                mockPG.maybeOne.mockImplementation(async () => null);
+
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/confirm-change-email`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "confirm-change-email" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": "id",
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
+
+                expect(res.parsedBody).not.toHaveProperty("success");
+
+                await shutdownHandler();
+            });
+        });
+
+        describe("With wrong secretCode", () => {
+            test("Should return error", async () => {
+                const authService = new AuthService(CONFIG);
+                const shutdownHandler = getLastRegisterShutdownHandler();
+
+                await authService.startService();
+
+                const params = {
+                    userId: "id",
+                    secretCode: "secret"
+                };
+                const dbUser: UserState.User = {
+                    id: params.userId,
+                    status: UserState.UserStatus.enabled,
+                    secretCode: "OTHER",
+                    roles: {
+                        defaultRole: UserState.UserRoles.user,
+                        allowedRoles: [UserState.UserRoles.user]
+                    },
+                    settings: UserSettings
+                };
+
+                mockPG.maybeOne.mockImplementation(async () => dbUser);
+
+                const res = await ajax.post(
+                    `http://localhost:${CONFIG.port}/actions/confirm-change-email`,
+                    { "x-api-key": process.env.API_KEY },
+                    {
+                        action: { name: "confirm-change-email" },
+                        input: params,
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        session_variables: {
+                            "x-hasura-user-id": dbUser.id,
+                            "x-hasura-role": UserState.UserRoles.user
+                        }
+                    }
+                );
+
+                expect(res.parsedBody).not.toHaveProperty("success");
+
+                await shutdownHandler();
             });
         });
     });

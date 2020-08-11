@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { v4 as uuid } from "uuid";
 import dayjs from "@cryptuoso/dayjs";
+import { ActionsHandlerError } from "@cryptuoso/errors";
 
 import { UserState } from "@cryptuoso/user-state";
 import { formatTgName, checkTgLogin, getAccessValue } from "./auth-helper";
@@ -24,17 +25,27 @@ export class Auth {
         const { email, password } = params;
 
         const user: UserState.User = await this.#db.getUserByEmail({ email });
-        if (!user) throw new Error("User account is not found.");
+        if (!user)
+            throw new ActionsHandlerError(
+                "Not found: User account is not found.", null, "NOT_FOUND", 404
+            );
         if (user.status === UserState.UserStatus.blocked)
-            throw new Error("User account is blocked.");
+            throw new ActionsHandlerError(
+                "Forbidden: User account is blocked.", null, "FORBIDDEN", 403
+            );
         if (user.status === UserState.UserStatus.new)
-            throw new Error("User account is not activated.");
+            throw new ActionsHandlerError(
+                "Forbidden: User account is not activated.", null, "FORBIDDEN", 403
+            );
         if (!user.passwordHash)
-            throw new Error(
-                "Password is not set. Login with Telegram and change password."
+            throw new ActionsHandlerError(
+                "Forbidden: Password is not set. Login with Telegram and change password.", null, "FORBIDDEN", 403
             );
         const passwordChecked = await bcrypt.compare(password, user.passwordHash);
-        if (!passwordChecked) throw new Error("Invalid password.");
+        if (!passwordChecked)
+            throw new ActionsHandlerError(
+                "Forbidden: Invalid password.", null, "FORBIDDEN", 403
+            );
 
         let refreshToken;
         let refreshTokenExpireAt;
@@ -93,11 +104,18 @@ export class Auth {
             telegramUsername,
             name
         });
-        if (!user) throw new Error("User account is not found.");
+        if (!user)
+            throw new ActionsHandlerError(
+                "Not found: User account is not found.", null, "NOT_FOUND", 404
+            );
         if (user.status === UserState.UserStatus.blocked)
-            throw new Error("User account is blocked.");
+            throw new ActionsHandlerError(
+                "Forbidden: User account is blocked.", null, "FORBIDDEN", 403
+            );
         if (user.status === UserState.UserStatus.new)
-            throw new Error("User account is not activated.");
+            throw new ActionsHandlerError(
+                "Forbidden: User account is not activated.", null, "FORBIDDEN", 403
+            );
 
         let refreshToken = null;
         let refreshTokenExpireAt = null;
@@ -131,10 +149,6 @@ export class Auth {
         };
     }
 
-    async logout(params: any) {
-
-    }
-
     async register(params: {
         email: string;
         password: string;
@@ -143,7 +157,10 @@ export class Auth {
         const { email, password, name } = params;
 
         const userExists: UserState.User = await this.#db.getUserByEmail({ email });
-        if (userExists) throw new Error("User account already exists");
+        if (userExists)
+            throw new ActionsHandlerError(
+                "Conflict: User account already exists.", null, "CONFLICT", 409
+            );
         const newUser: UserState.User = {
             id: uuid(),
             name,
@@ -231,11 +248,17 @@ export class Auth {
     }) {
         const user: UserState.User = await this.#db.getUserByToken(params);
         if (!user)
-            throw new Error("Refresh token expired or user account is not found.");
-        if (user.status === UserState.UserStatus.new)
-            throw new Error("User account is not activated.");
+            throw new ActionsHandlerError(
+                "Not found: Refresh token expired or user account is not found.", null, "NOT_FOUND", 404
+            );
         if (user.status === UserState.UserStatus.blocked)
-            throw new Error("User account is blocked.");
+            throw new ActionsHandlerError(
+                "Forbidden: User account is blocked.", null, "FORBIDDEN", 403
+            );
+        if (user.status === UserState.UserStatus.new)
+            throw new ActionsHandlerError(
+                "Forbidden: User account is not activated.", null, "FORBIDDEN", 403
+            );
 
         return {
             accessToken: this.generateAccessToken(user),
@@ -252,14 +275,26 @@ export class Auth {
 
         const user: UserState.User = await this.#db.getUserById({ userId });
 
-        if (!user) throw new Error("User account not found.");
+        if (!user)
+            throw new ActionsHandlerError(
+                "Not found: User account not found.", null, "NOT_FOUND", 404
+            );
         if (user.status === UserState.UserStatus.blocked)
-            throw new Error("User account is blocked.");
+            throw new ActionsHandlerError(
+                "Forbidden: User account is blocked.", null, "FORBIDDEN", 403
+            );
         if (user.status === UserState.UserStatus.enabled)
-            throw new Error("User account is already activated.");
-        if (!user.secretCode) throw new Error("Confirmation code is not set.");
+            throw new ActionsHandlerError(
+                "Forbidden: User account is already activated.", null, "FORBIDDEN", 403
+            );
+        if (!user.secretCode)
+            throw new ActionsHandlerError(
+                "Forbidden: Confirmation code is not set.", null, "FORBIDDEN", 403
+            );
         if (user.secretCode !== secretCode)
-            throw new Error("Wrong confirmation code.");
+            throw new ActionsHandlerError(
+                "Forbidden: Wrong confirmation code.", null, "FORBIDDEN", 403
+            );
 
         const refreshToken = uuid();
         const refreshTokenExpireAt = dayjs
@@ -303,9 +338,14 @@ export class Auth {
         const { email } = params;
         const user: UserState.User = await this.#db.getUserByEmail({ email });
 
-        if (!user) throw new Error("User account not found.");
+        if (!user)
+            throw new ActionsHandlerError(
+                "Not found: User account not found.", null, "NOT_FOUND", 404
+            );
         if (user.status === UserState.UserStatus.blocked)
-            throw new Error("User account is blocked.");
+            throw new ActionsHandlerError(
+                "Forbidden: User account is blocked.", null, "FORBIDDEN", 403
+            );
 
         let secretCode;
         let secretCodeExpireAt;
@@ -354,12 +394,22 @@ export class Auth {
 
         const user: UserState.User = await this.#db.getUserById({ userId });
 
-        if (!user) throw new Error("User account not found.");
+        if (!user)
+            throw new ActionsHandlerError(
+                "Not found: User account not found.", null, "NOT_FOUND", 404
+            );
         if (user.status === UserState.UserStatus.blocked)
-            throw new Error("User account is blocked.");
-        if (!user.secretCode) throw new Error("Confirmation code is not set.");
+            throw new ActionsHandlerError(
+                "Forbidden: User account is blocked.", null, "FORBIDDEN", 403
+            );
+        if (!user.secretCode)
+            throw new ActionsHandlerError(
+                "Forbidden: Confirmation code is not set.", null, "FORBIDDEN", 403
+            );
         if (user.secretCode !== secretCode)
-            throw new Error("Wrong confirmation code.");
+            throw new ActionsHandlerError(
+                "Forbidden: Wrong confirmation code.", null, "FORBIDDEN", 403
+            );
 
         const refreshToken = uuid();
         const refreshTokenExpireAt = dayjs
@@ -400,30 +450,30 @@ export class Auth {
         };
     }
 
-    async changeEmail(
-        params: {
-            email: string;
-        },
-        session_variables: {
-            "x-hasura-user-id": string
-        }
-    ) {
-        const { email } = params;
+    async changeEmail(params: {
+        userId: string,
+        email: string
+    }) {
+        const { userId, email } = params;
         const userExists: UserState.User = await this.#db.getUserByEmail({ email });
         if (userExists) throw new Error("User already exists.");
 
-        const userId = session_variables["x-hasura-user-id"];
-
         const user: UserState.User = await this.#db.getUserById({ userId });
-        if (!user) throw new Error("User account is not found.");
+        if (!user)
+            throw new ActionsHandlerError(
+                "Not found: User account not found.", null, "NOT_FOUND", 404
+            );
         if (user.status === UserState.UserStatus.blocked)
-            throw new Error("User account is blocked.");
+            throw new ActionsHandlerError(
+                "Forbidden: User account is blocked.", null, "FORBIDDEN", 403
+            );
 
-        let { secretCode, secretCodeExpireAt } = user;
+        let secretCode;
+        let secretCodeExpireAt;
         if (
-            secretCode &&
-            secretCodeExpireAt &&
-            dayjs.utc().valueOf() < dayjs.utc(secretCodeExpireAt).valueOf()
+            user.secretCode &&
+            user.secretCodeExpireAt &&
+            dayjs.utc().valueOf() < dayjs.utc(user.secretCodeExpireAt).valueOf()
         ) {
             secretCode = user.secretCode;
             secretCodeExpireAt = user.secretCodeExpireAt;
@@ -453,25 +503,33 @@ export class Auth {
         return { success: true };
     }
 
-    async confirmChangeEmail(
-        params: {
-            secretCode: string
-        },
-        session_variables: {
-            "x-hasura-user-id": string
-        }
-    ) {
-        const { secretCode } = params;
-        const userId = session_variables["x-hasura-user-id"];
+    async confirmChangeEmail(params: {
+        userId: string,
+        secretCode: string
+    }) {
+        const { userId, secretCode } = params;
         const user: UserState.User = await this.#db.getUserById({ userId });
 
-        if (!user) throw new Error("User account not found.");
+        if (!user)
+            throw new ActionsHandlerError(
+                "Not found: User account not found.", null, "NOT_FOUND", 404
+            );
         if (user.status === UserState.UserStatus.blocked)
-            throw new Error("User account is blocked.");
-        if (!user.emailNew) throw new Error("New email is not set.");
-        if (!user.secretCode) throw new Error("Confirmation code is not set.");
+            throw new ActionsHandlerError(
+                "Forbidden: User account is blocked.", null, "FORBIDDEN", 403
+            );
+        if (!user.emailNew)
+            throw new ActionsHandlerError(
+                "Forbidden: New email is not set.", null, "FORBIDDEN", 403
+            );
+        if (!user.secretCode)
+            throw new ActionsHandlerError(
+                "Forbidden: Confirmation code is not set.", null, "FORBIDDEN", 403
+            );
         if (user.secretCode !== secretCode)
-            throw new Error("Wrong confirmation code.");
+            throw new ActionsHandlerError(
+                "Forbidden: Wrong confirmation code.", null, "FORBIDDEN", 403
+            );
 
         const refreshToken = uuid();
         const refreshTokenExpireAt = dayjs
