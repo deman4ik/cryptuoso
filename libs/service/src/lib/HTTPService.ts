@@ -160,6 +160,7 @@ export class HTTPService extends BaseService {
             const { handler } = route;
             let { auth, roles, inputSchema } = route;
             if (!name) throw new Error("Route name is required");
+            if (this._routes[`/actions/${name}`]) throw new Error("This route name is occupied");
             if (!handler && typeof handler !== "function") throw new Error("Route handler must be a function");
             auth = auth || false;
             roles = roles || [];

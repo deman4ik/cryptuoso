@@ -1,14 +1,18 @@
 /**
- * Возвращает исходную строку с прописным первым символом
+ * Returns the given string with 1st character capitalized.
  *
- * @param {string} string исходная строка
+ * @param {string} string
+ * @example
+ * capitalize("lowercasekey"); //Lowercasekey
  */
 export const capitalize = (string: string) => string.charAt(0).toUpperCase() + string.slice(1);
 
 /**
- * Converts a string to camelcase.
+ * Converts an underscored string to camelcase.
  *
  * @param str
+ * @example
+ * toCamelCase("underscore_key"); // underscoreKey
  */
 export const toCamelCase = (str: string) => {
     const s =
@@ -21,10 +25,13 @@ export const toCamelCase = (str: string) => {
 };
 
 /**
- * Converts a string from camelcase.
+ * Adds a separator to a camelCased string and converts it to lower case.
  *
  * @param str
- * @param separator
+ * @param separator The separator. Default is '_'.
+ * @example
+ * fromCamelCase("camelCasedKey"); // camel_cased_key
+ * fromCamelCase("anotherKey", ".") // another.key
  */
 export const fromCamelCase = (str: string, separator = "_") =>
     str
