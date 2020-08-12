@@ -963,10 +963,7 @@
                     "builder": "@nrwl/linter:lint",
                     "options": {
                         "linter": "eslint",
-                        "tsConfig": [
-                            "apps/auth/tsconfig.app.json",
-                            "apps/auth/tsconfig.spec.json"
-                        ],
+                        "tsConfig": ["apps/auth/tsconfig.app.json", "apps/auth/tsconfig.spec.json"],
                         "exclude": ["**/node_modules/**", "!apps/auth/**/*"]
                     }
                 },
@@ -999,6 +996,30 @@
                     "options": {
                         "jestConfig": "libs/user-state/jest.config.js",
                         "tsConfig": "libs/user-state/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "mail": {
+            "root": "libs/mail",
+            "sourceRoot": "libs/mail/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": ["libs/mail/tsconfig.lib.json", "libs/mail/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/mail/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/mail/jest.config.js",
+                        "tsConfig": "libs/mail/tsconfig.spec.json",
                         "passWithNoTests": true
                     }
                 }

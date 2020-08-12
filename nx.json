@@ -105,6 +105,9 @@
         },
         "user-state": {
             "tags": []
+        },
+        "mail": {
+            "tags": []
         }
     }
 }

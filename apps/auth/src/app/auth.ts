@@ -4,18 +4,36 @@ import { v4 as uuid } from "uuid";
 import dayjs from "@cryptuoso/dayjs";
 import { ActionsHandlerError } from "@cryptuoso/errors";
 
+import MailUtil from "@cryptuoso/mail";
+
 import { User, UserStatus, UserRoles } from "@cryptuoso/user-state";
 import { formatTgName, checkTgLogin, getAccessValue } from "./auth-helper";
 import { DBFunctions } from "./types";
 
 export class Auth {
     #db: DBFunctions;
+    #mailUtil: MailUtil;
+
     constructor(db: DBFunctions) {
         this.#db = db;
-    }
 
-    // eslint-disable-next-line
-    private async _mail(action: string, params: any) {}
+        try {
+            let config;
+            if (process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN) {
+                config = {
+                    apiKey: process.env.MAILGUN_API_KEY,
+                    domain: process.env.MAILGUN_DOMAIN,
+                    host: "api.eu.mailgun.net"
+                };
+            } else {
+                config = { apiKey: "none", domain: "none" };
+                //this.logger.warn("Mail Service runs in TEST mode.");
+            }
+            this.#mailUtil = new MailUtil(config);
+        } catch(e) {
+            throw e;
+        }
+    }
 
     async login(params: { email: string; password: string }) {
         const { email, password } = params;
@@ -155,7 +173,7 @@ export class Auth {
             userId: newUser.id,
             secretCode: newUser.secretCode
         });
-        await this._mail(`send`, {
+        await this.#mailUtil.send({
             to: email,
             subject: "🚀 Welcome to Cryptuoso Platform - Please confirm your email.",
             variables: {
@@ -248,11 +266,12 @@ export class Auth {
             refreshTokenExpireAt,
             userId
         });
-        await this._mail(`subscribeToList`, {
+        await this.#mailUtil.subscribeToList({
             list: "cpz-beta@mg.cryptuoso.com",
-            email: user.email
+            email: user.email,
+            name: user.name
         });
-        await this._mail(`send`, {
+        await this.#mailUtil.send({
             to: user.email,
             subject: "🚀 Welcome to Cryptuoso Platform - User Account Activated.",
             variables: {
@@ -298,7 +317,7 @@ export class Auth {
             userId: user.id,
             secretCode
         });
-        await this._mail(`send`, {
+        await this.#mailUtil.send({
             to: user.email,
             subject: "🔐 Cryptuoso - Password Reset Request.",
             variables: {
@@ -346,7 +365,7 @@ export class Auth {
             refreshTokenExpireAt
         });
 
-        await this._mail(`send`, {
+        await this.#mailUtil.send({
             to: user.email,
             subject: "🔐 Cryptuoso - Reset Password Confirmation.",
             variables: {
@@ -394,7 +413,7 @@ export class Auth {
             secretCodeExpireAt
         });
 
-        await this._mail(`send`, {
+        await this.#mailUtil.send({
             to: email,
             subject: "🔐 Cryptuoso - Change Email Request.",
             variables: {
@@ -438,7 +457,7 @@ export class Auth {
             status: UserStatus.enabled
         });
 
-        await this._mail(`send`, {
+        await this.#mailUtil.send({
             to: user.email || user.emailNew,
             subject: "🔐 Cryptuoso - Email Change Confirmation.",
             variables: {
