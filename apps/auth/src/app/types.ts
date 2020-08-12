@@ -1,12 +1,12 @@
-import { UserState } from "@cryptuoso/user-state";
+import { User, UserStatus } from "@cryptuoso/user-state";
 
 export interface DBFunctions {
-    getUserByEmail: { (params: { email: string }): Promise<UserState.User> };
-    getUserById: { (params: { userId: string }): Promise<UserState.User> };
-    getUserTg: { (params: { telegramId: number }): Promise<UserState.User> };
-    getUserByToken: { (params: { refreshToken: string }): Promise<UserState.User> };
-    registerUser: { (newUser: UserState.User): Promise<any> };
-    registerUserTg: { (newUser: UserState.User): Promise<any> };
+    getUserByEmail: { (params: { email: string }): Promise<User> };
+    getUserById: { (params: { userId: string }): Promise<User> };
+    getUserTg: { (params: { telegramId: number }): Promise<User> };
+    getUserByToken: { (params: { refreshToken: string }): Promise<User> };
+    registerUser: { (newUser: User): Promise<any> };
+    registerUserTg: { (newUser: User): Promise<any> };
     updateUserRefreshToken: {
         (params: { userId: string; refreshToken: string; refreshTokenExpireAt: string }): Promise<any>;
     };
@@ -35,7 +35,7 @@ export interface DBFunctions {
             secretCodeExpireAt: string;
             refreshToken: string;
             refreshTokenExpireAt: string;
-            status: UserState.UserStatus;
+            status: UserStatus;
         }): Promise<any>;
     };
     activateUser: {
