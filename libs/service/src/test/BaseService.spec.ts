@@ -4,7 +4,7 @@ import Redis from "ioredis";
 import logger from "@cryptuoso/logger";
 import { sql, pg } from "@cryptuoso/postgres";
 import { Events } from "@cryptuoso/events";
-import { BaseService } from "./BaseService";
+import { BaseService } from "../lib/BaseService";
 
 const ERROR_CODE = 1;
 const mockExit = jest.fn();

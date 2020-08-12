@@ -36,7 +36,10 @@
             "@cryptuoso/robot-indicators": ["libs/robot-indicators/src/index.ts"],
             "@cryptuoso/robot-events": ["libs/robot-events/src/index.ts"],
             "@cryptuoso/backtester-events": ["libs/backtester-events/src/index.ts"],
-            "@cryptuoso/trade-statistics": ["libs/trade-statistics/src/index.ts"]
+            "@cryptuoso/trade-statistics": ["libs/trade-statistics/src/index.ts"],
+            "@cryptuoso/auth": ["libs/auth/src/index.ts"],
+            "@cryptuoso/user-state": ["libs/user-state/src/index.ts"],
+            "@cryptuoso/mail": ["libs/mail/src/index.ts"]
         }
     },
     "exclude": ["node_modules", "tmp"]

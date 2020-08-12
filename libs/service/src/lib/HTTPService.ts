@@ -69,7 +69,7 @@ export class HTTPService extends BaseService {
             this.addOnStartHandler(this._startServer);
             this.addOnStopHandler(this._stopServer);
         } catch (err) {
-            this.log.error(err, "While consctructing HTTPService");
+            this.log.error(err, "While constructing HTTPService");
             process.exit(1);
         }
     }
@@ -150,6 +150,12 @@ export class HTTPService extends BaseService {
             inputSchema?: ValidationSchema;
         };
     }) {
+        for (const name of Object.keys(routes)) {
+            if (this._routes[`/actions/${name}`]) {
+                throw new Error(`This route ${name} is occupied`);
+            }
+        }
+
         for (const [name, route] of Object.entries(routes)) {
             const { handler } = route;
             let { auth, roles, inputSchema } = route;

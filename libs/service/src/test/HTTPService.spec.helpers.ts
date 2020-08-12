@@ -1,5 +1,5 @@
 import { Service, Protocol } from "restana";
-import { HTTPService } from "./HTTPService";
+import { HTTPService } from "../lib/HTTPService";
 import fetch, { Response } from "node-fetch";
 
 enum Method {
