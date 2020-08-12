@@ -3,8 +3,9 @@ import bcrypt from "bcrypt";
 import { v4 as uuid } from "uuid";
 import dayjs from "@cryptuoso/dayjs";
 import { ActionsHandlerError } from "@cryptuoso/errors";
+import logger from "@cryptuoso/logger";
 
-import MailUtil from "@cryptuoso/mail";
+import mailUtil from "@cryptuoso/mail";
 
 import { User, UserStatus, UserRoles } from "@cryptuoso/user-state";
 import { formatTgName, checkTgLogin, getAccessValue } from "./auth-helper";
@@ -12,26 +13,14 @@ import { DBFunctions } from "./types";
 
 export class Auth {
     #db: DBFunctions;
-    #mailUtil: MailUtil;
+    #mailUtil: typeof mailUtil;
 
     constructor(db: DBFunctions) {
-        this.#db = db;
-
         try {
-            let config;
-            if (process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN) {
-                config = {
-                    apiKey: process.env.MAILGUN_API_KEY,
-                    domain: process.env.MAILGUN_DOMAIN,
-                    host: "api.eu.mailgun.net"
-                };
-            } else {
-                config = { apiKey: "none", domain: "none" };
-                //this.logger.warn("Mail Service runs in TEST mode.");
-            }
-            this.#mailUtil = new MailUtil(config);
-        } catch(e) {
-            throw e;
+            this.#db = db;
+            this.#mailUtil = mailUtil;
+        } catch (e) {
+            logger.error(e, "Failed to init Auth instance!");
         }
     }
 

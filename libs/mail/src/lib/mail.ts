@@ -34,10 +34,21 @@ export const TEMPLATE_TYPES: any = {
     main: "main"
 };
 
-class MailUtil {
+export class MailUtil {
     private mailgun: Mailgun.Mailgun;
-    constructor(readonly config: MailUtilConfig) {
+    constructor() {
         try {
+            let config;
+            if (process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN) {
+                config = {
+                    apiKey: process.env.MAILGUN_API_KEY,
+                    domain: process.env.MAILGUN_DOMAIN,
+                    host: "api.eu.mailgun.net"
+                };
+            } else {
+                config = { apiKey: "none", domain: "none" };
+                logger.warn("Mail Service runs in TEST mode.");
+            }
             this.mailgun = new Mailgun(config);
         } catch (e) {
             logger.error(e, "Failed to init mailgun instance!");
@@ -45,7 +56,16 @@ class MailUtil {
     }
 
     /* Метод отправки сообщения*/
-    send = async ({ from, to, subject, text, html, template, variables, tags }: SendProps) => {
+    send = async ({
+        from = "Cryptuoso <noreply@cryptuoso.com>",
+        to,
+        subject,
+        text,
+        html,
+        template = "simple",
+        variables,
+        tags
+    }: SendProps) => {
         try {
             const mailGunVariables = variables && Object.keys(variables) && JSON.stringify(variables);
             await this.mailgun.messages().send({
@@ -81,4 +101,5 @@ class MailUtil {
     };
 }
 
-export default MailUtil;
+const mailUtil: MailUtil = new MailUtil();
+export default mailUtil;

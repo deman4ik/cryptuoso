@@ -69,6 +69,36 @@ spec:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
                                 key: REDISCS
+                      - name: REFRESH_TOKEN_EXPIRES
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: REFRESH_TOKEN_EXPIRES
+                      - name: JWT_SECRET
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: JWT_SECRET
+                      - name: JWT_TOKEN_EXPIRES
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: JWT_TOKEN_EXPIRES
+                      - name: BOT_TOKEN
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: BOT_TOKEN
+                      - name: MAILGUN_API_KEY
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: MAILGUN_API_KEY
+                      - name: MAILGUN_DOMAIN
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: MAILGUN_DOMAIN
                   ports:
                       - containerPort: 3000
                         protocol: TCP

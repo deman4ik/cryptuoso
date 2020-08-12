@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import { User, UserStatus, UserRoles, UserSettings } from "@cryptuoso/user-state";
 import { makeTgHash } from "./helpers";
 import { Auth } from "../app/auth";
+import { json } from 'body-parser';
 
 const userSettings: UserSettings = {
     notifications: {
@@ -20,6 +21,8 @@ process.env.REFRESH_TOKEN_EXPIRES = "1";
 process.env.JWT_SECRET = "secret";
 process.env.JWT_TOKEN_EXPIRES = "1";
 process.env.BOT_TOKEN = "BOT_TOKEN";
+
+jest.mock("@cryptuoso/mail");
 
 describe("Test Auth class methods", () => {
     describe("login method", () => {

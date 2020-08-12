@@ -59,6 +59,7 @@ jest.mock("ioredis");
 jest.mock("@cryptuoso/logger");
 jest.mock("@cryptuoso/postgres");
 jest.mock("@cryptuoso/events");
+jest.mock("@cryptuoso/mail");
 
 describe("Test 'AuthService' class methods", () => {
     const CONFIG: AuthServiceConfig = { port: 4000 };
