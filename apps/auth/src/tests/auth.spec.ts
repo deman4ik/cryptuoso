@@ -1,3 +1,9 @@
+process.env.PGCS = "localhost:5349";
+process.env.REFRESH_TOKEN_EXPIRES = "1";
+process.env.JWT_SECRET = "secret";
+process.env.JWT_TOKEN_EXPIRES = "1";
+process.env.BOT_TOKEN = "BOT_TOKEN";
+
 import bcrypt from "bcrypt";
 import { User, UserStatus, UserRoles, UserSettings } from "@cryptuoso/user-state";
 import { makeTgHash } from "./helpers";
@@ -16,11 +22,7 @@ const userSettings: UserSettings = {
     }
 };
 
-process.env.REFRESH_TOKEN_EXPIRES = "1";
-process.env.JWT_SECRET = "secret";
-process.env.JWT_TOKEN_EXPIRES = "1";
-process.env.BOT_TOKEN = "BOT_TOKEN";
-
+jest.mock("@cryptuoso/postgres");
 jest.mock("@cryptuoso/mail");
 
 describe("Test Auth class methods", () => {
