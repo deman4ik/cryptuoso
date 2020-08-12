@@ -1,10 +1,3 @@
-export const enum TimeUnit {
-    second = "second",
-    minute = "minute",
-    hour = "hour",
-    day = "day"
-}
-
 export const enum UserRoles {
     admin = "admin",
     manager = "manager",

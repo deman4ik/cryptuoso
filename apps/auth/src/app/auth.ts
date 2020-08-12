@@ -4,7 +4,7 @@ import { v4 as uuid } from "uuid";
 import dayjs from "@cryptuoso/dayjs";
 import { ActionsHandlerError } from "@cryptuoso/errors";
 
-import { User, UserStatus, UserRoles, TimeUnit } from "@cryptuoso/user-state";
+import { User, UserStatus, UserRoles } from "@cryptuoso/user-state";
 import { formatTgName, checkTgLogin, getAccessValue } from "./auth-helper";
 import { DBFunctions } from "./types";
 
@@ -41,12 +41,12 @@ export class Auth {
         if (
             !user.refreshToken ||
             !user.refreshTokenExpireAt ||
-            dayjs.utc(user.refreshTokenExpireAt).add(-1, TimeUnit.day).valueOf() < dayjs.utc().valueOf()
+            dayjs.utc(user.refreshTokenExpireAt).add(-1, "day").valueOf() < dayjs.utc().valueOf()
         ) {
             refreshToken = uuid();
             refreshTokenExpireAt = dayjs
                 .utc()
-                .add(+process.env.REFRESH_TOKEN_EXPIRES, TimeUnit.day)
+                .add(+process.env.REFRESH_TOKEN_EXPIRES, "day")
                 .toISOString();
         } else {
             refreshToken = user.refreshToken;
@@ -96,12 +96,12 @@ export class Auth {
         if (
             !user.refreshToken ||
             !user.refreshTokenExpireAt ||
-            dayjs.utc(user.refreshTokenExpireAt).add(-1, TimeUnit.day).valueOf() < dayjs.utc().valueOf()
+            dayjs.utc(user.refreshTokenExpireAt).add(-1, "day").valueOf() < dayjs.utc().valueOf()
         ) {
             refreshToken = uuid();
             refreshTokenExpireAt = dayjs
                 .utc()
-                .add(+process.env.REFRESH_TOKEN_EXPIRES, TimeUnit.day)
+                .add(+process.env.REFRESH_TOKEN_EXPIRES, "day")
                 .toISOString();
             await this.#db.updateUserRefreshToken({
                 refreshToken,
@@ -240,7 +240,7 @@ export class Auth {
         const refreshToken = uuid();
         const refreshTokenExpireAt = dayjs
             .utc()
-            .add(+process.env.REFRESH_TOKEN_EXPIRES, TimeUnit.day)
+            .add(+process.env.REFRESH_TOKEN_EXPIRES, "day")
             .toISOString();
 
         await this.#db.activateUser({
@@ -285,7 +285,7 @@ export class Auth {
             secretCodeExpireAt = user.secretCodeExpireAt;
         } else {
             secretCode = this.generateCode();
-            secretCodeExpireAt = dayjs.utc().add(1, TimeUnit.hour).toISOString();
+            secretCodeExpireAt = dayjs.utc().add(1, "hour").toISOString();
 
             this.#db.updateUserSecretCode({
                 secretCode,
@@ -328,7 +328,7 @@ export class Auth {
         const refreshToken = uuid();
         const refreshTokenExpireAt = dayjs
             .utc()
-            .add(+process.env.REFRESH_TOKEN_EXPIRES, TimeUnit.day)
+            .add(+process.env.REFRESH_TOKEN_EXPIRES, "day")
             .toISOString();
 
         let newSecretCode = null;
@@ -385,7 +385,7 @@ export class Auth {
             secretCodeExpireAt = user.secretCodeExpireAt;
         } else {
             secretCode = this.generateCode();
-            secretCodeExpireAt = dayjs.utc().add(1, TimeUnit.hour).toISOString();
+            secretCodeExpireAt = dayjs.utc().add(1, "hour").toISOString();
         }
         await this.#db.changeUserEmail({
             userId,
@@ -424,7 +424,7 @@ export class Auth {
         const refreshToken = uuid();
         const refreshTokenExpireAt = dayjs
             .utc()
-            .add(+process.env.REFRESH_TOKEN_EXPIRES, TimeUnit.day)
+            .add(+process.env.REFRESH_TOKEN_EXPIRES, "day")
             .toISOString();
 
         await this.#db.confirmChangeUserEmail({
