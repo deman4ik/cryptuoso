@@ -2,7 +2,6 @@ import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import ccxtpro from "ccxt.pro";
 import cron from "node-cron";
 import { v4 as uuid } from "uuid";
-import retry from "async-retry";
 import dayjs from "@cryptuoso/dayjs";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { Timeframe, CandleType, ExchangePrice, ExchangeCandle } from "@cryptuoso/market";
@@ -827,12 +826,11 @@ export class ExwatcherBaseService extends BaseService {
 
     async saveCandles(candles: ExchangeCandle[]): Promise<void> {
         try {
-            for (const candle of candles) {
-                try {
-                    const call = async (bail: (e: Error) => void) => {
-                        try {
-                            await this.db.pg.query(this.db.sql`
-                            insert into ${this.db.sql.identifier([`candles${candle.timeframe}`])} 
+            await this.db.pg.connect(async (connection) => {
+                for (const candle of candles) {
+                    try {
+                        await connection.query(this.db.sql`
+                            insert into ${this.db.sql.identifier([`candles${candle.timeframe}`])}
                 (exchange, asset, currency, open, high, low, close, volume, time, timestamp, type)
                 values (
                     ${candle.exchange},
@@ -856,24 +854,11 @@ export class ExwatcherBaseService extends BaseService {
                 close = excluded.close,
                 volume = excluded.volume,
                 type = excluded.type;`);
-                        } catch (e) {
-                            bail(e);
-                        }
-                    };
-                    await retry(call, {
-                        retries: 5,
-                        minTimeout: 500,
-                        maxTimeout: 30000,
-                        onRetry: (err: any, i: number) => {
-                            if (err) {
-                                this.log.warn(`Retry save candles ${i} - ${err.message}`);
-                            }
-                        }
-                    });
-                } catch (e) {
-                    this.log.error(e);
+                    } catch (e) {
+                        this.log.error(e);
+                    }
                 }
-            }
+            });
         } catch (e) {
             this.log.error(e);
         }
