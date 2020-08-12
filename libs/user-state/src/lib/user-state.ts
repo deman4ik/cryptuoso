@@ -1,8 +1,5 @@
-export interface GenericObject<T> {
-    [key: string]: T;
-}
-
-declare namespace UserState {
+// eslint-disable-next-line @typescript-eslint/no-namespace
+export declare namespace UserState {
     const enum TimeUnit {
         second = "second",
         minute = "minute",
