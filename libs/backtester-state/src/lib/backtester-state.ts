@@ -1,9 +1,9 @@
-import { RobotSettings, RobotStats, RobotEquity, StrategyProps } from "@cryptuoso/robot-state";
-import { ValidTimeframe } from "@cryptuoso/market";
-import { IndicatorState } from "@cryptuoso/robot-indicators";
+import { RobotSettings, RobotStats, RobotEquity, Robot, StrategyCode } from "@cryptuoso/robot-state";
+import { ValidTimeframe, Candle } from "@cryptuoso/market";
 import dayjs from "@cryptuoso/dayjs";
 import { round, defaultValue } from "@cryptuoso/helpers";
 import logger from "@cryptuoso/logger";
+import { IndicatorCode } from "@cryptuoso/robot-indicators";
 
 export const enum Status {
     queued = "queued",
@@ -32,7 +32,6 @@ export interface BacktesterState {
     dateFrom: string;
     dateTo: string;
     settings: BacktesterSettings;
-    robotSettings: RobotSettings;
     totalBars?: number;
     processedBars?: number;
     leftBars?: number;
@@ -40,216 +39,280 @@ export interface BacktesterState {
     status: Status;
     startedAt?: string;
     finishedAt?: string;
-    statistics?: RobotStats;
-    equity?: RobotEquity;
-    robotState?: StrategyProps;
-    robotIndicators?: { [key: string]: IndicatorState };
+    statistics?: { [key: string]: RobotStats };
+    equity?: { [key: string]: RobotEquity };
+    robotSettings?: { [key: string]: RobotSettings };
+    robotInstances?: { [key: string]: Robot };
     error?: string;
 }
 
 export class Backtester {
-    _id: string;
-    _robotId: string;
-    _exchange: string;
-    _asset: string;
-    _currency: string;
-    _timeframe: ValidTimeframe;
-    _strategyName: string;
-    _dateFrom: string;
-    _dateTo: string;
-    _settings?: BacktesterSettings;
-    _robotSettings?: RobotSettings;
-    _totalBars?: number;
-    _processedBars?: number;
-    _leftBars?: number;
-    _completedPercent?: number;
-    _prevPercent = 0;
-    _status: Status;
-    _startedAt?: string;
-    _finishedAt?: string;
-    _statistics?: RobotStats;
-    _equity?: RobotEquity;
-    _robotState?: StrategyProps;
-    _robotIndicators?: { [key: string]: IndicatorState };
-    _error?: string;
+    #id: string;
+    #robotId: string;
+    #exchange: string;
+    #asset: string;
+    #currency: string;
+    #timeframe: ValidTimeframe;
+    #strategyName: string;
+    #dateFrom: string;
+    #dateTo: string;
+    #settings?: BacktesterSettings;
+    #totalBars?: number;
+    #processedBars?: number;
+    #leftBars?: number;
+    #completedPercent?: number;
+    #prevPercent = 0;
+    #status: Status;
+    #startedAt?: string;
+    #finishedAt?: string;
+    #statistics?: { [key: string]: RobotStats };
+    #equity?: { [key: string]: RobotEquity };
+    #robotSettings?: { [key: string]: RobotSettings };
+    #robotInstances?: { [key: string]: Robot } = {};
+    #error?: string;
 
     constructor(state: BacktesterState) {
-        this._id = state.id;
-        this._robotId = state.robotId;
-        this._exchange = state.exchange;
-        this._asset = state.asset;
-        this._currency = state.currency;
-        this._timeframe = state.timeframe;
-        this._strategyName = state.strategyName;
-        this._dateFrom = state.dateFrom;
-        this._dateTo = state.dateTo;
-        this._settings = {
+        this.#id = state.id;
+        this.#robotId = state.robotId;
+        this.#exchange = state.exchange;
+        this.#asset = state.asset;
+        this.#currency = state.currency;
+        this.#timeframe = state.timeframe;
+        this.#strategyName = state.strategyName;
+        this.#dateFrom = state.dateFrom;
+        this.#dateTo = state.dateTo;
+        this.#settings = {
             local: defaultValue(state.settings.local, false),
             populateHistory: defaultValue(state.settings.populateHistory, false),
             savePositions: defaultValue(state.settings.savePositions, true),
             saveLogs: defaultValue(state.settings.saveLogs, false)
         };
-        this._robotSettings = state.robotSettings;
-        this._totalBars = defaultValue(state.totalBars, 0);
-        this._processedBars = defaultValue(state.processedBars, 0);
-        this._leftBars = defaultValue(state.leftBars, this._totalBars);
-        this._completedPercent = defaultValue(state.completedPercent, 0);
-        this._status = state.status;
-        this._startedAt = state.startedAt || null;
-        this._finishedAt = state.finishedAt || null;
-        this._statistics = state.statistics;
-        this._equity = state.equity;
-        this._robotState = state.robotState;
-        this._robotIndicators = state.robotIndicators;
-        this._error = state.error || null;
+        this.#robotSettings = state.robotSettings;
+        this.#totalBars = defaultValue(state.totalBars, 0);
+        this.#processedBars = defaultValue(state.processedBars, 0);
+        this.#leftBars = defaultValue(state.leftBars, this.#totalBars);
+        this.#completedPercent = defaultValue(state.completedPercent, 0);
+        this.#status = state.status;
+        this.#startedAt = state.startedAt || null;
+        this.#finishedAt = state.finishedAt || null;
+        this.#statistics = state.statistics;
+        this.#equity = state.equity;
+        this.#error = state.error || null;
     }
 
     get state(): BacktesterState {
         return {
-            id: this._id,
-            robotId: this._robotId,
-            exchange: this._exchange,
-            asset: this._asset,
-            currency: this._currency,
-            timeframe: this._timeframe,
-            strategyName: this._strategyName,
-            dateFrom: this._dateFrom,
-            dateTo: this._dateTo,
-            settings: this._settings,
-            robotSettings: this._robotSettings,
-            totalBars: this._totalBars,
-            processedBars: this._processedBars,
-            leftBars: this._leftBars,
-            completedPercent: this._completedPercent,
-            status: this._status,
-            startedAt: this._startedAt,
-            finishedAt: this._finishedAt,
-            statistics: this._statistics,
-            equity: this._equity,
-            robotState: this._robotState,
-            robotIndicators: this._robotIndicators,
-            error: this._error
+            id: this.#id,
+            robotId: this.#robotId,
+            exchange: this.#exchange,
+            asset: this.#asset,
+            currency: this.#currency,
+            timeframe: this.#timeframe,
+            strategyName: this.#strategyName,
+            dateFrom: this.#dateFrom,
+            dateTo: this.#dateTo,
+            settings: this.#settings,
+            robotSettings: this.#robotSettings,
+            totalBars: this.#totalBars,
+            processedBars: this.#processedBars,
+            leftBars: this.#leftBars,
+            completedPercent: this.#completedPercent,
+            status: this.#status,
+            startedAt: this.#startedAt,
+            finishedAt: this.#finishedAt,
+            statistics: this.#statistics,
+            equity: this.#equity,
+            error: this.#error
         };
     }
 
     get id() {
-        return this._id;
+        return this.#id;
+    }
+
+    get exchange() {
+        return this.#exchange;
+    }
+
+    get asset() {
+        return this.#asset;
+    }
+
+    get currency() {
+        return this.#currency;
+    }
+
+    get timeframe() {
+        return this.#timeframe;
+    }
+
+    get strategyName() {
+        return this.#strategyName;
+    }
+
+    get dateFrom() {
+        return this.#dateFrom;
+    }
+
+    get dateTo() {
+        return this.#dateTo;
     }
 
     get status() {
-        return this._status;
+        return this.#status;
     }
 
     set status(status: Status) {
-        this._status = status;
+        this.#status = status;
     }
 
     get isStarted() {
-        return this._status === Status.started;
+        return this.#status === Status.started;
     }
 
     start() {
-        this._status = Status.started;
-        this._startedAt = this._startedAt ? this._startedAt : dayjs.utc().toISOString();
+        this.#status = Status.started;
+        this.#startedAt = this.#startedAt ? this.#startedAt : dayjs.utc().toISOString();
     }
 
     set startedAt(date: string) {
-        this._startedAt = dayjs.utc(date).toISOString();
+        this.#startedAt = dayjs.utc(date).toISOString();
     }
 
     set finishedAt(date: string) {
-        this._finishedAt = dayjs.utc(date).toISOString();
+        this.#finishedAt = dayjs.utc(date).toISOString();
     }
 
     get isFailed() {
-        return this._status === Status.failed;
+        return this.#status === Status.failed;
     }
 
     get isFinished() {
-        return this._status === Status.finished || this._status === Status.canceled;
+        return this.#status === Status.finished || this.#status === Status.canceled;
     }
 
     get error() {
-        return this._error;
+        return this.#error;
     }
 
     set error(message: string) {
-        this._error = message;
+        this.#error = message;
     }
 
     get isProcessed() {
-        return this._processedBars === this._totalBars;
+        return this.#processedBars === this.#totalBars;
     }
 
     get progress() {
-        return this._processedBars;
+        return this.#processedBars;
     }
 
     init(totalBars: number) {
-        this._totalBars = totalBars;
-        this._leftBars = totalBars;
-        this._processedBars = 0;
-        this._completedPercent = 0;
+        this.#totalBars = totalBars;
+        this.#leftBars = totalBars;
+        this.#processedBars = 0;
+        this.#completedPercent = 0;
     }
 
     incrementProgress() {
-        this._processedBars += 1;
-        this._leftBars = this._totalBars - this._processedBars;
-        this._completedPercent = round((this._processedBars / this._totalBars) * 100);
-        if (this._completedPercent > this._prevPercent) {
-            this._prevPercent = this._completedPercent;
+        this.#processedBars += 1;
+        this.#leftBars = this.#totalBars - this.#processedBars;
+        this.#completedPercent = round((this.#processedBars / this.#totalBars) * 100);
+        if (this.#completedPercent > this.#prevPercent) {
+            this.#prevPercent = this.#completedPercent;
             logger.info(
-                `Importer #${this._id} - Processed ${this._processedBars}, left ${this._leftBars} - ${this._completedPercent}%`
+                `Importer #${this.#id} - Processed ${this.#processedBars}, left ${this.#leftBars} - ${
+                    this.#completedPercent
+                }%`
             );
         }
     }
 
+    get settings() {
+        return this.#settings;
+    }
+
     get statistics() {
-        return this._statistics;
+        return this.#statistics;
     }
 
     set statistics(statistics) {
-        this._statistics = statistics;
+        this.#statistics = statistics;
     }
 
     get equity() {
-        return this._equity;
+        return this.#equity;
     }
 
     set equity(equity) {
-        this._equity = equity;
+        this.#equity = equity;
     }
 
-    get robotState() {
-        return this._robotState;
+    get robotSettings() {
+        return this.#robotSettings;
     }
 
-    set robotState(robotState) {
-        this._robotState = robotState;
+    set robotSettings(robotSettings) {
+        this.#robotSettings = robotSettings;
     }
 
-    get robotIndicators() {
-        return this._robotIndicators;
+    get robotIds() {
+        return Object.keys(this.#robotInstances);
     }
 
-    set robotIndicators(robotIndicators) {
-        this._robotIndicators = robotIndicators;
+    get robotInstances() {
+        return this.#robotSettings;
+    }
+
+    get robotInstancesArray() {
+        return Object.values(this.#robotInstances);
+    }
+
+    initRobots(strategyCode: StrategyCode) {
+        for (const [id, settings] of Object.entries(this.#robotSettings)) {
+            this.#robotInstances[id] = new Robot({
+                id,
+                exchange: this.#exchange,
+                asset: this.#asset,
+                currency: this.#currency,
+                timeframe: this.#timeframe,
+                strategyName: this.#strategyName,
+                settings,
+                backtest: true
+            });
+            this.#robotInstances[id].setStrategy(strategyCode);
+            this.#robotInstances[id].initStrategy();
+        }
+    }
+
+    initIndicators(indicatorsCode: { fileName: string; code: IndicatorCode }[]) {
+        Object.keys(this.#robotInstances).forEach(([id]) => {
+            this.#robotInstances[id].setBaseIndicatorsCode(indicatorsCode);
+            this.#robotInstances[id].setIndicators();
+            this.#robotInstances[id].initIndicators();
+        });
+    }
+
+    handleHistoryCandles(candles: Candle[]) {
+        Object.keys(this.#robotInstances).forEach(([id]) => {
+            this.#robotInstances[id].handleHistoryCandles(candles);
+        });
     }
 
     finish(cancel = false) {
-        this._finishedAt = dayjs.utc().toISOString();
+        this.#finishedAt = dayjs.utc().toISOString();
         if (this.status === Status.failed) return;
         if (cancel) {
-            this._status = Status.canceled;
+            this.#status = Status.canceled;
             return;
         }
         if (this.isProcessed) {
-            this._status = Status.finished;
+            this.#status = Status.finished;
         }
     }
 
     fail(error: string) {
-        this._status = Status.failed;
-        this._error = error;
+        this.#status = Status.failed;
+        this.#error = error;
     }
 }

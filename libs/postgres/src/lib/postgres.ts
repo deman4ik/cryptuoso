@@ -13,7 +13,8 @@ const pg = createPool(process.env.PGCS, {
 });
 
 const pgUtil = {
-    prepareUnnest
+    prepareUnnest,
+    interceptors
 };
 
-export { pg, sql, pgUtil };
+export { pg, sql, pgUtil, createPool };

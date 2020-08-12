@@ -95,7 +95,7 @@ export default class ImporterWorkerService extends BaseService {
                 }
             } catch (err) {
                 importer.fail(err.message);
-                this.log.warn(err, `Importer #${importer.id}`);
+                this.log.warn(`Importer #${importer.id}`, err);
             }
             importer.finish(this.abort[importer.id]);
             if (this.abort[importer.id]) delete this.abort[importer.id];

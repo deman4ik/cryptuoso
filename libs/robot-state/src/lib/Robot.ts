@@ -50,9 +50,9 @@ export interface RobotTradeSettings {
 
 export interface RobotHead {
     id: string;
-    code: string;
-    mod: string;
-    name: string;
+    code?: string;
+    mod?: string;
+    name?: string;
 }
 
 //TODO: move to another lib
@@ -118,7 +118,7 @@ export interface RobotState extends RobotHead {
     backtest?: boolean;
 }
 
-interface StrategyCode {
+export interface StrategyCode {
     [key: string]: any;
     init(): void;
     check(): void;
