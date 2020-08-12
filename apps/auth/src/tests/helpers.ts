@@ -1,6 +1,6 @@
 import crypto from "crypto";
 
-export { ajax, setProperty } from "../../../../libs/service/src/test/HTTPService.spec.helpers";
+export { ajax, setProperty } from "@cryptuoso/service";
 
 export async function makeTgHash(
     loginData: {

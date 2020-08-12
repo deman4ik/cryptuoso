@@ -2,7 +2,6 @@ import bcrypt from "bcrypt";
 import { User, UserStatus, UserRoles, UserSettings } from "@cryptuoso/user-state";
 import { makeTgHash } from "./helpers";
 import { Auth } from "../app/auth";
-import { json } from 'body-parser';
 
 const userSettings: UserSettings = {
     notifications: {
