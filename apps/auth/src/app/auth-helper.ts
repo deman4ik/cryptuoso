@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { UserState } from "@cryptuoso/user-state";
+import { UserRoles } from "@cryptuoso/user-state";
 
 async function checkTgLogin(
     loginData: {
@@ -31,15 +31,15 @@ async function checkTgLogin(
     }
 }
 
-function roleToAccesValue(role: UserState.UserRoles) {
+function roleToAccesValue(role: UserRoles) {
     switch (role) {
-        case UserState.UserRoles.anonymous:
+        case UserRoles.anonymous:
             return 20;
-        case UserState.UserRoles.user:
+        case UserRoles.user:
             return 15;
-        case UserState.UserRoles.vip:
+        case UserRoles.vip:
             return 10;
-        case UserState.UserRoles.admin:
+        case UserRoles.admin:
             return 5;
         default:
             return 20;
@@ -48,7 +48,7 @@ function roleToAccesValue(role: UserState.UserRoles) {
 
 function getAccessValue(user: {
     roles: {
-        allowedRoles: UserState.UserRoles[];
+        allowedRoles: UserRoles[];
     };
 }): number {
     const {

@@ -1,9 +1,9 @@
 import bcrypt from "bcrypt";
-import { UserState } from "@cryptuoso/user-state";
+import { User, UserStatus, UserRoles, UserSettings } from "@cryptuoso/user-state";
 import { makeTgHash } from "./helpers";
 import { Auth } from "../app/auth";
 
-const UserSettings: UserState.UserSettings = {
+const userSettings: UserSettings = {
     notifications: {
         signals: {
             telegram: true,
@@ -30,16 +30,16 @@ describe("Test Auth class methods", () => {
                         email: "example@inbox.com",
                         password: "password"
                     };
-                    const dbUser: UserState.User = {
+                    const dbUser: User = {
                         id: "id",
                         email: params.email,
-                        status: UserState.UserStatus.enabled,
+                        status: UserStatus.enabled,
                         passwordHash: await bcrypt.hash(params.password, 10),
                         roles: {
-                            defaultRole: UserState.UserRoles.user,
-                            allowedRoles: [UserState.UserRoles.user]
+                            defaultRole: UserRoles.user,
+                            allowedRoles: [UserRoles.user]
                         },
-                        settings: UserSettings
+                        settings: userSettings
                     };
                     const auth = new Auth({
                         getUserByEmail: jest.fn(async () => dbUser),
@@ -61,18 +61,18 @@ describe("Test Auth class methods", () => {
                     email: "example@inbox.com",
                     password: "password"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: "id",
                     email: params.email,
-                    status: UserState.UserStatus.enabled,
+                    status: UserStatus.enabled,
                     passwordHash: await bcrypt.hash(params.password, 10),
                     refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
                     refreshTokenExpireAt: "2120-08-11T12:50:21.055Z",
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
                 const auth = new Auth({
                     getUserByEmail: jest.fn(async () => dbUser),
@@ -93,18 +93,18 @@ describe("Test Auth class methods", () => {
                     email: "example@inbox.com",
                     password: "password"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: "id",
                     email: params.email,
-                    status: UserState.UserStatus.enabled,
+                    status: UserStatus.enabled,
                     passwordHash: await bcrypt.hash(params.password, 10),
                     refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
                     refreshTokenExpireAt: "1970-08-11T12:50:21.055Z",
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
                 const auth = new Auth({
                     getUserByEmail: jest.fn(async () => dbUser),
@@ -126,16 +126,16 @@ describe("Test Auth class methods", () => {
                         email: "example@inbox.com",
                         password: "password"
                     };
-                    const dbUser: UserState.User = {
+                    const dbUser: User = {
                         id: "id",
                         email: params.email,
-                        status: UserState.UserStatus.enabled,
+                        status: UserStatus.enabled,
                         passwordHash: "wrong hash",
                         roles: {
-                            defaultRole: UserState.UserRoles.user,
-                            allowedRoles: [UserState.UserRoles.user]
+                            defaultRole: UserRoles.user,
+                            allowedRoles: [UserRoles.user]
                         },
-                        settings: UserSettings
+                        settings: userSettings
                     };
                     const auth = new Auth({
                         getUserByEmail: jest.fn(async () => dbUser),
@@ -152,16 +152,16 @@ describe("Test Auth class methods", () => {
                         email: "example@inbox.com",
                         password: "password"
                     };
-                    const dbUser: UserState.User = {
+                    const dbUser: User = {
                         id: "id",
                         email: params.email,
-                        status: UserState.UserStatus.new,
+                        status: UserStatus.new,
                         passwordHash: await bcrypt.hash(params.password, 10),
                         roles: {
-                            defaultRole: UserState.UserRoles.user,
-                            allowedRoles: [UserState.UserRoles.user]
+                            defaultRole: UserRoles.user,
+                            allowedRoles: [UserRoles.user]
                         },
-                        settings: UserSettings
+                        settings: userSettings
                     };
                     const auth = new Auth({
                         getUserByEmail: jest.fn(async () => dbUser),
@@ -201,17 +201,17 @@ describe("Test Auth class methods", () => {
                         hash: ""
                     };
                     params.hash = await makeTgHash(params, process.env.BOT_TOKEN);
-                    const dbUser: UserState.User = {
+                    const dbUser: User = {
                         id: "id",
                         telegramId: params.id,
-                        status: UserState.UserStatus.enabled,
+                        status: UserStatus.enabled,
                         refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
                         refreshTokenExpireAt: "2120-08-11T12:50:21.055Z",
                         roles: {
-                            defaultRole: UserState.UserRoles.user,
-                            allowedRoles: [UserState.UserRoles.user]
+                            defaultRole: UserRoles.user,
+                            allowedRoles: [UserRoles.user]
                         },
-                        settings: UserSettings
+                        settings: userSettings
                     };
                     const auth = new Auth({
                         getUserTg: jest.fn(async () => dbUser),
@@ -237,17 +237,17 @@ describe("Test Auth class methods", () => {
                         hash: ""
                     };
                     params.hash = await makeTgHash(params, process.env.BOT_TOKEN);
-                    const dbUser: UserState.User = {
+                    const dbUser: User = {
                         id: "id",
                         telegramId: params.id,
-                        status: UserState.UserStatus.enabled,
+                        status: UserStatus.enabled,
                         refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
                         refreshTokenExpireAt: "1970-08-11T12:50:21.055Z",
                         roles: {
-                            defaultRole: UserState.UserRoles.user,
-                            allowedRoles: [UserState.UserRoles.user]
+                            defaultRole: UserRoles.user,
+                            allowedRoles: [UserRoles.user]
                         },
-                        settings: UserSettings
+                        settings: userSettings
                     };
                     const auth = new Auth({
                         getUserTg: jest.fn(async () => dbUser),
@@ -279,17 +279,17 @@ describe("Test Auth class methods", () => {
                         hash: ""
                     };
                     params.hash = await makeTgHash(params, process.env.BOT_TOKEN);
-                    const dbUser: UserState.User = {
+                    const dbUser: User = {
                         id: "id",
                         telegramId: params.id,
-                        status: UserState.UserStatus.enabled,
+                        status: UserStatus.enabled,
                         refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
                         refreshTokenExpireAt: "1970-08-11T12:50:21.055Z",
                         roles: {
-                            defaultRole: UserState.UserRoles.user,
-                            allowedRoles: [UserState.UserRoles.user]
+                            defaultRole: UserRoles.user,
+                            allowedRoles: [UserRoles.user]
                         },
-                        settings: UserSettings
+                        settings: userSettings
                     };
                     const auth = new Auth({
                         getUserTg: jest.fn(async () => dbUser),
@@ -330,11 +330,11 @@ describe("Test Auth class methods", () => {
 
                     const result = await auth.loginTg(params);
 
-                    const newUser: UserState.User = dbf.registerUserTg.mock.calls.pop()[0];
+                    const newUser: User = dbf.registerUserTg.mock.calls.pop()[0];
 
                     expect(newUser.telegramId).toStrictEqual(params.id);
                     expect(newUser.telegramUsername).toStrictEqual(params.username);
-                    expect(newUser.status).toStrictEqual(UserState.UserStatus.enabled);
+                    expect(newUser.status).toStrictEqual(UserStatus.enabled);
 
                     expect(result).toHaveProperty("accessToken");
                     expect(result).toHaveProperty("refreshToken");
@@ -354,17 +354,17 @@ describe("Test Auth class methods", () => {
                         hash: ""
                     };
                     //params.hash = await makeTgHash(params, process.env.BOT_TOKEN);
-                    const dbUser: UserState.User = {
+                    const dbUser: User = {
                         id: "id",
                         telegramId: params.id,
-                        status: UserState.UserStatus.enabled,
+                        status: UserStatus.enabled,
                         refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
                         refreshTokenExpireAt: "2120-08-11T12:50:21.055Z",
                         roles: {
-                            defaultRole: UserState.UserRoles.user,
-                            allowedRoles: [UserState.UserRoles.user]
+                            defaultRole: UserRoles.user,
+                            allowedRoles: [UserRoles.user]
                         },
-                        settings: UserSettings
+                        settings: userSettings
                     };
                     const auth = new Auth({
                         getUserTg: jest.fn(async () => dbUser),
@@ -386,17 +386,17 @@ describe("Test Auth class methods", () => {
                         hash: ""
                     };
                     params.hash = await makeTgHash(params, process.env.BOT_TOKEN);
-                    const dbUser: UserState.User = {
+                    const dbUser: User = {
                         id: "id",
                         telegramId: params.id,
-                        status: UserState.UserStatus.blocked,
+                        status: UserStatus.blocked,
                         refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
                         refreshTokenExpireAt: "2120-08-11T12:50:21.055Z",
                         roles: {
-                            defaultRole: UserState.UserRoles.user,
-                            allowedRoles: [UserState.UserRoles.user]
+                            defaultRole: UserRoles.user,
+                            allowedRoles: [UserRoles.user]
                         },
-                        settings: UserSettings
+                        settings: userSettings
                     };
                     const auth = new Auth({
                         getUserTg: jest.fn(async () => dbUser),
@@ -426,7 +426,7 @@ describe("Test Auth class methods", () => {
 
                 await expect(auth.register(params)).resolves.toBeDefined();
 
-                const newUser: UserState.User = dbf.registerUser.mock.calls.pop()[0];
+                const newUser: User = dbf.registerUser.mock.calls.pop()[0];
 
                 expect(params.email).toStrictEqual(newUser.email);
                 expect(params.name).toStrictEqual(newUser.name);
@@ -441,16 +441,16 @@ describe("Test Auth class methods", () => {
                     password: "password",
                     name: "Name"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: "id",
                     email: params.email,
-                    status: UserState.UserStatus.new,
+                    status: UserStatus.new,
                     passwordHash: await bcrypt.hash(params.password, 10),
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
                 const auth = new Auth({
                     getUserByEmail: jest.fn(async () => dbUser),
@@ -468,17 +468,17 @@ describe("Test Auth class methods", () => {
                 const params = {
                     refreshToken: "token"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: "id",
                     email: "example@inbox.com",
-                    status: UserState.UserStatus.enabled,
+                    status: UserStatus.enabled,
                     passwordHash: "password",
                     refreshToken: "token",
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
                 const auth = new Auth({
                     getUserByToken: jest.fn(async () => dbUser)
@@ -510,17 +510,17 @@ describe("Test Auth class methods", () => {
                 const params = {
                     refreshToken: "token"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: "id",
                     email: "example@inbox.com",
-                    status: UserState.UserStatus.blocked,
+                    status: UserStatus.blocked,
                     passwordHash: "password",
                     refreshToken: "token",
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
                 const auth = new Auth({
                     getUserByToken: jest.fn(async () => dbUser)
@@ -538,18 +538,18 @@ describe("Test Auth class methods", () => {
                     userId: "id",
                     secretCode: "code"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: params.userId,
                     email: "example@inbox.com",
-                    status: UserState.UserStatus.new,
+                    status: UserStatus.new,
                     passwordHash: "hash",
                     refreshToken: "token",
                     secretCode: params.secretCode,
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
                 const auth = new Auth({
                     getUserById: jest.fn(async () => dbUser),
@@ -570,18 +570,18 @@ describe("Test Auth class methods", () => {
                     userId: "id",
                     secretCode: "code"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: params.userId,
                     email: "example@inbox.com",
-                    status: UserState.UserStatus.new,
+                    status: UserStatus.new,
                     passwordHash: "hash",
                     refreshToken: "token",
                     secretCode: "OTHER",
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
                 const auth = new Auth({
                     getUserById: jest.fn(async () => dbUser),
@@ -598,18 +598,18 @@ describe("Test Auth class methods", () => {
                     userId: "id",
                     secretCode: "code"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: params.userId,
                     email: "example@inbox.com",
-                    status: UserState.UserStatus.blocked,
+                    status: UserStatus.blocked,
                     passwordHash: "hash",
                     refreshToken: "token",
                     secretCode: "code",
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
                 const auth = new Auth({
                     getUserById: jest.fn(async () => dbUser),
@@ -642,17 +642,17 @@ describe("Test Auth class methods", () => {
                 const params = {
                     email: "example@inbox.com"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: "id",
                     email: params.email,
-                    status: UserState.UserStatus.new,
+                    status: UserStatus.new,
                     passwordHash: "hash",
                     refreshToken: "token",
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
                 const auth = new Auth({
                     getUserByEmail: jest.fn(async () => dbUser)
@@ -667,17 +667,17 @@ describe("Test Auth class methods", () => {
                 const params = {
                     email: "example@inbox.com"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: "id",
                     email: params.email,
-                    status: UserState.UserStatus.blocked,
+                    status: UserStatus.blocked,
                     passwordHash: "hash",
                     refreshToken: "token",
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
                 const auth = new Auth({
                     getUserByEmail: jest.fn(async () => dbUser)
@@ -709,18 +709,18 @@ describe("Test Auth class methods", () => {
                     secretCode: "code",
                     password: "password"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: params.userId,
                     email: "example@inbox.com",
-                    status: UserState.UserStatus.enabled,
+                    status: UserStatus.enabled,
                     passwordHash: "hash",
                     refreshToken: "token",
                     secretCode: params.secretCode,
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
                 const auth = new Auth({
                     getUserById: jest.fn(async () => dbUser),
@@ -742,18 +742,18 @@ describe("Test Auth class methods", () => {
                     secretCode: "code",
                     password: "password"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: "id",
                     email: "example@inbox.com",
-                    status: UserState.UserStatus.blocked,
+                    status: UserStatus.blocked,
                     passwordHash: "hash",
                     refreshToken: "token",
                     secretCode: "OTHER",
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
                 const auth = new Auth({
                     getUserById: jest.fn(async () => dbUser),
@@ -788,17 +788,17 @@ describe("Test Auth class methods", () => {
                     email: "new@inbox.com",
                     userId: "id"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: params.userId,
                     email: "example@inbox.com",
-                    status: UserState.UserStatus.enabled,
+                    status: UserStatus.enabled,
                     passwordHash: "hash",
                     refreshToken: "token",
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
                 const auth = new Auth({
                     getUserByEmail: jest.fn(async () => null),
@@ -832,17 +832,17 @@ describe("Test Auth class methods", () => {
                     email: "new@inbox.com",
                     userId: "id"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: params.userId,
                     email: "example@inbox.com",
-                    status: UserState.UserStatus.enabled,
+                    status: UserStatus.enabled,
                     passwordHash: "hash",
                     refreshToken: "token",
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
                 const auth = new Auth({
                     getUserByEmail: jest.fn(async () => dbUser),
@@ -860,17 +860,17 @@ describe("Test Auth class methods", () => {
                     email: "new@inbox.com",
                     userId: "id"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: params.userId,
                     email: "example@inbox.com",
-                    status: UserState.UserStatus.blocked,
+                    status: UserStatus.blocked,
                     passwordHash: "hash",
                     refreshToken: "token",
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
                 const auth = new Auth({
                     getUserByEmail: jest.fn(async () => null),
@@ -890,19 +890,19 @@ describe("Test Auth class methods", () => {
                     secretCode: "code",
                     userId: "id"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: params.userId,
                     email: "example@inbox.com",
                     emailNew: "new@inbox.com",
-                    status: UserState.UserStatus.enabled,
+                    status: UserStatus.enabled,
                     passwordHash: "hash",
                     refreshToken: "token",
                     secretCode: params.secretCode,
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
                 const auth = new Auth({
                     getUserById: jest.fn(async () => dbUser),
@@ -923,19 +923,19 @@ describe("Test Auth class methods", () => {
                     secretCode: "code",
                     userId: "id"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: params.userId,
                     email: "example@inbox.com",
                     /* emailNew: "new@inbox.com", */
-                    status: UserState.UserStatus.enabled,
+                    status: UserStatus.enabled,
                     passwordHash: "hash",
                     refreshToken: "token",
                     secretCode: params.secretCode,
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
                 const auth = new Auth({
                     getUserById: jest.fn(async () => dbUser),
@@ -952,19 +952,19 @@ describe("Test Auth class methods", () => {
                     secretCode: "code",
                     userId: "id"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: params.userId,
                     email: "example@inbox.com",
                     emailNew: "new@inbox.com",
-                    status: UserState.UserStatus.enabled,
+                    status: UserStatus.enabled,
                     passwordHash: "hash",
                     refreshToken: "token",
                     secretCode: "OTHER",
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
                 const auth = new Auth({
                     getUserById: jest.fn(async () => dbUser),
@@ -981,19 +981,19 @@ describe("Test Auth class methods", () => {
                     secretCode: "code",
                     userId: "id"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: params.userId,
                     email: "example@inbox.com",
                     emailNew: "new@inbox.com",
-                    status: UserState.UserStatus.blocked,
+                    status: UserStatus.blocked,
                     passwordHash: "hash",
                     refreshToken: "token",
                     secretCode: params.secretCode,
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
                 const auth = new Auth({
                     getUserById: jest.fn(async () => dbUser),

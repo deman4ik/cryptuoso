@@ -2,7 +2,7 @@ import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 /* import { IncomingMessage, ServerResponse } from 'http'; */
 import { Request, Response, Protocol } from "restana";
 import Cookies from "cookies";
-import { UserState } from "@cryptuoso/user-state";
+import { User, UserStatus, UserRoles } from "@cryptuoso/user-state";
 import { DBFunctions } from "./types";
 import { Auth } from "./auth";
 import { sql } from "slonik";
@@ -44,7 +44,7 @@ export default class AuthService extends HTTPService {
             this.createRoutes({
                 login: {
                     handler: this.login.bind(this),
-                    roles: [UserState.UserRoles.anonymous],
+                    roles: [UserRoles.anonymous],
                     inputSchema: {
                         email: { type: "email", normalize: true },
                         password: { type: "string", empty: false, trim: true }
@@ -52,7 +52,7 @@ export default class AuthService extends HTTPService {
                 },
                 "login-tg": {
                     handler: this.loginTg.bind(this),
-                    roles: [UserState.UserRoles.anonymous],
+                    roles: [UserRoles.anonymous],
                     inputSchema: {
                         id: "number",
                         // eslint-disable-next-line @typescript-eslint/camelcase
@@ -69,12 +69,12 @@ export default class AuthService extends HTTPService {
                 },
                 logout: {
                     handler: this.logout.bind(this),
-                    roles: [UserState.UserRoles.user],
+                    roles: [UserRoles.user],
                     auth: true
                 },
                 register: {
                     handler: this.register.bind(this),
-                    roles: [UserState.UserRoles.anonymous],
+                    roles: [UserRoles.anonymous],
                     inputSchema: {
                         email: { type: "email", normalize: true },
                         password: {
@@ -89,13 +89,13 @@ export default class AuthService extends HTTPService {
                 },
                 "refresh-token": {
                     handler: this.refreshToken.bind(this),
-                    roles: [UserState.UserRoles.user],
+                    roles: [UserRoles.user],
                     auth: true,
                     inputSchema: {}
                 },
                 "activate-account": {
                     handler: this.activateAccount.bind(this),
-                    roles: [UserState.UserRoles.anonymous],
+                    roles: [UserRoles.anonymous],
                     inputSchema: {
                         userId: "string",
                         secretCode: { type: "string", empty: false, trim: true }
@@ -103,14 +103,14 @@ export default class AuthService extends HTTPService {
                 },
                 "password-reset": {
                     handler: this.passwordReset.bind(this),
-                    roles: [UserState.UserRoles.anonymous],
+                    roles: [UserRoles.anonymous],
                     inputSchema: {
                         email: { type: "email", normalize: true }
                     }
                 },
                 "confirm-password-reset": {
                     handler: this.confirmPasswordReset.bind(this),
-                    roles: [UserState.UserRoles.anonymous],
+                    roles: [UserRoles.anonymous],
                     inputSchema: {
                         userId: "string",
                         secretCode: { type: "string", empty: false, trim: true },
@@ -125,7 +125,7 @@ export default class AuthService extends HTTPService {
                 },
                 "change-email": {
                     handler: this.changeEmail.bind(this),
-                    roles: [UserState.UserRoles.user],
+                    roles: [UserRoles.user],
                     auth: true,
                     inputSchema: {
                         email: { type: "email", normalize: true }
@@ -133,7 +133,7 @@ export default class AuthService extends HTTPService {
                 },
                 "confirm-change-email": {
                     handler: this.confirmChangeEmail.bind(this),
-                    roles: [UserState.UserRoles.user],
+                    roles: [UserRoles.user],
                     auth: true,
                     inputSchema: {
                         secretCode: { type: "string", empty: false, trim: true }
@@ -306,7 +306,7 @@ export default class AuthService extends HTTPService {
         res.end();
     }
 
-    private async _dbGetUserByEmail(params: { email: string }): Promise<UserState.User> {
+    private async _dbGetUserByEmail(params: { email: string }): Promise<User> {
         const { email } = params;
 
         return await this.db.pg.maybeOne(sql`
@@ -315,7 +315,7 @@ export default class AuthService extends HTTPService {
         `);
     }
 
-    private async _dbGetUserById(params: { userId: string }): Promise<UserState.User> {
+    private async _dbGetUserById(params: { userId: string }): Promise<User> {
         const { userId } = params;
 
         return await this.db.pg.maybeOne(sql`
@@ -324,7 +324,7 @@ export default class AuthService extends HTTPService {
         `);
     }
 
-    private async _dbGetUserTg(params: { telegramId: number }): Promise<UserState.User> {
+    private async _dbGetUserTg(params: { telegramId: number }): Promise<User> {
         const { telegramId } = params;
 
         return await this.db.pg.maybeOne(this.db.sql`
@@ -333,7 +333,7 @@ export default class AuthService extends HTTPService {
         `);
     }
 
-    private async _dbGetUserByToken(params: { refreshToken: string }): Promise<UserState.User> {
+    private async _dbGetUserByToken(params: { refreshToken: string }): Promise<User> {
         const { refreshToken } = params;
 
         return await this.db.pg.maybeOne(sql`
@@ -356,7 +356,7 @@ export default class AuthService extends HTTPService {
         `);
     }
 
-    private async _dbRegisterUserTg(newUser: UserState.User): Promise<any> {
+    private async _dbRegisterUserTg(newUser: User): Promise<any> {
         await this.db.pg.query(sql`
             INSERT INTO users
                 (id, telegramId, telegramUsername, name, status, roles, settings)
@@ -372,7 +372,7 @@ export default class AuthService extends HTTPService {
         `);
     }
 
-    private async _dbRegisterUser(newUser: UserState.User): Promise<any> {
+    private async _dbRegisterUser(newUser: User): Promise<any> {
         await this.db.pg.query(sql`
             INSERT INTO users
                 (id, name, email, status, passwordHash, secretCode, roles, settings)
@@ -400,7 +400,7 @@ export default class AuthService extends HTTPService {
             UPDATE users
             SET secretCode = ${null},
                 secretCodeExpireAt = ${null},
-                status = ${UserState.UserStatus.enabled},
+                status = ${UserStatus.enabled},
                 refreshToken = ${refreshToken},
                 refreshTokenExpireAt = ${refreshTokenExpireAt}
             WHERE id = ${userId};
@@ -446,7 +446,7 @@ export default class AuthService extends HTTPService {
         secretCodeExpireAt: string;
         refreshToken: string;
         refreshTokenExpireAt: string;
-        status: UserState.UserStatus;
+        status: UserStatus;
     }): Promise<any> {
         const {
             userId,

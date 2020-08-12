@@ -9,11 +9,11 @@ process.env.BOT_TOKEN = "BOT_TOKEN";
 
 import bcrypt from "bcrypt";
 import AuthService, { AuthServiceConfig } from "../app/service";
-import { UserState } from "@cryptuoso/user-state";
+import { User, UserStatus, UserRoles, UserSettings } from "@cryptuoso/user-state";
 import { pg } from "@cryptuoso/postgres";
 import { ajax, setProperty, makeTgHash } from "./helpers";
 
-const UserSettings: UserState.UserSettings = {
+const userSettings: UserSettings = {
     notifications: {
         signals: {
             telegram: true,
@@ -81,16 +81,16 @@ describe("Test 'AuthService' class methods", () => {
                     email: "example@inbox.com",
                     password: "password"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: "id",
                     email: params.email,
-                    status: UserState.UserStatus.enabled,
+                    status: UserStatus.enabled,
                     passwordHash: await bcrypt.hash(params.password, 10),
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -104,7 +104,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
@@ -141,7 +141,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": "id",
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
@@ -164,16 +164,16 @@ describe("Test 'AuthService' class methods", () => {
                     email: "example@inbox.com",
                     password: "password"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: "id",
                     email: params.email,
-                    status: UserState.UserStatus.enabled,
+                    status: UserStatus.enabled,
                     passwordHash: "OTHER",
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -187,7 +187,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
@@ -215,15 +215,15 @@ describe("Test 'AuthService' class methods", () => {
                     hash: ""
                 };
                 params.hash = await makeTgHash(params, process.env.BOT_TOKEN);
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: "id",
                     telegramId: params.id,
-                    status: UserState.UserStatus.enabled,
+                    status: UserStatus.enabled,
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -237,7 +237,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserState.UserRoles.anonymous
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -278,7 +278,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": "id",
-                            "x-hasura-role": UserState.UserRoles.anonymous
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -308,15 +308,15 @@ describe("Test 'AuthService' class methods", () => {
                 };
                 //params.hash = await makeTgHash(params, process.env.BOT_TOKEN);
 
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: "id",
                     telegramId: params.id,
-                    status: UserState.UserStatus.enabled,
+                    status: UserStatus.enabled,
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -330,7 +330,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": "id",
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
@@ -362,7 +362,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": "id",
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
@@ -401,7 +401,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": "id",
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
@@ -427,14 +427,14 @@ describe("Test 'AuthService' class methods", () => {
                     name: "Name"
                 };
 
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: "id",
-                    status: UserState.UserStatus.enabled,
+                    status: UserStatus.enabled,
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -448,7 +448,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": "id",
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
@@ -472,14 +472,14 @@ describe("Test 'AuthService' class methods", () => {
                 const params = {
                     refreshToken: "1"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: "id",
-                    status: UserState.UserStatus.enabled,
+                    status: UserStatus.enabled,
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -496,7 +496,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
@@ -533,7 +533,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": "id",
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
@@ -558,15 +558,15 @@ describe("Test 'AuthService' class methods", () => {
                     userId: "id",
                     secretCode: "secret"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: params.userId,
-                    status: UserState.UserStatus.new,
+                    status: UserStatus.new,
                     secretCode: params.secretCode,
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -580,7 +580,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
@@ -617,7 +617,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": "id",
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
@@ -640,15 +640,15 @@ describe("Test 'AuthService' class methods", () => {
                     userId: "id",
                     secretCode: "secret"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: params.userId,
-                    status: UserState.UserStatus.new,
+                    status: UserStatus.new,
                     secretCode: "OTHER",
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -662,7 +662,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
@@ -686,15 +686,15 @@ describe("Test 'AuthService' class methods", () => {
                 const params = {
                     email: "example@inbox.com"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: "id",
                     email: params.email,
-                    status: UserState.UserStatus.enabled,
+                    status: UserStatus.enabled,
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -708,7 +708,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
@@ -743,7 +743,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": "id",
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
@@ -769,15 +769,15 @@ describe("Test 'AuthService' class methods", () => {
                     secretCode: "secret",
                     password: "password"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: params.userId,
-                    status: UserState.UserStatus.enabled,
+                    status: UserStatus.enabled,
                     secretCode: params.secretCode,
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -791,7 +791,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
@@ -829,7 +829,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": "id",
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
@@ -853,15 +853,15 @@ describe("Test 'AuthService' class methods", () => {
                     secretCode: "secret",
                     password: "password"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: params.userId,
-                    status: UserState.UserStatus.enabled,
+                    status: UserStatus.enabled,
                     secretCode: "OTHER",
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -875,7 +875,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
@@ -899,15 +899,15 @@ describe("Test 'AuthService' class methods", () => {
                     secretCode: "secret",
                     password: ""
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: params.userId,
-                    status: UserState.UserStatus.enabled,
+                    status: UserStatus.enabled,
                     secretCode: "OTHER",
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -921,7 +921,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
@@ -946,15 +946,15 @@ describe("Test 'AuthService' class methods", () => {
                 const params = {
                     email: "example@inbox.com"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: "id",
                     email: params.email,
-                    status: UserState.UserStatus.enabled,
+                    status: UserStatus.enabled,
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -969,7 +969,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
@@ -991,15 +991,15 @@ describe("Test 'AuthService' class methods", () => {
                 const params = {
                     email: "example@inbox.com"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: "id",
                     email: params.email,
-                    status: UserState.UserStatus.enabled,
+                    status: UserStatus.enabled,
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -1014,7 +1014,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
@@ -1048,7 +1048,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": "WRONG",
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
@@ -1072,16 +1072,16 @@ describe("Test 'AuthService' class methods", () => {
                 const params = {
                     secretCode: "secret"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: "id",
                     emailNew: "example@inbox.com",
-                    status: UserState.UserStatus.enabled,
+                    status: UserStatus.enabled,
                     secretCode: params.secretCode,
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -1095,7 +1095,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
@@ -1132,7 +1132,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": "id",
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
@@ -1155,15 +1155,15 @@ describe("Test 'AuthService' class methods", () => {
                     userId: "id",
                     secretCode: "secret"
                 };
-                const dbUser: UserState.User = {
+                const dbUser: User = {
                     id: params.userId,
-                    status: UserState.UserStatus.enabled,
+                    status: UserStatus.enabled,
                     secretCode: "OTHER",
                     roles: {
-                        defaultRole: UserState.UserRoles.user,
-                        allowedRoles: [UserState.UserRoles.user]
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
                     },
-                    settings: UserSettings
+                    settings: userSettings
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -1177,7 +1177,7 @@ describe("Test 'AuthService' class methods", () => {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
                             "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserState.UserRoles.user
+                            "x-hasura-role": UserRoles.user
                         }
                     }
                 );
