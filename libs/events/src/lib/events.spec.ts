@@ -1,43 +1,104 @@
 import Redis from "ioredis";
-import { Events } from "./events";
 import { createLightship } from "lightship";
+import { Events } from "./events";
 import { CloudEvent as Event } from "cloudevents";
+import { ValidationSchema } from "fastest-validator";
+
+jest.mock("uuid", () => ({ v4: () => "id123" }));
 
 const mockLightshipType = {
-    isServerShuttingDown: jest.fn(),
-    createBeacon: jest.fn(() => {
-        return { die: jest.fn() };
-    })
+    isServerShuttingDown: () => false,
+    createBeacon: jest.fn(() => ({ die: jest.fn() }))
 };
 
-jest.mock("lightship", () => {
+jest.mock("lightship", () => ({
+    LightshipType: jest.fn(() => mockLightshipType),
+    createLightship: jest.fn(() => mockLightshipType)
+}));
+
+const mockXgroup = jest.fn(),
+    mockXread = jest.fn(() => [
+        "cpz:events:importer",
+        [
+            ["1293846129342-0", ["key1", "123", "key2", "foo", "key3", "bar"]],
+            ["1293846129345-0", ["key1", "456", "key2", "bar", "key3", "tar"]]
+        ]
+    ]),
+    mockXreadGroup = jest.fn(),
+    mockXpending = jest.fn(),
+    mockXclaim = jest.fn(),
+    mockXack = jest.fn(),
+    mockXadd = jest.fn();
+
+function RedisConstructor() {
     return {
-        LightshipType: jest.fn().mockImplementation(() => mockLightshipType),
-        createLightship: jest.fn().mockImplementation(() => mockLightshipType)
+        duplicate: () => RedisConstructor(),
+        xgroup: mockXgroup,
+        xread: mockXread,
+        xreadgroup: mockXreadGroup,
+        xpending: mockXpending,
+        xclaim: mockXclaim,
+        xack: mockXack,
+        xadd: mockXadd
     };
-});
+}
+jest.mock("ioredis", () => () => RedisConstructor());
+
+const mockCatalogAdd = jest.fn(),
+    mockCatalogHandler = jest.fn(),
+    mockCatalogValidate = jest.fn(() => true);
+jest.mock("./catalog", () => ({
+    EventsCatalog: jest.fn(() => ({
+        groups: [{ topic: "cpz:events:importer", group: "importer" }],
+        unbalancedTopics: ["cpz:events:trades"],
+        getGroupHandlers: () => ({
+            "cpz:events:importer": {
+                subs: {
+                    "com.cryptuoso.importer.start": {
+                        handler: mockCatalogHandler,
+                        validate: mockCatalogValidate
+                    }
+                }
+            }
+        }),
+        getUnbalancedHandlers: () => ({
+            "cpz:events:importer": {
+                subs: {
+                    "com.cryptuoso.importer.start": {
+                        handler: mockCatalogHandler,
+                        validate: mockCatalogValidate
+                    }
+                }
+            }
+        }),
+        add: mockCatalogAdd
+    }))
+}));
 
 describe("Test 'Events' module", () => {
     describe("Unit tests", () => {
-        jest.mock("ioredis");
-        describe("Testing data transformation utils", () => {
-            const redisClient = new Redis();
-            const lightship = createLightship();
-            const events = new Events(redisClient, lightship);
+        beforeEach(() => {
+            jest.clearAllMocks();
+        });
 
-            describe("Testing '_parseObjectResponse'", () => {
+        const redisClient = Redis();
+        const lightship = createLightship();
+        const events = new Events(redisClient, lightship);
+
+        describe("Testing data transformation utils", () => {
+            describe("Testing '_parseObjectResponse' method", () => {
                 it("Should parse single redis message to object", () => {
                     const msg = ["key1", "123", "key2", "foo", "key3", "bar"];
                     const res = events._parseObjectResponse(msg);
 
                     expect(res).toStrictEqual({ key1: 123, key2: "foo", key3: "bar" });
 
-                    // const emptyRes = events._parseObjectResponse([]);
-                    // expect(emptyRes).toStrictEqual({});
+                    const emptyRes = events._parseObjectResponse([]);
+                    expect(emptyRes).toStrictEqual({});
                 });
             });
 
-            describe("Testing '_parseMessageResponse'", () => {
+            describe("Testing '_parseMessageResponse' method", () => {
                 it("Should parse message array to object", () => {
                     const array: [string, string[]][] = [
                         ["message_1", ["key1", "123", "key2", "foo", "key3", "bar"]],
@@ -50,12 +111,12 @@ describe("Test 'Events' module", () => {
                         { msgId: "message_2", data: { key1: 456, key2: "bar", key3: "tar" } },
                         { msgId: "message_3", data: { key1: 789, key2: "tar", key3: "foo" } }
                     ]);
-                    // const emptyRes = events._parseMessageResponse([]);
-                    // expect(emptyRes).toStrictEqual([]);
+                    const emptyRes = events._parseMessageResponse([]);
+                    expect(emptyRes).toStrictEqual([]);
                 });
             });
 
-            describe("Testing '_parseStreamResponse'", () => {
+            describe("Testing '_parseStreamResponse' method", () => {
                 it("Should parse response of xread command to object", () => {
                     const array: [string, [string, string[]][]][] = [
                         [
@@ -88,7 +149,7 @@ describe("Test 'Events' module", () => {
                 });
             });
 
-            describe("Testing '_parsePendingResponse'", () => {
+            describe("Testing '_parsePendingResponse' method", () => {
                 describe("Input is not empty", () => {
                     it("Should parse an array of pending messages to object", () => {
                         const arr = [
@@ -109,7 +170,7 @@ describe("Test 'Events' module", () => {
                 });
             });
 
-            describe("Testing '_parseEvents'", () => {
+            describe("Testing '_parseEvents' method", () => {
                 describe("Passing valid arguments", () => {
                     it("Should return object with values of Event type", () => {
                         const eventArr: { msgId: string; data: { [key: string]: any } }[] = [
@@ -127,6 +188,40 @@ describe("Test 'Events' module", () => {
                             expect(res[key]).toBeInstanceOf(Event);
                         }
                     });
+                });
+            });
+
+            describe("Testing 'subscribe' method", () => {
+                it("Should call #catalog.add once with the event provided", () => {
+                    const evt: {
+                        [key: string]: {
+                            group?: string;
+                            unbalanced?: boolean;
+                            handler: (event: Event) => Promise<void>;
+                            schema?: ValidationSchema<any>;
+                        };
+                    } = {
+                        "foo.bar.tar": {
+                            group: "group1",
+                            handler: (event: Event) => new Promise(() => console.log(JSON.stringify(event)))
+                        }
+                    };
+                    events.subscribe(evt);
+
+                    expect(mockCatalogAdd).toHaveBeenCalledWith(evt);
+                    expect(mockCatalogAdd).toHaveBeenCalledTimes(1);
+                });
+            });
+
+            describe("Testing 'start' method", () => {
+                const topic = "cpz:events:importer",
+                    group = "importer";
+                it("Should call all redis read functions", () => {
+                    events.start();
+                    expect(mockXgroup).toHaveBeenCalledTimes(1);
+                    expect(mockXreadGroup).toHaveBeenCalledTimes(1);
+                    expect(mockXpending).toHaveBeenCalledTimes(1);
+                    expect(mockXread).toHaveBeenCalledTimes(1);
                 });
             });
         });
