@@ -397,7 +397,7 @@ export class Events {
             const cloudEvent = new Event({
                 source: `https://${process.env.SERVICE || "events"}.cryptuoso.com`,
                 specversion: "1.0",
-                dataContentType: "application/json",
+                datacontenttype: "application/json",
                 type: `com.cryptuoso.${type}`,
                 data,
                 subject
