@@ -1,8 +1,10 @@
 process.env.PGCS = "localhost:5349";
+process.env.SERVICE = "my_service";
+process.env.API_KEY = "my_api_key";
 
+import { Service, Protocol } from "restana";
 import { HTTPService, HTTPServiceConfig } from "../lib/HTTPService";
 import { ActionsHandlerError } from "@cryptuoso/errors";
-
 import { ajax, setProperty, getServerFromService, createRoute } from "./HTTPService.spec.helpers";
 
 const mockExit = jest.fn();
@@ -36,99 +38,83 @@ jest.mock("@cryptuoso/events");
 
 describe("Test 'BaseService' class", () => {
     const CONFIG: HTTPServiceConfig = { port: 4000 };
-    process.env.SERVICE = "my_service";
-    process.env.API_KEY = "my_api_key";
+    // Willbe initialized in tests
+    let httpService: HTTPService;
+    let app: Service<Protocol.HTTP>;
+    let shutdownHandler: { (): Promise<any> };
 
-    describe("Testing constructor", () => {
+    afterAll(async () => {
+        await shutdownHandler();
+    });
+
+    describe("Testing constructor, startService and _stopService", () => {
         describe("Test with valid input", () => {
             describe("Test with right config provided", () => {
-                test("Should initialize correctly and doesn't call process.exit", async () => {
-                    new HTTPService(CONFIG);
+                it("Should initialize correctly and doesn't call process.exit", () => {
+                    httpService = new HTTPService(CONFIG);
+                    app = getServerFromService(httpService);
+                    shutdownHandler = getLastRegisterShutdownHandler();
 
                     expect(mockExit).toHaveBeenCalledTimes(0);
                 });
             });
         });
 
+        describe("Testing _stopServer method calling w/o _startServer method calling", () => {
+            test("Shold quit correctly", async () => {
+                await shutdownHandler();
+
+                expect(app.getServer().listening).toStrictEqual(false);
+                expect(mockExit).toHaveBeenCalledTimes(1);
+
+                mockExit.mockClear();
+            });
+        });
+
         describe("Test with valid input", () => {
             describe("Test with right config provided", () => {
                 test("Should initialize correctly and doesn't call process.exit", async () => {
-                    const httpService = new HTTPService(CONFIG);
-                    const shutdownHandler = getLastRegisterShutdownHandler();
-                    const app = getServerFromService(httpService);
-
                     await httpService.startService();
 
                     expect(mockExit).toHaveBeenCalledTimes(0);
                     expect(app.getServer().address().port).toEqual(CONFIG.port);
-
-                    await shutdownHandler();
                 });
             });
 
             describe("Test with w/o config", () => {
                 test("Should initialize correctly and doesn't call process.exit", async () => {
-                    const httpService = new HTTPService();
-                    const shutdownHandler = getLastRegisterShutdownHandler();
-                    const app = getServerFromService(httpService);
+                    const httpService2 = new HTTPService();
+                    const shutdownHandler2 = getLastRegisterShutdownHandler();
+                    const app2 = getServerFromService(httpService2);
 
-                    await httpService.startService();
+                    await httpService2.startService();
 
                     expect(mockExit).toHaveBeenCalledTimes(0);
-                    expect(app.getServer().address().port).toEqual(3000);
+                    expect(app2.getServer().address().port).toEqual(3000);
 
-                    await shutdownHandler();
+                    await shutdownHandler2();
                 });
             });
         });
     });
 
     describe("Testing methods", () => {
-        describe("Testing _stopServer method calling w/o _startServer method calling", () => {
-            test("Shold quit correctly", async () => {
-                const httpService = new HTTPService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-                const app = getServerFromService(httpService);
-
-                await shutdownHandler();
-
-                expect(app.getServer().listening).toStrictEqual(false);
-            });
-        });
-
         describe("Testing _checkApiKey method", () => {
             describe("Testing with right requests", () => {
-                describe("Should return right response", () => {
-                    test("", async () => {
-                        const httpService = new HTTPService(CONFIG);
-                        const shutdownHandler = getLastRegisterShutdownHandler();
-                        const app = getServerFromService(httpService);
-
-                        await httpService.startService();
-
-                        const res = await ajax.get(`http://localhost:${CONFIG.port}`, {
-                            "x-api-key": process.env.API_KEY
-                        });
-
-                        await shutdownHandler();
-
-                        expect(res.ok).toStrictEqual(true);
-                        expect(res.parsedBody).toStrictEqual({ service: process.env.SERVICE, routes: app.routes() });
+                test("Should return right response", async () => {
+                    const res = await ajax.get(`http://localhost:${CONFIG.port}`, {
+                        "x-api-key": process.env.API_KEY
                     });
+
+                    expect(res.ok).toStrictEqual(true);
+                    expect(res.parsedBody).toStrictEqual({ service: process.env.SERVICE, routes: app.routes() });
                 });
             });
 
             describe("Testing with wrong requests", () => {
                 describe("With wrong 'x-api-key' header", () => {
                     test("Should return error response", async () => {
-                        const httpService = new HTTPService(CONFIG);
-                        const shutdownHandler = getLastRegisterShutdownHandler();
-
-                        await httpService.startService();
-
                         const res = await ajax.get(`http://localhost:${CONFIG.port}`, { "x-api-key": "wrong_key" });
-
-                        await shutdownHandler();
 
                         expect(res.status).toStrictEqual(403);
                         expect(res.parsedBody).toStrictEqual(
@@ -139,14 +125,7 @@ describe("Test 'BaseService' class", () => {
 
                 describe("Testing w/o 'x-api-key' header", () => {
                     test("Should return error response", async () => {
-                        const httpService = new HTTPService(CONFIG);
-                        const shutdownHandler = getLastRegisterShutdownHandler();
-
-                        await httpService.startService();
-
                         const res = await ajax.get(`http://localhost:${CONFIG.port}`);
-
-                        await shutdownHandler();
 
                         expect(res.status).toStrictEqual(403);
                         expect(res.parsedBody).toStrictEqual(
@@ -161,26 +140,20 @@ describe("Test 'BaseService' class", () => {
             describe("Testing with right requests", () => {
                 describe("Test with right schema", () => {
                     test("Should return right response", async () => {
-                        const httpService = new HTTPService(CONFIG);
-                        const shutdownHandler = getLastRegisterShutdownHandler();
                         const rightResponse = { success: true };
 
-                        createRoute(httpService, "my", rightResponse);
-
-                        await httpService.startService();
+                        createRoute(httpService, "my1", rightResponse);
 
                         const res = await ajax.post(
-                            `http://localhost:${CONFIG.port}/actions/my`,
+                            `http://localhost:${CONFIG.port}/actions/my1`,
                             { "x-api-key": process.env.API_KEY },
                             {
-                                action: { name: "my" },
+                                action: { name: "my1" },
                                 input: {},
                                 // eslint-disable-next-line @typescript-eslint/camelcase
                                 session_variables: {}
                             }
                         );
-
-                        await shutdownHandler();
 
                         expect(res.parsedBody).toEqual(rightResponse);
                     });
@@ -190,16 +163,12 @@ describe("Test 'BaseService' class", () => {
             describe("Testing with wrong requests", () => {
                 describe("Test with wrong schema", () => {
                     test("Should return error response with validation code", async () => {
-                        const httpService = new HTTPService(CONFIG);
-                        const shutdownHandler = getLastRegisterShutdownHandler();
                         const rightResponse = { success: true };
 
-                        createRoute(httpService, "my", rightResponse);
-
-                        await httpService.startService();
+                        createRoute(httpService, "my2", rightResponse);
 
                         const res = await ajax.post(
-                            `http://localhost:${CONFIG.port}/actions/my`,
+                            `http://localhost:${CONFIG.port}/actions/my2`,
                             { "x-api-key": process.env.API_KEY },
                             {
                                 action: { name: "wrong" },
@@ -209,30 +178,22 @@ describe("Test 'BaseService' class", () => {
                             }
                         );
 
-                        await shutdownHandler();
-
                         expect(res.status).toStrictEqual(400);
                         expect(res.parsedBody["code"]).toEqual("VALIDATION");
                     });
 
                     test("Should return error response with validation code", async () => {
-                        const httpService = new HTTPService(CONFIG);
-                        const shutdownHandler = getLastRegisterShutdownHandler();
                         const rightResponse = { success: true };
 
-                        createRoute(httpService, "my", rightResponse);
-
-                        await httpService.startService();
+                        createRoute(httpService, "my3", rightResponse);
 
                         const res = await ajax.post(
-                            `http://localhost:${CONFIG.port}/actions/my`,
+                            `http://localhost:${CONFIG.port}/actions/my3`,
                             { "x-api-key": process.env.API_KEY },
                             {
                                 wrong: "wrong"
                             }
                         );
-
-                        await shutdownHandler();
 
                         expect(res.status).toStrictEqual(400);
                         expect(res.parsedBody["code"]).toEqual("VALIDATION");
@@ -244,26 +205,20 @@ describe("Test 'BaseService' class", () => {
                 describe("Testing with right requests", () => {
                     describe("Testing with right roles; user-id passed", () => {
                         test("Should return right response", async () => {
-                            const httpService = new HTTPService(CONFIG);
-                            const shutdownHandler = getLastRegisterShutdownHandler();
                             const rightResponse = { success: true };
 
-                            createRoute(httpService, "my", rightResponse, ["my-role"], true);
-
-                            await httpService.startService();
+                            createRoute(httpService, "my4", rightResponse, ["my-role"], true);
 
                             const res = await ajax.post(
-                                `http://localhost:${CONFIG.port}/actions/my`,
+                                `http://localhost:${CONFIG.port}/actions/my4`,
                                 { "x-api-key": process.env.API_KEY },
                                 {
-                                    action: { name: "my" },
+                                    action: { name: "my4" },
                                     input: {},
                                     // eslint-disable-next-line @typescript-eslint/camelcase
                                     session_variables: { "x-hasura-user-id": "user-id", "x-hasura-role": "my-role" }
                                 }
                             );
-
-                            await shutdownHandler();
 
                             expect(res.parsedBody).toEqual(rightResponse);
                         });
@@ -271,26 +226,20 @@ describe("Test 'BaseService' class", () => {
 
                     describe("Testing w/o roles", () => {
                         test("Should return right response", async () => {
-                            const httpService = new HTTPService(CONFIG);
-                            const shutdownHandler = getLastRegisterShutdownHandler();
                             const rightResponse = { success: true };
 
-                            createRoute(httpService, "my", rightResponse, [], true);
-
-                            await httpService.startService();
+                            createRoute(httpService, "my5", rightResponse, [], true);
 
                             const res = await ajax.post(
-                                `http://localhost:${CONFIG.port}/actions/my`,
+                                `http://localhost:${CONFIG.port}/actions/my5`,
                                 { "x-api-key": process.env.API_KEY },
                                 {
-                                    action: { name: "my" },
+                                    action: { name: "my5" },
                                     input: {},
                                     // eslint-disable-next-line @typescript-eslint/camelcase
                                     session_variables: { "x-hasura-user-id": "user-id" }
                                 }
                             );
-
-                            await shutdownHandler();
 
                             expect(res.parsedBody).toEqual(rightResponse);
                         });
@@ -300,8 +249,6 @@ describe("Test 'BaseService' class", () => {
                 describe("Testing with wrong requests", () => {
                     describe("Testing with empty 'user-id'", () => {
                         test("Should return error response", async () => {
-                            const httpService = new HTTPService(CONFIG);
-                            const shutdownHandler = getLastRegisterShutdownHandler();
                             const rightResponse = { success: true };
                             const errorResponse = new ActionsHandlerError(
                                 "Unauthorized: Invalid session variables",
@@ -310,22 +257,18 @@ describe("Test 'BaseService' class", () => {
                                 401
                             ).response;
 
-                            createRoute(httpService, "my", rightResponse, ["my-role"], true);
-
-                            await httpService.startService();
+                            createRoute(httpService, "my6", rightResponse, ["my-role"], true);
 
                             const res = await ajax.post(
-                                `http://localhost:${CONFIG.port}/actions/my`,
+                                `http://localhost:${CONFIG.port}/actions/my6`,
                                 { "x-api-key": process.env.API_KEY },
                                 {
-                                    action: { name: "my" },
+                                    action: { name: "my6" },
                                     input: {},
                                     // eslint-disable-next-line @typescript-eslint/camelcase
                                     session_variables: { "x-hasura-user-id": "", "x-hasura-role": "my-role" }
                                 }
                             );
-
-                            await shutdownHandler();
 
                             expect(res.parsedBody).toEqual(errorResponse);
                         });
@@ -333,8 +276,6 @@ describe("Test 'BaseService' class", () => {
 
                     describe("Testing with empty 'role'", () => {
                         test("Should return error response", async () => {
-                            const httpService = new HTTPService(CONFIG);
-                            const shutdownHandler = getLastRegisterShutdownHandler();
                             const rightResponse = { success: true };
                             const errorResponse = new ActionsHandlerError(
                                 "Forbidden: Invalid role",
@@ -343,22 +284,18 @@ describe("Test 'BaseService' class", () => {
                                 403
                             ).response;
 
-                            createRoute(httpService, "my", rightResponse, ["my-role"], true);
-
-                            await httpService.startService();
+                            createRoute(httpService, "my7", rightResponse, ["my-role"], true);
 
                             const res = await ajax.post(
-                                `http://localhost:${CONFIG.port}/actions/my`,
+                                `http://localhost:${CONFIG.port}/actions/my7`,
                                 { "x-api-key": process.env.API_KEY },
                                 {
-                                    action: { name: "my" },
+                                    action: { name: "my7" },
                                     input: {},
                                     // eslint-disable-next-line @typescript-eslint/camelcase
                                     session_variables: { "x-hasura-user-id": "user-id", "x-hasura-role": "" }
                                 }
                             );
-
-                            await shutdownHandler();
 
                             expect(res.parsedBody).toEqual(errorResponse);
                         });
@@ -366,8 +303,6 @@ describe("Test 'BaseService' class", () => {
 
                     describe("Testing with wrong 'role'", () => {
                         test("Should return error response", async () => {
-                            const httpService = new HTTPService(CONFIG);
-                            const shutdownHandler = getLastRegisterShutdownHandler();
                             const rightResponse = { success: true };
                             const errorResponse = new ActionsHandlerError(
                                 "Forbidden: Invalid role",
@@ -376,22 +311,18 @@ describe("Test 'BaseService' class", () => {
                                 403
                             ).response;
 
-                            createRoute(httpService, "my", rightResponse, ["my-role"], true);
-
-                            await httpService.startService();
+                            createRoute(httpService, "my8", rightResponse, ["my-role"], true);
 
                             const res = await ajax.post(
-                                `http://localhost:${CONFIG.port}/actions/my`,
+                                `http://localhost:${CONFIG.port}/actions/my8`,
                                 { "x-api-key": process.env.API_KEY },
                                 {
-                                    action: { name: "my" },
+                                    action: { name: "my8" },
                                     input: {},
                                     // eslint-disable-next-line @typescript-eslint/camelcase
                                     session_variables: { "x-hasura-user-id": "user-id", "x-hasura-role": "wrong" }
                                 }
                             );
-
-                            await shutdownHandler();
 
                             expect(res.parsedBody).toEqual(errorResponse);
                         });
@@ -403,34 +334,26 @@ describe("Test 'BaseService' class", () => {
                 describe("Testing with right arguments set", () => {
                     describe("Testing with full arguments set", () => {
                         it("Should not throw error", () => {
-                            const httpService = new HTTPService(CONFIG);
-
-                            expect(() => createRoute(httpService, "my", {}, ["my-role"], true, {})).not.toThrowError();
-                            expect(() => createRoute(httpService, "my2", {}, [], true, {})).not.toThrowError();
+                            expect(() => createRoute(httpService, "my9", {}, ["my-role"], true, {})).not.toThrowError();
+                            expect(() => createRoute(httpService, "my10", {}, [], true, {})).not.toThrowError();
                         });
                     });
 
                     describe("Testing w/o 'inputSchema'", () => {
                         it("Should not throw error", () => {
-                            const httpService = new HTTPService(CONFIG);
-
-                            expect(() => createRoute(httpService, "my", {}, ["my-role"], true)).not.toThrowError();
+                            expect(() => createRoute(httpService, "my11", {}, ["my-role"], true)).not.toThrowError();
                         });
                     });
 
                     describe("Testing w/o 'auth' and 'inputSchema'", () => {
                         it("Should not throw error", () => {
-                            const httpService = new HTTPService(CONFIG);
-
-                            expect(() => createRoute(httpService, "my", {}, ["my-role"])).not.toThrowError();
+                            expect(() => createRoute(httpService, "my12", {}, ["my-role"])).not.toThrowError();
                         });
                     });
 
                     describe("Testing w/o 'roles, 'auth' and 'inputSchema'", () => {
                         it("Should not throw error", () => {
-                            const httpService = new HTTPService(CONFIG);
-
-                            expect(() => createRoute(httpService, "my", {})).not.toThrowError();
+                            expect(() => createRoute(httpService, "my13", {})).not.toThrowError();
                         });
                     });
                 });
@@ -438,8 +361,6 @@ describe("Test 'BaseService' class", () => {
                 describe("Testing with wrong arguments set", () => {
                     describe("Testing with empty 'name'", () => {
                         it("Should to throw error", () => {
-                            const httpService = new HTTPService(CONFIG);
-
                             expect(() => {
                                 const arg: { [key: string]: any } = {};
                                 arg[""] = {
@@ -455,11 +376,9 @@ describe("Test 'BaseService' class", () => {
 
                     describe("Testing with empty 'handler'", () => {
                         it("Should to throw error", () => {
-                            const httpService = new HTTPService(CONFIG);
-
                             expect(() => {
                                 const arg: { [key: string]: any } = {};
-                                arg["my"] = {
+                                arg["my14"] = {
                                     /* handler: () => {}, */
                                     roles: ["my-role"],
                                     auth: true,
@@ -472,11 +391,9 @@ describe("Test 'BaseService' class", () => {
 
                     describe("Testing with non-function 'handler'", () => {
                         it("Should to throw error", () => {
-                            const httpService = new HTTPService(CONFIG);
-
                             expect(() => {
                                 const arg: { [key: string]: any } = {};
-                                arg["my"] = {
+                                arg["my15"] = {
                                     handler: "handler",
                                     roles: ["my-role"],
                                     auth: true,
@@ -490,22 +407,20 @@ describe("Test 'BaseService' class", () => {
 
                 describe("Adding handler to existing route", () => {
                     test("Should throw error", async () => {
-                        const httpService = new HTTPService(CONFIG);
                         const rightResponse = { first: true };
 
-                        createRoute(httpService, "my", rightResponse, [], true);
-                        expect(() => createRoute(httpService, "my", rightResponse, [], true)).toThrowError();
-                        expect(() => createRoute(httpService, "my3", rightResponse, [], true)).not.toThrowError();
+                        createRoute(httpService, "my16", rightResponse, [], true);
+                        expect(() => createRoute(httpService, "my16", rightResponse, [], true)).toThrowError();
+                        expect(() => createRoute(httpService, "my17", rightResponse, [], true)).not.toThrowError();
                     });
                 });
 
                 describe("Adding several handlers", () => {
                     test("Should not throw error", async () => {
-                        const httpService = new HTTPService(CONFIG);
                         const rightResponse = { first: true };
 
-                        createRoute(httpService, "my1", rightResponse, [], true);
-                        expect(() => createRoute(httpService, "my2", rightResponse, [], true)).not.toThrowError();
+                        createRoute(httpService, "my18", rightResponse, [], true);
+                        expect(() => createRoute(httpService, "my19", rightResponse, [], true)).not.toThrowError();
                     });
                 });
             });
