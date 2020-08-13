@@ -46,6 +46,10 @@
         "serve:exwatcher-bitfinex": "nx serve exwatcher-bitfinex",
         "build:exwatcher-kraken": "nx build exwatcher-kraken --prod",
         "serve:exwatcher-kraken": "nx serve exwatcher-kraken",
+        "build:backtester-runner": "nx build backtester-runner --prod",
+        "serve:backtester-runner": "nx serve backtester-runner",
+        "build:backtester-worker": "nx build backtester-worker --prod",
+        "serve:backtester-worker": "nx serve backtester-worker",
         "build:auth": "nx build auth --prod",
         "serve:auth": "nx serve auth"
     },
