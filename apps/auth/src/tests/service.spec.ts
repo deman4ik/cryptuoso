@@ -63,21 +63,27 @@ jest.mock("@cryptuoso/mail");
 
 describe("Test 'AuthService' class methods", () => {
     const CONFIG: AuthServiceConfig = { port: 4000 };
+    let authService: AuthService;
+    let shutdownHandler: { (): Promise<any> };
+
+    afterAll(async () => {
+        await shutdownHandler();
+    });
 
     describe("Test constructor", () => {
         test("Should not to throw", async () => {
-            expect(() => new AuthService(CONFIG)).not.toThrowError();
+            expect(() => {
+                authService = new AuthService(CONFIG);
+                shutdownHandler = getLastRegisterShutdownHandler();
+            }).not.toThrowError();
+
+            await expect(authService.startService()).resolves.not.toThrowError();
         });
     });
 
     describe("login method", () => {
         describe("With right email and password", () => {
             test("Should return accessToken and set cookie refreshToken", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     email: "example@inbox.com",
                     password: "password"
@@ -114,18 +120,11 @@ describe("Test 'AuthService' class methods", () => {
                 expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("accessToken");
                 expect(res.headers.get("set-cookie").includes("refresh_token")).toBeTruthy();
-
-                await shutdownHandler();
             });
         });
 
         describe("With wrong email", () => {
             test("Should return error", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     email: "example@inbox.com",
                     password: "password"
@@ -149,18 +148,11 @@ describe("Test 'AuthService' class methods", () => {
 
                 expect(res.status).toStrictEqual(404);
                 expect(res.parsedBody).not.toHaveProperty("success");
-
-                await shutdownHandler();
             });
         });
 
         describe("With wrong password", () => {
             test("Should return error", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     email: "example@inbox.com",
                     password: "password"
@@ -195,8 +187,6 @@ describe("Test 'AuthService' class methods", () => {
 
                 expect(res.status).toStrictEqual(403);
                 expect(res.parsedBody).not.toHaveProperty("success");
-
-                await shutdownHandler();
             });
         });
     });
@@ -204,11 +194,6 @@ describe("Test 'AuthService' class methods", () => {
     describe("loginTg method", () => {
         describe("With right telegramId and hash", () => {
             test("Should return accessToken and set cookie refreshToken", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     id: 123,
                     // eslint-disable-next-line @typescript-eslint/camelcase
@@ -247,18 +232,11 @@ describe("Test 'AuthService' class methods", () => {
                 expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("accessToken");
                 expect(res.headers.get("set-cookie").includes("refresh_token")).toBeTruthy();
-
-                await shutdownHandler();
             });
         });
 
         describe("With new user", () => {
             test("Should create new account and return new tokens", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     id: 123,
                     username: "username",
@@ -288,18 +266,11 @@ describe("Test 'AuthService' class methods", () => {
                 expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("accessToken");
                 expect(res.headers.get("set-cookie").includes("refresh_token")).toBeTruthy();
-
-                await shutdownHandler();
             });
         });
 
         describe("With wrong hash", () => {
             test("Should return error", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     id: 123,
                     username: "username",
@@ -338,8 +309,6 @@ describe("Test 'AuthService' class methods", () => {
 
                 expect(res.status).toStrictEqual(403);
                 expect(res.parsedBody).not.toHaveProperty("success");
-
-                await shutdownHandler();
             });
         });
     });
@@ -347,11 +316,6 @@ describe("Test 'AuthService' class methods", () => {
     describe("logout method", () => {
         describe("With any params", () => {
             test("Should clear refreshToken", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {};
 
                 const res = await ajax.post(
@@ -371,8 +335,6 @@ describe("Test 'AuthService' class methods", () => {
                 expect(res.status).toStrictEqual(200);
                 expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.headers.get("set-cookie").includes("refresh_token=;")).toBeTruthy();
-
-                await shutdownHandler();
             });
         });
     });
@@ -380,11 +342,6 @@ describe("Test 'AuthService' class methods", () => {
     describe("register method", () => {
         describe("With unique email", () => {
             test("Should return userId", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     email: "example@inbox.com",
                     password: "password",
@@ -410,18 +367,11 @@ describe("Test 'AuthService' class methods", () => {
                 expect(res.status).toStrictEqual(200);
                 expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("userId");
-
-                await shutdownHandler();
             });
         });
 
         describe("With non-unique email", () => {
             test("Should return error", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     email: "example@inbox.com",
                     password: "password",
@@ -456,8 +406,6 @@ describe("Test 'AuthService' class methods", () => {
 
                 expect(res.status).toStrictEqual(409);
                 expect(res.parsedBody).not.toHaveProperty("success");
-
-                await shutdownHandler();
             });
         });
     });
@@ -465,11 +413,6 @@ describe("Test 'AuthService' class methods", () => {
     describe("refreshToken method", () => {
         describe("With right refreshToken", () => {
             test("Should return accessToken and set cookie refreshToken", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     refreshToken: "1"
                 };
@@ -506,18 +449,11 @@ describe("Test 'AuthService' class methods", () => {
                 expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("accessToken");
                 expect(res.headers.get("set-cookie").includes("refresh_token")).toBeTruthy();
-
-                await shutdownHandler();
             });
         });
 
         describe("With bad refreshToken", () => {
             test("Should return error", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {};
 
                 mockPG.maybeOne.mockImplementation(async () => null);
@@ -541,8 +477,6 @@ describe("Test 'AuthService' class methods", () => {
 
                 expect(res.status).toStrictEqual(404);
                 expect(res.parsedBody).not.toHaveProperty("success");
-
-                await shutdownHandler();
             });
         });
     });
@@ -550,11 +484,6 @@ describe("Test 'AuthService' class methods", () => {
     describe("activateAccount method", () => {
         describe("With right userId and secretCode", () => {
             test("Should return accessToken and set cookie refreshToken", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     userId: "id",
                     secretCode: "secret"
@@ -590,18 +519,11 @@ describe("Test 'AuthService' class methods", () => {
                 expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("accessToken");
                 expect(res.headers.get("set-cookie").includes("refresh_token")).toBeTruthy();
-
-                await shutdownHandler();
             });
         });
 
         describe("With wrong userId", () => {
             test("Should return error", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     userId: "id",
                     secretCode: "secret"
@@ -625,18 +547,11 @@ describe("Test 'AuthService' class methods", () => {
 
                 expect(res.status).toStrictEqual(404);
                 expect(res.parsedBody).not.toHaveProperty("success");
-
-                await shutdownHandler();
             });
         });
 
         describe("With wrong secretCode", () => {
             test("Should return error", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     userId: "id",
                     secretCode: "secret"
@@ -670,8 +585,6 @@ describe("Test 'AuthService' class methods", () => {
 
                 expect(res.status).toStrictEqual(403);
                 expect(res.parsedBody).not.toHaveProperty("success");
-
-                await shutdownHandler();
             });
         });
     });
@@ -679,11 +592,6 @@ describe("Test 'AuthService' class methods", () => {
     describe("passwordReset method", () => {
         describe("With right email", () => {
             test("Should return userId", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     email: "example@inbox.com"
                 };
@@ -717,18 +625,11 @@ describe("Test 'AuthService' class methods", () => {
                 expect(res.status).toStrictEqual(200);
                 expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("userId", dbUser.id);
-
-                await shutdownHandler();
             });
         });
 
         describe("With bad refreshToken", () => {
             test("Should return error", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     email: "example@inbox.com"
                 };
@@ -751,8 +652,6 @@ describe("Test 'AuthService' class methods", () => {
 
                 expect(res.status).toStrictEqual(404);
                 expect(res.parsedBody).not.toHaveProperty("success");
-
-                await shutdownHandler();
             });
         });
     });
@@ -760,11 +659,6 @@ describe("Test 'AuthService' class methods", () => {
     describe("confirmPasswordReset method", () => {
         describe("With right userId, secretCode and password", () => {
             test("Should return accessToken and set cookie refreshToken", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     userId: "id",
                     secretCode: "secret",
@@ -801,18 +695,11 @@ describe("Test 'AuthService' class methods", () => {
                 expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("accessToken");
                 expect(res.headers.get("set-cookie").includes("refresh_token")).toBeTruthy();
-
-                await shutdownHandler();
             });
         });
 
         describe("With wrong userId", () => {
             test("Should return error", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     userId: "id",
                     secretCode: "secret",
@@ -837,18 +724,11 @@ describe("Test 'AuthService' class methods", () => {
 
                 expect(res.status).toStrictEqual(404);
                 expect(res.parsedBody).not.toHaveProperty("success");
-
-                await shutdownHandler();
             });
         });
 
         describe("With wrong secretCode", () => {
             test("Should return error", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     userId: "id",
                     secretCode: "secret",
@@ -883,18 +763,11 @@ describe("Test 'AuthService' class methods", () => {
 
                 expect(res.status).toStrictEqual(403);
                 expect(res.parsedBody).not.toHaveProperty("success");
-
-                await shutdownHandler();
             });
         });
 
         describe("With wrong password", () => {
             test("Should return error", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     userId: "id",
                     secretCode: "secret",
@@ -930,8 +803,6 @@ describe("Test 'AuthService' class methods", () => {
                 // from HttpService._checkValidation
                 expect(res.status).toStrictEqual(400);
                 expect(res.parsedBody).not.toHaveProperty("success");
-
-                await shutdownHandler();
             });
         });
     });
@@ -939,11 +810,6 @@ describe("Test 'AuthService' class methods", () => {
     describe("changeEmail method", () => {
         describe("With right email", () => {
             test("Should return userId", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     email: "example@inbox.com"
                 };
@@ -977,18 +843,11 @@ describe("Test 'AuthService' class methods", () => {
 
                 expect(res.status).toStrictEqual(200);
                 expect(res.parsedBody).toHaveProperty("success", true);
-
-                await shutdownHandler();
             });
         });
 
         describe("With wrong email", () => {
             test("Should return error", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     email: "example@inbox.com"
                 };
@@ -1022,18 +881,11 @@ describe("Test 'AuthService' class methods", () => {
 
                 expect(res.status).toStrictEqual(409);
                 expect(res.parsedBody).not.toHaveProperty("success");
-
-                await shutdownHandler();
             });
         });
 
         describe("With wrong x-hasura-user-id", () => {
             test("Should return userId", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     email: "example@inbox.com"
                 };
@@ -1056,8 +908,6 @@ describe("Test 'AuthService' class methods", () => {
 
                 expect(res.status).toStrictEqual(404);
                 expect(res.parsedBody).not.toHaveProperty("success");
-
-                await shutdownHandler();
             });
         });
     });
@@ -1065,11 +915,6 @@ describe("Test 'AuthService' class methods", () => {
     describe("confirmChangeEmail method", () => {
         describe("With right x-hasura-user-id and secretCode", () => {
             test("Should return accessToken and set cookie refreshToken", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     secretCode: "secret"
                 };
@@ -1105,18 +950,11 @@ describe("Test 'AuthService' class methods", () => {
                 expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("accessToken");
                 expect(res.headers.get("set-cookie").includes("refresh_token")).toBeTruthy();
-
-                await shutdownHandler();
             });
         });
 
         describe("With wrong userId", () => {
             test("Should return error", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     userId: "id",
                     secretCode: "secret"
@@ -1140,18 +978,11 @@ describe("Test 'AuthService' class methods", () => {
 
                 expect(res.status).toStrictEqual(404);
                 expect(res.parsedBody).not.toHaveProperty("success");
-
-                await shutdownHandler();
             });
         });
 
         describe("With wrong secretCode", () => {
             test("Should return error", async () => {
-                const authService = new AuthService(CONFIG);
-                const shutdownHandler = getLastRegisterShutdownHandler();
-
-                await authService.startService();
-
                 const params = {
                     userId: "id",
                     secretCode: "secret"
@@ -1185,8 +1016,6 @@ describe("Test 'AuthService' class methods", () => {
 
                 expect(res.status).toStrictEqual(403);
                 expect(res.parsedBody).not.toHaveProperty("success");
-
-                await shutdownHandler();
             });
         });
     });
