@@ -1,6 +1,6 @@
 import Redis from "ioredis";
 import { createLightship } from "lightship";
-import { Events } from "./events";
+import { Events, NewEvent } from "./events";
 import { CloudEvent as Event } from "cloudevents";
 import { ValidationSchema } from "fastest-validator";
 
@@ -16,17 +16,38 @@ jest.mock("lightship", () => ({
     createLightship: jest.fn(() => mockLightshipType)
 }));
 
+const unbalancedTopic = "cpz:events:trades",
+    groupTopic = "cpz:events:importer",
+    groupName = "importer";
+const stringifiedUnbalancedEvent = JSON.stringify({
+        type: "com.cryptuoso.foo",
+        source: "events.cryptuoso.com"
+    }),
+    stringifiedGroupEvent = JSON.stringify({
+        type: groupTopic,
+        source: "events.cryptuoso.com"
+    });
 const mockXgroup = jest.fn(),
     mockXread = jest.fn(() => [
-        "cpz:events:importer",
         [
-            ["1293846129342-0", ["key1", "123", "key2", "foo", "key3", "bar"]],
-            ["1293846129345-0", ["key1", "456", "key2", "bar", "key3", "tar"]]
+            unbalancedTopic,
+            [
+                ["1250192301273-0", ["event", stringifiedUnbalancedEvent]],
+                ["1250192301280-0", ["event", stringifiedUnbalancedEvent]]
+            ]
         ]
     ]),
-    mockXreadGroup = jest.fn(),
-    mockXpending = jest.fn(),
-    mockXclaim = jest.fn(),
+    mockXreadGroup = jest.fn(() => [
+        [
+            groupTopic,
+            [
+                ["1250192301273-1", ["event", stringifiedGroupEvent]],
+                ["1250192301280-1", ["event", stringifiedGroupEvent]]
+            ]
+        ]
+    ]),
+    mockXpending = jest.fn(() => [["1256984818136-0", "consumer-123", "196415", "1"]]),
+    mockXclaim = jest.fn(() => [groupTopic, ["1256984818136-0", ["event", stringifiedGroupEvent]]]),
     mockXack = jest.fn(),
     mockXadd = jest.fn();
 
@@ -44,43 +65,35 @@ function RedisConstructor() {
 }
 jest.mock("ioredis", () => () => RedisConstructor());
 
-const mockCatalogAdd = jest.fn(),
-    mockCatalogHandler = jest.fn(),
-    mockCatalogValidate = jest.fn(() => true);
+const mockAdd = jest.fn(),
+    mockUnbalancedHandler = jest.fn(),
+    mockUnbalancedValidate = jest.fn(() => true),
+    mockGroupHandler = jest.fn(),
+    mockGroupValidate = jest.fn(() => true);
 jest.mock("./catalog", () => ({
     EventsCatalog: jest.fn(() => ({
         groups: [{ topic: "cpz:events:importer", group: "importer" }],
-        unbalancedTopics: ["cpz:events:trades"],
-        getGroupHandlers: () => ({
-            "cpz:events:importer": {
-                subs: {
-                    "com.cryptuoso.importer.start": {
-                        handler: mockCatalogHandler,
-                        validate: mockCatalogValidate
-                    }
-                }
+        unbalancedTopics: [unbalancedTopic],
+        getGroupHandlers: () => [
+            {
+                handler: mockGroupHandler,
+                validate: mockGroupValidate,
+                passFullEvent: true
             }
-        }),
-        getUnbalancedHandlers: () => ({
-            "cpz:events:importer": {
-                subs: {
-                    "com.cryptuoso.importer.start": {
-                        handler: mockCatalogHandler,
-                        validate: mockCatalogValidate
-                    }
-                }
+        ],
+        getUnbalancedHandlers: () => [
+            {
+                handler: mockUnbalancedHandler,
+                validate: mockUnbalancedValidate,
+                passFullEvent: true
             }
-        }),
-        add: mockCatalogAdd
+        ],
+        add: mockAdd
     }))
 }));
 
 describe("Test 'Events' module", () => {
     describe("Unit tests", () => {
-        beforeEach(() => {
-            jest.clearAllMocks();
-        });
-
         const redisClient = Redis();
         const lightship = createLightship();
         const events = new Events(redisClient, lightship);
@@ -208,20 +221,74 @@ describe("Test 'Events' module", () => {
                     };
                     events.subscribe(evt);
 
-                    expect(mockCatalogAdd).toHaveBeenCalledWith(evt);
-                    expect(mockCatalogAdd).toHaveBeenCalledTimes(1);
+                    expect(mockAdd).toHaveBeenCalledWith(evt);
+                    expect(mockAdd).toHaveBeenCalledTimes(1);
                 });
             });
 
-            describe("Testing 'start' method", () => {
-                const topic = "cpz:events:importer",
-                    group = "importer";
-                it("Should call all redis read functions", () => {
+            describe("Testing 'start' and data processing methods", () => {
+                it("Should call xgroup and bind _recieve[...]Tick functions accordingly", () => {
+                    const isBound = (func: Function) => func.prototype === undefined;
                     events.start();
                     expect(mockXgroup).toHaveBeenCalledTimes(1);
-                    expect(mockXreadGroup).toHaveBeenCalledTimes(1);
-                    expect(mockXpending).toHaveBeenCalledTimes(1);
-                    expect(mockXread).toHaveBeenCalledTimes(1);
+                    expect(isBound(events._receiveMessagesTick)).toBeTruthy();
+                    expect(isBound(events._receiveGroupMessagesTick)).toBeTruthy();
+                    expect(isBound(events._receivePendingGroupMessagesTick)).toBeTruthy();
+                });
+
+                describe("Testing data processing methods", () => {
+                    afterEach(() => {
+                        jest.clearAllMocks();
+                    });
+                    describe("Testing '_receiveMessagesTick' method", () => {
+                        it("Should call xread and associated unbalanced handler", async () => {
+                            await events._receiveMessagesTick(unbalancedTopic);
+
+                            expect(mockXread).toHaveBeenCalledTimes(1);
+                            expect(mockUnbalancedHandler).toHaveBeenCalledTimes(2);
+                            expect(mockUnbalancedValidate).toHaveBeenCalledTimes(2);
+                        });
+                    });
+
+                    describe("Testing '_receiveGroupMessagesTick' method", () => {
+                        it("Shoult call xreadgroup, associated group handler, xack", async () => {
+                            await events._receiveGroupMessagesTick(groupTopic, groupName);
+
+                            expect(mockXreadGroup).toHaveBeenCalledTimes(1);
+                            expect(mockGroupHandler).toHaveBeenCalledTimes(2);
+                            expect(mockGroupValidate).toHaveBeenCalledTimes(2);
+                            expect(mockXack).toHaveBeenCalledTimes(2);
+                        });
+                    });
+
+                    describe("Testing '__receivePendingGroupMessagesTick' method", () => {
+                        it("Should call xpending, xclaim, associated group handler", async () => {
+                            await events._receivePendingGroupMessagesTick(groupTopic, groupName);
+
+                            expect(mockXpending).toHaveBeenCalledTimes(1);
+                            expect(mockXclaim).toHaveBeenCalledTimes(1);
+                            expect(mockGroupHandler).toHaveBeenCalledTimes(1);
+                            expect(mockGroupValidate).toHaveBeenCalledTimes(1);
+                        });
+                    });
+                });
+            });
+
+            describe("Testing 'emit' method", () => {
+                it("Should call xadd", async () => {
+                    interface CustomType {
+                        foo: string;
+                        bar: number;
+                    }
+                    const newEvent: NewEvent<CustomType> = {
+                        type: "some-random-event.foo",
+                        data: { foo: "foo", bar: 4 },
+                        subject: "lul"
+                    };
+
+                    await events.emit(newEvent);
+
+                    expect(mockXadd).toHaveBeenCalledTimes(1);
                 });
             });
         });
