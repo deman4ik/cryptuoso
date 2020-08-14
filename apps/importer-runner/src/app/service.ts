@@ -60,7 +60,7 @@ export default class ImporterRunnerService extends HTTPService {
     }
 
     async onStopService() {
-        await this.queues.importCandles.close();
+        await this.queues.importCandles?.close();
     }
 
     async startHTTPHandler(

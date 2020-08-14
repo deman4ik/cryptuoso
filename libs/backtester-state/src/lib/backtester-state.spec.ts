@@ -46,8 +46,6 @@ describe("Test 'Backtester' Class", () => {
                 finishedAt: null,
                 statistics: undefined,
                 equity: undefined,
-                robotState: undefined,
-                robotIndicators: undefined,
                 error: null
             });
         });
