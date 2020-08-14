@@ -9,7 +9,7 @@ import { StrategyCode } from "@cryptuoso/robot-state";
 import { IndicatorCode } from "@cryptuoso/robot-indicators";
 import { ValidTimeframe, Candle, DBCandle } from "@cryptuoso/market";
 import { sortAsc, sleep } from "@cryptuoso/helpers";
-import { createPool, pg } from "@cryptuoso/postgres";
+import { pg, pgUtil } from "@cryptuoso/postgres";
 
 export type BacktesterWorkerServiceConfig = BaseServiceConfig;
 
@@ -26,10 +26,7 @@ export default class BacktesterWorkerService extends BaseService {
                     unbalanced: true
                 }
             });*/
-            this.pgJs = createPool(process.env.PGCS, {
-                interceptors: this.db.util.interceptors,
-                preferNativeBindings: false
-            });
+            this.pgJs = pgUtil.createJSPool();
             this.addOnStopHandler(this.onStopService);
         } catch (err) {
             this.log.error("Error in BacktesterWorkerService constructor", err);
@@ -194,7 +191,7 @@ export default class BacktesterWorkerService extends BaseService {
     async test(): Promise<void> {
         try {
             await this.pgJs.stream(
-                this.db.sql`select * from candles1440 where exchange = 'binance_futures' and asset = 'BTC' limit 10`,
+                this.db.sql`select * from candles1440 where exchange = 'binance_futures' and asset = 'BTC' limit 2`,
                 async (stream) => {
                     await DataStream.from(stream, { maxParallel: 1 })
                         .map(async (data: { row: DBCandle }) => {
