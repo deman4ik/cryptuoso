@@ -83,6 +83,10 @@ async function doWork(redis: Redis.Redis) {
 describe("E2E test", () => {
     it("Should execute if connection is established", (done) => {
         const redis = new Redis({ port: 6379, host: "127.0.0.1" })
+            .on("error", (err) => {
+                console.log(err);
+                done();
+            })
             .on("end", () => {
                 console.log("Connection to redis could not be established, ending test...");
                 done();
