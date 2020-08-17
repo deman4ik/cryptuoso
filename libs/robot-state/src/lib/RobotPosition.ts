@@ -7,6 +7,14 @@ export const enum PositionDirection {
     short = "short"
 }
 
+export interface PositionDataForStats {
+    id: string;
+    direction?: PositionDirection;
+    exitDate?: string;
+    profit?: number;
+    barsHeld?: number;
+}
+
 export const enum RobotPositionStatus {
     new = "new",
     open = "open",

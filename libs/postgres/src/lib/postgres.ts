@@ -9,6 +9,10 @@ const interceptors = [
 ];
 
 const pg = createPool(process.env.PGCS, {
+    maximumPoolSize: 60,
+    connectionTimeout: 60e3,
+    statementTimeout: 60e3,
+    preferNativeBindings: false,
     interceptors
 });
 
