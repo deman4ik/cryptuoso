@@ -8,19 +8,10 @@ const service = new Service();
 
 console.log("Starting", process.env.PGCS);
 
-async function ByAll(count: number = 10) {
+async function startSeveralFunctions(func: { (): Promise<any> }, count: number = 10) {
     const argArr = [];
-    for(let i=0; i<count; ++i)
-        argArr.push(service.tryGetAll());
-    const results = await Promise.all(argArr);
-}
-
-async function ByStreams(count: number = 10) {
-    const argArr = [];
-    for(let i=0; i<count; ++i)
-        argArr.push(service.tryGetStream());
-    const results = await Promise.all(argArr);
-    console.log(service.streamsConnectionsCount);
+    for (let i = 0; i < count; ++i) argArr.push(func());
+    return await Promise.all(argArr);
 }
 
 async function start() {
@@ -34,18 +25,20 @@ async function start() {
         process.exit(1);
     }
 
-    const count = 1;
-    let startTime = Date.now();
-    
-    /* await ByAll(count);
-    console.log(count, " All times: ", Date.now() - startTime);
-    
+    const count = 10;
+    const robotId = "51c90607-6d38-4b7c-81c9-d349886e80b0";
+    let startTime;
+
     startTime = Date.now();
+    await startSeveralFunctions(async () => await service.calcRobotBySingleQuery(robotId), count);
+    console.log("All time: ", Date.now() - startTime);
 
-    await ByStreams(count);
-    console.log(count, " Streams times: ", Date.now() - startTime);  */
+    startTime = Date.now();
+    await startSeveralFunctions(async () => await service.calcRobotByChunks(robotId), count);
+    console.log("Chunks time: ", Date.now() - startTime);
 
-    await service.calcRobot('51c90607-6d38-4b7c-81c9-d349886e80b0');
-    console.log(count, " All times: ", Date.now() - startTime);
+    startTime = Date.now();
+    await startSeveralFunctions(async () => await service.calcRobotByStream(robotId), count);
+    console.log("Stream time: ", Date.now() - startTime);
 }
 start();

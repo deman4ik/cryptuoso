@@ -1,65 +1,73 @@
 import { DataStream } from "scramjet";
-import os from "os";
-import { spawn, Pool, Worker as ThreadsWorker } from "threads";
+/* import os from "os";
+import { spawn, Pool, Worker as ThreadsWorker } from "threads"; */
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
-import { RobotPositionState, PositionDataForStats } from "@cryptuoso/robot-state";
+//import { RobotPositionState, PositionDataForStats } from "@cryptuoso/robot-state";
 import { round } from "@cryptuoso/helpers";
-import { calcStatistics } from "./statsWorker";
+//import { calcStatistics } from "./statsWorker";
+import { sql, pgUtil, pg } from "@cryptuoso/postgres";
 
-export default class Service extends BaseService {
-    streamsConnectionsCount: number = 0;
-    connectionsCount: number = 0;
-    cpus: number;
-    pool: Pool<any>;
+import { calcStatisticsCumulatively, CommonStats, PositionDataForStats } from "@cryptuoso/trade-statistics";
+
+export default class StatisticCalcService extends BaseService {
+    /* cpus: number;
+    pool: Pool<any>; */
+    pgJS: typeof pg;
 
     constructor(config?: BaseServiceConfig) {
         super(config);
-        this.cpus = os.cpus().length;
-        //this.addOnStartHandler(this.onStartService);
+        try {
+            this.pgJS = pgUtil.createJSPool();
+            /* this.cpus = os.cpus().length;
+            this.addOnStartHandler(this._onStartService.bind(this)); */
+        } catch (err) {
+            this.log.error("Error in StatisticCalcService constructor", err);
+        }
     }
 
-    async onStartService(): Promise<void> {
-        /* this.pool = Pool(() => spawn<StatisticUtils>(new ThreadsWorker("./statsWorker")), {
+    /* async _onStartService(): Promise<void> {
+        this.pool = Pool(() => spawn<StatisticUtils>(new ThreadsWorker("./statsWorker")), {
             concurrency: this.cpus,
             name: "statistic-utils"
-        }); */
-    }
+        });
+    } */
 
-    async calcStatistics(positions: PositionDataForStats[]) {
+    async calcStatistics(previousPositionsStatistics: CommonStats, positions: PositionDataForStats[]) {
         /* return this.pool.queue(async (utils: StatisticUtils) =>
             utils.calcStatistics(positions)
         ); */
-        return await calcStatistics(positions);
-    }
-
-    async calcRobot(robotId: string) {
-        const positions: RobotPositionState[] = await this.db.pg.any(this.db.sql`
-                SELECT p.*
-                FROM robot_positions p,
-                    robots r
-                WHERE p.robot_id = r.id
-                    AND p.status = 'closed'
-                    AND r.id = ${robotId}
-                ORDER BY p.exit_date;
-        `);
-        
-        /* AND p.exit_date >= r.updated_at */
-
-        //console.warn(positions);
-
-        const { statistics, equity } = await this.calcStatistics(
+        return await calcStatisticsCumulatively(
+            previousPositionsStatistics,
+            // from cpz_platform
             positions.map((pos) => ({
-            ...pos,
-            profit:
-                pos.fee && +pos.fee > 0
-                ? +round(pos.profit - pos.profit * pos.fee, 6)
-                : pos.profit
+                ...pos,
+                profit: pos.fee && +pos.fee > 0 ? +round(pos.profit - pos.profit * pos.fee, 6) : pos.profit
             }))
         );
+    }
 
-        console.log(statistics, equity);
+    async calcRobotBySingleQuery(robotId: string) {
+        const prevRobotStats: CommonStats = await pg.maybeOne(sql`
+            SELECT statistics, equity
+            FROM robots
+            WHERE id = ${robotId};
+        `);
 
-        await this.db.pg.any(this.db.sql`
+        if (!prevRobotStats) throw new Error("Robot with this id doesn't exists");
+
+        const positions: PositionDataForStats[] = await this.db.pg.any(sql`
+                SELECT *
+                FROM robot_positions
+                WHERE robot_id = ${robotId}
+                    AND status = 'closed'
+                ORDER BY exit_date;
+        `);
+
+        //AND exit_date >= r.updated_at
+
+        const { statistics, equity } = await this.calcStatistics(new CommonStats(null, null), positions);
+
+        await this.db.pg.any(sql`
             UPDATE robots
             SET statistics = ${this.db.sql.json(statistics)},
                 equity = ${this.db.sql.json(equity)}
@@ -67,43 +75,82 @@ export default class Service extends BaseService {
         `);
     }
 
-    async tryGetStream() {
-        const id = ++this.streamsConnectionsCount;
-        await this.db.pg.stream(
-            this.db.sql`SELECT * FROM robots LIMIT 5;`,
-            (stream) => {
-                //console.log(id, " Start stream");
-                let cnt = 0;
-                stream.on('data', (datum: {row:any}) => {
-                    ++cnt;
-                    console.log(datum.row);
-                });
-                stream.on("end", () => {
-                    --this.streamsConnectionsCount;
-                    //console.log("End ", cnt);
-                });
-            }
-        ).catch(e => {
-            console.log(e);
-        });
+    async calcRobotByChunks(robotId: string, partSize: number = 500) {
+        const pg = this.db.pg;
+        const prevRobotStats: CommonStats = await pg.maybeOne(sql`
+            SELECT statistics, equity
+            FROM robots
+            WHERE id = ${robotId};
+        `);
 
-        //console.log(id, " Await ends");
+        if (!prevRobotStats) throw new Error("Robot with this id doesn't exists");
+
+        await DataStream.from(async function* () {
+            let partNum = 0;
+
+            while (true) {
+                const part: PositionDataForStats[] = await pg.any(sql`
+                        SELECT *
+                        FROM robot_positions
+                        WHERE robot_id = ${robotId}
+                            AND status = 'closed'
+                        ORDER BY exit_date
+                        LIMIT ${partSize} OFFSET ${partNum * partSize};
+                    `);
+
+                ++partNum;
+                yield part;
+
+                if (part.length != partSize) break;
+            }
+        })
+            .reduce(async (prevStats: CommonStats, chunk: PositionDataForStats[]) => {
+                return await this.calcStatistics(prevStats, chunk);
+            }, new CommonStats(null, null))
+            .then(async (res) => {
+                const { statistics, equity } = res;
+                await this.db.pg.any(sql`
+                    UPDATE robots
+                    SET statistics = ${this.db.sql.json(statistics)},
+                        equity = ${this.db.sql.json(equity)}
+                    WHERE id = ${robotId};
+                `);
+            });
     }
 
-    async tryGetAll() {
-        const id = ++this.connectionsCount;
-        console.log(id, " Start all");
-        const result = await this.db.pg.any(
-            this.db.sql`SELECT * FROM robot_positions LIMIT 5;`
-        ).catch(e => {
-            console.log(e);
-            return [];
-        });        
-        --this.connectionsCount;
+    async calcRobotByStream(robotId: string) {
+        const prevRobotStats: CommonStats = await pg.maybeOne(sql`
+            SELECT statistics, equity
+            FROM robots
+            WHERE id = ${robotId};
+        `);
 
-        console.log(id, " All ends");
-        console.log(result);
+        if (!prevRobotStats) throw new Error("Robot with this id doesn't exists");
 
-        return result;
+        await this.pgJS.stream(
+            sql`
+                SELECT *
+                FROM robot_positions
+                WHERE robot_id = ${robotId}
+                    AND status = 'closed'
+                ORDER BY exit_date;
+            `,
+            async (stream) => {
+                await DataStream.from(stream)
+                    .map((datum) => datum.row)
+                    .reduce(async (prevStats: CommonStats, pos: PositionDataForStats) => {
+                        return await this.calcStatistics(prevStats, [pos]);
+                    }, new CommonStats(null, null))
+                    .then(async (res) => {
+                        const { statistics, equity } = res;
+                        await this.db.pg.any(sql`
+                            UPDATE robots
+                            SET statistics = ${this.db.sql.json(statistics)},
+                                equity = ${this.db.sql.json(equity)}
+                            WHERE id = ${robotId};
+                        `);
+                    });
+            }
+        );
     }
 }

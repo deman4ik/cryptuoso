@@ -27,6 +27,12 @@ export function roundRobotStatVals(vals: RobotNumberValue, decimals = 0): RobotN
     return result;
 }
 
+function divide(a: number, b: number) {
+    if(a === 0) return 0;
+    if (!a || !b || b === 0) return null;
+    return a / b;
+}
+
 // ignores integers
 function roundStatisticsValues(statistics: RobotStats): RobotStats {
     const result = { ...statistics };
@@ -486,9 +492,9 @@ export default class StatisticsCalculator {
         validateArguments(profitStat.all, profitStat[this.dir], lossStat.all, lossStat[this.dir]);
 
         return new RobotNumberValue(
-            Math.abs(profitStat.all / lossStat.all),
-            Math.abs(profitStat.long / lossStat.long),
-            Math.abs(profitStat.short / lossStat.short)
+            Math.abs(divide(profitStat.all, lossStat.all)),
+            Math.abs(divide(profitStat.long, lossStat.long)),
+            Math.abs(divide(profitStat.short, lossStat.short))
         );
     }
 
@@ -530,7 +536,7 @@ export default class StatisticsCalculator {
         netProfit: RobotNumberValue,
         localMax: RobotNumberValue
     ): RobotNumberValue {
-        validateArguments(netProfit.all, netProfit[this.dir], localMax);
+        validateArguments(netProfit.all, netProfit[this.dir], localMax.all, localMax[this.dir]);
 
         const currentDrawdownAll = netProfit.all - localMax.all;
         const currentDrawdownDir = netProfit[this.dir] - localMax[this.dir];
@@ -570,12 +576,12 @@ export default class StatisticsCalculator {
         netProfit: RobotNumberValue,
         maxDrawdown: RobotNumberValue
     ): RobotNumberValue {
-        validateArguments(netProfit, maxDrawdown);
+        validateArguments(netProfit.all, netProfit[this.dir], maxDrawdown.all, maxDrawdown[this.dir]);
 
         const newFactor = { ...prevFactor };
 
-        newFactor.all = (netProfit.all / maxDrawdown.all) * -1;
-        newFactor[this.dir] = (netProfit[this.dir] / maxDrawdown[this.dir]) * -1;
+        newFactor.all = divide(netProfit.all, maxDrawdown.all) * -1;
+        newFactor[this.dir] = divide(netProfit[this.dir], maxDrawdown[this.dir]) * -1;
 
         return newFactor;
     }
@@ -601,11 +607,7 @@ export default class StatisticsCalculator {
     ): RobotNumberValue {
         validateArguments(
             profitFactor.all,
-            profitFactor.long,
-            profitFactor.short,
             payoffRatio.all,
-            payoffRatio.long,
-            payoffRatio.short,
             recoveryFactor.all
         );
 
@@ -616,9 +618,9 @@ export default class StatisticsCalculator {
             throw new Error("Sum of weights must be equal to 1");
 
         return new RobotNumberValue(
-            (profitFactorWeight * (profitFactor.all + profitFactor.long + profitFactor.short)) / 3 +
-                (payoffRatioWeight * (payoffRatio.all + payoffRatio.long + payoffRatio.short)) / 3 +
-                recoveryFactorWeight * recoveryFactor.all // check calculateRecoveryFactor method
+            profitFactorWeight * profitFactor.all +
+            payoffRatioWeight * payoffRatio.all +
+            recoveryFactorWeight * recoveryFactor.all
         );
     }
     //#endregion
