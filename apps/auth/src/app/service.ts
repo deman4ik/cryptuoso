@@ -327,9 +327,9 @@ export default class AuthService extends HTTPService {
     private async _dbGetUserTg(params: { telegramId: number }): Promise<User> {
         const { telegramId } = params;
 
-        return await this.db.pg.maybeOne(this.db.sql`
+        return await this.db.pg.maybeOne(sql`
             SELECT * FROM users
-            WHERE telegramId = ${telegramId};
+            WHERE telegram_id = ${telegramId};
         `);
     }
 
@@ -338,7 +338,7 @@ export default class AuthService extends HTTPService {
 
         return await this.db.pg.maybeOne(sql`
             SELECT * FROM users
-            WHERE refreshToken = ${refreshToken} AND refreshTokenExpireAt > ${dayjs.utc().toISOString()};
+            WHERE refresh_token = ${refreshToken} AND refresh_token_expire_at > ${dayjs.utc().toISOString()};
         `);
     }
 
@@ -351,7 +351,7 @@ export default class AuthService extends HTTPService {
 
         await this.db.pg.query(sql`
             UPDATE users
-            SET refreshToken = ${refreshToken}, refreshTokenExpireAt = ${refreshTokenExpireAt}
+            SET refresh_token = ${refreshToken}, refresh_token_expire_at = ${refreshTokenExpireAt}
             WHERE id = ${userId}
         `);
     }
@@ -359,7 +359,7 @@ export default class AuthService extends HTTPService {
     private async _dbRegisterUserTg(newUser: User): Promise<any> {
         await this.db.pg.query(sql`
             INSERT INTO users
-                (id, telegramId, telegramUsername, name, status, roles, settings)
+                (id, telegram_id, telegram_username, name, status, roles, settings)
                 VALUES(
                     ${newUser.id},
                     ${newUser.telegramId},
@@ -375,7 +375,7 @@ export default class AuthService extends HTTPService {
     private async _dbRegisterUser(newUser: User): Promise<any> {
         await this.db.pg.query(sql`
             INSERT INTO users
-                (id, name, email, status, passwordHash, secretCode, roles, settings)
+                (id, name, email, status, password_hash, secret_code, roles, settings)
                 VALUES(
                     ${newUser.id},
                     ${newUser.name},
@@ -398,11 +398,11 @@ export default class AuthService extends HTTPService {
 
         await await this.db.pg.query(sql`
             UPDATE users
-            SET secretCode = ${null},
-                secretCodeExpireAt = ${null},
+            SET secret_сode = ${null},
+                secret_сode_expire_at = ${null},
                 status = ${UserStatus.enabled},
-                refreshToken = ${refreshToken},
-                refreshTokenExpireAt = ${refreshTokenExpireAt}
+                refresh_token = ${refreshToken},
+                refresh_token_expire_at = ${refreshTokenExpireAt}
             WHERE id = ${userId};
         `);
     }
@@ -416,7 +416,7 @@ export default class AuthService extends HTTPService {
 
         await this.db.pg.query(sql`
             UPDATE users
-            SET secretCode = ${secretCode}, secretCodeExpireAt = ${secretCodeExpireAt}
+            SET secret_code = ${secretCode}, secret_code_expire_at = ${secretCodeExpireAt}
             WHERE id = ${userId}
         `);
     }
@@ -431,9 +431,9 @@ export default class AuthService extends HTTPService {
 
         await this.db.pg.query(sql`
             UPDATE users
-            SET emailNew = ${emailNew},
-                secretCode = ${secretCode},
-                secretCodeExpireAt = ${secretCodeExpireAt}
+            SET email_new = ${emailNew},
+                secret_code = ${secretCode},
+                secret_code_expire_at = ${secretCodeExpireAt}
             WHERE id = ${userId}
         `);
     }
@@ -462,11 +462,11 @@ export default class AuthService extends HTTPService {
         await this.db.pg.query(sql`
             UPDATE users
             SET email = ${email},
-                emailNew = ${emailNew},
-                secretCode = ${secretCode},
-                secretCodeExpireAt = ${secretCodeExpireAt}
-                refreshToken = ${refreshToken},
-                refreshTokenExpireAt = ${refreshTokenExpireAt},
+                email_new = ${emailNew},
+                secret_code = ${secretCode},
+                secret_code_expire_at = ${secretCodeExpireAt}
+                refresh_token = ${refreshToken},
+                refresh_token_expire_at = ${refreshTokenExpireAt},
                 status = ${status}
             WHERE id = ${userId}
         `);
@@ -491,11 +491,11 @@ export default class AuthService extends HTTPService {
 
         await this.db.pg.query(sql`
             UPDATE users
-            SET passwordHash = ${passwordHash},
-                secretCode = ${newSecretCode},
-                secretCodeExpireAt = ${newSecretCodeExpireAt},
-                refreshToken = ${refreshToken},
-                refreshTokenExpireAt = ${refreshTokenExpireAt}
+            SET password_hash = ${passwordHash},
+                secret_code = ${newSecretCode},
+                secret_code_expire_at = ${newSecretCodeExpireAt},
+                refresh_token = ${refreshToken},
+                refresh_token_expireAt = ${refreshTokenExpireAt}
             WHERE id = ${userId};
         `);
     }
