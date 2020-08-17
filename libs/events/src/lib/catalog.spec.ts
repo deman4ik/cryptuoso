@@ -163,4 +163,113 @@ describe("Test 'EventsCatalog'", () => {
             expect(catalog.getUnbalancedHandlers("cpz:events:importer", "com.cryptuoso.importer.start").length).toBe(1);
         });
     });
+
+    describe("Test '_match'", () => {
+        it("Should correctly compare two strings", () => {
+            expect(catalog._match("1.2.3", "1.2.3")).toBe(true);
+            expect(catalog._match("a.b.c.d", "a.b.c.d")).toBe(true);
+            expect(catalog._match("aa.bb.cc", "aa.bb.cc")).toBe(true);
+
+            expect(catalog._match("a1c", "a?c")).toBe(true);
+            expect(catalog._match("a2c", "a?c")).toBe(true);
+            expect(catalog._match("a3c", "a?c")).toBe(true);
+            expect(catalog._match("ac", "a?c")).toBe(false);
+
+            expect(catalog._match("aa.1b.c", "aa.?b.*")).toBe(true);
+            expect(catalog._match("aa.2b.cc", "aa.?b.*")).toBe(true);
+            expect(catalog._match("aa.3b.ccc", "aa.?b.*")).toBe(true);
+            expect(catalog._match("aa.4b.cccc", "aa.?b.*")).toBe(true);
+            expect(catalog._match("aa.5b.ccccc", "aa.?b.*")).toBe(true);
+            expect(catalog._match("aa.5b.ccccc.d", "aa.?b.*")).toBe(false);
+
+            expect(catalog._match("aa.bb.cc", "aa.bb.*")).toBe(true);
+            expect(catalog._match("aa.bb.cc", "*.bb.*")).toBe(true);
+            expect(catalog._match("bb.cc", "bb.*")).toBe(true);
+            expect(catalog._match("dd", "*")).toBe(true);
+
+            expect(catalog._match("abcd", "*d")).toBe(true);
+            expect(catalog._match("abcd", "*d*")).toBe(true);
+            expect(catalog._match("abcd", "*a*")).toBe(true);
+            expect(catalog._match("abcd", "a*")).toBe(true);
+
+            // --- DOUBLE STARS CASES ---
+
+            expect(catalog._match("aa.bb.cc", "aa.*")).toBe(false);
+            expect(catalog._match("aa.bb.cc", "a*")).toBe(false);
+            expect(catalog._match("bb.cc", "*")).toBe(false);
+
+            expect(catalog._match("aa.bb.cc.dd", "*.bb.*")).toBe(false);
+            expect(catalog._match("aa.bb.cc.dd", "*.cc.*")).toBe(false);
+
+            expect(catalog._match("aa.bb.cc.dd", "*bb*")).toBe(false);
+            expect(catalog._match("aa.bb.cc.dd", "*cc*")).toBe(false);
+
+            expect(catalog._match("aa.bb.cc.dd", "*b*")).toBe(false);
+            expect(catalog._match("aa.bb.cc.dd", "*c*")).toBe(false);
+
+            expect(catalog._match("aa.bb.cc.dd", "**.bb.**")).toBe(true);
+            expect(catalog._match("aa.bb.cc.dd", "**.cc.**")).toBe(true);
+
+            expect(catalog._match("aa.bb.cc.dd", "**aa**")).toBe(true);
+            expect(catalog._match("aa.bb.cc.dd", "**bb**")).toBe(true);
+            expect(catalog._match("aa.bb.cc.dd", "**cc**")).toBe(true);
+            expect(catalog._match("aa.bb.cc.dd", "**dd**")).toBe(true);
+
+            expect(catalog._match("aa.bb.cc.dd", "**b**")).toBe(true);
+            expect(catalog._match("aa.bb.cc.dd", "**c**")).toBe(true);
+
+            expect(catalog._match("aa.bb.cc", "aa.**")).toBe(true);
+            expect(catalog._match("aa.bb.cc", "**.cc")).toBe(true);
+
+            expect(catalog._match("bb.cc", "**")).toBe(true);
+            expect(catalog._match("b", "**")).toBe(true);
+        });
+    });
+
+    describe("Test getting unbalanced handlers for pattern event types", () => {
+        it("Should return expected event handlers", () => {
+            catalog.add({
+                "importer.start": {
+                    unbalanced: true,
+                    handler
+                },
+                "importer.finished": {
+                    unbalanced: true,
+                    handler
+                },
+                "importer.stop": {
+                    unbalanced: true,
+                    handler
+                }
+            });
+
+            expect(catalog.getUnbalancedHandlers("cpz:events:importer", "com?cryptuoso?importer?*").length).toBe(3);
+            expect(catalog.getUnbalancedHandlers("cpz:events:importer", "**importer**").length).toBe(3);
+            expect(catalog.getUnbalancedHandlers("cpz:events:importer", "**.importer.s*").length).toBe(2);
+            expect(catalog.getUnbalancedHandlers("cpz:events:importer", "**finished").length).toBe(1);
+        });
+    });
+
+    describe("Test getting group handlers for pattern event types", () => {
+        it("Should return expected event handlers", () => {
+            catalog.add({
+                "importer.start": {
+                    handler
+                },
+                "importer.finished": {
+                    handler
+                },
+                "importer.stop": {
+                    handler
+                }
+            });
+
+            expect(catalog.getGroupHandlers("cpz:events:importer", "importer", "com?cryptuoso?importer?*").length).toBe(
+                3
+            );
+            expect(catalog.getGroupHandlers("cpz:events:importer", "importer", "**importer**").length).toBe(3);
+            expect(catalog.getGroupHandlers("cpz:events:importer", "importer", "**.importer.s*").length).toBe(2);
+            expect(catalog.getGroupHandlers("cpz:events:importer", "importer", "**finished").length).toBe(1);
+        });
+    });
 });

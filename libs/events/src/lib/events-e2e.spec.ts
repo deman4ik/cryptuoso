@@ -2,10 +2,18 @@ import Redis from "ioredis";
 import { createLightship } from "lightship";
 import { Events } from "./events";
 import { sleep } from "@cryptuoso/helpers";
+import { ValidationSchema } from "fastest-validator";
+
+const commonSchema: ValidationSchema = {
+    message: "string"
+};
+
 const serviceJobHandler = jest.fn(async (data) => {
         console.log(data.info);
-        if (data.numbers) {
+        try {
             console.log("Sum of numbers is " + data.numbers.reduce((acc: number, n: number) => acc + n, 0));
+        } catch (err) {
+            console.log(err);
         }
     }),
     randomHandler = jest.fn(async ({ foo, bar }) => {
@@ -27,7 +35,7 @@ async function doWork(redis: Redis.Redis) {
     await events.emit({
         type: "service-job",
         data: {
-            info: "This job event is supposed to be pending",
+            info: "This event is supposed to be pending",
             numbers: [1, 2, 3]
         }
     });
@@ -46,7 +54,8 @@ async function doWork(redis: Redis.Redis) {
         },
         common: {
             unbalanced: true,
-            handler: commonHandler
+            handler: commonHandler,
+            schema: commonSchema
         }
     });
 
@@ -79,26 +88,41 @@ async function doWork(redis: Redis.Redis) {
         type: "common",
         data: { message: "This is a very cool notification" }
     });
+
+    // events with invalid data
+    await events.emit({
+        type: "service-job",
+        data: {
+            info: "This is a faulty job event, error is expected",
+            foo: {}
+        }
+    });
+    await events.emit({
+        type: "common",
+        data: { msg: "This notification will not be seen due to validation error :(" }
+    });
 }
 describe("E2E test", () => {
     it("Should execute if connection is established", (done) => {
-        const redis = new Redis({ port: 6379, host: "127.0.0.1" })
-            .on("error", (err) => {
-                console.log(err);
-                done();
-            })
-            .on("end", () => {
-                console.log("Connection to redis could not be established, ending test...");
-                done();
-            })
-            .on("ready", async () => {
-                await doWork(redis).then(async () => {
-                    await sleep(100);
-                    expect(serviceJobHandler).toHaveBeenCalledTimes(3);
-                    expect(randomHandler).toHaveBeenCalledTimes(1);
-                    expect(commonHandler).toHaveBeenCalledTimes(1);
+        expect(() => {
+            const redis = new Redis({ port: 6379, host: "127.0.0.1" })
+                .on("error", (err) => {
+                    console.log("Connection to redis could not be established.\n" + err);
                     done();
+                })
+                .on("end", () => {
+                    console.log("Error connecting to redis instance.");
+                    done();
+                })
+                .on("ready", async () => {
+                    await doWork(redis).then(async () => {
+                        await sleep(100);
+                        expect(serviceJobHandler).toHaveBeenCalledTimes(4);
+                        expect(randomHandler).toHaveBeenCalledTimes(1);
+                        expect(commonHandler).toHaveBeenCalledTimes(1);
+                        done();
+                    });
                 });
-            });
+        }).not.toThrowError();
     });
 });

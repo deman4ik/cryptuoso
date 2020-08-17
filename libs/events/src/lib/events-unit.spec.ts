@@ -1,6 +1,7 @@
 import Redis from "ioredis";
 import { createLightship } from "lightship";
 import { Events, NewEvent } from "./events";
+import { BASE_REDIS_PREFIX } from "./catalog";
 import { CloudEvent as Event } from "cloudevents";
 import { ValidationSchema } from "fastest-validator";
 
@@ -273,20 +274,38 @@ describe("Unit tests", () => {
         });
 
         describe("Testing 'emit' method", () => {
-            it("Should call xadd", async () => {
-                interface CustomType {
-                    foo: string;
-                    bar: number;
-                }
-                const newEvent: NewEvent<CustomType> = {
-                    type: "some-random-event.foo",
-                    data: { foo: "foo", bar: 4 },
-                    subject: "lul"
-                };
+            interface CustomType {
+                foo: string;
+                bar: number;
+            }
+            const eventName = "some-random-event",
+                eventType = eventName + ".foo";
+            const newEvent: NewEvent<CustomType> = {
+                type: eventType,
+                data: { foo: "foo", bar: 4 },
+                subject: "lul"
+            };
+            it("Should call xadd with expected arguments", async () => {
+                const expectedTopic = BASE_REDIS_PREFIX + eventName;
 
                 await events.emit(newEvent);
 
                 expect(mockXadd).toHaveBeenCalledTimes(1);
+
+                const argumentCount = mockXadd.mock.calls[0].length;
+                expect(argumentCount).toBe(10);
+
+                // xadd syntax: xadd(stream, id, ...args)
+                expect(mockXadd.mock.calls[0][0]).toStrictEqual(expectedTopic);
+
+                // expected args: ["id", "...", "type", "...", "timestamp", "...", "event", "..."]
+                const eventArgs = mockXadd.mock.calls[0].slice(2, argumentCount);
+
+                const eventObj = JSON.parse(eventArgs[7]);
+
+                expect(eventObj.type).toBe("com.cryptuoso." + newEvent.type);
+                expect(eventObj.subject).toBe(newEvent.subject);
+                expect(eventObj.data).toMatchObject(newEvent.data);
             });
         });
     });
