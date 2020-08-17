@@ -4,9 +4,12 @@
     "parserOptions": {
         "ecmaVersion": 2020,
         "sourceType": "module",
-        "project": "./tsconfig.json"
+        "project": "./tsconfig.base.json"
     },
-    "env": { "node": true, "jest": true },
+    "env": {
+        "node": true,
+        "jest": true
+    },
     "ignorePatterns": ["**/*"],
     "plugins": ["@typescript-eslint", "@nrwl/nx"],
     "extends": [
@@ -18,15 +21,23 @@
         "plugin:prettier/recommended"
     ],
     "rules": {
-        "prettier/prettier": ["error", {
-            "endOfLine":"auto"
-        }],
+        "prettier/prettier": [
+            "error",
+            {
+                "endOfLine": "auto"
+            }
+        ],
         "@nrwl/nx/enforce-module-boundaries": [
             "error",
             {
                 "enforceBuildableLibDependency": true,
                 "allow": [],
-                "depConstraints": [{ "sourceTag": "*", "onlyDependOnLibsWithTags": ["*"] }]
+                "depConstraints": [
+                    {
+                        "sourceTag": "*",
+                        "onlyDependOnLibsWithTags": ["*"]
+                    }
+                ]
             }
         ],
         "@typescript-eslint/no-explicit-any": "off",

@@ -6,5 +6,6 @@ module.exports = {
     },
     moduleFileExtensions: ["ts", "tsx", "js", "jsx", "html"],
     coverageDirectory: "../../coverage/libs/trade-statistics",
-    verbose: true
+    verbose: true,
+    globals: { "ts-jest": { tsConfig: "<rootDir>/tsconfig.spec.json" } }
 };
