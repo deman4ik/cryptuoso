@@ -1,4 +1,4 @@
-import { createPool, sql } from "slonik";
+import { createPool, sql, ClientConfigurationInputType } from "slonik";
 import { createFieldNameTransformationInterceptor } from "slonik-interceptor-field-name-transformation";
 import { prepareUnnest } from "./helpers";
 
@@ -8,15 +8,21 @@ const interceptors = [
     })
 ];
 
-const pg = createPool(process.env.PGCS, {
-    maximumPoolSize: 60,
-    connectionTimeout: 60e3,
-    statementTimeout: 60e3,
-    preferNativeBindings: false,
+const config: ClientConfigurationInputType = {
+    connectionRetryLimit: 5,
+    connectionTimeout: 10000,
+    idleTimeout: 3000,
+    maximumPoolSize: 16,
     interceptors
-});
+};
+
+const pg = createPool(process.env.PGCS, config);
+
+const createJSPool = (pgConfig: ClientConfigurationInputType = {}) =>
+    createPool(process.env.PGCS, { ...config, preferNativeBindings: false, ...pgConfig });
 
 const pgUtil = {
+    createJSPool,
     prepareUnnest
 };
 
