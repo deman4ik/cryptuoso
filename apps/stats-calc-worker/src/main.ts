@@ -14,31 +14,70 @@ async function startSeveralFunctions(func: { (): Promise<any> }, count: number =
     return await Promise.all(argArr);
 }
 
+async function measureFunction(
+    name: string,
+    func: { (robotId: string, updateAll: boolean): Promise<any> },
+    count: number,
+    robotId: string,
+    updateAll: boolean
+) {
+    const startTime = Date.now();
+    try {
+        await startSeveralFunctions(async () => {
+            return await func(robotId, updateAll);
+        }, count);
+    } catch(err) {
+        console.log(`${name} error: ${err.message}`);
+    }
+    console.log(`${name}: \t time - ${Date.now() - startTime}, \t copies - ${count}`);
+}
+
+async function testService() {
+    const count = 7;
+    const updateAll = true;
+    const robotId = "51c90607-6d38-4b7c-81c9-d349886e80b0";
+
+    //console.log(await service.getRobot(robotId));
+
+    //await service.checkStreamOrder(robotId, updateAll);
+
+    //await service.streamAgain();
+
+    await measureFunction(
+        "Single",
+        service.calcRobotBySingleQuery.bind(service),
+        count, robotId, updateAll
+    );
+
+    await measureFunction(
+        "Chunks",
+        service.calcRobotByChunks.bind(service),
+        count, robotId, updateAll
+    );
+
+    await measureFunction(
+        "Chunks + c",
+        service.calcRobotByChunksWithConnection.bind(service),
+        count, robotId, updateAll
+    );
+
+    await measureFunction(
+        "Stream",
+        service.calcRobotByStream.bind(service),
+        count, robotId, updateAll
+    );
+}
+
 async function start() {
     try {
         await service.startService();
 
         console.log("Connected");
+
+        testService();
     } catch (error) {
-        console.log(error);
         log.error(error, `Failed to start service ${process.env.SERVICE}`);
         process.exit(1);
     }
-
-    const count = 10;
-    const robotId = "51c90607-6d38-4b7c-81c9-d349886e80b0";
-    let startTime;
-
-    startTime = Date.now();
-    await startSeveralFunctions(async () => await service.calcRobotBySingleQuery(robotId), count);
-    console.log("All time: ", Date.now() - startTime);
-
-    startTime = Date.now();
-    await startSeveralFunctions(async () => await service.calcRobotByChunks(robotId), count);
-    console.log("Chunks time: ", Date.now() - startTime);
-
-    startTime = Date.now();
-    await startSeveralFunctions(async () => await service.calcRobotByStream(robotId), count);
-    console.log("Stream time: ", Date.now() - startTime);
 }
 start();
