@@ -471,10 +471,10 @@ export class Events {
 
     async start() {
         try {
+            await this._createGroup("dead-letter", "dead-letter");
             await Promise.all(
                 this.#catalog.groups.map(async ({ topic, group }) => {
                     this.log.info(`Subscribing to "${topic}" group "${group}" events...`);
-                    await this._createGroup("dead-letter", "dead-letter");
                     await this._createGroup(topic, group);
                     await this._receiveGroupMessages(topic, group);
                     await this._receivePendingGroupMessages(topic, group);
