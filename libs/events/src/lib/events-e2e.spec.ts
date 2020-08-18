@@ -3,8 +3,8 @@ import { createLightship } from "lightship";
 import { Events } from "./events";
 import { sleep } from "@cryptuoso/helpers";
 import { ValidationSchema } from "fastest-validator";
-process.env.IDLE_SECONDS_PERMITTED = "0";
-jest.setTimeout(10000);
+
+jest.setTimeout(15000);
 const serviceSchema: ValidationSchema = {
     info: "string",
     numbers: { type: "array", items: "number" }
@@ -30,7 +30,7 @@ const firstServiceJobHandler = jest.fn(async (data) => {
 
 async function doWork(redis: Redis.Redis) {
     const lightship = createLightship();
-    const events = new Events(redis, lightship, 50);
+    const events = new Events(redis, lightship, { blockTimeout: 20, pendingRetryRate: -1, pendingMinIdleTime: 20 });
     // delete data in case there is any
     redis.flushall();
 
@@ -127,9 +127,9 @@ describe("E2E test", () => {
                 })
                 .on("ready", async () => {
                     await doWork(redis).then(async () => {
-                        await sleep(6000);
+                        await sleep(10000);
                         expect(firstServiceJobHandler).toHaveBeenCalledTimes(5);
-                        expect(secondServiceJobHandler).toHaveBeenCalledTimes(7); // 1 for each valid event + 1 for each faulty
+                        expect(secondServiceJobHandler).toHaveBeenCalledTimes(6);
                         expect(randomHandler).toHaveBeenCalledTimes(1);
                         expect(commonHandler).toHaveBeenCalledTimes(1);
                         done();

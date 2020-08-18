@@ -15,8 +15,15 @@ export interface NewEvent<T> {
     data: T;
     subject?: string;
 }
+export interface EventsConfig {
+    blockTimeout?: number;
+    pendingRetryRate?: number;
+    pendingMinIdleTime?: number;
+    pendingMaxRetries?: number;
+}
 
 const BLOCK_TIMEOUT = 60000;
+const PENDING_RETRY_RATE = 30;
 
 type StreamMsgVals = string[];
 type StreamMessage = [string, StreamMsgVals];
@@ -28,6 +35,9 @@ export class Events {
     #lightship: LightshipType;
     #consumerId: string;
     #blockTimeout: number;
+    #pendingRetryRate: number;
+    #pendingMinIdleTime: number;
+    #pendingMaxRetries: number;
     #state: {
         [topic: string]: {
             unbalanced?: {
@@ -51,14 +61,17 @@ export class Events {
             };
         };
     } = {};
-    constructor(redisClient: Redis, lightship: LightshipType, blockTimeout?: number) {
+    constructor(redisClient: Redis, lightship: LightshipType, config?: EventsConfig) {
         this.#log = logger;
         this.#redis = redisClient.duplicate();
         this.#lightship = lightship;
 
         this.#consumerId = uuid();
         this.#catalog = new EventsCatalog();
-        this.#blockTimeout = blockTimeout || BLOCK_TIMEOUT;
+        this.#blockTimeout = config?.blockTimeout || BLOCK_TIMEOUT;
+        this.#pendingMinIdleTime = config?.pendingMinIdleTime || BLOCK_TIMEOUT;
+        this.#pendingRetryRate = config?.pendingRetryRate || PENDING_RETRY_RATE;
+        this.#pendingMaxRetries = config?.pendingMaxRetries || 3;
     }
 
     get log() {
@@ -315,17 +328,15 @@ export class Events {
                     this.#state[`${topic}-${group}`].pending.count = 10;
                 }
 
-                for (const { msgId } of data.filter(({ idleSeconds, retries }) => {
-                    if (process.env.IDLE_SECONDS_PERMITTED)
-                        return idleSeconds >= parseInt(process.env.IDLE_SECONDS_PERMITTED);
-                    return idleSeconds > retries * 30;
-                })) {
+                for (const { msgId, retries } of data.filter(
+                    ({ idleSeconds, retries }) => idleSeconds > retries * this.#pendingRetryRate
+                )) {
                     try {
                         const result = await this.#redis.xclaim(
                             topic,
                             group,
                             this.#consumerId,
-                            this.#blockTimeout,
+                            this.#pendingMinIdleTime,
                             msgId
                         );
                         if (result) {
@@ -342,22 +353,40 @@ export class Events {
                                     event.type
                                 );
                                 for (const { handler, validate, passFullEvent } of handlers) {
-                                    const validationErrors = await validate(event.toJSON());
-                                    const data = passFullEvent ? event : event.data;
-                                    if (validationErrors === true) await handler(data);
-                                    else
-                                        throw new BaseError(
-                                            validationErrors.map((e) => e.message).join(" "),
-                                            { validationErrors },
-                                            "VALIDATION"
-                                        );
+                                    try {
+                                        const validationErrors = await validate(event.toJSON());
+                                        const data = passFullEvent ? event : event.data;
+                                        if (validationErrors === true) await handler(data);
+                                        else
+                                            throw new BaseError(
+                                                validationErrors.map((e) => e.message).join(" "),
+                                                { validationErrors },
+                                                "VALIDATION"
+                                            );
+                                    } catch (error) {
+                                        this.#log.error(error);
+                                        continue;
+                                    }
                                 }
                                 await this.#redis.xack(topic, group, msgId);
                                 this.log.debug(
                                     `Handled pending "${topic}" group "${group}" event #${msgId} (${event.id})`
                                 );
                             } catch (error) {
-                                //TODO: deadletter queue + endpoints to handle them
+                                if (retries >= this.#pendingMaxRetries) {
+                                    const letterData = {
+                                        topic,
+                                        group,
+                                        type: event.type,
+                                        data
+                                    };
+                                    await this.emit({
+                                        type: `dead-letter.${letterData.type}`,
+                                        data: letterData
+                                    }).then(async () => {
+                                        await this.#redis.xack(topic, group, msgId);
+                                    });
+                                }
                                 this.log.error(
                                     error,
                                     `Failed to handle pending "${topic}" group "${group}" event #${msgId} (${event.id})`
@@ -445,6 +474,7 @@ export class Events {
             await Promise.all(
                 this.#catalog.groups.map(async ({ topic, group }) => {
                     this.log.info(`Subscribing to "${topic}" group "${group}" events...`);
+                    await this._createGroup("dead-letter", "dead-letter");
                     await this._createGroup(topic, group);
                     await this._receiveGroupMessages(topic, group);
                     await this._receivePendingGroupMessages(topic, group);

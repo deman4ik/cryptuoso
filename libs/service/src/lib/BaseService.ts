@@ -2,11 +2,11 @@ import { createLightship, LightshipType } from "lightship";
 import Redis from "ioredis";
 import logger, { Logger } from "@cryptuoso/logger";
 import { sql, pg, pgUtil } from "@cryptuoso/postgres";
-import { Events } from "@cryptuoso/events";
+import { Events, EventsConfig } from "@cryptuoso/events";
 
 export interface BaseServiceConfig {
     name?: string;
-    blockTimeout?: number;
+    eventsConfig?: EventsConfig;
 }
 
 export class BaseService {
@@ -17,7 +17,6 @@ export class BaseService {
     #onServiceStop: { (): Promise<void> }[] = [];
     #redisConnection: Redis.Redis;
     #db: { sql: typeof sql; pg: typeof pg; util: typeof pgUtil };
-    #blockTimeout: number;
     #events: Events;
 
     constructor(config?: BaseServiceConfig) {
@@ -32,7 +31,6 @@ export class BaseService {
             });
             this.#lightship.registerShutdownHandler(this.#stopService.bind(this));
             this.#name = config?.name || process.env.SERVICE;
-            this.#blockTimeout = config?.blockTimeout;
             this.#db = {
                 sql,
                 pg: pg,
@@ -41,7 +39,8 @@ export class BaseService {
             this.#redisConnection = new Redis(
                 process.env.REDISCS //,{enableReadyCheck: false}
             );
-            this.#events = new Events(this.#redisConnection, this.#lightship, this.#blockTimeout);
+
+            this.#events = new Events(this.#redisConnection, this.#lightship, config?.eventsConfig);
         } catch (err) {
             console.error(err);
             process.exit(1);
