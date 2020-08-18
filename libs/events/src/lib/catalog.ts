@@ -171,13 +171,13 @@ export class EventsCatalog {
 
     getGroupHandlers(topic: string, group: string, type: string) {
         return Object.entries(this.#grouped[topic][group].subs)
-            .filter(([eventName]) => this._match(eventName, type))
+            .filter(([eventName]) => this._match(type, eventName))
             .map(([, handlers]) => handlers);
     }
 
     getUnbalancedHandlers(topic: string, type: string) {
         return Object.entries(this.#unbalanced[topic].subs)
-            .filter(([eventName]) => this._match(eventName, type))
+            .filter(([eventName]) => this._match(type, eventName))
             .map(([, handlers]) => handlers);
     }
 }

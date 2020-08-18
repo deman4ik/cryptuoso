@@ -315,9 +315,13 @@ export class Events {
                     this.#state[`${topic}-${group}`].pending.count = 10;
                 }
 
-                for (const { msgId } of data.filter(({ idleSeconds, retries }) => idleSeconds > retries * 30)) {
+                for (const { msgId } of data.filter(({ idleSeconds, retries }) => {
+                    if (process.env.IDLE_SECONDS_PERMITTED)
+                        return idleSeconds >= parseInt(process.env.IDLE_SECONDS_PERMITTED);
+                    return idleSeconds > retries * 30;
+                })) {
                     try {
-                        const result = await this.#redis.xclaim(topic, group, this.#consumerId, 60000, msgId);
+                        const result = await this.#redis.xclaim(topic, group, this.#consumerId, 0, msgId);
                         if (result) {
                             const [event]: Event[] = Object.values(
                                 this._parseEvents(this._parseMessageResponse(result))

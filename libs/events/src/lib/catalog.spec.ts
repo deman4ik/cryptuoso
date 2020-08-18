@@ -229,47 +229,64 @@ describe("Test 'EventsCatalog'", () => {
     describe("Test getting unbalanced handlers for pattern event types", () => {
         it("Should return expected event handlers", () => {
             catalog.add({
-                "importer.start": {
+                "common.*": {
                     unbalanced: true,
                     handler
                 },
-                "importer.finished": {
+                "common.private": {
                     unbalanced: true,
                     handler
                 },
-                "importer.stop": {
+                "common.**e": {
+                    unbalanced: true,
+                    handler
+                },
+                "common.???": {
                     unbalanced: true,
                     handler
                 }
             });
 
-            expect(catalog.getUnbalancedHandlers("cpz:events:importer", "com?cryptuoso?importer?*").length).toBe(3);
-            expect(catalog.getUnbalancedHandlers("cpz:events:importer", "**importer**").length).toBe(3);
-            expect(catalog.getUnbalancedHandlers("cpz:events:importer", "**.importer.s*").length).toBe(2);
-            expect(catalog.getUnbalancedHandlers("cpz:events:importer", "**finished").length).toBe(1);
+            expect(catalog.getUnbalancedHandlers("cpz:events:common", "com.cryptuoso.common.all").length).toBe(2);
+            expect(catalog.getUnbalancedHandlers("cpz:events:common", "com.cryptuoso.common.private").length).toBe(3);
+            expect(catalog.getUnbalancedHandlers("cpz:events:common", "com.cryptuoso.common.failure").length).toBe(2);
+            expect(catalog.getUnbalancedHandlers("cpz:events:common", "com.cryptuoso.common.log").length).toBe(2);
         });
     });
 
     describe("Test getting group handlers for pattern event types", () => {
         it("Should return expected event handlers", () => {
             catalog.add({
-                "importer.start": {
-                    handler
+                "importer.*": {
+                    handler,
+                    group: "importer"
                 },
                 "importer.finished": {
-                    handler
+                    handler,
+                    group: "importer"
                 },
-                "importer.stop": {
-                    handler
+                "importer.s????": {
+                    handler,
+                    group: "importer"
+                },
+                "importer.s**": {
+                    handler,
+                    group: "importer"
                 }
             });
 
-            expect(catalog.getGroupHandlers("cpz:events:importer", "importer", "com?cryptuoso?importer?*").length).toBe(
-                3
-            );
-            expect(catalog.getGroupHandlers("cpz:events:importer", "importer", "**importer**").length).toBe(3);
-            expect(catalog.getGroupHandlers("cpz:events:importer", "importer", "**.importer.s*").length).toBe(2);
-            expect(catalog.getGroupHandlers("cpz:events:importer", "importer", "**finished").length).toBe(1);
+            expect(
+                catalog.getGroupHandlers("cpz:events:importer", "importer", "com.cryptuoso.importer.start").length
+            ).toBe(3);
+            expect(
+                catalog.getGroupHandlers("cpz:events:importer", "importer", "com.cryptuoso.importer.finished").length
+            ).toBe(2);
+            expect(
+                catalog.getGroupHandlers("cpz:events:importer", "importer", "com.cryptuoso.importer.stop").length
+            ).toBe(2);
+            expect(
+                catalog.getGroupHandlers("cpz:events:importer", "importer", "com.cryptuoso.importer.cancel").length
+            ).toBe(1);
         });
     });
 });

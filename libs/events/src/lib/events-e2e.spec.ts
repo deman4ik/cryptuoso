@@ -3,18 +3,21 @@ import { createLightship } from "lightship";
 import { Events } from "./events";
 import { sleep } from "@cryptuoso/helpers";
 import { ValidationSchema } from "fastest-validator";
-
-const commonSchema: ValidationSchema = {
-    message: "string"
+process.env.IDLE_SECONDS_PERMITTED = "0";
+const serviceSchema: ValidationSchema = {
+    info: "string",
+    numbers: { type: "array", items: "number" }
 };
 
-const serviceJobHandler = jest.fn(async (data) => {
+const firstServiceJobHandler = jest.fn(async (data) => {
         console.log(data.info);
-        try {
-            console.log("Sum of numbers is " + data.numbers.reduce((acc: number, n: number) => acc + n, 0));
-        } catch (err) {
-            console.log(err);
-        }
+
+        const sum = data.numbers.reduce((acc: number, n: number) => acc + n, 0);
+        if (sum < 10) throw new Error("Sum cannot be less than 10");
+        console.log("Sum of numbers is " + sum);
+    }),
+    secondServiceJobHandler = jest.fn(async (data) => {
+        console.log("This event will be logged\n" + "The data object is:\n" + JSON.stringify(data));
     }),
     randomHandler = jest.fn(async ({ foo, bar }) => {
         console.log("foo is " + foo);
@@ -33,20 +36,25 @@ async function doWork(redis: Redis.Redis) {
     // simulate handling failure
     await redis.xgroup("CREATE", "cpz:events:service-job", "group-1", "0", "MKSTREAM");
     await events.emit({
-        type: "service-job",
+        type: "service-job.work",
         data: {
             info: "This event is supposed to be pending",
-            numbers: [1, 2, 3]
+            numbers: [3, 4, 5]
         }
     });
     await redis.xread("COUNT", 1, "STREAMS", "cpz:events:service-job", "0");
-    await sleep(500);
+    await sleep(100);
 
     // subscribe to events
     events.subscribe({
-        "service-job": {
+        "service-job.*": {
             group: "group-1",
-            handler: serviceJobHandler
+            handler: secondServiceJobHandler
+        },
+        "service-job.work": {
+            group: "group-1",
+            handler: firstServiceJobHandler,
+            schema: serviceSchema
         },
         random: {
             group: "group-2",
@@ -54,8 +62,7 @@ async function doWork(redis: Redis.Redis) {
         },
         common: {
             unbalanced: true,
-            handler: commonHandler,
-            schema: commonSchema
+            handler: commonHandler
         }
     });
 
@@ -64,14 +71,14 @@ async function doWork(redis: Redis.Redis) {
 
     //emit some data
     await events.emit({
-        type: "service-job",
+        type: "service-job.work",
         data: {
             info: "This is a job event",
             numbers: [1, 2, 3, 4, 5]
         }
     });
     await events.emit({
-        type: "service-job",
+        type: "service-job.work",
         data: {
             info: "This is another job event",
             numbers: [5, 6, 7, 8, 9]
@@ -91,16 +98,20 @@ async function doWork(redis: Redis.Redis) {
 
     // events with invalid data
     await events.emit({
-        type: "service-job",
+        type: "service-job.work",
         data: {
             info: "This is a faulty job event, error is expected",
-            foo: {}
+            numbers: [0, 0, 0, 0]
         }
     });
     await events.emit({
-        type: "common",
-        data: { msg: "This notification will not be seen due to validation error :(" }
+        type: "service-job.work",
+        data: { msg: "This message is not expected" }
     });
+    await sleep(100);
+
+    await events._receivePendingGroupMessagesTick("cpz:events:service-job", "group-1");
+    await sleep(100);
 }
 describe("E2E test", () => {
     it("Should execute if connection is established", (done) => {
@@ -117,7 +128,8 @@ describe("E2E test", () => {
                 .on("ready", async () => {
                     await doWork(redis).then(async () => {
                         await sleep(100);
-                        expect(serviceJobHandler).toHaveBeenCalledTimes(4);
+                        expect(firstServiceJobHandler).toHaveBeenCalledTimes(5);
+                        expect(secondServiceJobHandler.mock.calls.length >= 5).toBeTruthy();
                         expect(randomHandler).toHaveBeenCalledTimes(1);
                         expect(commonHandler).toHaveBeenCalledTimes(1);
                         done();
