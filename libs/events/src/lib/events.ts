@@ -321,7 +321,13 @@ export class Events {
                     return idleSeconds > retries * 30;
                 })) {
                     try {
-                        const result = await this.#redis.xclaim(topic, group, this.#consumerId, 0, msgId);
+                        const result = await this.#redis.xclaim(
+                            topic,
+                            group,
+                            this.#consumerId,
+                            this.#blockTimeout,
+                            msgId
+                        );
                         if (result) {
                             const [event]: Event[] = Object.values(
                                 this._parseEvents(this._parseMessageResponse(result))

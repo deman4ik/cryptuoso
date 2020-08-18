@@ -29,7 +29,7 @@ const firstServiceJobHandler = jest.fn(async (data) => {
 
 async function doWork(redis: Redis.Redis) {
     const lightship = createLightship();
-    const events = new Events(redis, lightship);
+    const events = new Events(redis, lightship, 50);
     // delete data in case there is any
     redis.flushall();
 
@@ -128,8 +128,9 @@ describe("E2E test", () => {
                 .on("ready", async () => {
                     await doWork(redis).then(async () => {
                         await sleep(100);
+
                         expect(firstServiceJobHandler).toHaveBeenCalledTimes(5);
-                        expect(secondServiceJobHandler.mock.calls.length >= 5).toBeTruthy();
+                        expect(secondServiceJobHandler).toHaveBeenCalledTimes(7); // 1 for each valid event + 1 for each faulty
                         expect(randomHandler).toHaveBeenCalledTimes(1);
                         expect(commonHandler).toHaveBeenCalledTimes(1);
                         done();
