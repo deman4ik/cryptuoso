@@ -383,9 +383,8 @@ export class Events {
                                     await this.emit({
                                         type: `dead-letter.${letterData.type}`,
                                         data: letterData
-                                    }).then(async () => {
-                                        await this.#redis.xack(topic, group, msgId);
                                     });
+                                    await this.#redis.xack(topic, group, msgId);
                                 }
                                 this.log.error(
                                     error,
