@@ -1,15 +1,21 @@
 import { Redis } from "ioredis";
-import { CloudEvent } from "cloudevents-sdk";
 import { LightshipType } from "lightship";
 import { ValidationSchema } from "fastest-validator";
 import { v4 as uuid } from "uuid";
 import logger, { Logger } from "@cryptuoso/logger";
 import { JSONParse, round, sleep } from "@cryptuoso/helpers";
-import { CloudEvent as Event, CE } from "cloudevents-sdk/lib/cloudevent";
+import { CloudEvent as Event, CloudEventV1 } from "cloudevents";
 import { BaseError } from "@cryptuoso/errors";
 import { EventsCatalog, EventHandler, BASE_REDIS_PREFIX } from "./catalog";
+import dayjs from "@cryptuoso/dayjs";
 
-export { CE as Event };
+export { CloudEventV1 as Event };
+export interface NewEvent<T> {
+    type: string;
+    data: T;
+    subject?: string;
+}
+
 const BLOCK_TIMEOUT = 60000;
 
 type StreamMsgVals = string[];
@@ -105,7 +111,7 @@ export class Events {
             data: { event }
         } of rawEvents) {
             try {
-                const newEvent = new CloudEvent(event);
+                const newEvent = new Event(event);
                 events[msgId] = newEvent;
             } catch (error) {
                 this.log.error("Failed to parse and validate event", error);
@@ -149,7 +155,7 @@ export class Events {
                                 .getUnbalancedHandlers(topic, event.type)
                                 .map(async ({ handler, validate, passFullEvent }: EventHandler) => {
                                     try {
-                                        const validationErrors = await validate(event.format());
+                                        const validationErrors = await validate(event.toJSON());
                                         const data = passFullEvent ? event : event.data;
                                         if (validationErrors === true) await handler(data);
                                         else
@@ -226,31 +232,33 @@ export class Events {
                     this.#state[`${topic}-${group}`].grouped.count = 10;
                 }
                 const events: { [key: string]: Event } = this._parseEvents(data[topic]);
-                for (const [msgId, event] of Object.entries(events)) {
-                    try {
-                        this.log.info(`Handling "${topic}" group "${group}" event #${msgId} (${event.id})...`, event);
-                        const handlers: EventHandler[] = this.#catalog.getGroupHandlers(topic, group, event.type);
-                        for (const { handler, validate, passFullEvent } of handlers) {
-                            const validationErrors = await validate(event.format());
-                            const data = passFullEvent ? event : event.data;
-                            if (validationErrors === true) await handler(data);
-                            else
-                                throw new BaseError(
-                                    validationErrors.map((e) => e.message).join(" "),
-                                    { validationErrors },
-                                    "VALIDATION"
-                                );
-                        }
+                await Promise.all(
+                    Object.entries(events).map(async ([msgId, event]) => {
+                        try {
+                            this.log.debug(`Handling "${topic}" group "${group}" event #${msgId} (${event.id})...`);
+                            const handlers: EventHandler[] = this.#catalog.getGroupHandlers(topic, group, event.type);
+                            for (const { handler, validate, passFullEvent } of handlers) {
+                                const validationErrors = await validate(event.toJSON());
+                                const data = passFullEvent ? event : event.data;
+                                if (validationErrors === true) await handler(data);
+                                else
+                                    throw new BaseError(
+                                        validationErrors.map((e) => e.message).join(" "),
+                                        { validationErrors },
+                                        "VALIDATION"
+                                    );
+                            }
 
-                        await this.#state[`${topic}-${group}`].grouped.redis.xack(topic, group, msgId);
-                        this.log.info(`Handled "${topic}" group "${group}" event #${msgId} (${event.id})`);
-                    } catch (error) {
-                        this.log.error(
-                            error,
-                            `Failed to handle "${topic}" group "${group}" event #${msgId} (${event.id})`
-                        );
-                    }
-                }
+                            await this.#state[`${topic}-${group}`].grouped.redis.xack(topic, group, msgId);
+                            this.log.debug(`Handled "${topic}" group "${group}" event #${msgId} (${event.id})`);
+                        } catch (error) {
+                            this.log.error(
+                                error,
+                                `Failed to handle "${topic}" group "${group}" event #${msgId} (${event.id})`
+                            );
+                        }
+                    })
+                );
             }
             await beacon.die();
         } catch (error) {
@@ -315,9 +323,8 @@ export class Events {
                                 this._parseEvents(this._parseMessageResponse(result))
                             );
                             try {
-                                this.log.info(
-                                    `Handling pending "${topic}" group "${group}" event #${msgId} (${event.id})...`,
-                                    event
+                                this.log.debug(
+                                    `Handling pending "${topic}" group "${group}" event #${msgId} (${event.id})...`
                                 );
                                 const handlers: EventHandler[] = this.#catalog.getGroupHandlers(
                                     topic,
@@ -325,7 +332,7 @@ export class Events {
                                     event.type
                                 );
                                 for (const { handler, validate, passFullEvent } of handlers) {
-                                    const validationErrors = await validate(event.format());
+                                    const validationErrors = await validate(event.toJSON());
                                     const data = passFullEvent ? event : event.data;
                                     if (validationErrors === true) await handler(data);
                                     else
@@ -336,7 +343,7 @@ export class Events {
                                         );
                                 }
                                 await this.#redis.xack(topic, group, msgId);
-                                this.log.info(
+                                this.log.debug(
                                     `Handled pending "${topic}" group "${group}" event #${msgId} (${event.id})`
                                 );
                             } catch (error) {
@@ -382,32 +389,33 @@ export class Events {
         }
     }
 
-    async emit<T>(type: string, data: T, subject?: string) {
+    async emit<T>(event: NewEvent<T>) {
         try {
+            const { type, data, subject } = event;
             const [topicName] = type.split(".", 1);
             const topic = `${BASE_REDIS_PREFIX}${topicName}`;
-            const event = new CloudEvent({
+            const cloudEvent = new Event({
                 source: `https://${process.env.SERVICE || "events"}.cryptuoso.com`,
                 specversion: "1.0",
-                dataContentType: "application/json",
+                datacontenttype: "application/json",
                 type: `com.cryptuoso.${type}`,
                 data,
                 subject
             });
             const args = [
                 "id",
-                event.id,
+                cloudEvent.id,
                 "type",
-                event.type,
+                cloudEvent.type,
                 "timestamp",
-                event.time,
+                dayjs.utc(cloudEvent.time).toISOString(),
                 "event",
-                JSON.stringify(event.format())
+                JSON.stringify(cloudEvent.toJSON())
             ];
             await this.#redis.xadd(topic, "*", ...args);
-            this.log.info(`Emited Event ${type}`, data);
+            this.log.debug(`Emited Event ${type}`);
         } catch (error) {
-            this.log.error("Failed to emit event", error, { type, data, subject });
+            this.log.error("Failed to emit event", error, event);
         }
     }
 

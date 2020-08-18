@@ -38,7 +38,7 @@ export class HTTPService extends BaseService {
             this._v = new Validator();
             this._port = config?.port || +process.env.PORT || +process.env.NODE_PORT || 3000;
             this._server = restana({
-                errorHandler: this._errorHandler
+                errorHandler: this._errorHandler.bind(this)
             });
             this._server.use(helmet() as RequestHandler<Protocol.HTTP>);
             this._server.use(bodyParser.json());
@@ -55,17 +55,28 @@ export class HTTPService extends BaseService {
                     (req: any) => this._routes[req.url] && this._routes[req.url].auth
                 )
             );
-
+            this._server.use(async (req, res, next) => {
+                try {
+                    this.log.debug({ method: req.method, url: req.url, headers: req.headers, body: req.body });
+                    await next();
+                } catch (err) {
+                    return next(err);
+                }
+            });
+            this._server.get("/", (req, res) => {
+                res.send({ service: process.env.SERVICE, routes: this._server.routes() });
+                res.end();
+            });
             this.addOnStartHandler(this._startServer);
             this.addOnStopHandler(this._stopServer);
         } catch (err) {
-            this.log.error(err, "While consctructing HTTPService");
+            this.log.error(err, "While constructing HTTPService");
             process.exit(1);
         }
     }
 
     private async _startServer() {
-        this._server.start(this._port, "0.0.0.0");
+        await this._server.start(this._port, "0.0.0.0");
         this.log.info(`HTTP listening on ${this._port}`);
         if (this._server.routes().length > 0) {
             this.log.info(`with routes \n${this._server.routes().join("\n")}`);
@@ -73,20 +84,23 @@ export class HTTPService extends BaseService {
     }
 
     private async _stopServer() {
-        this._server.close();
+        await this._server.close();
     }
 
     private _checkApiKey(req: Request<Protocol>, res: Response<Protocol>, next: (err?: Error) => void) {
         if (!req.headers["x-api-key"] || req.headers["x-api-key"] !== process.env.API_KEY) {
             throw new ActionsHandlerError("Forbidden: Invalid API Key", null, "FORBIDDEN", 403);
         }
-        next();
+        return next();
     }
 
     private _checkValidation(req: Request<Protocol>, res: Response<Protocol>, next: (err?: Error) => void) {
-        const validationErrors = this._routes[req.url].validate(req.body);
-        if (validationErrors === true) next();
-        else
+        const body = req.body;
+        const validationErrors = this._routes[req.url].validate(body);
+        if (validationErrors === true) {
+            req.body = body;
+            return next();
+        } else
             throw new ActionsHandlerError(
                 validationErrors.map((e) => e.message).join(" "),
                 { validationErrors },
@@ -97,24 +111,25 @@ export class HTTPService extends BaseService {
 
     private _checkAuth(req: any, res: Response<Protocol>, next: (err?: Error) => void) {
         try {
+            this.log.debug(req.body);
             const userId = req.body.session_variables["x-hasura-user-id"];
             if (!userId)
                 throw new ActionsHandlerError("Unauthorized: Invalid session variables", null, "UNAUTHORIZED", 401);
 
             const role = req.body.session_variables["x-hasura-role"];
 
-            if (!this._routes[req.url].roles.includes(role))
+            if (this._routes[req.url].roles.length > 0 && !this._routes[req.url].roles.includes(role))
                 throw new ActionsHandlerError("Forbidden: Invalid role", null, "FORBIDDEN", 403);
 
             //TODO: check user in DB and cache in Redis
-            next();
+            return next();
         } catch (err) {
-            next(err);
+            return next(err);
         }
     }
 
     private _errorHandler(err: Error, req: any, res: Response<Protocol>) {
-        req.log.warn(err);
+        this.log.warn(err);
         if (err instanceof ActionsHandlerError) {
             res.send(err.response, err.statusCode);
         } else {
@@ -128,19 +143,25 @@ export class HTTPService extends BaseService {
         }
     }
 
-    private _createRoutes(
-        routes: {
-            name: string;
+    private _createRoutes(routes: {
+        [key: string]: {
             handler: (req: any, res: any) => Promise<any>;
             auth?: boolean;
             roles?: string[];
             inputSchema?: ValidationSchema;
-        }[]
-    ) {
-        routes.forEach((route) => {
-            const { name, handler } = route;
+        };
+    }) {
+        for (const name of Object.keys(routes)) {
+            if (this._routes[`/actions/${name}`]) {
+                throw new Error(`This route ${name} is occupied`);
+            }
+        }
+
+        for (const [name, route] of Object.entries(routes)) {
+            const { handler } = route;
             let { auth, roles, inputSchema } = route;
             if (!name) throw new Error("Route name is required");
+            if (this._routes[`/actions/${name}`]) throw new Error("This route name is occupied");
             if (!handler && typeof handler !== "function") throw new Error("Route handler must be a function");
             auth = auth || false;
             roles = roles || [];
@@ -168,7 +189,7 @@ export class HTTPService extends BaseService {
                 roles
             };
             this._server.post(`/actions/${name}`, handler.bind(this));
-        });
+        }
     }
 
     get createRoutes() {

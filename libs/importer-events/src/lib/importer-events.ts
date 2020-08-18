@@ -1,22 +1,24 @@
-import { Timeframe, ISO_DATE_REGEX, CANDLES_RECENT_AMOUNT, ValidTimeframe } from "@cryptuoso/helpers";
-import { ImportType } from "@cryptuoso/importer-state";
+import { ISO_DATE_REGEX, CANDLES_RECENT_AMOUNT } from "@cryptuoso/helpers";
+import { Timeframe, ValidTimeframe } from "@cryptuoso/market";
+import { ImportType, Status } from "@cryptuoso/importer-state";
 
-export const enum InImporterRunnerEvents {
+export const enum ImporterRunnerEvents {
     START = "in-importer-runner.start",
     STOP = "in-importer-runner.stop"
 }
 
-export const enum InImporterWorkerEvents {
-    PAUSE = "in-importer-worker.pause"
-}
-
-export const enum OutImporterWorkerEvents {
+export const enum ImporterWorkerEvents {
+    CANCEL = "in-importer-worker.cancel",
     FINISHED = "out-importer-worker.finished",
     FAILED = "out-importer-worker.failed"
 }
 
 export const ImporterRunnerSchema = {
-    [InImporterRunnerEvents.START]: {
+    [ImporterRunnerEvents.START]: {
+        id: {
+            type: "uuid",
+            optional: true
+        },
         exchange: {
             type: "string"
         },
@@ -34,7 +36,6 @@ export const ImporterRunnerSchema = {
             type: "array",
             enum: Timeframe.validArray,
             empty: false,
-            optional: true,
             default: Timeframe.validArray
         },
         dateFrom: {
@@ -50,33 +51,22 @@ export const ImporterRunnerSchema = {
         amount: {
             type: "number",
             integer: true,
-            optional: true,
             default: CANDLES_RECENT_AMOUNT
         }
     },
-    [InImporterRunnerEvents.STOP]: {
+    [ImporterRunnerEvents.STOP]: {
         id: {
-            type: "string"
+            type: "uuid"
         }
     }
 };
 
 export const ImporterWorkerSchema = {
-    [InImporterWorkerEvents.PAUSE]: {
-        id: "string"
+    [ImporterWorkerEvents.CANCEL]: {
+        id: "uuid"
     },
-    [OutImporterWorkerEvents.FINISHED]: {
-        id: "string",
-        type: {
-            type: "enum",
-            values: ["recent", "history"]
-        },
-        exchange: "string",
-        asset: "string",
-        currency: "string"
-    },
-    [OutImporterWorkerEvents.FAILED]: {
-        id: "string",
+    [ImporterWorkerEvents.FINISHED]: {
+        id: "uuid",
         type: {
             type: "enum",
             values: ["recent", "history"]
@@ -84,16 +74,28 @@ export const ImporterWorkerSchema = {
         exchange: "string",
         asset: "string",
         currency: "string",
-        error: "string"
+        status: "string"
+    },
+    [ImporterWorkerEvents.FAILED]: {
+        id: "uuid",
+        type: {
+            type: "enum",
+            values: ["recent", "history"]
+        },
+        exchange: "string",
+        asset: "string",
+        currency: "string",
+        error: { type: "string", optional: true }
     }
 };
 
 export interface ImporterRunnerStart {
+    id?: string;
     exchange: string;
     asset: string;
     currency: string;
     type: ImportType;
-    timeframes: ValidTimeframe[];
+    timeframes?: ValidTimeframe[];
     dateFrom?: string;
     dateTo?: string;
     amount?: number;
@@ -103,7 +105,7 @@ export interface ImporterRunnerStop {
     id: string;
 }
 
-export interface ImporterWorkerPause {
+export interface ImporterWorkerCancel {
     id: string;
 }
 
@@ -113,6 +115,7 @@ export interface ImporterWorkerFinished {
     asset: string;
     currency: string;
     type: ImportType;
+    status: Status;
 }
 
 export interface ImporterWorkerFailed {
@@ -121,5 +124,5 @@ export interface ImporterWorkerFailed {
     asset: string;
     currency: string;
     type: ImportType;
-    error: string;
+    error?: string;
 }

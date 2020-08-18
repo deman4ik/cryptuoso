@@ -6,9 +6,9 @@
             "dependencies": "*",
             "devDependencies": "*"
         },
-        "tsconfig.json": "*",
         ".eslintrc": "*",
-        "nx.json": "*"
+        "nx.json": "*",
+        "tsconfig.base.json": "*"
     },
     "tasksRunnerOptions": {
         "default": {
@@ -54,6 +54,63 @@
         },
         "importer-worker": {
             "tags": []
+        },
+        "exwatcher-runner": {
+            "tags": []
+        },
+        "exwatcher-bitfinex": {
+            "tags": []
+        },
+        "exwatcher-kraken": {
+            "tags": []
+        },
+        "exwatcher-binance": {
+            "tags": []
+        },
+        "exwatcher-base": {
+            "tags": []
+        },
+        "market": {
+            "tags": []
+        },
+        "exwatcher-events": {
+            "tags": []
+        },
+        "backtester-runner": {
+            "tags": []
+        },
+        "backtester-worker": {
+            "tags": []
+        },
+        "backtester-state": {
+            "tags": []
+        },
+        "robot-state": {
+            "tags": []
+        },
+        "robot-indicators": {
+            "tags": []
+        },
+        "robot-events": {
+            "tags": []
+        },
+        "backtester-events": {
+            "tags": []
+        },
+        "trade-statistics": {
+            "tags": []
+        },
+        "auth": {
+            "tags": []
+        },
+        "user-state": {
+            "tags": []
+        },
+        "mail": {
+            "tags": []
         }
+    },
+    "affected": {
+        "defaultBase": "master"
     }
 }

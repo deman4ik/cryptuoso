@@ -18,6 +18,9 @@ jobs:
               uses: actions/setup-node@v1
               with:
                   node-version: ${{ matrix.node-version }}
+            - uses: webfactory/ssh-agent@v0.2.0
+              with:
+                  ssh-private-key: ${{ secrets.GH_SSH_KEY }}
             - run: npm install
             - run: npm run build
             - run: npm run test

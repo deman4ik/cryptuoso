@@ -1,12 +1,7 @@
 import { expose } from "threads/worker";
 import { TradesChunk } from "@cryptuoso/importer-state";
-import {
-    ExchangeTrade,
-    createCandlesFromTrades,
-    handleCandleGaps,
-    uniqueElementsBy,
-    sortAsc
-} from "@cryptuoso/helpers";
+import { uniqueElementsBy, sortAsc } from "@cryptuoso/helpers";
+import { ExchangeTrade, createCandlesFromTrades, handleCandleGaps } from "@cryptuoso/market";
 import dayjs from "@cryptuoso/dayjs";
 
 const tradesToCandles = ({

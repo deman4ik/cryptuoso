@@ -15,11 +15,17 @@ jobs:
         steps:
             - name: Checkout
               uses: actions/checkout@master
+              with:
+                  fetch-depth: 0
 
             - name: Use Node.js
               uses: actions/setup-node@v1
               with:
                   node-version: ${{ matrix.node-version }}
+
+            - uses: webfactory/ssh-agent@v0.2.0
+              with:
+                  ssh-private-key: ${{ secrets.GH_SSH_KEY }}
 
             - name: NPM Install
               run: npm install
@@ -54,7 +60,7 @@ jobs:
                                  status === "completed" &&
                                  conclusion === "success"
                              ).head_sha;
-                             return `--head=${sha} --base=${branch}`;
+                             return `--base=${sha} --head=${branch}`;
                          } else return "--all";
                       }
 
@@ -64,6 +70,10 @@ jobs:
 
             - name: Echo services
               run: echo ${{ steps.services.outputs.list }}
+
+            #- name: Check services
+            #  if: steps.services.outputs.list == null || steps.services.outputs.list == ${{ ' ' }}
+            #  run: exit 1
 
             - name: Build containers
               run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do docker build --build-arg SERVICE_NAME="${i}" --build-arg GITHUB_SSH_KEY="${{ secrets.GH_SSH_KEY }}" -t registry.digitalocean.com/cpz/$i:$(echo $GITHUB_SHA | head -c7) .; done;

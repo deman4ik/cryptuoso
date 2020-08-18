@@ -1,10 +1,10 @@
 import Validator, { ValidationSchema, ValidationError } from "fastest-validator";
-import { CloudEvent as Event } from "cloudevents-sdk/lib/cloudevent";
+import { CloudEvent as Event } from "cloudevents";
 import { flattenArray } from "@cryptuoso/helpers";
 export { Event };
 export type EventHandler = {
     passFullEvent: boolean;
-    handler: (event: Event) => Promise<void>;
+    handler: (event: { [key: string]: any }) => Promise<void>;
     validate: (value: any) => true | ValidationError[];
 };
 export const BASE_REDIS_PREFIX = "cpz:events:";

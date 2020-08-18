@@ -1,15 +1,47 @@
-import postgres from "postgres";
-//TODO: delete custom declaration type
+import { createPool, sql, ClientConfigurationInputType, createTypeParserPreset } from "slonik";
+import { createFieldNameTransformationInterceptor } from "slonik-interceptor-field-name-transformation";
+import dayjs from "@cryptuoso/dayjs";
+import { prepareUnnest } from "./helpers";
 
-const sql = postgres({
-    ssl: { rejectUnauthorized: false },
-    transform: {
-        column: postgres.toCamel
+const interceptors = [
+    createFieldNameTransformationInterceptor({
+        format: "CAMEL_CASE"
+    })
+];
+const parseDate = (value: string) => (!value ? value : dayjs.utc(value).toISOString());
+
+const typeParsers = [
+    ...createTypeParserPreset(),
+    {
+        name: "date",
+        parse: parseDate
     },
-    connection: {
-        /* eslint-disable-next-line @typescript-eslint/camelcase */
-        application_name: process.env.SERVICE
+    {
+        name: "timestamp",
+        parse: parseDate
+    },
+    {
+        name: "timestamptz",
+        parse: parseDate
     }
-});
+];
+const config: ClientConfigurationInputType = {
+    connectionRetryLimit: 5,
+    connectionTimeout: 10000,
+    idleTimeout: 3000,
+    maximumPoolSize: 16,
+    interceptors,
+    typeParsers
+};
 
-export { sql };
+const pg = createPool(process.env.PGCS, config);
+
+const createJSPool = (pgConfig: ClientConfigurationInputType = {}) =>
+    createPool(process.env.PGCS, { ...config, preferNativeBindings: false, ...pgConfig });
+
+const pgUtil = {
+    createJSPool,
+    prepareUnnest
+};
+
+export { pg, sql, pgUtil };

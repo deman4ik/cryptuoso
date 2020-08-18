@@ -2,16 +2,18 @@ import { Queue } from "bullmq";
 import { v4 as uuid } from "uuid";
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import dayjs from "@cryptuoso/dayjs";
-import { getValidDate } from "@cryptuoso/helpers";
+import { getValidDate, CANDLES_RECENT_AMOUNT } from "@cryptuoso/helpers";
 import { Importer, Status, ImporterParams } from "@cryptuoso/importer-state";
 import {
     ImporterRunnerSchema,
-    InImporterRunnerEvents,
+    ImporterRunnerEvents,
     ImporterRunnerStart,
     ImporterRunnerStop,
-    InImporterWorkerEvents,
-    ImporterWorkerPause
+    ImporterWorkerEvents,
+    ImporterWorkerCancel
 } from "@cryptuoso/importer-events";
+import { BaseError } from "@cryptuoso/errors";
+import { Timeframe } from "@cryptuoso/market";
 
 export type ImporterRunnerServiceConfig = HTTPServiceConfig;
 
@@ -20,30 +22,28 @@ export default class ImporterRunnerService extends HTTPService {
     constructor(config?: ImporterRunnerServiceConfig) {
         super(config);
         try {
-            this.createRoutes([
-                {
-                    name: "importerStart",
-                    inputSchema: ImporterRunnerSchema[InImporterRunnerEvents.START],
+            this.createRoutes({
+                importerStart: {
+                    inputSchema: ImporterRunnerSchema[ImporterRunnerEvents.START],
                     auth: true,
-                    roles: ["admin"],
+                    roles: ["manager", "admin"],
                     handler: this.startHTTPHandler
                 },
-                {
-                    name: "importerStop",
-                    inputSchema: ImporterRunnerSchema[InImporterRunnerEvents.STOP],
+                importerStop: {
+                    inputSchema: ImporterRunnerSchema[ImporterRunnerEvents.STOP],
                     auth: true,
-                    roles: ["admin"],
+                    roles: ["manager", "admin"],
                     handler: this.stopHTTPHandler
                 }
-            ]);
+            });
             this.events.subscribe({
-                [InImporterRunnerEvents.START]: {
+                [ImporterRunnerEvents.START]: {
                     handler: this.start.bind(this),
-                    schema: ImporterRunnerSchema[InImporterRunnerEvents.START]
+                    schema: ImporterRunnerSchema[ImporterRunnerEvents.START]
                 },
-                [InImporterRunnerEvents.STOP]: {
+                [ImporterRunnerEvents.STOP]: {
                     handler: this.stop.bind(this),
-                    schema: ImporterRunnerSchema[InImporterRunnerEvents.STOP]
+                    schema: ImporterRunnerSchema[ImporterRunnerEvents.STOP]
                 }
             });
             this.addOnStartHandler(this.onStartService);
@@ -60,7 +60,7 @@ export default class ImporterRunnerService extends HTTPService {
     }
 
     async onStopService() {
-        await this.queues.importCandles.close();
+        await this.queues.importCandles?.close();
     }
 
     async startHTTPHandler(
@@ -76,26 +76,31 @@ export default class ImporterRunnerService extends HTTPService {
         res.end();
     }
 
-    async start({ exchange, asset, currency, type, timeframes, dateFrom, dateTo, amount }: ImporterRunnerStart) {
+    async start({ id, exchange, asset, currency, type, timeframes, dateFrom, dateTo, amount }: ImporterRunnerStart) {
         try {
-            const [{ loadFrom }] = await this.sql`
+            const params: ImporterParams = {
+                timeframes: timeframes || Timeframe.validArray
+            };
+            const market: { loadFrom: string } = await this.db.pg.maybeOne(this.db.sql`
             select load_from from markets 
             where exchange = ${exchange} 
             and asset = ${asset} and currency = ${currency}
-            `;
-            this.log.info(loadFrom);
-            const params: ImporterParams = {
-                timeframes
-            };
+            `);
+            if (!market)
+                throw new BaseError(
+                    `Market ${exchange} ${asset}/${currency} doesn't exists.`,
+                    { exchange, asset, currency },
+                    "NotFound"
+                );
             if (type === "history") {
-                params.dateFrom = dateFrom ? getValidDate(dateFrom) : loadFrom;
+                params.dateFrom = dateFrom ? getValidDate(dateFrom) : market.loadFrom;
                 params.dateTo = dateTo ? getValidDate(dateTo) : dayjs.utc().startOf("minute").toISOString();
             } else {
-                params.amount = amount;
+                params.amount = amount || CANDLES_RECENT_AMOUNT;
             }
 
             const importer = new Importer({
-                id: uuid(),
+                id: id || uuid(),
                 exchange,
                 asset,
                 currency,
@@ -109,7 +114,7 @@ export default class ImporterRunnerService extends HTTPService {
                 jobId: importer.id,
                 removeOnComplete: true
             });
-            return { id: importer.id, status: importer.status };
+            return { result: importer.id };
         } catch (error) {
             this.log.error(error);
             throw error;
@@ -124,26 +129,26 @@ export default class ImporterRunnerService extends HTTPService {
         },
         res: any
     ) {
-        const result = await this.stop(req.body.input);
-        res.send(result);
+        await this.stop(req.body.input);
+        res.send({ result: "OK" });
         res.end();
     }
 
     async stop({ id }: ImporterRunnerStop) {
         try {
             const job = await this.queues.importCandles.getJob(id);
-            const result = { id, status: Status.canceled };
             if (job) {
                 if (job.isActive) {
-                    await this.events.emit<ImporterWorkerPause>(InImporterWorkerEvents.PAUSE, {
-                        id
+                    await this.events.emit<ImporterWorkerCancel>({
+                        type: ImporterWorkerEvents.CANCEL,
+                        data: {
+                            id
+                        }
                     });
-                    result.status = Status.stopping;
                 } else {
                     await job.remove();
                 }
             }
-            return result;
         } catch (error) {
             this.log.error(error);
             throw error;

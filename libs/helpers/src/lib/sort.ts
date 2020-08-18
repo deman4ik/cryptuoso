@@ -1,5 +1,5 @@
 /**
- * Сортировка по возрастанию
+ * Ascending sort
  *
  * @param {T} a
  * @param {T} b
@@ -16,7 +16,7 @@ export function sortAsc<T>(a: T, b: T): number {
 }
 
 /**
- * Сортировка по убыванию
+ * Descending sort
  *
  * @param {T} a
  * @param {T} b

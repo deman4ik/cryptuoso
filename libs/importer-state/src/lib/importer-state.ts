@@ -1,15 +1,6 @@
 import dayjs from "@cryptuoso/dayjs";
-import {
-    chunkDates,
-    getValidDate,
-    Timeframe,
-    ValidTimeframe,
-    loadLimit,
-    convertExchangeTimeframes,
-    sortDesc,
-    round,
-    CANDLES_RECENT_AMOUNT
-} from "@cryptuoso/helpers";
+import { chunkDates, getValidDate, sortDesc, round, CANDLES_RECENT_AMOUNT } from "@cryptuoso/helpers";
+import { Timeframe, ValidTimeframe, loadLimit, convertExchangeTimeframes } from "@cryptuoso/market";
 
 export type ImportType = "recent" | "history";
 
@@ -17,9 +8,7 @@ export const enum Status {
     queued = "queued",
     started = "started",
     finished = "finished",
-    paused = "paused",
     failed = "failed",
-    stopping = "stopping",
     canceled = "canceled"
 }
 
@@ -74,14 +63,14 @@ export interface CandlesChunk extends TradesChunk {
 }
 
 export class Importer {
-    _id: string;
-    _exchange: string;
-    _asset: string;
-    _currency: string;
-    _type: ImportType;
-    _params: ImporterParams;
-    _status: Status;
-    _currentState?: {
+    #id: string;
+    #exchange: string;
+    #asset: string;
+    #currency: string;
+    #type: ImportType;
+    #params: ImporterParams;
+    #status: Status;
+    #currentState?: {
         trades?: {
             dateFrom: string;
             dateTo: string;
@@ -98,44 +87,47 @@ export class Importer {
             };
         };
     };
-    _progress?: number;
-    _startedAt?: string;
-    _endedAt?: string;
-    _error?: string;
+    #progress?: number;
+    #startedAt?: string;
+    #endedAt?: string;
+    #error?: string;
 
     constructor(state: ImporterState) {
-        this._id = state.id;
-        this._exchange = state.exchange;
-        this._asset = state.asset;
-        this._currency = state.currency;
-        this._type = state.type;
-        this._params = state.params;
-        this._status = state.status;
-        this._currentState = state.currentState || {};
-        this._progress = state.progress || 0;
-        this._startedAt = state.startedAt;
-        this._endedAt = state.endedAt;
-        this._error = state.error;
+        this.#id = state.id;
+        this.#exchange = state.exchange;
+        this.#asset = state.asset;
+        this.#currency = state.currency;
+        this.#type = state.type;
+        this.#params = state.params;
+        this.#status = state.status;
+        this.#currentState = state.currentState || {};
+        this.#progress = state.progress || 0;
+        this.#startedAt = state.startedAt;
+        this.#endedAt = state.endedAt;
+        this.#error = state.error;
     }
 
-    _init() {
-        if (this._type === "history") {
-            if (this._exchange === "kraken") {
-                const dateFrom = dayjs.utc(this._params.dateFrom).startOf("day").toISOString();
-                const dateTo = getValidDate(this._params.dateTo);
-                this._currentState.trades = {
+    #init = () => {
+        if (this.#type === "history") {
+            if (this.#exchange === "kraken") {
+                const dateFrom = dayjs
+                    .utc(this.#params.dateFrom)
+                    .startOf("day")
+                    .toISOString();
+                const dateTo = getValidDate(this.#params.dateTo);
+                this.#currentState.trades = {
                     dateFrom,
                     dateTo,
                     loaded: false,
                     chunks: []
                 };
             } else {
-                this._currentState.candles = {};
-                this._params.timeframes.sort(sortDesc).forEach((timeframe) => {
+                this.#currentState.candles = {};
+                this.#params.timeframes.sort(sortDesc).forEach((timeframe) => {
                     const { unit, amountInUnit } = Timeframe.get(timeframe);
-                    const dateFrom = Timeframe.validTimeframeDateNext(this._params.dateFrom, timeframe);
+                    const dateFrom = Timeframe.validTimeframeDateNext(this.#params.dateFrom, timeframe);
                     const newDateTo = dayjs.utc(
-                        Timeframe.validTimeframeDatePrev(getValidDate(this._params.dateTo, unit), timeframe)
+                        Timeframe.validTimeframeDatePrev(getValidDate(this.#params.dateTo, unit), timeframe)
                     );
                     const currentDateTo = dayjs
                         .utc(Timeframe.validTimeframeDatePrev(dayjs.utc().startOf(unit).toISOString(), timeframe))
@@ -145,7 +137,7 @@ export class Importer {
                         newDateTo.valueOf() > currentDateTo.valueOf()
                             ? currentDateTo.toISOString()
                             : newDateTo.toISOString();
-                    this._currentState.candles[timeframe] = {
+                    this.#currentState.candles[timeframe] = {
                         timeframe,
                         dateFrom,
                         dateTo,
@@ -154,10 +146,10 @@ export class Importer {
                     };
                 });
             }
-        } else if (this._type === "recent") {
-            const amount = this._params.amount || CANDLES_RECENT_AMOUNT;
-            this._currentState.candles = {};
-            this._params.timeframes.sort(sortDesc).forEach((timeframe) => {
+        } else if (this.#type === "recent") {
+            const amount = this.#params.amount || CANDLES_RECENT_AMOUNT;
+            this.#currentState.candles = {};
+            this.#params.timeframes.sort(sortDesc).forEach((timeframe) => {
                 const { unit, amountInUnit } = Timeframe.get(timeframe);
                 const dateTo = Timeframe.validTimeframeDatePrev(
                     dayjs.utc().startOf(unit).add(-amountInUnit, unit).toISOString(),
@@ -173,7 +165,7 @@ export class Importer {
                     timeframe
                 );
 
-                this._currentState.candles[timeframe] = {
+                this.#currentState.candles[timeframe] = {
                     timeframe,
                     dateFrom,
                     dateTo,
@@ -182,18 +174,18 @@ export class Importer {
                 };
             });
         }
-    }
+    };
 
     get init() {
-        return this._init;
+        return this.#init;
     }
 
-    _createChunks(timeframes: { [key: string]: string | number }) {
+    #createChunks = (timeframes: { [key: string]: string | number }) => {
         const exchangeTimeframes = convertExchangeTimeframes(timeframes);
-        if (this._type === "history" && this._exchange === "kraken") {
-            if (!this._currentState.trades.loaded && this._currentState.trades.chunks.length === 0) {
-                const { dateFrom, dateTo } = this._currentState.trades;
-                this._currentState.trades.chunks = chunkDates(dateFrom, dateTo, "day", 1, 1).chunks.map(
+        if (this.#type === "history" && this.#exchange === "kraken") {
+            if (!this.#currentState.trades.loaded && this.#currentState.trades.chunks.length === 0) {
+                const { dateFrom, dateTo } = this.#currentState.trades;
+                this.#currentState.trades.chunks = chunkDates(dateFrom, dateTo, "day", 1, 1).chunks.map(
                     (chunk, index) => ({
                         ...chunk,
                         loaded: false,
@@ -202,19 +194,19 @@ export class Importer {
                 );
             }
         } else {
-            Object.values(this._currentState.candles)
+            Object.values(this.#currentState.candles)
                 .filter((s) => s.loaded === false && s.chunks.length === 0)
                 .forEach((s) => {
-                    let limit = loadLimit(this._exchange);
+                    let limit = loadLimit(this.#exchange);
                     const exchangeHasTimeframe = Timeframe.inList(exchangeTimeframes, Timeframe.toString(s.timeframe));
                     if (!exchangeHasTimeframe) {
                         const lowerTimeframe = Object.values(exchangeTimeframes)
                             .map((t) => +t)
                             .sort(sortDesc)
                             .filter((t) => +t < +s.timeframe)[0];
-                        limit = round(loadLimit(this._exchange) / (s.timeframe / lowerTimeframe));
+                        limit = round(loadLimit(this.#exchange) / (s.timeframe / lowerTimeframe));
                     }
-                    this._currentState.candles[s.timeframe].chunks = Timeframe.chunkDates(
+                    this.#currentState.candles[s.timeframe].chunks = Timeframe.chunkDates(
                         s.dateFrom,
                         s.dateTo,
                         s.timeframe,
@@ -228,181 +220,187 @@ export class Importer {
                     }));
                 });
         }
-    }
+    };
 
     get createChunks() {
-        return this._createChunks;
+        return this.#createChunks;
     }
 
     get id() {
-        return this._id;
+        return this.#id;
     }
 
     get exchange() {
-        return this._exchange;
+        return this.#exchange;
     }
 
     get asset() {
-        return this._asset;
+        return this.#asset;
     }
 
     get currency() {
-        return this._currency;
+        return this.#currency;
     }
 
     get type() {
-        return this._type;
+        return this.#type;
     }
 
     get status() {
-        return this._status;
+        return this.#status;
     }
 
     set status(status: Status) {
-        this._status = status;
+        this.#status = status;
     }
 
     get isStarted() {
-        return this._status === "started";
+        return this.#status === Status.started;
     }
 
     get params() {
-        return this._params;
+        return this.#params;
     }
 
     get currentState() {
-        return this._currentState;
+        return this.#currentState;
     }
 
     set currentState(state) {
-        this._currentState = state;
+        this.#currentState = state;
     }
 
     get state(): ImporterState {
         return {
-            id: this._id,
-            exchange: this._exchange,
-            asset: this._asset,
-            currency: this._currency,
-            type: this._type,
-            params: this._params,
-            status: this._status,
-            currentState: this._currentState,
-            progress: this._progress,
-            startedAt: this._startedAt,
-            endedAt: this._endedAt,
-            error: this._error
+            id: this.#id,
+            exchange: this.#exchange,
+            asset: this.#asset,
+            currency: this.#currency,
+            type: this.#type,
+            params: this.#params,
+            status: this.#status,
+            currentState: this.#currentState,
+            progress: this.#progress,
+            startedAt: this.#startedAt,
+            endedAt: this.#endedAt,
+            error: this.#error
         };
     }
 
     get tradesChunks() {
-        if (this._currentState.trades.loaded) return [];
-        return this._currentState.trades.chunks.filter((c) => c.loaded === false);
+        if (this.#currentState.trades.loaded) return [];
+        return this.#currentState.trades.chunks.filter((c) => c.loaded === false);
     }
 
     get candlesChunks() {
-        return Object.values(this._currentState.candles)
+        return Object.values(this.#currentState.candles)
             .filter((t) => t.loaded === false)
             .map((t) => t.chunks)
             .flat();
     }
 
-    _calcTradesProgress() {
-        const loaded = this._currentState.trades.chunks.filter((t) => t.loaded === true).length;
-        this._progress = round((loaded / this._currentState.trades.chunks.length) * 100);
-    }
+    #calcTradesProgress = () => {
+        const loaded = this.#currentState.trades.chunks.filter((t) => t.loaded === true).length;
+        this.#progress = round((loaded / this.#currentState.trades.chunks.length) * 100);
+    };
 
-    _calcCandlesProgress() {
-        const loaded = Object.values(this._currentState.candles)
+    #calcCandlesProgress = () => {
+        const loaded = Object.values(this.#currentState.candles)
             .filter((t) => t.loaded === false)
             .map((t) => t.chunks)
             .flat().length;
-        this._progress = round(
+        this.#progress = round(
             (loaded /
-                Object.values(this._currentState.candles)
+                Object.values(this.#currentState.candles)
                     .map((t) => t.chunks)
                     .flat().length) *
                 100
         );
-    }
+    };
 
-    _setTradesProgress(chunkId: number) {
-        const index = this._currentState.trades.chunks.findIndex(({ id }) => id === chunkId);
-        this._currentState.trades.chunks[index].loaded = true;
-        this._calcTradesProgress();
-        if (this._currentState.trades.chunks.filter((t) => t.loaded === false).length === 0) {
-            this._currentState.trades.loaded = true;
+    #setTradesProgress = (chunkId: number) => {
+        const index = this.#currentState.trades.chunks.findIndex(({ id }) => id === chunkId);
+        this.#currentState.trades.chunks[index].loaded = true;
+        this.#calcTradesProgress();
+        if (this.#currentState.trades.chunks.filter((t) => t.loaded === false).length === 0) {
+            this.#currentState.trades.loaded = true;
         }
-        return this._progress;
-    }
+        return this.#progress;
+    };
 
     get setTradesProgress() {
-        return this._setTradesProgress;
+        return this.#setTradesProgress;
     }
 
-    _setCandlesProgress(timeframe: ValidTimeframe, chunkId: number) {
-        const index = this._currentState.candles[timeframe].chunks.findIndex(({ id }) => id === chunkId);
-        this._currentState.candles[timeframe].chunks[index].loaded = true;
-        this._calcCandlesProgress();
-        if (this._currentState.candles[timeframe].chunks.filter((t) => t.loaded === false).length === 0) {
-            this._currentState.candles[timeframe].loaded = true;
+    #setCandlesProgress = (timeframe: ValidTimeframe, chunkId: number) => {
+        const index = this.#currentState.candles[timeframe].chunks.findIndex(({ id }) => id === chunkId);
+        this.#currentState.candles[timeframe].chunks[index].loaded = true;
+        this.#calcCandlesProgress();
+        if (this.#currentState.candles[timeframe].chunks.filter((t) => t.loaded === false).length === 0) {
+            this.#currentState.candles[timeframe].loaded = true;
         }
-        return this._progress;
-    }
+        return this.#progress;
+    };
 
     get setCandlesProgress() {
-        return this._setCandlesProgress;
+        return this.#setCandlesProgress;
     }
 
     get isLoaded() {
-        if (this._currentState.trades) {
-            return this._currentState.trades.loaded;
-        } else if (this._currentState.candles) {
-            return Object.values(this._currentState.candles).filter((t) => t.loaded === false).length === 0;
+        if (this.#currentState.trades) {
+            return this.#currentState.trades.loaded;
+        } else if (this.#currentState.candles) {
+            return Object.values(this.#currentState.candles).filter((t) => t.loaded === false).length === 0;
         }
     }
 
     get isFailed() {
-        return this._status === Status.failed;
+        return this.#status === Status.failed;
     }
 
     get isFinished() {
-        return this._status === Status.finished;
+        return this.#status === Status.finished || this.#status === Status.canceled;
     }
 
-    set progress(progress: number) {
-        this._progress = progress;
-    }
-
-    set startedAt(date: string) {
-        this._startedAt = dayjs.utc(date).toISOString();
-    }
-
-    set endedAt(date: string) {
-        this._endedAt = dayjs.utc(date).toISOString();
+    get error() {
+        return this.#error;
     }
 
     set error(message: string) {
-        this._error = message;
+        this.#error = message;
+    }
+
+    set progress(progress: number) {
+        this.#progress = progress;
+    }
+
+    set startedAt(date: string) {
+        this.#startedAt = dayjs.utc(date).toISOString();
+    }
+
+    set endedAt(date: string) {
+        this.#endedAt = dayjs.utc(date).toISOString();
     }
 
     start() {
-        this._status = Status.started;
-        this._startedAt = this._startedAt ? this._startedAt : dayjs.utc().toISOString();
+        this.#status = Status.started;
+        this.#startedAt = this.#startedAt ? this.#startedAt : dayjs.utc().toISOString();
     }
 
-    finish(pause = false) {
+    finish(cancel = false) {
+        this.#endedAt = dayjs.utc().toISOString();
         if (this.status === Status.failed) return;
+        if (cancel) {
+            this.#status = Status.canceled;
+            return;
+        }
         if (this.isLoaded) {
-            this._status = Status.finished;
-            this._endedAt = dayjs.utc().toISOString();
-        } else {
-            this._status = pause ? Status.paused : Status.queued;
+            this.#status = Status.finished;
         }
     }
 
     fail(error: string) {
-        this._status = Status.failed;
-        this._error = error;
+        this.#status = Status.failed;
+        this.#error = error;
     }
 }

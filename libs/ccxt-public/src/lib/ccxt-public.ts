@@ -2,20 +2,20 @@ import ccxt, { Exchange } from "ccxt";
 import retry from "async-retry";
 import dayjs from "@cryptuoso/dayjs";
 import logger, { Logger } from "@cryptuoso/logger";
+import { round } from "@cryptuoso/helpers";
 import {
+    ExchangePrice,
+    ExchangeCandle,
+    CandleType,
+    ExchangeTrade,
     Timeframe,
+    ValidTimeframe,
     getCurrentCandleParams,
     getCandlesParams,
     handleCandleGaps,
-    batchCandles,
-    round,
-    ExchangePrice,
-    ExchangeCandle,
-    ValidTimeframe,
-    CandleType,
-    ExchangeTrade
-} from "@cryptuoso/helpers";
-import { createFetchMethod } from "./fetch";
+    batchCandles
+} from "@cryptuoso/market";
+import { createSocksProxyAgent } from "./fetch";
 
 interface MinMax {
     min: number;
@@ -51,12 +51,12 @@ export class PublicConnector {
         }
     };
 
-    _fetch = createFetchMethod(process.env.PROXY_ENDPOINT);
+    _agent = process.env.PROXY_ENDPOINT && createSocksProxyAgent(process.env.PROXY_ENDPOINT);
 
     async initConnector(exchange: string): Promise<void> {
         if (!(exchange in this.connectors)) {
             const config: { [key: string]: any } = {
-                fetchImplementation: this._fetch
+                agent: this._agent
             };
             if (exchange === "bitfinex" || exchange === "kraken") {
                 this.connectors[exchange] = new ccxt[exchange](config);
@@ -335,6 +335,7 @@ export class PublicConnector {
             const params = getCandlesParams(this.connectors[exchange].timeframes, timeframe, dateFrom, limit);
             const dateTo = dayjs.utc(params.dateTo).toISOString();
             let candles: ExchangeCandle[] = [];
+
             const call = async (bail: (e: Error) => void) => {
                 try {
                     return await this.connectors[exchange].fetchOHLCV(
@@ -349,6 +350,7 @@ export class PublicConnector {
                 }
             };
             const response: ccxt.OHLCV[] = await retry(call, this.retryOptions);
+
             if (!response || !Array.isArray(response) || response.length === 0) return candles;
 
             candles = response.map((candle) => {
@@ -373,10 +375,13 @@ export class PublicConnector {
                     throw e;
                 }
             });
-            candles = await handleCandleGaps(dateFrom, dateTo, candles);
-            if (params.batch && timeframe > ValidTimeframe["1m"])
-                candles = await batchCandles(dateFrom, dateTo, timeframe, candles);
 
+            if (params.batch && timeframe > ValidTimeframe["1m"]) {
+                candles = handleCandleGaps(dayjs.utc(params.dateFrom).toISOString(), dateTo, candles);
+                candles = batchCandles(dateFrom, dateTo, timeframe, candles);
+            } else {
+                candles = handleCandleGaps(dateFrom, dateTo, candles);
+            }
             return candles;
         } catch (e) {
             if (e instanceof ccxt.ExchangeNotAvailable) throw new Error("ExchangeNotAvailable");
