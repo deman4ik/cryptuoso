@@ -4,6 +4,7 @@ import { Events } from "./events";
 import { sleep } from "@cryptuoso/helpers";
 import { ValidationSchema } from "fastest-validator";
 process.env.IDLE_SECONDS_PERMITTED = "0";
+jest.setTimeout(10000);
 const serviceSchema: ValidationSchema = {
     info: "string",
     numbers: { type: "array", items: "number" }
@@ -34,16 +35,16 @@ async function doWork(redis: Redis.Redis) {
     redis.flushall();
 
     // simulate handling failure
-    await redis.xgroup("CREATE", "cpz:events:service-job", "group-1", "0", "MKSTREAM");
-    await events.emit({
-        type: "service-job.work",
-        data: {
-            info: "This event is supposed to be pending",
-            numbers: [3, 4, 5]
-        }
+    await redis.xgroup("CREATE", "cpz:events:service-job", "group-1", "0", "MKSTREAM").then(async () => {
+        await events.emit({
+            type: "service-job.work",
+            data: {
+                info: "This event is supposed to be pending",
+                numbers: [3, 4, 5]
+            }
+        });
+        await redis.xread("COUNT", 1, "STREAMS", "cpz:events:service-job", "0");
     });
-    await redis.xread("COUNT", 1, "STREAMS", "cpz:events:service-job", "0");
-    await sleep(100);
 
     // subscribe to events
     events.subscribe({
@@ -65,53 +66,52 @@ async function doWork(redis: Redis.Redis) {
             handler: commonHandler
         }
     });
-
     // init
     await events.start();
 
-    //emit some data
-    await events.emit({
-        type: "service-job.work",
-        data: {
-            info: "This is a job event",
-            numbers: [1, 2, 3, 4, 5]
-        }
-    });
-    await events.emit({
-        type: "service-job.work",
-        data: {
-            info: "This is another job event",
-            numbers: [5, 6, 7, 8, 9]
-        }
-    });
-    await events.emit({
-        type: "random",
-        data: {
-            foo: "bar",
-            bar: { 1: "one", 2: "two", 3: "three" }
-        }
-    });
-    await events.emit({
-        type: "common",
-        data: { message: "This is a very cool notification" }
-    });
+    Promise.all([
+        //emit some data
+        await events.emit({
+            type: "service-job.work",
+            data: {
+                info: "This is a job event",
+                numbers: [1, 2, 3, 4, 5]
+            }
+        }),
+        await events.emit({
+            type: "service-job.work",
+            data: {
+                info: "This is another job event",
+                numbers: [5, 6, 7, 8, 9]
+            }
+        }),
+        await events.emit({
+            type: "random",
+            data: {
+                foo: "bar",
+                bar: { 1: "one", 2: "two", 3: "three" }
+            }
+        }),
+        await events.emit({
+            type: "common",
+            data: { message: "This is a very cool notification" }
+        }),
 
-    // events with invalid data
-    await events.emit({
-        type: "service-job.work",
-        data: {
-            info: "This is a faulty job event, error is expected",
-            numbers: [0, 0, 0, 0]
-        }
+        // events with invalid data
+        await events.emit({
+            type: "service-job.work",
+            data: {
+                info: "This is a faulty job event, error is expected",
+                numbers: [0, 0, 0, 0]
+            }
+        }),
+        await events.emit({
+            type: "service-job.work",
+            data: { msg: "This message is not expected" }
+        })
+    ]).then(async () => {
+        await events._receivePendingGroupMessagesTick("cpz:events:service-job", "group-1");
     });
-    await events.emit({
-        type: "service-job.work",
-        data: { msg: "This message is not expected" }
-    });
-    await sleep(100);
-
-    await events._receivePendingGroupMessagesTick("cpz:events:service-job", "group-1");
-    await sleep(100);
 }
 describe("E2E test", () => {
     it("Should execute if connection is established", (done) => {
@@ -127,8 +127,7 @@ describe("E2E test", () => {
                 })
                 .on("ready", async () => {
                     await doWork(redis).then(async () => {
-                        await sleep(100);
-
+                        await sleep(6000);
                         expect(firstServiceJobHandler).toHaveBeenCalledTimes(5);
                         expect(secondServiceJobHandler).toHaveBeenCalledTimes(7); // 1 for each valid event + 1 for each faulty
                         expect(randomHandler).toHaveBeenCalledTimes(1);
