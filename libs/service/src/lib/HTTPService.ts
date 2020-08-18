@@ -57,6 +57,7 @@ export class HTTPService extends BaseService {
             );
             this._server.use(async (req, res, next) => {
                 try {
+                    this.log.debug({ method: req.method, url: req.url, headers: req.headers, body: req.body });
                     await next();
                 } catch (err) {
                     return next(err);

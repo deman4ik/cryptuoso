@@ -5,5 +5,6 @@ module.exports = {
         "^.+\\.[tj]sx?$": "ts-jest"
     },
     moduleFileExtensions: ["ts", "tsx", "js", "jsx", "html"],
-    coverageDirectory: "../../coverage/libs/exwatcher-base"
+    coverageDirectory: "../../coverage/libs/exwatcher-base",
+    globals: { "ts-jest": { tsConfig: "<rootDir>/tsconfig.spec.json" } }
 };
