@@ -22,6 +22,14 @@ export interface EventsConfig {
     pendingMaxRetries?: number;
 }
 
+export interface DeadLetter {
+    topic: string;
+    group?: string;
+    type: string;
+    data: Event | any;
+    error: string;
+}
+
 const BLOCK_TIMEOUT = 60000;
 const PENDING_RETRY_RATE = 30;
 
@@ -177,11 +185,20 @@ export class Events {
                                                 { validationErrors },
                                                 "VALIDATION"
                                             );
-                                    } catch (err) {
+                                    } catch (error) {
                                         this.log.error(
-                                            err,
+                                            error,
                                             `Failed to handle "${topic}" event #${msgId} (${event.id}) ${event.type}`
                                         );
+                                        if (error instanceof BaseError && error.type === "VALIDATION") {
+                                            const letter: DeadLetter = {
+                                                topic,
+                                                type: event.type,
+                                                data,
+                                                error: error.message
+                                            };
+                                            await this.emitDeadLetter(letter);
+                                        }
                                     }
                                 })
                         );
@@ -269,6 +286,17 @@ export class Events {
                                 error,
                                 `Failed to handle "${topic}" group "${group}" event #${msgId} (${event.id})`
                             );
+                            if (error instanceof BaseError && error.type === "VALIDATION") {
+                                const letter: DeadLetter = {
+                                    topic,
+                                    group,
+                                    type: event.type,
+                                    data,
+                                    error: error.message
+                                };
+                                await this.emitDeadLetter(letter);
+                                await this.#redis.xack(topic, group, msgId);
+                            }
                         }
                     })
                 );
@@ -353,43 +381,39 @@ export class Events {
                                     event.type
                                 );
                                 for (const { handler, validate, passFullEvent } of handlers) {
-                                    try {
-                                        const validationErrors = await validate(event.toJSON());
-                                        const data = passFullEvent ? event : event.data;
-                                        if (validationErrors === true) await handler(data);
-                                        else
-                                            throw new BaseError(
-                                                validationErrors.map((e) => e.message).join(" "),
-                                                { validationErrors },
-                                                "VALIDATION"
-                                            );
-                                    } catch (error) {
-                                        this.#log.error(error);
-                                        continue;
-                                    }
+                                    const validationErrors = await validate(event.toJSON());
+                                    const data = passFullEvent ? event : event.data;
+                                    if (validationErrors === true) await handler(data);
+                                    else
+                                        throw new BaseError(
+                                            validationErrors.map((e) => e.message).join(" "),
+                                            { validationErrors },
+                                            "VALIDATION"
+                                        );
                                 }
                                 await this.#redis.xack(topic, group, msgId);
                                 this.log.debug(
                                     `Handled pending "${topic}" group "${group}" event #${msgId} (${event.id})`
                                 );
                             } catch (error) {
-                                if (retries >= this.#pendingMaxRetries) {
-                                    const letterData = {
-                                        topic,
-                                        group,
-                                        type: event.type,
-                                        data
-                                    };
-                                    await this.emit({
-                                        type: `dead-letter.${letterData.type}`,
-                                        data: letterData
-                                    });
-                                    await this.#redis.xack(topic, group, msgId);
-                                }
                                 this.log.error(
                                     error,
                                     `Failed to handle pending "${topic}" group "${group}" event #${msgId} (${event.id})`
                                 );
+                                if (
+                                    (error instanceof BaseError && error.type === "VALIDATION") ||
+                                    retries >= this.#pendingMaxRetries
+                                ) {
+                                    const letter: DeadLetter = {
+                                        topic,
+                                        group,
+                                        type: event.type,
+                                        data,
+                                        error: error.message
+                                    };
+                                    await this.emitDeadLetter(letter);
+                                    await this.#redis.xack(topic, group, msgId);
+                                }
                             }
                         }
                     } catch (error) {
@@ -425,6 +449,13 @@ export class Events {
         } catch (error) {
             this.log.error(error);
         }
+    }
+
+    async emitDeadLetter(deadLetter: DeadLetter) {
+        await this.emit({
+            type: `dead-letter.${deadLetter.type}`,
+            data: deadLetter
+        });
     }
 
     async emit<T>(event: NewEvent<T>) {
