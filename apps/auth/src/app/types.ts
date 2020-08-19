@@ -42,3 +42,8 @@ export interface DBFunctions {
         (params: { refreshToken: string; refreshTokenExpireAt: string; userId: string }): Promise<any>;
     };
 }
+
+export interface Bcrypt {
+    compare: { (data: any, encrypted: string): Promise<boolean> };
+    hash: { (data: any, saltOrRounds: string | number): Promise<string> };
+}
