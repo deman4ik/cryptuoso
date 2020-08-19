@@ -6,7 +6,7 @@ on:
 
 jobs:
     build:
-        if: "contains(github.event.head_commit.message, 'DEPLOY')"
+        if: "contains(github.event.head_commit.message, 'DEPLOY |')"
         name: Build, push, and deploy
         runs-on: ubuntu-latest
         strategy:
@@ -37,8 +37,12 @@ jobs:
                   result-encoding: string
                   github-token: ${{secrets.GITHUB_TOKEN}}
                   script: |
-                      if (context.payload.head_commit.message.includes("DEPLOY ALL")) {
-                         return "--all";
+                      const matched = context.payload.head_commit.message.match(/(?<=DEPLOY \|).*?(?=\s*\|)/gs);
+                      const list = matched && Array.isArray(matched) && matched.length > 0 ? matched[0].trim() : null;
+                      if (list === "ALL") {
+                             return "--all";
+                         } else if (list) {
+                             return list;
                          } else {
                          const branch = context.payload.ref.split("/")[2];
 
@@ -66,7 +70,13 @@ jobs:
 
             - name: List services
               id: services
-              run: echo ::set-output name=list::$(node ./node_modules/@nrwl/cli/bin/nx.js affected:apps --plain ${{steps.history.outputs.result}} )
+              run: |
+                  if [[ ${{steps.history.outputs.result}} == *"--"* ]];
+                  then
+                     echo ::set-output name=list::$(node ./node_modules/@nrwl/cli/bin/nx.js affected:apps --plain ${{steps.history.outputs.result}} )
+                  else
+                     echo ::set-output name=list::${{steps.history.outputs.result}}
+                  fi
 
             - name: Echo services
               run: echo ${{ steps.services.outputs.list }}
