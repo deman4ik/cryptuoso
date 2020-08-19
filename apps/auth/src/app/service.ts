@@ -1,12 +1,13 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 /* import { IncomingMessage, ServerResponse } from 'http'; */
 import { Request, Response, Protocol } from "restana";
-import Cookies from "cookies";
+import Cookie from "cookie";
 import { User, UserStatus, UserRoles } from "@cryptuoso/user-state";
 import { DBFunctions } from "./types";
 import { Auth } from "./auth";
 import { sql } from "slonik";
 import dayjs from "@cryptuoso/dayjs";
+import { ActionsHandlerError } from "@cryptuoso/errors";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface HttpRequest extends Request<Protocol.HTTP> /* , IncomingMessage */ {
@@ -50,7 +51,7 @@ export default class AuthService extends HTTPService {
                         password: { type: "string", empty: false, trim: true }
                     }
                 },
-                "login-tg": {
+                loginTg: {
                     handler: this.loginTg.bind(this),
                     roles: [UserRoles.anonymous],
                     inputSchema: {
@@ -87,13 +88,12 @@ export default class AuthService extends HTTPService {
                         name: { type: "string", optional: true, empty: false, trim: true }
                     }
                 },
-                "refresh-token": {
+                refreshToken: {
                     handler: this.refreshToken.bind(this),
-                    roles: [UserRoles.user],
-                    auth: true,
-                    inputSchema: {}
+                    auth: false,
+                    inputSchema: null
                 },
-                "activate-account": {
+                activateAccount: {
                     handler: this.activateAccount.bind(this),
                     roles: [UserRoles.anonymous],
                     inputSchema: {
@@ -101,14 +101,14 @@ export default class AuthService extends HTTPService {
                         secretCode: { type: "string", empty: false, trim: true }
                     }
                 },
-                "password-reset": {
+                passwordReset: {
                     handler: this.passwordReset.bind(this),
                     roles: [UserRoles.anonymous],
                     inputSchema: {
                         email: { type: "email", normalize: true }
                     }
                 },
-                "confirm-password-reset": {
+                confirmPasswordReset: {
                     handler: this.confirmPasswordReset.bind(this),
                     roles: [UserRoles.anonymous],
                     inputSchema: {
@@ -123,7 +123,7 @@ export default class AuthService extends HTTPService {
                         }
                     }
                 },
-                "change-email": {
+                changeEmail: {
                     handler: this.changeEmail.bind(this),
                     roles: [UserRoles.user],
                     auth: true,
@@ -131,7 +131,7 @@ export default class AuthService extends HTTPService {
                         email: { type: "email", normalize: true }
                     }
                 },
-                "confirm-change-email": {
+                confirmChangeEmail: {
                     handler: this.confirmChangeEmail.bind(this),
                     roles: [UserRoles.user],
                     auth: true,
@@ -148,15 +148,16 @@ export default class AuthService extends HTTPService {
     async login(req: HttpRequest, res: HttpResponse) {
         const { accessToken, refreshToken, refreshTokenExpireAt } = await this.#auth.login(req.body.input);
 
-        const cookies = new Cookies(req, res);
-
-        cookies.set("refresh_token", refreshToken, {
-            expires: new Date(refreshTokenExpireAt),
-            httpOnly: true,
-            sameSite: "lax",
-            domain: ".cryptuoso.com",
-            overwrite: true
-        });
+        res.setHeader(
+            "Set-Cookie",
+            Cookie.serialize("refresh_token", refreshToken, {
+                expires: new Date(refreshTokenExpireAt),
+                httpOnly: true,
+                sameSite: "lax",
+                domain: ".cryptuoso.com",
+                secure: true
+            })
+        );
         res.send({
             success: true,
             accessToken
@@ -167,15 +168,16 @@ export default class AuthService extends HTTPService {
     async loginTg(req: HttpRequest, res: HttpResponse) {
         const { accessToken, refreshToken, refreshTokenExpireAt } = await this.#auth.loginTg(req.body.input);
 
-        const cookies = new Cookies(req, res);
-
-        cookies.set("refresh_token", refreshToken, {
-            expires: new Date(refreshTokenExpireAt),
-            httpOnly: true,
-            sameSite: "lax",
-            domain: ".cryptuoso.com",
-            overwrite: true
-        });
+        res.setHeader(
+            "Set-Cookie",
+            Cookie.serialize("refresh_token", refreshToken, {
+                expires: new Date(refreshTokenExpireAt),
+                httpOnly: true,
+                sameSite: "lax",
+                domain: ".cryptuoso.com",
+                secure: true
+            })
+        );
         res.send({
             success: true,
             accessToken
@@ -184,15 +186,16 @@ export default class AuthService extends HTTPService {
     }
 
     async logout(req: HttpRequest, res: HttpResponse) {
-        const cookies = new Cookies(req, res);
-
-        cookies.set("refresh_token", "", {
-            expires: new Date(0),
-            httpOnly: true,
-            sameSite: "lax",
-            domain: ".cryptuoso.com",
-            overwrite: true
-        });
+        res.setHeader(
+            "Set-Cookie",
+            Cookie.serialize("refresh_token", "", {
+                expires: new Date(0),
+                httpOnly: true,
+                sameSite: "lax",
+                domain: ".cryptuoso.com",
+                secure: true
+            })
+        );
         res.send({ success: true });
         res.end();
     }
@@ -204,22 +207,27 @@ export default class AuthService extends HTTPService {
     }
 
     async refreshToken(req: HttpRequest, res: HttpResponse) {
-        const cookies = new Cookies(req, res);
-        let oldRefreshToken = cookies.get("refresh_token");
+        const cookies = Cookie.parse((req.headers["cookie"] as string) || "");
+        let oldRefreshToken = cookies["refresh_token"];
+        this.log.info("cookie ", req.headers["cookie"], cookies, oldRefreshToken);
         if (!oldRefreshToken) {
             oldRefreshToken = req.headers["x-refresh-token"] as string;
         }
+        if (!oldRefreshToken) throw new ActionsHandlerError("No refresh token", null, "FORBIDDEN", 403);
         const { accessToken, refreshToken, refreshTokenExpireAt } = await this.#auth.refreshToken({
             refreshToken: oldRefreshToken
         });
 
-        cookies.set("refresh_token", refreshToken, {
-            expires: new Date(refreshTokenExpireAt),
-            httpOnly: true,
-            sameSite: "lax",
-            domain: ".cryptuoso.com",
-            overwrite: true
-        });
+        res.setHeader(
+            "Set-Cookie",
+            Cookie.serialize("refresh_token", refreshToken, {
+                expires: new Date(refreshTokenExpireAt),
+                httpOnly: true,
+                sameSite: "lax",
+                domain: ".cryptuoso.com",
+                secure: true
+            })
+        );
         res.send({
             success: true,
             accessToken,
@@ -232,15 +240,16 @@ export default class AuthService extends HTTPService {
     async activateAccount(req: HttpRequest, res: HttpResponse) {
         const { accessToken, refreshToken, refreshTokenExpireAt } = await this.#auth.activateAccount(req.body.input);
 
-        const cookies = new Cookies(req, res);
-
-        cookies.set("refresh_token", refreshToken, {
-            expires: new Date(refreshTokenExpireAt),
-            httpOnly: true,
-            sameSite: "lax",
-            domain: ".cryptuoso.com",
-            overwrite: true
-        });
+        res.setHeader(
+            "Set-Cookie",
+            Cookie.serialize("refresh_token", refreshToken, {
+                expires: new Date(refreshTokenExpireAt),
+                httpOnly: true,
+                sameSite: "lax",
+                domain: ".cryptuoso.com",
+                secure: true
+            })
+        );
         res.send({
             success: true,
             accessToken
@@ -259,15 +268,16 @@ export default class AuthService extends HTTPService {
             req.body.input
         );
 
-        const cookies = new Cookies(req, res);
-
-        cookies.set("refresh_token", refreshToken, {
-            expires: new Date(refreshTokenExpireAt),
-            httpOnly: true,
-            sameSite: "lax",
-            domain: ".cryptuoso.com",
-            overwrite: true
-        });
+        res.setHeader(
+            "Set-Cookie",
+            Cookie.serialize("refresh_token", refreshToken, {
+                expires: new Date(refreshTokenExpireAt),
+                httpOnly: true,
+                sameSite: "lax",
+                domain: ".cryptuoso.com",
+                secure: true
+            })
+        );
         res.send({
             success: true,
             accessToken
@@ -290,15 +300,16 @@ export default class AuthService extends HTTPService {
             secretCode: req.body.input.secretCode
         });
 
-        const cookies = new Cookies(req, res);
-
-        cookies.set("refresh_token", refreshToken, {
-            expires: new Date(refreshTokenExpireAt),
-            httpOnly: true,
-            sameSite: "lax",
-            domain: ".cryptuoso.com",
-            overwrite: true
-        });
+        res.setHeader(
+            "Set-Cookie",
+            Cookie.serialize("refresh_token", refreshToken, {
+                expires: new Date(refreshTokenExpireAt),
+                httpOnly: true,
+                sameSite: "lax",
+                domain: ".cryptuoso.com",
+                secure: true
+            })
+        );
         res.send({
             success: true,
             accessToken
