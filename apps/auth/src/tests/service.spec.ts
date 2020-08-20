@@ -110,12 +110,10 @@ describe("Test 'AuthService' class methods", () => {
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
-
                 expect(res.status).toStrictEqual(200);
                 expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("accessToken");
@@ -140,8 +138,7 @@ describe("Test 'AuthService' class methods", () => {
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": "id",
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -179,8 +176,7 @@ describe("Test 'AuthService' class methods", () => {
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -358,8 +354,7 @@ describe("Test 'AuthService' class methods", () => {
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": "id",
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -398,8 +393,7 @@ describe("Test 'AuthService' class methods", () => {
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": "id",
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -509,8 +503,7 @@ describe("Test 'AuthService' class methods", () => {
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -539,8 +532,7 @@ describe("Test 'AuthService' class methods", () => {
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": "id",
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -577,8 +569,7 @@ describe("Test 'AuthService' class methods", () => {
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -616,8 +607,7 @@ describe("Test 'AuthService' class methods", () => {
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -644,8 +634,7 @@ describe("Test 'AuthService' class methods", () => {
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": "id",
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -685,8 +674,7 @@ describe("Test 'AuthService' class methods", () => {
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -716,8 +704,7 @@ describe("Test 'AuthService' class methods", () => {
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": "id",
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -755,8 +742,7 @@ describe("Test 'AuthService' class methods", () => {
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -794,8 +780,7 @@ describe("Test 'AuthService' class methods", () => {
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );

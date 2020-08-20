@@ -1,5 +1,5 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
-/* import { IncomingMessage, ServerResponse } from 'http'; */
+//import { spawn, Pool, Worker as ThreadsWorker } from "threads";
 import { Request, Response, Protocol } from "restana";
 import Cookie from "cookie";
 import { User, UserStatus, UserRoles } from "@cryptuoso/user-state";
@@ -8,21 +8,19 @@ import { Auth } from "./auth";
 import { sql } from "slonik";
 import dayjs from "@cryptuoso/dayjs";
 import { ActionsHandlerError } from "@cryptuoso/errors";
+//import { BcryptUtils } from "./bcryptWorker";
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-interface HttpRequest extends Request<Protocol.HTTP> /* , IncomingMessage */ {
+interface HttpRequest extends Request<Protocol.HTTP> {
     body: any;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-interface HttpResponse extends Response<Protocol.HTTP> /* , ServerResponse */ {}
+type HttpResponse = Response<Protocol.HTTP>;
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface AuthServiceConfig extends HTTPServiceConfig {}
+export type AuthServiceConfig = HTTPServiceConfig;
 
 export default class AuthService extends HTTPService {
-    #auth: Auth;
-    #dbFunctions: DBFunctions = {
+    auth: Auth;
+    dbFunctions: DBFunctions = {
         getUserByEmail: this._dbGetUserByEmail.bind(this),
         getUserById: this._dbGetUserById.bind(this),
         getUserTg: this._dbGetUserTg.bind(this),
@@ -36,12 +34,21 @@ export default class AuthService extends HTTPService {
         confirmChangeUserEmail: this._dbConfirmChangeUserEmail.bind(this),
         activateUser: this._dbActivateUser.bind(this)
     };
+    /*bcrypt: Bcrypt = {
+        compare: this._bcryptCompare.bind(this),
+        hash: this._bcryptHash.bind(this)
+    };
+     pool: Pool<any>;*/
 
     constructor(config?: AuthServiceConfig) {
         super(config);
         try {
-            this.#auth = new Auth(this.#dbFunctions);
-
+            this.auth = new Auth(
+                this.dbFunctions //this.bcrypt
+            );
+            /*
+          this.addOnStartHandler(this.onStartService);
+            this.addOnStopHandler(this.onStopService);*/
             this.createRoutes({
                 login: {
                     handler: this.login.bind(this),
@@ -145,28 +152,43 @@ export default class AuthService extends HTTPService {
         }
     }
 
-    async login(req: HttpRequest, res: HttpResponse) {
-        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.#auth.login(req.body.input);
-
-        res.setHeader(
-            "Set-Cookie",
-            Cookie.serialize("refresh_token", refreshToken, {
-                expires: new Date(refreshTokenExpireAt),
-                httpOnly: true,
-                sameSite: "lax",
-                domain: ".cryptuoso.com",
-                secure: true
-            })
-        );
-        res.send({
-            success: true,
-            accessToken
+    /* async onStartService(): Promise<void> {
+        this.pool = Pool(() => spawn<BcryptUtils>(new ThreadsWorker("./bcryptWorker")), {
+            name: "bcrypt-utils"
         });
-        res.end();
+    }
+
+    async onStopService(): Promise<void> {
+        await this.pool.terminate();
+    }*/
+
+    async login(req: HttpRequest, res: HttpResponse) {
+        try {
+            const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.login(req.body.input);
+
+            res.setHeader(
+                "Set-Cookie",
+                Cookie.serialize("refresh_token", refreshToken, {
+                    expires: new Date(refreshTokenExpireAt),
+                    httpOnly: true,
+                    sameSite: "lax",
+                    domain: ".cryptuoso.com",
+                    secure: true
+                })
+            );
+            res.send({
+                success: true,
+                accessToken
+            });
+            res.end();
+        } catch (err) {
+            console.error(err);
+            throw err;
+        }
     }
 
     async loginTg(req: HttpRequest, res: HttpResponse) {
-        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.#auth.loginTg(req.body.input);
+        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.loginTg(req.body.input);
 
         res.setHeader(
             "Set-Cookie",
@@ -201,7 +223,7 @@ export default class AuthService extends HTTPService {
     }
 
     async register(req: HttpRequest, res: HttpResponse) {
-        const userId = await this.#auth.register(req.body.input);
+        const userId = await this.auth.register(req.body.input);
         res.send({ success: true, userId });
         res.end();
     }
@@ -214,7 +236,7 @@ export default class AuthService extends HTTPService {
             oldRefreshToken = req.headers["x-refresh-token"] as string;
         }
         if (!oldRefreshToken) throw new ActionsHandlerError("No refresh token", null, "FORBIDDEN", 403);
-        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.#auth.refreshToken({
+        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.refreshToken({
             refreshToken: oldRefreshToken
         });
 
@@ -238,7 +260,7 @@ export default class AuthService extends HTTPService {
     }
 
     async activateAccount(req: HttpRequest, res: HttpResponse) {
-        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.#auth.activateAccount(req.body.input);
+        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.activateAccount(req.body.input);
 
         res.setHeader(
             "Set-Cookie",
@@ -258,13 +280,13 @@ export default class AuthService extends HTTPService {
     }
 
     async passwordReset(req: HttpRequest, res: HttpResponse) {
-        const userId = await this.#auth.passwordReset(req.body.input);
+        const userId = await this.auth.passwordReset(req.body.input);
         res.send({ success: true, userId });
         res.end();
     }
 
     async confirmPasswordReset(req: HttpRequest, res: HttpResponse) {
-        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.#auth.confirmPasswordReset(
+        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.confirmPasswordReset(
             req.body.input
         );
 
@@ -286,7 +308,7 @@ export default class AuthService extends HTTPService {
     }
 
     async changeEmail(req: HttpRequest, res: HttpResponse) {
-        /* const response =  */ await this.#auth.changeEmail({
+        /* const response =  */ await this.auth.changeEmail({
             userId: req.body.session_variables["x-hasura-user-id"],
             email: req.body.input.email
         });
@@ -295,7 +317,7 @@ export default class AuthService extends HTTPService {
     }
 
     async confirmChangeEmail(req: HttpRequest, res: HttpResponse) {
-        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.#auth.confirmChangeEmail({
+        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.confirmChangeEmail({
             userId: req.body.session_variables["x-hasura-user-id"],
             secretCode: req.body.input.secretCode
         });
@@ -510,4 +532,13 @@ export default class AuthService extends HTTPService {
             WHERE id = ${userId};
         `);
     }
+    /*
+    private async _bcryptCompare(data: any, encrypted: string): Promise<boolean> {
+        return this.pool.queue(async (utils: BcryptUtils) => utils.compare(data, encrypted));
+    }
+
+    private async _bcryptHash(data: any, saltOrRounds: string | number): Promise<string> {
+        return this.pool.queue(async (utils: BcryptUtils) => utils.hash(data, saltOrRounds));
+    }
+    */
 }
