@@ -8,7 +8,7 @@ import { StatisticUtils } from "./statsWorker";
 import { sql, pgUtil, pg } from "@cryptuoso/postgres";
 
 import { /* calcStatisticsCumulatively,  */CommonStats, PositionDataForStats } from "@cryptuoso/trade-statistics";
-import dayjs from "dayjs";
+import dayjs from "@cryptuoso/dayjs";
 
 function toGoodDate(date: string): string {
     const time = dayjs.utc(date).valueOf();
