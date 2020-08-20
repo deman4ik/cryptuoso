@@ -47,7 +47,6 @@ export default class ImporterWorkerService extends BaseService {
 
     async onStartService(): Promise<void> {
         this.pool = Pool(() => spawn<ImporterUtils>(new ThreadsWorker("./importerUtilsWorker")), {
-            concurrency: this.cpus,
             name: "importer-utils"
         });
         this.workers = {
