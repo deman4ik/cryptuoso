@@ -23,7 +23,6 @@ import {
     ExwatcherUnsubscribeAll,
     ExwatcherTick
 } from "@cryptuoso/exwatcher-events";
-import { DatabasePoolConnectionType } from "slonik";
 
 // !FIXME: ccxt.pro typings
 
@@ -402,23 +401,22 @@ export class ExwatcherBaseService extends BaseService {
             const { id, exchange, asset, currency } = subscription;
             this.log.info(`Loading current candles ${id}`);
             if (!this.candlesCurrent[id]) this.candlesCurrent[id] = {};
-            await this.db.pg.connect(async (connection) => {
-                await Promise.all(
-                    Timeframe.validArray.map(async (timeframe) => {
-                        const candle: ExchangeCandle = await this.publicConnector.getCurrentCandle(
-                            exchange,
-                            asset,
-                            currency,
-                            timeframe
-                        );
 
-                        this.candlesCurrent[id][timeframe] = {
-                            ...candle
-                        };
-                        await this.saveCandles(connection, [this.candlesCurrent[id][timeframe]]);
-                    })
-                );
-            });
+            await Promise.all(
+                Timeframe.validArray.map(async (timeframe) => {
+                    const candle: ExchangeCandle = await this.publicConnector.getCurrentCandle(
+                        exchange,
+                        asset,
+                        currency,
+                        timeframe
+                    );
+
+                    this.candlesCurrent[id][timeframe] = {
+                        ...candle
+                    };
+                    await this.saveCandles([this.candlesCurrent[id][timeframe]]);
+                })
+            );
         } catch (err) {
             this.log.error(`Failed to load current candles ${subscription.id}`, err);
             throw err;
@@ -563,9 +561,7 @@ export class ExwatcherBaseService extends BaseService {
                         );
 
                         if (currentCandles.length > 0) {
-                            await this.db.pg.connect(async (connection) => {
-                                await this.saveCandles(connection, currentCandles);
-                            });
+                            await this.saveCandles(currentCandles);
                         }
 
                         let tick: ExchangePrice;
@@ -649,28 +645,23 @@ export class ExwatcherBaseService extends BaseService {
             }
 
             if (Object.keys(closedCandles).length > 0) {
-                await this.db.pg.connect(async (connection) => {
-                    await Promise.all(
-                        Object.keys(closedCandles).map(async (timeframe) => {
-                            const candles = closedCandles[timeframe];
-                            if (candles && Array.isArray(candles) && candles.length > 0) {
-                                this.log.info(
-                                    `New ${uniqueElementsBy(
-                                        candles,
-                                        (a, b) =>
-                                            a.exchange === b.exchange &&
-                                            a.asset === b.asset &&
-                                            a.currency === b.currency
-                                    ).map(
-                                        ({ exchange, asset, currency }) =>
-                                            `${exchange}.${asset}.${currency}.${timeframe}`
-                                    )} candles`
-                                );
-                                await this.saveCandles(connection, candles);
-                            }
-                        })
-                    );
-                });
+                await Promise.all(
+                    Object.keys(closedCandles).map(async (timeframe) => {
+                        const candles = closedCandles[timeframe];
+                        if (candles && Array.isArray(candles) && candles.length > 0) {
+                            this.log.info(
+                                `New ${uniqueElementsBy(
+                                    candles,
+                                    (a, b) =>
+                                        a.exchange === b.exchange && a.asset === b.asset && a.currency === b.currency
+                                ).map(
+                                    ({ exchange, asset, currency }) => `${exchange}.${asset}.${currency}.${timeframe}`
+                                )} candles`
+                            );
+                            await this.saveCandles(candles);
+                        }
+                    })
+                );
             }
 
             this.lastDate = date.valueOf();
@@ -775,9 +766,7 @@ export class ExwatcherBaseService extends BaseService {
                             });
 
                             if (currentCandles.length > 0) {
-                                await this.db.pg.connect(async (connection) => {
-                                    await this.saveCandles(connection, currentCandles);
-                                });
+                                await this.saveCandles(currentCandles);
                             }
 
                             if (tick) {
@@ -811,28 +800,23 @@ export class ExwatcherBaseService extends BaseService {
             }
 
             if (Object.keys(closedCandles).length > 0) {
-                await this.db.pg.connect(async (connection) => {
-                    await Promise.all(
-                        Object.keys(closedCandles).map(async (timeframe) => {
-                            const candles = closedCandles[timeframe];
-                            if (candles && Array.isArray(candles) && candles.length > 0) {
-                                this.log.info(
-                                    `New ${uniqueElementsBy(
-                                        candles,
-                                        (a, b) =>
-                                            a.exchange === b.exchange &&
-                                            a.asset === b.asset &&
-                                            a.currency === b.currency
-                                    ).map(
-                                        ({ exchange, asset, currency }) =>
-                                            `${exchange}.${asset}.${currency}.${timeframe}`
-                                    )} candles`
-                                );
-                                await this.saveCandles(connection, candles);
-                            }
-                        })
-                    );
-                });
+                await Promise.all(
+                    Object.keys(closedCandles).map(async (timeframe) => {
+                        const candles = closedCandles[timeframe];
+                        if (candles && Array.isArray(candles) && candles.length > 0) {
+                            this.log.info(
+                                `New ${uniqueElementsBy(
+                                    candles,
+                                    (a, b) =>
+                                        a.exchange === b.exchange && a.asset === b.asset && a.currency === b.currency
+                                ).map(
+                                    ({ exchange, asset, currency }) => `${exchange}.${asset}.${currency}.${timeframe}`
+                                )} candles`
+                            );
+                            await this.saveCandles(candles);
+                        }
+                    })
+                );
             }
 
             this.lastDate = date.valueOf();
@@ -841,11 +825,11 @@ export class ExwatcherBaseService extends BaseService {
         }
     }
 
-    async saveCandles(connection: DatabasePoolConnectionType, candles: ExchangeCandle[]): Promise<void> {
+    async saveCandles(candles: ExchangeCandle[]): Promise<void> {
         try {
             for (const candle of candles) {
                 try {
-                    await connection.query(this.db.sql`
+                    await this.db.pg.query(this.db.sql`
                             insert into ${this.db.sql.identifier([`candles${candle.timeframe}`])}
                 (exchange, asset, currency, open, high, low, close, volume, time, timestamp, type)
                 values (
