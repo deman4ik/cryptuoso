@@ -27,9 +27,9 @@ const typeParsers = [
 ];
 const config: ClientConfigurationInputType = {
     connectionRetryLimit: 5,
-    connectionTimeout: 10000,
+    connectionTimeout: "DISABLE_TIMEOUT",
     idleTimeout: 3000,
-    maximumPoolSize: 16,
+    maximumPoolSize: 22,
     interceptors,
     typeParsers
 };

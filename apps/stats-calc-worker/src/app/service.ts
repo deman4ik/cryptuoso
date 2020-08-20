@@ -1,50 +1,61 @@
 import { DataStream } from "scramjet";
-/* import os from "os";
-import { spawn, Pool, Worker as ThreadsWorker } from "threads"; */
+//import os from "os";
+import { spawn, Pool, Worker as ThreadsWorker } from "threads";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 //import { RobotPositionState, PositionDataForStats } from "@cryptuoso/robot-state";
-import { round } from "@cryptuoso/helpers";
-//import { calcStatistics } from "./statsWorker";
+//import { round } from "@cryptuoso/helpers";
+import { StatisticUtils } from "./statsWorker";
 import { sql, pgUtil, pg } from "@cryptuoso/postgres";
 
-import { calcStatisticsCumulatively, CommonStats, PositionDataForStats } from "@cryptuoso/trade-statistics";
+import { /* calcStatisticsCumulatively,  */CommonStats, PositionDataForStats } from "@cryptuoso/trade-statistics";
 import dayjs from "dayjs";
 
+function toGoodDate(date: string): string {
+    const time = dayjs.utc(date).valueOf();
+
+    return dayjs.utc(time + 3 * 60 * 60 * 1e3).toISOString();
+};
+
 export default class StatisticCalcService extends BaseService {
-    /* cpus: number;
-    pool: Pool<any>; */
+    /* cpus: number; */
+    pool: Pool<any>;
     pgJS: typeof pg;
 
     constructor(config?: BaseServiceConfig) {
         super(config);
         try {
-            this.pgJS = pgUtil.createJSPool();
-            /* this.cpus = os.cpus().length;
-            this.addOnStartHandler(this._onStartService.bind(this)); */
+            this.pgJS = pgUtil.createJSPool({});
+            /* this.cpus = os.cpus().length; */
+            this.addOnStartHandler(this._onStartService.bind(this));
+            this.addOnStopHandler(this.onStopService);
         } catch (err) {
             this.log.error("Error in StatisticCalcService constructor", err);
         }
     }
 
-    /* async _onStartService(): Promise<void> {
+    async _onStartService(): Promise<void> {
         this.pool = Pool(() => spawn<StatisticUtils>(new ThreadsWorker("./statsWorker")), {
-            concurrency: this.cpus,
-            name: "statistic-utils"
+            /* concurrency: this.cpus, */
+            name: "statistics-utils"
         });
-    } */
+    }
 
-    async calcStatistics(previousPositionsStatistics: CommonStats, positions: PositionDataForStats[]) {
-        /* return this.pool.queue(async (utils: StatisticUtils) =>
-            utils.calcStatistics(positions)
-        ); */
-        return await calcStatisticsCumulatively(
-            previousPositionsStatistics,
+    async onStopService(): Promise<void> {
+        await this.pool.terminate();
+    }
+
+    async calcStatistics(prevStats: CommonStats, positions: PositionDataForStats[]) {
+        return this.pool.queue(async (utils: StatisticUtils) =>
+            utils.calcStatistics(prevStats, positions)
+        );
+        /* return await calcStatisticsCumulatively(
+            prevStats,
             // from cpz_platform
             positions.map((pos) => ({
                 ...pos,
                 profit: pos.fee && +pos.fee > 0 ? +round(pos.profit - pos.profit * pos.fee, 6) : pos.profit
             }))
-        );
+        ); */
     }
 
     async getRobot(robotId: string) {
@@ -77,8 +88,6 @@ export default class StatisticCalcService extends BaseService {
                     AND exit_date > ${updateFrom}
                 ORDER BY exit_date;
         `);
-
-        //AND exit_date >= r.updated_at
 
         if (!positions.length) return;
 
@@ -155,11 +164,11 @@ export default class StatisticCalcService extends BaseService {
         const updateFrom = updateAll ? dayjs(0).toISOString() : prevRobotStats.statistics.lastPositionExitDate;
 
         await this.db.pg.connect(async (connection) => {
-                await DataStream.from(async function* () {
-                    let chunkNum = 0;
+            await DataStream.from(async function* () {
+                let chunkNum = 0;
 
-                    while (true) {
-                        const chunk: PositionDataForStats[] = await connection.any(sql`
+                while (true) {
+                    const chunk: PositionDataForStats[] = await connection.any(sql`
                                     SELECT id, direction, exit_date, profit, bars_held 
                                     FROM robot_positions
                                     WHERE robot_id = ${robotId}
@@ -169,12 +178,12 @@ export default class StatisticCalcService extends BaseService {
                                     LIMIT ${chunkSize} OFFSET ${chunkNum * chunkSize};
                                 `);
 
-                        ++chunkNum;
-                        yield chunk;
+                    ++chunkNum;
+                    yield chunk;
 
-                        if (chunk.length != chunkSize) break;
-                    }
-                })
+                    if (chunk.length != chunkSize) break;
+                }
+            })
                 .reduce(async (prevStats: CommonStats, chunk: PositionDataForStats[]) => {
                     return await this.calcStatistics(prevStats, chunk);
                 }, initStats)
@@ -202,7 +211,7 @@ export default class StatisticCalcService extends BaseService {
         if (!prevRobotStats) throw new Error("Robot with this id doesn't exists");
 
         const initStats = updateAll ? new CommonStats(null, null) : prevRobotStats;
-        const updateFrom = updateAll ? dayjs(0).toISOString() : prevRobotStats.statistics.lastPositionExitDate;
+        const updateFrom = updateAll ? dayjs(0).toISOString() : toGoodDate(prevRobotStats.statistics.lastPositionExitDate);
 
         await this.pgJS.stream(
             sql`
@@ -229,15 +238,12 @@ export default class StatisticCalcService extends BaseService {
                                 equity = ${this.db.sql.json(equity)}
                             WHERE id = ${robotId};
                         `); */
-                    })
-                    .catch((err) => {
-                        //console.log("ERRRORRR", err);
                     });
             }
         );
     }
 
-    async checkStreamOrder(robotId: string, updateAll: boolean = false) {
+    async calcRobotByStreamWithConnection(robotId: string, updateAll: boolean = false) {
         const prevRobotStats: CommonStats = await pg.maybeOne(sql`
             SELECT statistics, equity
             FROM robots
@@ -246,48 +252,41 @@ export default class StatisticCalcService extends BaseService {
 
         if (!prevRobotStats) throw new Error("Robot with this id doesn't exists");
 
-        const updateFrom = updateAll ? dayjs(0).toISOString() : prevRobotStats.statistics.lastPositionExitDate;
+        const initStats = updateAll ? new CommonStats(null, null) : prevRobotStats;
+        const updateFrom = updateAll ? dayjs(0).toISOString() : toGoodDate(prevRobotStats.statistics.lastPositionExitDate);
 
-        let cnt = 0;
-        
-        await this.pgJS.stream(
-            sql`
-                SELECT id, direction, exit_date, profit, bars_held 
-                FROM robot_positions
-                WHERE robot_id = ${robotId}
-                    AND status = 'closed'
-                    AND exit_date > ${updateFrom}
-                ORDER BY exit_date;
-            `,
-            async (stream) => {
-                await DataStream.from(stream)
-                    .map((datum) => datum.row)
-                    .reduce(
-                        async (acc: any, pos: PositionDataForStats) => {
-                            if(cnt < 3) {
-                                ++cnt;
-                                console.log(pos.exitDate, acc.lastExitDate);
-                            }
-                            if (dayjs.utc(pos.exitDate).valueOf() <= dayjs.utc(acc.lastExitDate).valueOf()) {
-                                //console.log(pos.exitDate, acc.lastExitDate);
-                                //console.log(dayjs.utc(pos.exitDate).valueOf(), dayjs.utc(acc.lastExitDate).valueOf());
-                                ++acc.wrongCount;
-                            }
+        await this.pgJS.connect(async (connection) => {
+            await connection.stream(
+                sql`
+                    SELECT id, direction, exit_date, profit, bars_held 
+                    FROM robot_positions
+                    WHERE robot_id = ${robotId}
+                        AND status = 'closed'
+                        AND exit_date > ${updateFrom}
+                    ORDER BY exit_date;
+                `,
+                async (stream) => {
+                    await DataStream.from(stream)
+                        .map((datum) => datum.row)
+                        .reduce(async (prevStats: CommonStats, pos: PositionDataForStats) => {
+                            return await this.calcStatistics(prevStats, [pos]);
+                        }, initStats)
+                        .then(async (res) => {
+                            if (res == initStats) return;
 
-                            ++acc.allCount;
-                            acc.lastExitDate = pos.exitDate;
-                            return acc;
-                        },
-                        { lastExitDate: updateFrom, wrongCount: 0, allCount: 0 }
-                    )
-                    .then(async (res) => {
-                        console.log(res);
-                        console.log(dayjs.utc(res.lastExitDate).valueOf());
-                    });
-            }
-        );
+                            const { statistics, equity } = res;
+                            /* await this.db.pg.any(sql`
+                                UPDATE robots
+                                SET statistics = ${this.db.sql.json(statistics)},
+                                    equity = ${this.db.sql.json(equity)}
+                                WHERE id = ${robotId};
+                            `); */
+                        });
+                }
+            );
+        });
     }
-    
+
     async streamAgain() {
         await this.pgJS.stream(
             this.db.sql`SELECT id, direction, exit_date, profit, bars_held
