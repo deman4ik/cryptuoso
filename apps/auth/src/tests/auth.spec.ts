@@ -22,10 +22,10 @@ const userSettings: UserSettings = {
     }
 };
 
-const bcryptUtils = {
+/*const bcryptUtils = {
     compare: bcrypt.compare,
     hash: bcrypt.hash
-};
+};*/
 jest.mock("@cryptuoso/postgres");
 jest.mock("@cryptuoso/mail");
 
@@ -53,8 +53,8 @@ describe("Test Auth class methods", () => {
                         {
                             getUserByEmail: jest.fn(async () => dbUser),
                             updateUserRefreshToken: jest.fn()
-                        } as any,
-                        bcryptUtils as any
+                        } as any
+                        //   //   bcryptUtils as any
                     );
 
                     const result = await auth.login(params);
@@ -89,8 +89,8 @@ describe("Test Auth class methods", () => {
                     {
                         getUserByEmail: jest.fn(async () => dbUser),
                         updateUserRefreshToken: jest.fn()
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 const result = await auth.login(params);
@@ -124,8 +124,8 @@ describe("Test Auth class methods", () => {
                     {
                         getUserByEmail: jest.fn(async () => dbUser),
                         updateUserRefreshToken: jest.fn()
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 const result = await auth.login(params);
@@ -158,8 +158,8 @@ describe("Test Auth class methods", () => {
                         {
                             getUserByEmail: jest.fn(async () => dbUser),
                             updateUserRefreshToken: jest.fn()
-                        } as any,
-                        bcryptUtils as any
+                        } as any
+                        //   //   bcryptUtils as any
                     );
 
                     await expect(auth.login(params)).rejects.toThrow();
@@ -187,8 +187,8 @@ describe("Test Auth class methods", () => {
                         {
                             getUserByEmail: jest.fn(async () => dbUser),
                             updateUserRefreshToken: jest.fn()
-                        } as any,
-                        bcryptUtils as any
+                        } as any
+                        //   //   bcryptUtils as any
                     );
 
                     await expect(auth.login(params)).rejects.toThrow();
@@ -205,8 +205,8 @@ describe("Test Auth class methods", () => {
                         {
                             getUserByEmail: jest.fn(async () => null),
                             updateUserRefreshToken: jest.fn()
-                        } as any,
-                        bcryptUtils as any
+                        } as any
+                        //   //   bcryptUtils as any
                     );
 
                     await expect(auth.login(params)).rejects.toThrow();
@@ -244,8 +244,8 @@ describe("Test Auth class methods", () => {
                             getUserTg: jest.fn(async () => dbUser),
                             registerUserTg: jest.fn(),
                             updateUserRefreshToken: jest.fn()
-                        } as any,
-                        bcryptUtils as any
+                        } as any
+                        //   //   bcryptUtils as any
                     );
 
                     const result = await auth.loginTg(params);
@@ -283,8 +283,8 @@ describe("Test Auth class methods", () => {
                             getUserTg: jest.fn(async () => dbUser),
                             registerUserTg: jest.fn(),
                             updateUserRefreshToken: jest.fn()
-                        } as any,
-                        bcryptUtils as any
+                        } as any
+                        //   //   bcryptUtils as any
                     );
 
                     const result = await auth.loginTg(params);
@@ -328,8 +328,8 @@ describe("Test Auth class methods", () => {
                             getUserTg: jest.fn(async () => dbUser),
                             registerUserTg: jest.fn(),
                             updateUserRefreshToken: jest.fn()
-                        } as any,
-                        bcryptUtils as any
+                        } as any
+                        //   //   bcryptUtils as any
                     );
 
                     const result = await auth.loginTg(params);
@@ -361,7 +361,9 @@ describe("Test Auth class methods", () => {
                         registerUserTg: jest.fn(),
                         updateUserRefreshToken: jest.fn()
                     };
-                    const auth = new Auth(dbf as any, bcryptUtils as any);
+                    const auth = new Auth(
+                        dbf as any //   bcryptUtils as any
+                    );
 
                     const result = await auth.loginTg(params);
 
@@ -406,8 +408,8 @@ describe("Test Auth class methods", () => {
                             getUserTg: jest.fn(async () => dbUser),
                             registerUserTg: jest.fn(),
                             updateUserRefreshToken: jest.fn()
-                        } as any,
-                        bcryptUtils as any
+                        } as any
+                        //   //   bcryptUtils as any
                     );
 
                     await expect(auth.loginTg(params)).rejects.toThrowError();
@@ -441,8 +443,8 @@ describe("Test Auth class methods", () => {
                             getUserTg: jest.fn(async () => dbUser),
                             registerUserTg: jest.fn(),
                             updateUserRefreshToken: jest.fn()
-                        } as any,
-                        bcryptUtils as any
+                        } as any
+                        //   //   bcryptUtils as any
                     );
 
                     await expect(auth.loginTg(params)).rejects.toThrowError();
@@ -463,7 +465,9 @@ describe("Test Auth class methods", () => {
                     getUserByEmail: jest.fn(async () => null),
                     registerUser: jest.fn()
                 };
-                const auth = new Auth(dbf as any, bcryptUtils as any);
+                const auth = new Auth(
+                    dbf as any //   bcryptUtils as any
+                );
 
                 await expect(auth.register(params)).resolves.toBeDefined();
 
@@ -497,8 +501,8 @@ describe("Test Auth class methods", () => {
                     {
                         getUserByEmail: jest.fn(async () => dbUser),
                         registerUser: jest.fn()
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 await expect(auth.register(params)).rejects.toThrowError();
@@ -527,8 +531,8 @@ describe("Test Auth class methods", () => {
                 const auth = new Auth(
                     {
                         getUserByToken: jest.fn(async () => dbUser)
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 const result = await auth.refreshToken(params);
@@ -547,8 +551,8 @@ describe("Test Auth class methods", () => {
                 const auth = new Auth(
                     {
                         getUserByToken: jest.fn(async () => null)
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 await expect(auth.refreshToken(params)).rejects.toThrowError();
@@ -575,8 +579,8 @@ describe("Test Auth class methods", () => {
                 const auth = new Auth(
                     {
                         getUserByToken: jest.fn(async () => dbUser)
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 await expect(auth.refreshToken(params)).rejects.toThrowError();
@@ -608,8 +612,8 @@ describe("Test Auth class methods", () => {
                     {
                         getUserById: jest.fn(async () => dbUser),
                         activateUser: jest.fn()
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 const result = await auth.activateAccount(params);
@@ -643,8 +647,8 @@ describe("Test Auth class methods", () => {
                     {
                         getUserById: jest.fn(async () => dbUser),
                         activateUser: jest.fn()
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 await expect(auth.activateAccount(params)).rejects.toThrowError();
@@ -674,8 +678,8 @@ describe("Test Auth class methods", () => {
                     {
                         getUserById: jest.fn(async () => dbUser),
                         activateUser: jest.fn()
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 await expect(auth.activateAccount(params)).rejects.toThrowError();
@@ -692,8 +696,8 @@ describe("Test Auth class methods", () => {
                     {
                         getUserById: jest.fn(async () => null),
                         activateUser: jest.fn()
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 await expect(auth.activateAccount(params)).rejects.toThrowError();
@@ -722,8 +726,8 @@ describe("Test Auth class methods", () => {
                 const auth = new Auth(
                     {
                         getUserByEmail: jest.fn(async () => dbUser)
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 await expect(auth.passwordReset(params)).resolves.toStrictEqual(dbUser.id);
@@ -750,8 +754,8 @@ describe("Test Auth class methods", () => {
                 const auth = new Auth(
                     {
                         getUserByEmail: jest.fn(async () => dbUser)
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 await expect(auth.passwordReset(params)).rejects.toThrowError();
@@ -766,8 +770,8 @@ describe("Test Auth class methods", () => {
                 const auth = new Auth(
                     {
                         getUserByEmail: jest.fn(async () => null)
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 await expect(auth.passwordReset(params)).rejects.toThrowError();
@@ -800,8 +804,8 @@ describe("Test Auth class methods", () => {
                     {
                         getUserById: jest.fn(async () => dbUser),
                         updateUserPassword: jest.fn()
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 const result = await auth.confirmPasswordReset(params);
@@ -836,8 +840,8 @@ describe("Test Auth class methods", () => {
                     {
                         getUserById: jest.fn(async () => dbUser),
                         updateUserPassword: jest.fn()
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 await expect(auth.confirmPasswordReset(params)).rejects.toThrowError();
@@ -850,8 +854,8 @@ describe("Test Auth class methods", () => {
                     {
                         getUserById: jest.fn(async () => null),
                         updateUserPassword: jest.fn()
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
                 const params = {
                     userId: "id",
@@ -888,8 +892,8 @@ describe("Test Auth class methods", () => {
                         getUserByEmail: jest.fn(async () => null),
                         getUserById: jest.fn(async () => dbUser),
                         changeUserEmail: jest.fn()
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 await expect(auth.changeEmail(params)).resolves.toStrictEqual({ success: true });
@@ -907,8 +911,8 @@ describe("Test Auth class methods", () => {
                         getUserByEmail: jest.fn(async () => null),
                         getUserById: jest.fn(async () => null),
                         changeUserEmail: jest.fn()
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 await expect(auth.changeEmail(params)).rejects.toThrowError();
@@ -938,8 +942,8 @@ describe("Test Auth class methods", () => {
                         getUserByEmail: jest.fn(async () => dbUser),
                         getUserById: jest.fn(async () => dbUser),
                         changeUserEmail: jest.fn()
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 await expect(auth.changeEmail(params)).rejects.toThrowError();
@@ -969,8 +973,8 @@ describe("Test Auth class methods", () => {
                         getUserByEmail: jest.fn(async () => null),
                         getUserById: jest.fn(async () => dbUser),
                         changeUserEmail: jest.fn()
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 await expect(auth.changeEmail(params)).rejects.toThrowError();
@@ -1003,8 +1007,8 @@ describe("Test Auth class methods", () => {
                     {
                         getUserById: jest.fn(async () => dbUser),
                         confirmChangeUserEmail: jest.fn()
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 const result = await auth.confirmChangeEmail(params);
@@ -1039,8 +1043,8 @@ describe("Test Auth class methods", () => {
                     {
                         getUserById: jest.fn(async () => dbUser),
                         confirmChangeUserEmail: jest.fn()
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 await expect(auth.confirmChangeEmail(params)).rejects.toThrowError();
@@ -1071,8 +1075,8 @@ describe("Test Auth class methods", () => {
                     {
                         getUserById: jest.fn(async () => dbUser),
                         confirmChangeUserEmail: jest.fn()
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 await expect(auth.confirmChangeEmail(params)).rejects.toThrowError();
@@ -1103,8 +1107,8 @@ describe("Test Auth class methods", () => {
                     {
                         getUserById: jest.fn(async () => dbUser),
                         confirmChangeUserEmail: jest.fn()
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 await expect(auth.confirmChangeEmail(params)).rejects.toThrowError();
@@ -1121,8 +1125,8 @@ describe("Test Auth class methods", () => {
                     {
                         getUserById: jest.fn(async () => null),
                         confirmChangeUserEmail: jest.fn()
-                    } as any,
-                    bcryptUtils as any
+                    } as any
+                    //   //   bcryptUtils as any
                 );
 
                 await expect(auth.confirmChangeEmail(params)).rejects.toThrowError();

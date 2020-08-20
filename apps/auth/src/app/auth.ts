@@ -7,13 +7,16 @@ import mailUtil from "@cryptuoso/mail";
 import { User, UserStatus, UserRoles } from "@cryptuoso/user-state";
 import { formatTgName, checkTgLogin, getAccessValue } from "./auth-helper";
 import { DBFunctions, Bcrypt } from "./types";
+import bcrypt from "bcrypt";
 
 export class Auth {
     #db: DBFunctions;
     #bcrypt: Bcrypt;
     #mailUtil: typeof mailUtil;
 
-    constructor(db: DBFunctions, bcrypt: Bcrypt) {
+    constructor(
+        db: DBFunctions // bcrypt: Bcrypt
+    ) {
         try {
             this.#db = db;
             this.#bcrypt = bcrypt;
@@ -39,7 +42,9 @@ export class Auth {
                 "FORBIDDEN",
                 403
             );
+
         const passwordChecked = await this.#bcrypt.compare(password, user.passwordHash);
+
         if (!passwordChecked) throw new ActionsHandlerError("Invalid password.", null, "FORBIDDEN", 403);
 
         let refreshToken;

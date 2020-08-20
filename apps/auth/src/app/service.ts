@@ -1,15 +1,14 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
-import os from "os";
-import { spawn, Pool, Worker as ThreadsWorker } from "threads";
+//import { spawn, Pool, Worker as ThreadsWorker } from "threads";
 import { Request, Response, Protocol } from "restana";
 import Cookie from "cookie";
 import { User, UserStatus, UserRoles } from "@cryptuoso/user-state";
-import { DBFunctions, Bcrypt } from "./types";
+import { DBFunctions } from "./types";
 import { Auth } from "./auth";
 import { sql } from "slonik";
 import dayjs from "@cryptuoso/dayjs";
 import { ActionsHandlerError } from "@cryptuoso/errors";
-import { BcryptUtils } from "./bcryptWorker";
+//import { BcryptUtils } from "./bcryptWorker";
 
 interface HttpRequest extends Request<Protocol.HTTP> {
     body: any;
@@ -35,19 +34,21 @@ export default class AuthService extends HTTPService {
         confirmChangeUserEmail: this._dbConfirmChangeUserEmail.bind(this),
         activateUser: this._dbActivateUser.bind(this)
     };
-    bcrypt: Bcrypt = {
+    /*bcrypt: Bcrypt = {
         compare: this._bcryptCompare.bind(this),
         hash: this._bcryptHash.bind(this)
     };
-    cpus: number;
-    pool: Pool<any>;
+     pool: Pool<any>;*/
 
     constructor(config?: AuthServiceConfig) {
         super(config);
         try {
-            this.auth = new Auth(this.dbFunctions, this.bcrypt);
-            this.cpus = os.cpus().length;
-            this.addOnStartHandler(this.onStartService);
+            this.auth = new Auth(
+                this.dbFunctions //this.bcrypt
+            );
+            /*
+          this.addOnStartHandler(this.onStartService);
+            this.addOnStopHandler(this.onStopService);*/
             this.createRoutes({
                 login: {
                     handler: this.login.bind(this),
@@ -151,16 +152,15 @@ export default class AuthService extends HTTPService {
         }
     }
 
-    async onStartService(): Promise<void> {
+    /* async onStartService(): Promise<void> {
         this.pool = Pool(() => spawn<BcryptUtils>(new ThreadsWorker("./bcryptWorker")), {
-            concurrency: this.cpus,
             name: "bcrypt-utils"
         });
     }
 
     async onStopService(): Promise<void> {
         await this.pool.terminate();
-    }
+    }*/
 
     async login(req: HttpRequest, res: HttpResponse) {
         try {
@@ -532,7 +532,7 @@ export default class AuthService extends HTTPService {
             WHERE id = ${userId};
         `);
     }
-
+    /*
     private async _bcryptCompare(data: any, encrypted: string): Promise<boolean> {
         return this.pool.queue(async (utils: BcryptUtils) => utils.compare(data, encrypted));
     }
@@ -540,4 +540,5 @@ export default class AuthService extends HTTPService {
     private async _bcryptHash(data: any, saltOrRounds: string | number): Promise<string> {
         return this.pool.queue(async (utils: BcryptUtils) => utils.hash(data, saltOrRounds));
     }
+    */
 }
