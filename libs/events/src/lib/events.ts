@@ -452,10 +452,12 @@ export class Events {
     }
 
     async emitDeadLetter(deadLetter: DeadLetter) {
-        await this.emit({
-            type: `dead-letter.${deadLetter.type}`,
+        const typeChunks = deadLetter.type.split(".");
+        const evt = {
+            type: `dead-letter.${typeChunks.slice(2, typeChunks.length).join(".")}`,
             data: deadLetter
-        });
+        };
+        await this.emit(evt);
     }
 
     async emit<T>(event: NewEvent<T>) {
