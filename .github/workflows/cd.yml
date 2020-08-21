@@ -71,7 +71,7 @@ jobs:
             - name: List services
               id: services
               run: |
-                  if [[ ${{steps.history.outputs.result}} == *"--"* ]];
+                  if [[ "${{steps.history.outputs.result}}"" == *"--"* ]];
                   then
                      echo ::set-output name=list::$(node ./node_modules/@nrwl/cli/bin/nx.js affected:apps --plain ${{steps.history.outputs.result}} )
                   else
