@@ -94,7 +94,7 @@ export function uniqueElementsBy<T>(arr: T[], fn: (a: T, b: T) => boolean): T[] 
  * Flattens an array up to the specified depth.
  *
  * @param {any[]} arr
- * @param {number} [depth=1] The depth of the targer array. Default value is 1.
+ * @param {number} [depth=1] The depth of the target array. Default value is 1.
  * @returns {any[]}
  * @example
  * flattenArray([1, [2], 3, 4]); // [1, 2, 3, 4]

@@ -15,8 +15,24 @@ export interface NewEvent<T> {
     data: T;
     subject?: string;
 }
+export interface EventsConfig {
+    blockTimeout?: number;
+    pendingRetryRate?: number;
+    pendingMinIdleTime?: number;
+    pendingMaxRetries?: number;
+}
+
+export interface DeadLetter {
+    topic: string;
+    group?: string;
+    type: string;
+    data: Event | any;
+    error: string;
+}
 
 const BLOCK_TIMEOUT = 60000;
+const PENDING_RETRY_RATE = 30;
+const PENDING_MAX_RETRIES = 3;
 
 type StreamMsgVals = string[];
 type StreamMessage = [string, StreamMsgVals];
@@ -28,6 +44,9 @@ export class Events {
     #lightship: LightshipType;
     #consumerId: string;
     #blockTimeout: number;
+    #pendingRetryRate: number;
+    #pendingMinIdleTime: number;
+    #pendingMaxRetries: number;
     #state: {
         [topic: string]: {
             unbalanced?: {
@@ -51,14 +70,17 @@ export class Events {
             };
         };
     } = {};
-    constructor(redisClient: Redis, lightship: LightshipType, blockTimeout?: number) {
+    constructor(redisClient: Redis, lightship: LightshipType, config?: EventsConfig) {
         this.#log = logger;
         this.#redis = redisClient.duplicate();
         this.#lightship = lightship;
 
         this.#consumerId = uuid();
         this.#catalog = new EventsCatalog();
-        this.#blockTimeout = blockTimeout || BLOCK_TIMEOUT;
+        this.#blockTimeout = config?.blockTimeout || BLOCK_TIMEOUT;
+        this.#pendingMinIdleTime = config?.pendingMinIdleTime || BLOCK_TIMEOUT;
+        this.#pendingRetryRate = config?.pendingRetryRate || PENDING_RETRY_RATE;
+        this.#pendingMaxRetries = config?.pendingMaxRetries || PENDING_MAX_RETRIES;
     }
 
     get log() {
@@ -164,11 +186,20 @@ export class Events {
                                                 { validationErrors },
                                                 "VALIDATION"
                                             );
-                                    } catch (err) {
+                                    } catch (error) {
                                         this.log.error(
-                                            err,
+                                            error,
                                             `Failed to handle "${topic}" event #${msgId} (${event.id}) ${event.type}`
                                         );
+                                        if (error instanceof BaseError && error.type === "VALIDATION") {
+                                            const letter: DeadLetter = {
+                                                topic,
+                                                type: event.type,
+                                                data,
+                                                error: error.message
+                                            };
+                                            await this.emitDeadLetter(letter);
+                                        }
                                     }
                                 })
                         );
@@ -256,6 +287,17 @@ export class Events {
                                 error,
                                 `Failed to handle "${topic}" group "${group}" event #${msgId} (${event.id})`
                             );
+                            if (error instanceof BaseError && error.type === "VALIDATION") {
+                                const letter: DeadLetter = {
+                                    topic,
+                                    group,
+                                    type: event.type,
+                                    data,
+                                    error: error.message
+                                };
+                                await this.emitDeadLetter(letter);
+                                await this.#redis.xack(topic, group, msgId);
+                            }
                         }
                     })
                 );
@@ -315,9 +357,17 @@ export class Events {
                     this.#state[`${topic}-${group}`].pending.count = 10;
                 }
 
-                for (const { msgId } of data.filter(({ idleSeconds, retries }) => idleSeconds > retries * 30)) {
+                for (const { msgId, retries } of data.filter(
+                    ({ idleSeconds, retries }) => idleSeconds > retries * this.#pendingRetryRate
+                )) {
                     try {
-                        const result = await this.#redis.xclaim(topic, group, this.#consumerId, 60000, msgId);
+                        const result = await this.#redis.xclaim(
+                            topic,
+                            group,
+                            this.#consumerId,
+                            this.#pendingMinIdleTime,
+                            msgId
+                        );
                         if (result) {
                             const [event]: Event[] = Object.values(
                                 this._parseEvents(this._parseMessageResponse(result))
@@ -347,11 +397,24 @@ export class Events {
                                     `Handled pending "${topic}" group "${group}" event #${msgId} (${event.id})`
                                 );
                             } catch (error) {
-                                //TODO: deadletter queue + endpoints to handle them
                                 this.log.error(
                                     error,
                                     `Failed to handle pending "${topic}" group "${group}" event #${msgId} (${event.id})`
                                 );
+                                if (
+                                    (error instanceof BaseError && error.type === "VALIDATION") ||
+                                    retries >= this.#pendingMaxRetries
+                                ) {
+                                    const letter: DeadLetter = {
+                                        topic,
+                                        group,
+                                        type: event.type,
+                                        data,
+                                        error: error.message
+                                    };
+                                    await this.emitDeadLetter(letter);
+                                    await this.#redis.xack(topic, group, msgId);
+                                }
                             }
                         }
                     } catch (error) {
@@ -387,6 +450,15 @@ export class Events {
         } catch (error) {
             this.log.error(error);
         }
+    }
+
+    async emitDeadLetter(deadLetter: DeadLetter) {
+        const typeChunks = deadLetter.type.split(".");
+        const evt = {
+            type: `dead-letter.${typeChunks.slice(2, typeChunks.length).join(".")}`,
+            data: deadLetter
+        };
+        await this.emit(evt);
     }
 
     async emit<T>(event: NewEvent<T>) {
@@ -432,6 +504,7 @@ export class Events {
 
     async start() {
         try {
+            await this._createGroup("dead-letter", "dead-letter");
             await Promise.all(
                 this.#catalog.groups.map(async ({ topic, group }) => {
                     this.log.info(`Subscribing to "${topic}" group "${group}" events...`);
