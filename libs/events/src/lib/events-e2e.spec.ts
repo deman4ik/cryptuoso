@@ -1,7 +1,7 @@
 import "jest-extended";
 import Redis from "ioredis";
 import { createLightship } from "lightship";
-import { Events } from "./events";
+import { Events, EventsConfig } from "./events";
 import { sleep } from "@cryptuoso/helpers";
 import { ValidationSchema } from "fastest-validator";
 
@@ -23,11 +23,11 @@ const calcSchema: ValidationSchema = {
 
 describe("E2E test", () => {
     const lightship = createLightship();
-    const eventConfig = {
+    const eventsConfig: EventsConfig = {
         blockTimeout: 50,
         pendingMinIdleTime: 50,
-        pendingRetryRate: 5,
-        pendingMaxRetries: 1
+        pendingRetryRate: -1,
+        pendingMaxRetries: 1 // emit a dead-letter on firts pending handling failure
     };
     let redis: Redis.Redis;
     describe("Test connection to redis instance", () => {
@@ -61,6 +61,7 @@ describe("E2E test", () => {
                         "com.cryptuoso.dead-letter." + type.split(".").slice(-type.split(".").length).join(".")
                     );
                 });
+            return [];
         };
 
         itif(
@@ -80,7 +81,7 @@ describe("E2E test", () => {
                 "Should subscribe to event and process emitted data",
                 () => redis != null,
                 async (done: Function) => {
-                    const events = new Events(redis, lightship, eventConfig);
+                    const events = new Events(redis, lightship, eventsConfig);
 
                     events.subscribe({
                         messager: {
@@ -113,10 +114,10 @@ describe("E2E test", () => {
                 "Should subscribe to event and process emitted data",
                 () => redis != null,
                 async (done: Function) => {
-                    const events = new Events(redis, lightship, eventConfig);
+                    const events = new Events(redis, lightship, eventsConfig);
 
                     events.subscribe({
-                        messager: {
+                        "group-messager": {
                             group: "data-supply",
                             handler: groupMessageHandler
                         }
@@ -127,7 +128,7 @@ describe("E2E test", () => {
                     await sleep(500);
 
                     await events.emit({
-                        type: "messager",
+                        type: "group-messager",
                         data: {
                             foo: "bar",
                             bar: { 1: "one", 2: "two", 3: "three" }
@@ -136,6 +137,7 @@ describe("E2E test", () => {
                     await sleep(500);
 
                     expect(groupMessageHandler).toHaveBeenCalledTimes(1);
+
                     done();
                 }
             );
@@ -149,7 +151,7 @@ describe("E2E test", () => {
                 "Should subscribe and handle the event",
                 () => redis != null,
                 async (done: Function) => {
-                    const events = new Events(redis, lightship, eventConfig);
+                    const events = new Events(redis, lightship, eventsConfig);
 
                     await events.emit({
                         type: "unbalanced-log",
@@ -181,7 +183,7 @@ describe("E2E test", () => {
                 "Should subscribe and handle the event",
                 () => redis != null,
                 async (done: Function) => {
-                    const events = new Events(redis, lightship, eventConfig);
+                    const events = new Events(redis, lightship, eventsConfig);
 
                     await events.emit({
                         type: "group-log",
@@ -208,17 +210,17 @@ describe("E2E test", () => {
         });
 
         const faultyHandler = jest.fn((data) => {
-            throw new Error("Cannon process the data:\n" + data);
+            throw new Error("Cannot process the data:\n" + data);
         });
         describe("Error in a group event handler scenario", () => {
             itif(
                 "Should call the handler two times",
                 () => redis != null,
                 async (done: Function) => {
-                    const events = new Events(redis, lightship, eventConfig);
+                    const events = new Events(redis, lightship, eventsConfig);
 
                     events.subscribe({
-                        "group-log": {
+                        "faulty-group-log": {
                             group: "error-group",
                             handler: faultyHandler
                         }
@@ -227,7 +229,7 @@ describe("E2E test", () => {
                     await sleep(500);
 
                     await events.emit({
-                        type: "group-log",
+                        type: "faulty-group-log",
                         data: {
                             foo: "bar"
                         }
@@ -236,7 +238,8 @@ describe("E2E test", () => {
 
                     expect(faultyHandler).toHaveBeenCalledTimes(1);
 
-                    await events._receivePendingGroupMessagesTick("group-log", "error-group");
+                    await sleep(500);
+                    await events._receivePendingGroupMessagesTick("cpz:events:faulty-group-log", "error-group");
                     await sleep(500);
 
                     expect(faultyHandler).toHaveBeenCalledTimes(2);
@@ -251,10 +254,10 @@ describe("E2E test", () => {
                 "Should emit a dead-letter",
                 () => redis != null,
                 async (done: Function) => {
-                    const events = new Events(redis, lightship, eventConfig);
+                    const events = new Events(redis, lightship, eventsConfig);
 
                     events.subscribe({
-                        "group-log-2": {
+                        "faulty-group-log-2": {
                             group: "error-group-2",
                             handler: faultyHandler
                         }
@@ -263,17 +266,17 @@ describe("E2E test", () => {
                     await sleep(500);
 
                     await events.emit({
-                        type: "group-log-2",
+                        type: "faulty-group-log-2",
                         data: {
                             foo: "bar"
                         }
                     });
                     await sleep(500);
 
-                    await events._receivePendingGroupMessagesTick("group-log-2", "error-group-2");
+                    await events._receivePendingGroupMessagesTick("cpz:events:faulty-group-log-2", "error-group-2");
                     await sleep(500);
 
-                    const letters = await findDeadLetter("group-log-2");
+                    const letters = await findDeadLetter("faulty-group-log-2");
 
                     expect(letters.length).toBe(1);
                     done();
@@ -293,7 +296,7 @@ describe("E2E test", () => {
                 "Should subscribe to the same stream and process event for each subscription",
                 () => redis != null,
                 async (done: Function) => {
-                    const events = new Events(redis, lightship, eventConfig);
+                    const events = new Events(redis, lightship, eventsConfig);
 
                     events.subscribe({
                         "calc.sum": {
@@ -335,10 +338,10 @@ describe("E2E test", () => {
             });
         describe("Handling pending event with handling error in one of the subs", () => {
             itif(
-                "Should call both handlers 2 times",
+                "Should call only firts handler once per start() and _receive[...]",
                 () => redis != null,
                 async (done: Function) => {
-                    const events = new Events(redis, lightship, eventConfig);
+                    const events = new Events(redis, lightship, eventsConfig);
 
                     events.subscribe({
                         "calc.divide": {
@@ -364,7 +367,7 @@ describe("E2E test", () => {
                     expect(divideHandler).toHaveBeenCalledTimes(1);
                     expect(divideLogHandler).toHaveBeenCalledTimes(0);
 
-                    await events._receivePendingGroupMessagesTick("cpz:events:calc.divide", "calc-divide");
+                    await events._receivePendingGroupMessagesTick("cpz:events:calc", "calc-divide");
                     await sleep(500);
 
                     expect(divideHandler).toHaveBeenCalledTimes(2);
@@ -382,7 +385,7 @@ describe("E2E test", () => {
                 "Should emit a dead-letter event",
                 () => redis != null,
                 async (done: Function) => {
-                    const events = new Events(redis, lightship, eventConfig);
+                    const events = new Events(redis, lightship, eventsConfig);
 
                     events.subscribe({
                         "calc.group-substract": {
@@ -395,7 +398,6 @@ describe("E2E test", () => {
 
                     await sleep(500);
 
-                    // the data won't pass validation for the first subscriber
                     await events.emit({
                         type: "calc.group-substract",
                         data: { msg: "This message is not expected" }
@@ -420,7 +422,7 @@ describe("E2E test", () => {
                 "Should emit a dead-letter event",
                 () => redis != null,
                 async (done: Function) => {
-                    const events = new Events(redis, lightship, eventConfig);
+                    const events = new Events(redis, lightship, eventsConfig);
 
                     events.subscribe({
                         "calc.unbalanced-substract": {
@@ -433,18 +435,18 @@ describe("E2E test", () => {
 
                     await sleep(500);
 
-                    // the data won't pass validation for the first subscriber
                     await events.emit({
                         type: "calc.unbalanced-substract",
                         data: { msg: "This message is not expected" }
                     });
-
                     await sleep(500);
+
                     const deadLetters = await findDeadLetter("calc.unbalanced-substract");
                     await sleep(500);
 
                     expect(deadLetters.length).toBe(1);
                     expect(unbalancedSubstractHandler).not.toHaveBeenCalled();
+
                     done();
                 }
             );

@@ -32,6 +32,7 @@ export interface DeadLetter {
 
 const BLOCK_TIMEOUT = 60000;
 const PENDING_RETRY_RATE = 30;
+const PENDING_MAX_RETRIES = 3;
 
 type StreamMsgVals = string[];
 type StreamMessage = [string, StreamMsgVals];
@@ -79,7 +80,7 @@ export class Events {
         this.#blockTimeout = config?.blockTimeout || BLOCK_TIMEOUT;
         this.#pendingMinIdleTime = config?.pendingMinIdleTime || BLOCK_TIMEOUT;
         this.#pendingRetryRate = config?.pendingRetryRate || PENDING_RETRY_RATE;
-        this.#pendingMaxRetries = config?.pendingMaxRetries || 3;
+        this.#pendingMaxRetries = config?.pendingMaxRetries || PENDING_MAX_RETRIES;
     }
 
     get log() {
