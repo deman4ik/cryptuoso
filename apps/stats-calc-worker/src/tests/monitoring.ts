@@ -1,8 +1,8 @@
 import { round } from "@cryptuoso/helpers";
 import os from "os";
+
 const appmetrics = require("appmetrics");
 const monitoring = appmetrics.monitor();
-
 const cpus = os.cpus().length;
 
 //const round = (n: number, decimals = 0): number => +Number(`${Math.round(+`${n}e${decimals}`)}e-${decimals}`);
@@ -57,16 +57,19 @@ export default class Monitoring {
     private cpu: Index = new Index;
     private memory: Index = new Index;
 
-    constructor() {
-        monitoring.on('cpu', (arg: any) => {
-            if(this._started)
-                this.cpu.add(arg.process * cpus * 100);
-        });
+    #cpuListener = this._cpuListener.bind(this);
+    #memoryListener = this._memoryListener.bind(this);
 
-        monitoring.on('memory', (arg: any) => {
-            if(this._started)
-                this.memory.add(arg.physical / 1024 / 1024);
-        });
+    constructor() {
+
+    }
+
+    private _cpuListener(arg: any) {
+        this.cpu.add(arg.process * cpus * 100);
+    }
+
+    private _memoryListener(arg: any) {
+        this.memory.add(arg.physical / 1024 / 1024);
     }
 
     clear() {
@@ -93,6 +96,9 @@ export default class Monitoring {
             Date.now() :
             Date.now() - (this.endTime - this.startTime);
         this.endTime = null;
+        
+        monitoring.addListener('cpu', this.#cpuListener);
+        monitoring.addListener('memory', this.#memoryListener);
 
         return this;
     }
@@ -100,6 +106,9 @@ export default class Monitoring {
     stop() {
         this._started = false;
         this.endTime = Date.now();
+        
+        monitoring.removeListener('cpu', this.#cpuListener);
+        monitoring.removeListener('memory', this.#memoryListener);
 
         return this;
     }

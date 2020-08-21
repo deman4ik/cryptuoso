@@ -81,11 +81,13 @@ export default class StatisticsCalculator {
         if (prevStatistics != null && !isRobotStats(prevStatistics))
             throw new Error("Invalid statistics object provided"); // calculations are allowed if null or valid obj is provided
 
-        if (prevStatistics && prevStatistics.lastPositionExitDate != "")
+        if (prevStatistics && prevStatistics.lastPositionExitDate != "") {
             this.positions = positions.filter(
                 (pos) => dayjs.utc(pos.exitDate).valueOf() > dayjs.utc(prevStatistics.lastPositionExitDate).valueOf()
             );
-        else this.positions = positions;
+            
+            if (this.positions.length < 1) throw new Error("At least 1 fresh position expected");
+        } else this.positions = positions;
 
         this.setPosition(0);
         this.setStatistics(prevStatistics);
