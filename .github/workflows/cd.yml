@@ -38,7 +38,7 @@ jobs:
                   github-token: ${{secrets.GITHUB_TOKEN}}
                   script: |
                       const matched = context.payload.head_commit.message.match(/(?<=DEPLOY \|).*?(?=\s*\|)/gs);
-                      const list = matched && Array.isArray(matched) && matched.length > 0 ? matched[0].trim() : null;
+                      const list = matched && Array.isArray(matched) && matched.length > 0 ? matched[0].replace(/(\r\n|\n|\r)/gm," ").trim() : null;
                       if (list === "ALL") {
                              return "--all";
                          } else if (list) {
