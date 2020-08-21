@@ -5,7 +5,7 @@ import { Events, EventsConfig } from "./events";
 import { sleep } from "@cryptuoso/helpers";
 import { ValidationSchema } from "fastest-validator";
 
-jest.setTimeout(20000);
+jest.setTimeout(40000);
 const itif = (name: string, condition: () => boolean, cb: Function) => {
     it(name, (done) => {
         if (condition()) {
@@ -35,13 +35,13 @@ describe("E2E test", () => {
             redis = new Redis({ port: 6379, host: "127.0.0.1" })
                 .on("error", (err) => {
                     console.warn("Connection to redis could not be established.\n" + err);
-                    redis.quit();
+                    redis?.quit();
                     redis = null;
                     done();
                 })
                 .on("end", () => {
                     console.warn("Error connecting to redis instance.");
-                    redis.quit();
+                    redis?.quit();
                     redis = null;
                     done();
                 })
@@ -92,13 +92,13 @@ describe("E2E test", () => {
 
                     await events.start();
                     // wait for events to set all neccesary valiables e.g. last unbalanced id
-                    await sleep(500);
+                    await sleep(3000);
 
                     await events.emit({
                         type: "messager",
                         data: { message: "This is a very cool message" }
                     });
-                    await sleep(500);
+                    await sleep(3000);
 
                     expect(unbalancedMessageHandler).toHaveBeenCalledTimes(1);
                     done();
@@ -125,7 +125,7 @@ describe("E2E test", () => {
 
                     await events.start();
 
-                    await sleep(500);
+                    await sleep(3000);
 
                     await events.emit({
                         type: "group-messager",
@@ -134,7 +134,7 @@ describe("E2E test", () => {
                             bar: { 1: "one", 2: "two", 3: "three" }
                         }
                     });
-                    await sleep(500);
+                    await sleep(3000);
 
                     expect(groupMessageHandler).toHaveBeenCalledTimes(1);
 
@@ -167,7 +167,7 @@ describe("E2E test", () => {
                         }
                     });
                     await events.start();
-                    await sleep(500);
+                    await sleep(3000);
 
                     expect(unbalancedLogHandler).not.toHaveBeenCalled();
                     done();
@@ -191,7 +191,7 @@ describe("E2E test", () => {
                             info: "This event is supposed to be processed"
                         }
                     });
-                    await sleep(500);
+                    await sleep(3000);
 
                     events.subscribe({
                         "group-log": {
@@ -200,7 +200,7 @@ describe("E2E test", () => {
                         }
                     });
                     await events.start();
-                    await sleep(500);
+                    await sleep(3000);
 
                     expect(groupLogHandler).toHaveBeenCalledTimes(1);
 
@@ -226,7 +226,7 @@ describe("E2E test", () => {
                         }
                     });
                     await events.start();
-                    await sleep(500);
+                    await sleep(3000);
 
                     await events.emit({
                         type: "faulty-group-log",
@@ -234,13 +234,13 @@ describe("E2E test", () => {
                             foo: "bar"
                         }
                     });
-                    await sleep(500);
+                    await sleep(3000);
 
                     expect(faultyHandler).toHaveBeenCalledTimes(1);
 
-                    await sleep(500);
+                    await sleep(3000);
                     await events._receivePendingGroupMessagesTick("cpz:events:faulty-group-log", "error-group");
-                    await sleep(500);
+                    await sleep(3000);
 
                     expect(faultyHandler).toHaveBeenCalledTimes(2);
 
@@ -263,7 +263,7 @@ describe("E2E test", () => {
                         }
                     });
                     await events.start();
-                    await sleep(500);
+                    await sleep(3000);
 
                     await events.emit({
                         type: "faulty-group-log-2",
@@ -271,10 +271,10 @@ describe("E2E test", () => {
                             foo: "bar"
                         }
                     });
-                    await sleep(500);
+                    await sleep(3000);
 
                     await events._receivePendingGroupMessagesTick("cpz:events:faulty-group-log-2", "error-group-2");
-                    await sleep(500);
+                    await sleep(3000);
 
                     const letters = await findDeadLetter("faulty-group-log-2");
 
@@ -310,7 +310,7 @@ describe("E2E test", () => {
                         }
                     });
                     await events.start();
-                    await sleep(500);
+                    await sleep(3000);
 
                     await events.emit({
                         type: "calc.sum",
@@ -319,7 +319,7 @@ describe("E2E test", () => {
                             numbers: [1, 2, 3, 4, 5]
                         }
                     });
-                    await sleep(500);
+                    await sleep(3000);
 
                     expect(sumHandler).toHaveBeenCalledTimes(1);
                     expect(sumLogHandler).toHaveBeenCalledTimes(1);
@@ -354,7 +354,7 @@ describe("E2E test", () => {
                         }
                     });
                     await events.start();
-                    await sleep(500);
+                    await sleep(3000);
 
                     await events.emit({
                         type: "calc.divide",
@@ -362,13 +362,13 @@ describe("E2E test", () => {
                             info: "This is a faulty event, error is expected"
                         }
                     });
-                    await sleep(500);
+                    await sleep(3000);
 
                     expect(divideHandler).toHaveBeenCalledTimes(1);
                     expect(divideLogHandler).toHaveBeenCalledTimes(0);
 
                     await events._receivePendingGroupMessagesTick("cpz:events:calc", "calc-divide");
-                    await sleep(500);
+                    await sleep(3000);
 
                     expect(divideHandler).toHaveBeenCalledTimes(2);
                     expect(divideLogHandler).toHaveBeenCalledTimes(0);
@@ -396,16 +396,16 @@ describe("E2E test", () => {
                     });
                     await events.start();
 
-                    await sleep(500);
+                    await sleep(3000);
 
                     await events.emit({
                         type: "calc.group-substract",
                         data: { msg: "This message is not expected" }
                     });
-                    await sleep(500);
+                    await sleep(3000);
 
                     const deadLetters = await findDeadLetter("calc.group-substract");
-                    await sleep(500);
+                    await sleep(3000);
 
                     expect(deadLetters.length).toBe(1);
                     expect(groupSubstractHandler).not.toHaveBeenCalled();
@@ -433,16 +433,16 @@ describe("E2E test", () => {
                     });
                     await events.start();
 
-                    await sleep(500);
+                    await sleep(3000);
 
                     await events.emit({
                         type: "calc.unbalanced-substract",
                         data: { msg: "This message is not expected" }
                     });
-                    await sleep(500);
+                    await sleep(3000);
 
                     const deadLetters = await findDeadLetter("calc.unbalanced-substract");
-                    await sleep(500);
+                    await sleep(3000);
 
                     expect(deadLetters.length).toBe(1);
                     expect(unbalancedSubstractHandler).not.toHaveBeenCalled();
