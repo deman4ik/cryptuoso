@@ -5,6 +5,7 @@ import { StatisticUtils } from "./statsWorker";
 import { sql, pgUtil, pg } from "@cryptuoso/postgres";
 import { CommonStats, PositionDataForStats } from "@cryptuoso/trade-statistics";
 
+export type StatisticCalcWorkerServiceConfig = BaseServiceConfig;
 export default class StatisticCalcWorkerService extends BaseService {
     pool: Pool<any>;
     pgJS: typeof pg;
@@ -12,7 +13,7 @@ export default class StatisticCalcWorkerService extends BaseService {
     maxSingleQueryPosCount: number = 750;
     defaultChunkSize: number = 500;
 
-    constructor(config?: BaseServiceConfig) {
+    constructor(config?: StatisticCalcWorkerServiceConfig) {
         super(config);
         try {
             this.pgJS = pgUtil.createJSPool({});
