@@ -160,9 +160,13 @@ export class ExwatcherBaseService extends BaseService {
     }
 
     async handleImporterFinishedEvent(event: ImporterWorkerFinished) {
-        const { id: importerId, type, exchange } = event;
+        const { id: importerId, type, exchange, asset, currency } = event;
         if (exchange !== this.exchange && type !== "recent") return;
-        const subscription = Object.values(this.subscriptions).find((sub: Exwatcher) => sub.importerId === importerId);
+        const subscription = Object.values(this.subscriptions).find(
+            (sub: Exwatcher) =>
+                sub.status != ExwatcherStatus.subscribed &&
+                (sub.importerId === importerId || (sub.asset === asset && sub.currency === currency))
+        );
         if (subscription) {
             this.log.info(`Importer ${importerId} finished!`);
             await this.subscribe(subscription);
@@ -170,9 +174,13 @@ export class ExwatcherBaseService extends BaseService {
     }
 
     async handleImporterFailedEvent(event: ImporterWorkerFailed) {
-        const { id: importerId, type, exchange, error } = event;
+        const { id: importerId, type, exchange, asset, currency, error } = event;
         if (exchange !== this.exchange && type !== "recent") return;
-        const subscription = Object.values(this.subscriptions).find((sub: Exwatcher) => sub.importerId === importerId);
+        const subscription = Object.values(this.subscriptions).find(
+            (sub: Exwatcher) =>
+                sub.status != ExwatcherStatus.subscribed &&
+                (sub.importerId === importerId || (sub.asset === asset && sub.currency === currency))
+        );
 
         if (subscription && subscription.id) {
             this.log.warn(`Importer ${importerId} failed!`, error);
