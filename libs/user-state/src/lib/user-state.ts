@@ -1,3 +1,30 @@
+import { PositionDataForStats, CommonStats } from "@cryptuoso/trade-statistics";
+
+export interface UserSignalPosition extends PositionDataForStats {
+    entryDate: string;
+    exchange?: string;
+    asset?: string;
+    currency?: string;
+    userId?: string;
+    userSignalVolume?: number;
+}
+
+export interface UserSignals extends CommonStats {
+    id: string;
+    robotId?: string;
+    userId?: string;
+    subscribedAt?: string;
+    volume?: number;
+}
+
+export interface UserAggrStatsDB extends CommonStats {
+    id: string;
+    userId: string;
+    exchange?: string;
+    asset?: string;
+    type: "signal" | "userRobot";
+}
+
 export const enum UserRoles {
     admin = "admin",
     manager = "manager",
