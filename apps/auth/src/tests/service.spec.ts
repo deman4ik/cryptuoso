@@ -44,7 +44,7 @@ function getLastRegisterShutdownHandler(): { (): Promise<any> } {
 }
 
 setProperty(process, "exit", mockExit);
-//setProperty(console, "error", jest.fn());
+
 jest.mock("lightship", () => {
     return {
         LightshipType: jest.fn().mockImplementation(() => {
@@ -110,12 +110,10 @@ describe("Test 'AuthService' class methods", () => {
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
-
                 expect(res.status).toStrictEqual(200);
                 expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("accessToken");
@@ -140,8 +138,7 @@ describe("Test 'AuthService' class methods", () => {
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": "id",
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -179,8 +176,7 @@ describe("Test 'AuthService' class methods", () => {
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -215,10 +211,10 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
 
                 const res = await ajax.post(
-                    `http://localhost:${CONFIG.port}/actions/login-tg`,
+                    `http://localhost:${CONFIG.port}/actions/loginTg`,
                     { "x-api-key": process.env.API_KEY },
                     {
-                        action: { name: "login-tg" },
+                        action: { name: "loginTg" },
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
@@ -249,10 +245,10 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => null);
 
                 const res = await ajax.post(
-                    `http://localhost:${CONFIG.port}/actions/login-tg`,
+                    `http://localhost:${CONFIG.port}/actions/loginTg`,
                     { "x-api-key": process.env.API_KEY },
                     {
-                        action: { name: "login-tg" },
+                        action: { name: "loginTg" },
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
@@ -294,10 +290,10 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
 
                 const res = await ajax.post(
-                    `http://localhost:${CONFIG.port}/actions/login-tg`,
+                    `http://localhost:${CONFIG.port}/actions/loginTg`,
                     { "x-api-key": process.env.API_KEY },
                     {
-                        action: { name: "login-tg" },
+                        action: { name: "loginTg" },
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
@@ -358,8 +354,7 @@ describe("Test 'AuthService' class methods", () => {
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": "id",
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -398,8 +393,7 @@ describe("Test 'AuthService' class methods", () => {
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": "id",
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -429,7 +423,7 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
 
                 const res = await ajax.post(
-                    `http://localhost:${CONFIG.port}/actions/refresh-token`,
+                    `http://localhost:${CONFIG.port}/actions/refreshToken`,
                     {
                         "x-api-key": process.env.API_KEY,
                         "x-refresh-token": params["refreshToken"]
@@ -459,13 +453,13 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => null);
 
                 const res = await ajax.post(
-                    `http://localhost:${CONFIG.port}/actions/refresh-token`,
+                    `http://localhost:${CONFIG.port}/actions/refreshToken`,
                     {
                         "x-api-key": process.env.API_KEY,
                         "x-refresh-token": "token"
                     },
                     {
-                        action: { name: "refresh-token" },
+                        action: { name: "refreshToken" },
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
@@ -502,15 +496,14 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
 
                 const res = await ajax.post(
-                    `http://localhost:${CONFIG.port}/actions/activate-account`,
+                    `http://localhost:${CONFIG.port}/actions/activateAccount`,
                     { "x-api-key": process.env.API_KEY },
                     {
-                        action: { name: "activate-account" },
+                        action: { name: "activateAccount" },
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -532,15 +525,14 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => null);
 
                 const res = await ajax.post(
-                    `http://localhost:${CONFIG.port}/actions/activate-account`,
+                    `http://localhost:${CONFIG.port}/actions/activateAccount`,
                     { "x-api-key": process.env.API_KEY },
                     {
-                        action: { name: "activate-account" },
+                        action: { name: "activateAccount" },
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": "id",
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -570,15 +562,14 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
 
                 const res = await ajax.post(
-                    `http://localhost:${CONFIG.port}/actions/activate-account`,
+                    `http://localhost:${CONFIG.port}/actions/activateAccount`,
                     { "x-api-key": process.env.API_KEY },
                     {
-                        action: { name: "activate-account" },
+                        action: { name: "activateAccount" },
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -609,15 +600,14 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
 
                 const res = await ajax.post(
-                    `http://localhost:${CONFIG.port}/actions/password-reset`,
+                    `http://localhost:${CONFIG.port}/actions/passwordReset`,
                     { "x-api-key": process.env.API_KEY },
                     {
-                        action: { name: "password-reset" },
+                        action: { name: "passwordReset" },
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -637,15 +627,14 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => null);
 
                 const res = await ajax.post(
-                    `http://localhost:${CONFIG.port}/actions/password-reset`,
+                    `http://localhost:${CONFIG.port}/actions/passwordReset`,
                     { "x-api-key": process.env.API_KEY },
                     {
-                        action: { name: "password-reset" },
+                        action: { name: "passwordReset" },
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": "id",
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -678,15 +667,14 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
 
                 const res = await ajax.post(
-                    `http://localhost:${CONFIG.port}/actions/confirm-password-reset`,
+                    `http://localhost:${CONFIG.port}/actions/confirmPasswordReset`,
                     { "x-api-key": process.env.API_KEY },
                     {
-                        action: { name: "confirm-password-reset" },
+                        action: { name: "confirmPasswordReset" },
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -709,15 +697,14 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => null);
 
                 const res = await ajax.post(
-                    `http://localhost:${CONFIG.port}/actions/confirm-password-reset`,
+                    `http://localhost:${CONFIG.port}/actions/confirmPasswordReset`,
                     { "x-api-key": process.env.API_KEY },
                     {
-                        action: { name: "confirm-password-reset" },
+                        action: { name: "confirmPasswordReset" },
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": "id",
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -748,15 +735,14 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
 
                 const res = await ajax.post(
-                    `http://localhost:${CONFIG.port}/actions/confirm-password-reset`,
+                    `http://localhost:${CONFIG.port}/actions/confirmPasswordReset`,
                     { "x-api-key": process.env.API_KEY },
                     {
-                        action: { name: "confirm-password-reset" },
+                        action: { name: "confirmPasswordReset" },
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -787,15 +773,14 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
 
                 const res = await ajax.post(
-                    `http://localhost:${CONFIG.port}/actions/confirm-password-reset`,
+                    `http://localhost:${CONFIG.port}/actions/confirmPasswordReset`,
                     { "x-api-key": process.env.API_KEY },
                     {
-                        action: { name: "confirm-password-reset" },
+                        action: { name: "confirmPasswordReset" },
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": dbUser.id,
-                            "x-hasura-role": UserRoles.user
+                            "x-hasura-role": UserRoles.anonymous
                         }
                     }
                 );
@@ -828,10 +813,10 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementationOnce(async () => null);
 
                 const res = await ajax.post(
-                    `http://localhost:${CONFIG.port}/actions/change-email`,
+                    `http://localhost:${CONFIG.port}/actions/changeEmail`,
                     { "x-api-key": process.env.API_KEY },
                     {
-                        action: { name: "change-email" },
+                        action: { name: "changeEmail" },
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
@@ -866,10 +851,10 @@ describe("Test 'AuthService' class methods", () => {
                 //mockPG.maybeOne.mockImplementationOnce(async () => null);
 
                 const res = await ajax.post(
-                    `http://localhost:${CONFIG.port}/actions/change-email`,
+                    `http://localhost:${CONFIG.port}/actions/changeEmail`,
                     { "x-api-key": process.env.API_KEY },
                     {
-                        action: { name: "change-email" },
+                        action: { name: "changeEmail" },
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
@@ -893,10 +878,10 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => null);
 
                 const res = await ajax.post(
-                    `http://localhost:${CONFIG.port}/actions/change-email`,
+                    `http://localhost:${CONFIG.port}/actions/changeEmail`,
                     { "x-api-key": process.env.API_KEY },
                     {
-                        action: { name: "change-email" },
+                        action: { name: "changeEmail" },
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
@@ -933,10 +918,10 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
 
                 const res = await ajax.post(
-                    `http://localhost:${CONFIG.port}/actions/confirm-change-email`,
+                    `http://localhost:${CONFIG.port}/actions/confirmChangeEmail`,
                     { "x-api-key": process.env.API_KEY },
                     {
-                        action: { name: "confirm-change-email" },
+                        action: { name: "confirmChangeEmail" },
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
@@ -963,10 +948,10 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => null);
 
                 const res = await ajax.post(
-                    `http://localhost:${CONFIG.port}/actions/confirm-change-email`,
+                    `http://localhost:${CONFIG.port}/actions/confirmChangeEmail`,
                     { "x-api-key": process.env.API_KEY },
                     {
-                        action: { name: "confirm-change-email" },
+                        action: { name: "confirmChangeEmail" },
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
@@ -1001,10 +986,10 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
 
                 const res = await ajax.post(
-                    `http://localhost:${CONFIG.port}/actions/confirm-change-email`,
+                    `http://localhost:${CONFIG.port}/actions/confirmChangeEmail`,
                     { "x-api-key": process.env.API_KEY },
                     {
-                        action: { name: "confirm-change-email" },
+                        action: { name: "confirmChangeEmail" },
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {

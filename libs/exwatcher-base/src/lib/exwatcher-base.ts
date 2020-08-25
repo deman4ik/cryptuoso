@@ -160,9 +160,13 @@ export class ExwatcherBaseService extends BaseService {
     }
 
     async handleImporterFinishedEvent(event: ImporterWorkerFinished) {
-        const { id: importerId, type, exchange } = event;
+        const { id: importerId, type, exchange, asset, currency } = event;
         if (exchange !== this.exchange && type !== "recent") return;
-        const subscription = Object.values(this.subscriptions).find((sub: Exwatcher) => sub.importerId === importerId);
+        const subscription = Object.values(this.subscriptions).find(
+            (sub: Exwatcher) =>
+                sub.status != ExwatcherStatus.subscribed &&
+                (sub.importerId === importerId || (sub.asset === asset && sub.currency === currency))
+        );
         if (subscription) {
             this.log.info(`Importer ${importerId} finished!`);
             await this.subscribe(subscription);
@@ -170,9 +174,13 @@ export class ExwatcherBaseService extends BaseService {
     }
 
     async handleImporterFailedEvent(event: ImporterWorkerFailed) {
-        const { id: importerId, type, exchange, error } = event;
+        const { id: importerId, type, exchange, asset, currency, error } = event;
         if (exchange !== this.exchange && type !== "recent") return;
-        const subscription = Object.values(this.subscriptions).find((sub: Exwatcher) => sub.importerId === importerId);
+        const subscription = Object.values(this.subscriptions).find(
+            (sub: Exwatcher) =>
+                sub.status != ExwatcherStatus.subscribed &&
+                (sub.importerId === importerId || (sub.asset === asset && sub.currency === currency))
+        );
 
         if (subscription && subscription.id) {
             this.log.warn(`Importer ${importerId} failed!`, error);
@@ -401,6 +409,7 @@ export class ExwatcherBaseService extends BaseService {
             const { id, exchange, asset, currency } = subscription;
             this.log.info(`Loading current candles ${id}`);
             if (!this.candlesCurrent[id]) this.candlesCurrent[id] = {};
+
             await Promise.all(
                 Timeframe.validArray.map(async (timeframe) => {
                     const candle: ExchangeCandle = await this.publicConnector.getCurrentCandle(
@@ -826,10 +835,9 @@ export class ExwatcherBaseService extends BaseService {
 
     async saveCandles(candles: ExchangeCandle[]): Promise<void> {
         try {
-            await this.db.pg.connect(async (connection) => {
-                for (const candle of candles) {
-                    try {
-                        await connection.query(this.db.sql`
+            for (const candle of candles) {
+                try {
+                    await this.db.pg.query(this.db.sql`
                             insert into ${this.db.sql.identifier([`candles${candle.timeframe}`])}
                 (exchange, asset, currency, open, high, low, close, volume, time, timestamp, type)
                 values (
@@ -854,11 +862,10 @@ export class ExwatcherBaseService extends BaseService {
                 close = excluded.close,
                 volume = excluded.volume,
                 type = excluded.type;`);
-                    } catch (e) {
-                        this.log.error(e);
-                    }
+                } catch (e) {
+                    this.log.error(e);
                 }
-            });
+            }
         } catch (e) {
             this.log.error(e);
         }
