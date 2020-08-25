@@ -7,6 +7,9 @@ export interface UserSignalPosition extends PositionDataForStats {
     currency?: string;
     userId?: string;
     userSignalVolume?: number;
+    exitPrice: number;
+    entryPrice: number;
+    fee: number;
 }
 
 export interface UserSignals extends CommonStats {

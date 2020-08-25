@@ -1,5 +1,26 @@
 import StatisticsCalculator from "./statistics-calculator";
 import EquityCalculator from "./equity-calculator";
+
+export const enum StatsCalcJobType {
+    robot = "robot",
+    userSignal = "userSignal",
+    userSignals = "userSignals",
+    userRobot = "userRobot",
+    userSignalsAggr = "userSignalsAggr",
+    userRobotAggr = "userRobotAggr"
+}
+
+export interface StatsCalcJob {
+    id: string;
+    type: StatsCalcJobType;
+    calcAll?: boolean;
+    robotId?: string;
+    userRobotId?: string;
+    userId?: string;
+    exchange?: string;
+    asset?: string;
+}
+
 export const enum PositionDirection {
     long = "long",
     short = "short"

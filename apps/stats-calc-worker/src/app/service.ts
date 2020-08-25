@@ -1,9 +1,16 @@
 import { DataStream } from "scramjet";
 import { spawn, Pool, Worker as ThreadsWorker } from "threads";
+import { Worker, Job } from "bullmq";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import { StatisticUtils } from "./statsWorker";
 import { sql, pgUtil, pg } from "@cryptuoso/postgres";
-import { CommonStats, PositionDataForStats, PositionDirection } from "@cryptuoso/trade-statistics";
+import {
+    StatsCalcJob,
+    StatsCalcJobType,
+    CommonStats,
+    PositionDataForStats,
+    PositionDirection
+} from "@cryptuoso/trade-statistics";
 import { UserSignals, UserAggrStatsDB, UserSignalPosition } from "@cryptuoso/user-state";
 import { round } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
@@ -24,8 +31,9 @@ function getCalcFromAndInitStats(stats?: CommonStats, calcAll?: boolean) {
 
 export type StatisticCalcWorkerServiceConfig = BaseServiceConfig;
 export default class StatisticCalcWorkerService extends BaseService {
-    pool: Pool<any>;
-    pgJS: typeof pg;
+    private pool: Pool<any>;
+    private workers: { [key: string]: Worker };
+    private pgJS: typeof pg;
 
     maxSingleQueryPosCount: number = 750;
     defaultChunkSize: number = 500;
@@ -41,21 +49,52 @@ export default class StatisticCalcWorkerService extends BaseService {
         }
     }
 
-    async _onStartService(): Promise<void> {
+    private async _onStartService(): Promise<void> {
         this.pool = Pool(() => spawn<StatisticUtils>(new ThreadsWorker("./statsWorker")), {
             name: "statistics-utils"
         });
+        this.workers = {
+            calcStatistics: new Worker("calcStatistics", async (job: Job) => this.process(job), {
+                connection: this.redis
+            })
+        };
     }
 
-    async _onStopService(): Promise<void> {
+    private async _onStopService(): Promise<void> {
+        await this.workers.calcStatistics.close();
         await this.pool.terminate();
+    }
+
+    async process(job: Job) {
+        const { id, type, calcAll, robotId, userRobotId, userId, exchange, asset } = job.data as StatsCalcJob;
+
+        this.log.info(`StatisticCalcWorker #${id} - Starting ${type} calculate`);
+
+        try {
+            if (type === StatsCalcJobType.robot) {
+                await this.calcRobot(robotId, calcAll);
+            } else if (type === StatsCalcJobType.userRobot) {
+                await this.calcUserRobot(userRobotId, calcAll);
+            } else if (type === StatsCalcJobType.userSignal) {
+                await this.calcUserSignal(userId, robotId, calcAll);
+            } else if (type === StatsCalcJobType.userSignals) {
+                await this.calcUserSignals(robotId, calcAll);
+            } else if (type === StatsCalcJobType.userSignalsAggr) {
+                await this.calcUserSignalsAggr(userId, exchange, asset, calcAll);
+            } else if (type === StatsCalcJobType.userRobotAggr) {
+                await this.calcUserRobotsAggr(userId, exchange, asset, calcAll);
+            }
+        } catch (err) {
+            this.log.warn(`StatisticCalcWorker #${id}`, err);
+            throw err;
+        }
     }
 
     async calcStatistics(prevStats: CommonStats, positions: PositionDataForStats[]): Promise<CommonStats> {
         return await this.pool.queue(async (utils: StatisticUtils) => utils.calcStatistics(prevStats, positions));
     }
 
-    async _calcRobotStatistics(prevStats: CommonStats, positions: PositionDataForStats[]): Promise<CommonStats> {
+    private async _calcRobotStatistics(prevStats: CommonStats, positions: PositionDataForStats[]): Promise<CommonStats> {
         return await this.calcStatistics(
             prevStats,
             positions.map((pos) => ({
@@ -65,7 +104,9 @@ export default class StatisticCalcWorkerService extends BaseService {
         );
     }
 
-    async _calcRobotBySingleQuery(robotId: string, initStats: CommonStats, calcFrom?: string) {
+    private async _calcRobotBySingleQuery(params: { robotId: string; initStats: CommonStats; calcFrom?: string }) {
+        const { robotId, initStats, calcFrom } = params;
+
         const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
         const positions: PositionDataForStats[] = await this.db.pg.any(sql`
                 SELECT id, direction, exit_date, profit, bars_held, fee
@@ -81,12 +122,14 @@ export default class StatisticCalcWorkerService extends BaseService {
         return await this._calcRobotStatistics(initStats, positions);
     }
 
-    async _calcRobotByChunks(
-        robotId: string,
-        initStats: CommonStats,
-        calcFrom?: string,
-        chunkSize: number = this.defaultChunkSize
-    ) {
+    private async _calcRobotByChunks(params: {
+        robotId: string;
+        initStats: CommonStats;
+        calcFrom?: string;
+        chunkSize?: number;
+    }) {
+        const { robotId, initStats, calcFrom, chunkSize = this.defaultChunkSize } = params;
+
         const pg = this.db.pg;
 
         return await DataStream.from(async function* () {
@@ -106,8 +149,7 @@ export default class StatisticCalcWorkerService extends BaseService {
 
                 ++chunkNum;
 
-                if(chunk.length > 0)
-                    yield chunk;
+                if (chunk.length > 0) yield chunk;
 
                 if (chunk.length != chunkSize) break;
             }
@@ -140,22 +182,22 @@ export default class StatisticCalcWorkerService extends BaseService {
                 ${conditionExitDate};
         `));
 
-        if (positionsCount > 0) {
-            const { statistics, equity } =
-                positionsCount <= this.maxSingleQueryPosCount
-                    ? await this._calcRobotBySingleQuery(robotId, initStats, calcFrom)
-                    : await this._calcRobotByChunks(robotId, initStats, calcFrom);
+        if (positionsCount == 0) return;
 
-            /* await this.db.pg.any(sql`
-                UPDATE robots
-                SET statistics = ${this.db.sql.json(statistics)},
-                    equity = ${this.db.sql.json(equity)}
-                WHERE id = ${robotId};
-            `); */
-        }
+        const { statistics, equity } =
+            positionsCount <= this.maxSingleQueryPosCount
+                ? await this._calcRobotBySingleQuery({ robotId, initStats, calcFrom })
+                : await this._calcRobotByChunks({ robotId, initStats, calcFrom });
+
+        /* await this.db.pg.any(sql`
+            UPDATE robots
+            SET statistics = ${this.db.sql.json(statistics)},
+                equity = ${this.db.sql.json(equity)}
+            WHERE id = ${robotId};
+        `); */
     }
 
-    async _calcUserSignalStatistics(
+    private async _calcUserSignalStatistics(
         prevStats: CommonStats,
         positions: UserSignalPosition[],
         userSignalVolume: number
@@ -179,22 +221,23 @@ export default class StatisticCalcWorkerService extends BaseService {
         );
     }
 
-    async _calcUserSignalBySingleQuery(
-        robotId: string,
-        initStats: CommonStats,
-        userSignal: UserSignals,
-        calcFrom?: string
-    ) {
+    private async _calcUserSignalBySingleQuery(params: {
+        robotId: string;
+        userSignal: UserSignals;
+        initStats: CommonStats;
+        calcFrom?: string;
+    }) {
+        const { robotId, userSignal, initStats, calcFrom } = params;
         const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
         const positions: UserSignalPosition[] = await this.db.pg.any(sql`
-                SELECT id, direction, exit_date, profit, bars_held,
-                       entry_price, exit_price, fee
-                FROM robot_positions
-                WHERE robot_id = ${robotId}
-                    AND status = 'closed'
-                    AND entry_date > ${userSignal.subscribedAt}
-                    ${conditionExitDate}
-                ORDER BY exit_date;
+            SELECT id, direction, exit_date, profit, bars_held,
+                    entry_price, exit_price, fee
+            FROM robot_positions
+            WHERE robot_id = ${robotId}
+                AND status = 'closed'
+                AND entry_date >= ${userSignal.subscribedAt}
+                ${conditionExitDate}
+            ORDER BY exit_date;
         `);
 
         //if (!positions.length) return;
@@ -202,13 +245,14 @@ export default class StatisticCalcWorkerService extends BaseService {
         return await this._calcUserSignalStatistics(initStats, positions, userSignal.volume);
     }
 
-    async _calcUserSignalByChunks(
-        robotId: string,
-        initStats: CommonStats,
-        userSignal: UserSignals,
-        calcFrom?: string,
-        chunkSize: number = this.defaultChunkSize
-    ) {
+    private async _calcUserSignalByChunks(params: {
+        robotId: string;
+        userSignal: UserSignals;
+        initStats: CommonStats;
+        calcFrom?: string;
+        chunkSize?: number;
+    }) {
+        const { robotId, userSignal, initStats, calcFrom, chunkSize = this.defaultChunkSize } = params;
         const pg = this.db.pg;
 
         return await DataStream.from(async function* () {
@@ -217,21 +261,20 @@ export default class StatisticCalcWorkerService extends BaseService {
 
             while (true) {
                 const chunk: UserSignalPosition[] = await pg.any(sql`
-                        SELECT id, direction, exit_date, profit, bars_held ,
-                               entry_price, exit_price, fee
-                        FROM robot_positions
-                        WHERE robot_id = ${robotId}
-                            AND status = 'closed'
-                            AND entry_date > ${userSignal.subscribedAt}
-                            ${conditionExitDate}
-                        ORDER BY exit_date
-                        LIMIT ${chunkSize} OFFSET ${chunkNum * chunkSize};
-                    `);
+                    SELECT id, direction, exit_date, profit, bars_held,
+                            entry_price, exit_price, fee
+                    FROM robot_positions
+                    WHERE robot_id = ${robotId}
+                        AND status = 'closed'
+                        AND entry_date >= ${userSignal.subscribedAt}
+                        ${conditionExitDate}
+                    ORDER BY exit_date
+                    LIMIT ${chunkSize} OFFSET ${chunkNum * chunkSize};
+                `);
 
                 ++chunkNum;
 
-                if(chunk.length > 0)
-                    yield chunk;
+                if (chunk.length > 0) yield chunk;
 
                 if (chunk.length != chunkSize) break;
             }
@@ -262,37 +305,39 @@ export default class StatisticCalcWorkerService extends BaseService {
             FROM robot_positions
             WHERE robot_id = ${robotId}
                 AND status = 'closed'
-                AND entry_date > ${userSignal.subscribedAt}
+                AND entry_date >= ${userSignal.subscribedAt}
                 ${conditionExitDate};
         `));
 
-        if (positionsCount > 0) {
-            const { statistics, equity } =
-                positionsCount <= this.maxSingleQueryPosCount
-                    ? await this._calcUserSignalBySingleQuery(robotId, initStats, userSignal, calcFrom)
-                    : await this._calcUserSignalByChunks(robotId, initStats, userSignal, calcFrom);
+        if (positionsCount == 0) return;
 
-            /* await this.db.pg.any(sql`
-                UPDATE user_signals
-                SET statistics = ${this.db.sql.json(statistics)},
-                    equity = ${this.db.sql.json(equity)}
-                WHERE id = ${userSignal.id};
-            `); */
-        }
+        const { statistics, equity } =
+            positionsCount <= this.maxSingleQueryPosCount
+                ? await this._calcUserSignalBySingleQuery({ robotId, initStats, userSignal, calcFrom })
+                : await this._calcUserSignalByChunks({ robotId, initStats, userSignal, calcFrom });
+
+        /* await this.db.pg.any(sql`
+            UPDATE user_signals
+            SET statistics = ${this.db.sql.json(statistics)},
+                equity = ${this.db.sql.json(equity)}
+            WHERE id = ${userSignal.id};
+        `); */
     }
 
-    async _calcUserSignalsBySingleQuery(
-        robotId: string,
-        userSignals: UserSignals[],
-        calcAll: boolean,
-        minSubscriptionDate: string,
-        minExitDate: string
-    ): Promise<{ [key: string]: CommonStats }> {
-        const res: { [key: string]: CommonStats } = {};
+    private async _calcUserSignalsBySingleQuery(params: {
+        robotId: string;
+        userSignals: UserSignals[];
+        minSubscriptionDate: string;
+        minExitDate: string;
+        calcAll: boolean;
+    }): Promise<{ [key: string]: CommonStats }> {
+        const { robotId, userSignals, minSubscriptionDate, minExitDate, calcAll } = params;
+        const statsDict: { [key: string]: CommonStats } = {};
 
         const conditionExitDate = !minExitDate ? sql`` : sql`AND exit_date > ${minExitDate}`;
         const allPositions: UserSignalPosition[] = await this.db.pg.any(sql`
-                SELECT id, direction, exit_date, profit, bars_held 
+                SELECT id, direction, exit_date, profit, bars_held,
+                    entry_price, exit_price, fee
                 FROM robot_positions
                 WHERE robot_id = ${robotId}
                     AND status = 'closed'
@@ -308,22 +353,31 @@ export default class StatisticCalcWorkerService extends BaseService {
                 (pos) => userSignal.subscribedAt <= pos.entryDate && (!calcFrom || calcFrom <= pos.exitDate)
             );
 
-            res[userSignal.id] = await this._calcUserSignalStatistics(initStats, positions, userSignal.volume);
+            statsDict[userSignal.id] = await this._calcUserSignalStatistics(initStats, positions, userSignal.volume);
         }
 
-        return res;
+        return statsDict;
     }
 
-    async _calcUserSignalsByChunks(
-        robotId: string,
-        userSignals: UserSignals[],
-        calcAll: boolean,
-        minSubscriptionDate: string,
-        minExitDate: string,
-        chunkSize: number = this.defaultChunkSize
-    ): Promise<{ [key: string]: CommonStats }> {
-        const res: { [key: string]: CommonStats } = {};
-        const acc: {
+    private async _calcUserSignalsByChunks(params: {
+        robotId: string;
+        userSignals: UserSignals[];
+        calcAll: boolean;
+        minSubscriptionDate: string;
+        minExitDate: string;
+        chunkSize?: number;
+    }): Promise<{ [key: string]: CommonStats }> {
+        const {
+            robotId,
+            userSignals,
+            minSubscriptionDate,
+            minExitDate,
+            calcAll,
+            chunkSize = this.defaultChunkSize
+        } = params;
+
+        const statsDict: { [key: string]: CommonStats } = {};
+        let statsAcc: {
             signal: UserSignals;
             calcFrom: string;
             stats: CommonStats;
@@ -332,18 +386,19 @@ export default class StatisticCalcWorkerService extends BaseService {
 
         userSignals.forEach((us) => {
             const { calcFrom, initStats: stats } = getCalcFromAndInitStats(us, calcAll);
-            acc.push({ signal: us, calcFrom, stats, updated: false });
+            statsAcc.push({ signal: us, calcFrom, stats, updated: false });
         });
 
         const pg = this.db.pg;
 
-        const resAcc: typeof acc = await DataStream.from(async function* () {
+        statsAcc = await DataStream.from(async function* () {
             let chunkNum = 0;
             const conditionExitDate = !minExitDate ? sql`` : sql`AND exit_date > ${minExitDate}`;
 
             while (true) {
                 const chunk: UserSignalPosition[] = await pg.any(sql`
-                        SELECT id, direction, exit_date, profit, bars_held, subscribed_at
+                        SELECT id, direction, exit_date, profit, bars_held, subscribed_at,
+                            entry_price, exit_price, fee
                         FROM robot_positions
                         WHERE robot_id = ${robotId}
                             AND status = 'closed'
@@ -355,12 +410,11 @@ export default class StatisticCalcWorkerService extends BaseService {
 
                 ++chunkNum;
 
-                if(chunk.length > 0)
-                    yield chunk;
+                if (chunk.length > 0) yield chunk;
 
                 if (chunk.length != chunkSize) break;
             }
-        }).reduce(async (signalsAcc: typeof acc, chunk: UserSignalPosition[]) => {
+        }).reduce(async (signalsAcc: typeof statsAcc, chunk: UserSignalPosition[]) => {
             const chunkMaxExitDate = chunk[chunk.length - 1].exitDate;
             const chunkMaxEntryDate = dayjs
                 .utc(Math.max(...chunk.map((pos) => dayjs.utc(pos.entryDate).valueOf())))
@@ -387,21 +441,20 @@ export default class StatisticCalcWorkerService extends BaseService {
 
                 signalAcc.updated = true;
             }
-        }, acc);
+        }, statsAcc);
 
-        resAcc.forEach((signalAcc) => {
-            if (signalAcc.updated) res[signalAcc.signal.id] = signalAcc.stats;
+        statsAcc.forEach((signalAcc) => {
+            if (signalAcc.updated) statsDict[signalAcc.signal.id] = signalAcc.stats;
         });
 
-        return res;
+        return statsDict;
     }
 
-    async calcUserSignals(userId: string, robotId: string, calcAll: boolean = false) {
+    async calcUserSignals(robotId: string, calcAll: boolean = false) {
         const userSignals: UserSignals[] = await this.db.pg.maybeOne(sql`
             SELECT id, subscribe_at, volume, statistics, equity
             FROM user_signals
-            WHERE id = ${robotId}
-                AND user_id = ${userId};
+            WHERE id = ${robotId};
         `);
 
         if (!userSignals) {
@@ -432,24 +485,36 @@ export default class StatisticCalcWorkerService extends BaseService {
                 ${conditionExitDate};
         `));
 
-        if (positionsCount > 0) {
-            const signalsStats =
-                positionsCount <= this.maxSingleQueryPosCount
-                    ? await this._calcUserSignalsBySingleQuery(robotId, userSignals, calcAll, minExitDate, minExitDate)
-                    : await this._calcUserSignalsByChunks(robotId, userSignals, calcAll, minExitDate, minExitDate);
+        if (positionsCount == 0) return;
 
-            for (const [signalId, { statistics, equity }] of Object.entries(signalsStats)) {
-                /* await this.db.pg.any(sql`
-                    UPDATE user_signals
-                    SET statistics = ${this.db.sql.json(statistics)},
-                        equity = ${this.db.sql.json(equity)}
-                    WHERE id = ${signalId};
-                `); */
-            }
+        const signalsStats =
+            positionsCount <= this.maxSingleQueryPosCount
+                ? await this._calcUserSignalsBySingleQuery({
+                      robotId,
+                      userSignals,
+                      calcAll,
+                      minSubscriptionDate,
+                      minExitDate
+                  })
+                : await this._calcUserSignalsByChunks({
+                      robotId,
+                      userSignals,
+                      calcAll,
+                      minSubscriptionDate,
+                      minExitDate
+                  });
+
+        for (const [signalId, { statistics, equity }] of Object.entries(signalsStats)) {
+            /* await this.db.pg.any(sql`
+                UPDATE user_signals
+                SET statistics = ${this.db.sql.json(statistics)},
+                    equity = ${this.db.sql.json(equity)}
+                WHERE id = ${signalId};
+            `); */
         }
     }
 
-    async _calcUserSignalsAggrStatistics(
+    private async _calcUserSignalsAggrStatistics(
         prevStats: CommonStats,
         positions: UserSignalPosition[]
     ): Promise<CommonStats> {
@@ -471,50 +536,50 @@ export default class StatisticCalcWorkerService extends BaseService {
             })
         );
     }
-    
-    async _calcUserSignalsAggrBySingleQuery(
-        userId: string,
-        initStats: CommonStats,
-        calcFrom?: string,
-        exchange?: string,
-        asset?: string,
-    ): Promise<CommonStats> {
+
+    private async _calcUserSignalsAggrBySingleQuery(params: {
+        userId: string;
+        exchange?: string;
+        asset?: string;
+        initStats: CommonStats;
+        calcFrom?: string;
+    }): Promise<CommonStats> {
+        const { userId, exchange, asset, initStats, calcFrom } = params;
+
         const conditionExchange = !exchange ? sql`` : sql`AND r.exchange = ${exchange}`;
         const conditionAsset = !asset ? sql`` : sql`AND r.asset = ${asset}`;
         const conditionExitDate = !calcFrom ? sql`` : sql`AND r.exit_date > ${calcFrom}`;
         const positions: UserSignalPosition[] = await this.db.pg.any(sql`
             SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
-                    p.fee, o.entry_price, p.exit_price
-                    r.exchange,
-                    r.asset,
-                    r.currency,
-                    us.user_id,
-                    us.volume AS user_signal_volume
+                   p.entry_price, p.exit_price, p.fee,
+                   us.volume AS user_signal_volume
             FROM robot_positions p,
-                    robots r,
-                    user_signals us
+                 robots r,
+                 user_signals us
             WHERE us.user_id = ${userId}
-                AND us.robot_id = r.id
-                AND p.robot_id = r.id
-                AND p.status = 'closed'
-                AND p.entry_date >= us.subscribed_at
-                ${conditionExchange}
-                ${conditionAsset}
-                ${conditionExitDate}
+              AND us.robot_id = r.id
+              AND p.robot_id = r.id
+              AND p.status = 'closed'
+              AND p.entry_date >= us.subscribed_at
+              ${conditionExchange}
+              ${conditionAsset}
+              ${conditionExitDate}
             ORDER BY p.exit_date;
         `);
 
         return await this._calcUserSignalsAggrStatistics(initStats, positions);
     }
 
-    async _calcUserSignalsAggrByChunks(
-        userId: string,
-        initStats: CommonStats,
-        calcFrom?: string,
-        exchange?: string,
-        asset?: string,
-        chunkSize: number = this.defaultChunkSize
-    ) {
+    private async _calcUserSignalsAggrByChunks(params: {
+        userId: string;
+        initStats: CommonStats;
+        calcFrom?: string;
+        exchange?: string;
+        asset?: string;
+        chunkSize?: number;
+    }) {
+        const { userId, exchange, asset, initStats, calcFrom, chunkSize = this.defaultChunkSize } = params;
+
         const pg = this.db.pg;
 
         return await DataStream.from(async function* () {
@@ -526,31 +591,26 @@ export default class StatisticCalcWorkerService extends BaseService {
             while (true) {
                 const chunk: PositionDataForStats[] = await pg.any(sql`
                         SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
-                                p.fee, o.entry_price, p.exit_price
-                            r.exchange,
-                            r.asset,
-                            r.currency,
-                            us.user_id,
-                            us.volume AS user_signal_volume
+                               p.entry_price, p.exit_price, p.fee,
+                               us.volume AS user_signal_volume
                         FROM robot_positions p,
-                            robots r,
-                            user_signals us
+                             robots r,
+                             user_signals us
                         WHERE us.user_id = ${userId}
-                            AND us.robot_id = r.id
-                            AND p.robot_id = r.id
-                            AND p.status = 'closed'
-                            AND p.entry_date >= us.subscribed_at
-                            ${conditionExchange}
-                            ${conditionAsset}
-                            ${conditionExitDate}
+                          AND us.robot_id = r.id
+                          AND p.robot_id = r.id
+                          AND p.status = 'closed'
+                          AND p.entry_date >= us.subscribed_at
+                          ${conditionExchange}
+                          ${conditionAsset}
+                          ${conditionExitDate}
                         ORDER BY p.exit_date
                         LIMIT ${chunkSize} OFFSET ${chunkNum * chunkSize};
                     `);
 
                 ++chunkNum;
 
-                if(chunk.length > 0)
-                    yield chunk;
+                if (chunk.length > 0) yield chunk;
 
                 if (chunk.length != chunkSize) break;
             }
@@ -561,7 +621,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         );
     }
 
-    async calcUserSignalsAggr(userId: string, calcAll: boolean = false, exchange?: string, asset?: string) {
+    async calcUserSignalsAggr(userId: string, exchange?: string, asset?: string, calcAll: boolean = false) {
         const prevUserAggrStats: UserAggrStatsDB = await this.db.pg.maybeOne(sql`
             SELECT id, statistics, equity
             FROM user_aggr_stats
@@ -577,65 +637,61 @@ export default class StatisticCalcWorkerService extends BaseService {
         const conditionAsset = !asset ? sql`` : sql`AND r.asset = ${asset}`;
         const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
         const positionsCount: number = +(await this.db.pg.oneFirst(sql`
-            SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
-                    p.fee, o.entry_price, p.exit_price
-                    r.exchange,
-                    r.asset,
-                    r.currency,
-                    us.user_id,
-                    us.volume AS user_signal_volume
+            SELECT COUNT(*)
             FROM robot_positions p,
-                    robots r,
-                    user_signals us
+                 robots r,
+                 user_signals us
             WHERE us.user_id = ${userId}
-                AND us.robot_id = r.id
-                AND p.robot_id = r.id
-                AND p.status = 'closed'
-                AND p.entry_date >= us.subscribed_at
-                ${conditionExchange}
-                ${conditionAsset}
-                ${conditionExitDate}
+              AND us.robot_id = r.id
+              AND p.robot_id = r.id
+              AND p.status = 'closed'
+              AND p.entry_date >= us.subscribed_at
+              ${conditionExchange}
+              ${conditionAsset}
+              ${conditionExitDate}
             ORDER BY p.exit_date;
         `));
 
-        if (positionsCount > 0) {
-            const { statistics, equity } =
-                positionsCount <= this.maxSingleQueryPosCount
-                    ? await this._calcUserSignalsAggrBySingleQuery(userId, initStats, calcFrom, exchange, asset)
-                    : await this._calcUserSignalsAggrByChunks(userId, initStats, calcFrom, exchange, asset);
+        if (positionsCount == 0) return;
 
-            /* if(prevUserAggrStats) {
-                await this.db.pg.any(sql`
-                    UPDATE user_aggr_stats
-                    SET statistics = ${this.db.sql.json(statistics)},
-                        equity = ${this.db.sql.json(equity)}
-                    WHERE id = ${prevUserAggrStats.id};
-                `);
-            } else {
-                await this.db.pg.any(sql`
-                    INSERT INTO user_aggr_stats
-                    (user_id, exchange, asset, \`type\`, statistics, equity)
-                    VALUES (
-                        ${userId},
-                        ${exchange},
-                        ${asset},
-                        'signal',
-                        ${this.db.sql.json(statistics)},
-                        ${this.db.sql.json(equity)}
-                    );
-                `);
-            } */
-        }
+        const { statistics, equity } =
+            positionsCount <= this.maxSingleQueryPosCount
+                ? await this._calcUserSignalsAggrBySingleQuery({ userId, exchange, asset, initStats, calcFrom })
+                : await this._calcUserSignalsAggrByChunks({ userId, exchange, asset, initStats, calcFrom });
+
+        /* if(prevUserAggrStats) {
+            await this.db.pg.any(sql`
+                UPDATE user_aggr_stats
+                SET statistics = ${this.db.sql.json(statistics)},
+                    equity = ${this.db.sql.json(equity)}
+                WHERE id = ${prevUserAggrStats.id};
+            `);
+        } else {
+            await this.db.pg.any(sql`
+                INSERT INTO user_aggr_stats
+                (user_id, exchange, asset, \`type\`, statistics, equity)
+                VALUES (
+                    ${userId},
+                    ${exchange},
+                    ${asset},
+                    'signal',
+                    ${this.db.sql.json(statistics)},
+                    ${this.db.sql.json(equity)}
+                );
+            `);
+        } */
     }
 
-    async _calcUserRobotBySingleQuery(userRobotId: string, initStats: CommonStats, calcFrom?: string) {
+    private async _calcUserRobotBySingleQuery(params: { userRobotId: string; initStats: CommonStats; calcFrom?: string }) {
+        const { userRobotId, initStats, calcFrom } = params;
+
         const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
         const positions: PositionDataForStats[] = await this.db.pg.any(sql`
-                SELECT id, direction, exit_date, profit, bars_held, fee
+                SELECT id, direction, exit_date, profit, bars_held
                 FROM user_positions
                 WHERE robot_id = ${userRobotId}
-                    AND status IN ('closed', 'closedAuto')
-                    ${conditionExitDate}
+                  AND status IN ('closed', 'closedAuto')
+                  ${conditionExitDate}
                 ORDER BY exit_date;
         `);
 
@@ -644,12 +700,14 @@ export default class StatisticCalcWorkerService extends BaseService {
         return await this.calcStatistics(initStats, positions);
     }
 
-    async _calcUserRobotByChunks(
-        userRobotId: string,
-        initStats: CommonStats,
-        calcFrom?: string,
-        chunkSize: number = this.defaultChunkSize
-    ) {
+    private async _calcUserRobotByChunks(params: {
+        userRobotId: string;
+        initStats: CommonStats;
+        calcFrom?: string;
+        chunkSize?: number;
+    }) {
+        const { userRobotId, initStats, calcFrom, chunkSize = this.defaultChunkSize } = params;
+
         const pg = this.db.pg;
 
         return await DataStream.from(async function* () {
@@ -658,19 +716,18 @@ export default class StatisticCalcWorkerService extends BaseService {
 
             while (true) {
                 const chunk: PositionDataForStats[] = await pg.any(sql`
-                        SELECT id, direction, exit_date, profit, bars_held, fee
+                        SELECT id, direction, exit_date, profit, bars_held
                         FROM user_positions
                         WHERE robot_id = ${userRobotId}
-                            AND status IN ('closed', 'closedAuto')
-                            ${conditionExitDate}
+                          AND status IN ('closed', 'closedAuto')
+                          ${conditionExitDate}
                         ORDER BY exit_date
                         LIMIT ${chunkSize} OFFSET ${chunkNum * chunkSize};
                     `);
 
                 ++chunkNum;
 
-                if(chunk.length > 0)
-                    yield chunk;
+                if (chunk.length > 0) yield chunk;
 
                 if (chunk.length != chunkSize) break;
             }
@@ -699,68 +756,66 @@ export default class StatisticCalcWorkerService extends BaseService {
             SELECT COUNT(*) 
             FROM user_positions
             WHERE robot_id = ${userRobotId}
-                AND status IN ('closed', 'closedAuto')
-                ${conditionExitDate};
+              AND status IN ('closed', 'closedAuto')
+              ${conditionExitDate};
         `));
 
-        if (positionsCount > 0) {
-            const { statistics, equity } =
-                positionsCount <= this.maxSingleQueryPosCount
-                    ? await this._calcUserRobotBySingleQuery(userRobotId, initStats, calcFrom)
-                    : await this._calcUserRobotByChunks(userRobotId, initStats, calcFrom);
+        if (positionsCount == 0) return;
 
-            /* await this.db.pg.any(sql`
-                UPDATE user_robots
-                SET statistics = ${this.db.sql.json(statistics)},
-                    equity = ${this.db.sql.json(equity)}
-                WHERE id = ${userRobotId};
-            `); */
-        }
+        const { statistics, equity } =
+            positionsCount <= this.maxSingleQueryPosCount
+                ? await this._calcUserRobotBySingleQuery({ userRobotId, initStats, calcFrom })
+                : await this._calcUserRobotByChunks({ userRobotId, initStats, calcFrom });
+
+        /* await this.db.pg.any(sql`
+            UPDATE user_robots
+            SET statistics = ${this.db.sql.json(statistics)},
+                equity = ${this.db.sql.json(equity)}
+            WHERE id = ${userRobotId};
+        `); */
     }
-    
-    async _calcUserRobotsAggrBySingleQuery(
-        userId: string,
-        initStats: CommonStats,
-        calcFrom?: string,
-        exchange?: string,
-        asset?: string,
-    ): Promise<CommonStats> {
+
+    private async _calcUserRobotsAggrBySingleQuery(params: {
+        userId: string;
+        exchange?: string;
+        asset?: string;
+        initStats: CommonStats;
+        calcFrom?: string;
+    }): Promise<CommonStats> {
+        const { userId, exchange, asset, initStats, calcFrom } = params;
+
         const conditionExchange = !exchange ? sql`` : sql`AND r.exchange = ${exchange}`;
         const conditionAsset = !asset ? sql`` : sql`AND r.asset = ${asset}`;
         const conditionExitDate = !calcFrom ? sql`` : sql`AND r.exit_date > ${calcFrom}`;
         const positions: UserSignalPosition[] = await this.db.pg.any(sql`
-            SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
-                    p.fee, o.entry_price, p.exit_price
-                    r.exchange,
-                    r.asset,
-                    r.currency,
-                    us.user_id,
-                    us.volume AS user_signal_volume
+            SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held
             FROM user_positions p,
-                    user_robots r,
-                    user_signals us
+                 user_robots r,
+                 user_signals us
             WHERE us.user_id = ${userId}
-                AND us.robot_id = r.id
-                AND p.robot_id = r.id
-                AND p.status IN ('closed', 'closedAuto')
-                AND p.entry_date >= us.subscribed_at
-                ${conditionExchange}
-                ${conditionAsset}
-                ${conditionExitDate}
+              AND us.robot_id = r.id
+              AND p.robot_id = r.id
+              AND p.status IN ('closed', 'closedAuto')
+              AND p.entry_date >= us.subscribed_at
+              ${conditionExchange}
+              ${conditionAsset}
+              ${conditionExitDate}
             ORDER BY p.exit_date;
         `);
 
         return await this.calcStatistics(initStats, positions);
     }
 
-    async _calcUserRobotsAggrByChunks(
-        userId: string,
-        initStats: CommonStats,
-        calcFrom?: string,
-        exchange?: string,
-        asset?: string,
-        chunkSize: number = this.defaultChunkSize
-    ) {
+    private async _calcUserRobotsAggrByChunks(params: {
+        userId: string;
+        exchange?: string;
+        asset?: string;
+        initStats: CommonStats;
+        calcFrom?: string;
+        chunkSize?: number;
+    }) {
+        const { userId, exchange, asset, initStats, calcFrom, chunkSize = this.defaultChunkSize } = params;
+
         const pg = this.db.pg;
 
         return await DataStream.from(async function* () {
@@ -772,42 +827,35 @@ export default class StatisticCalcWorkerService extends BaseService {
             while (true) {
                 const chunk: PositionDataForStats[] = await pg.any(sql`
                         SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
-                                p.fee, o.entry_price, p.exit_price
-                            r.exchange,
-                            r.asset,
-                            r.currency,
-                            us.user_id,
-                            us.volume AS user_signal_volume
+                                p.fee, p.entry_price, p.exit_price
                         FROM user_positions p,
-                            user_robots r,
-                            user_signals us
+                             user_robots r,
+                             user_signals us
                         WHERE us.user_id = ${userId}
-                            AND us.robot_id = r.id
-                            AND p.robot_id = r.id
-                            AND p.status IN ('closed', 'closedAuto')
-                            AND p.entry_date >= us.subscribed_at
-                            ${conditionExchange}
-                            ${conditionAsset}
-                            ${conditionExitDate}
+                          AND us.robot_id = r.id
+                          AND p.robot_id = r.id
+                          AND p.status IN ('closed', 'closedAuto')
+                          AND p.entry_date >= us.subscribed_at
+                          ${conditionExchange}
+                          ${conditionAsset}
+                          ${conditionExitDate}
                         ORDER BY p.exit_date
                         LIMIT ${chunkSize} OFFSET ${chunkNum * chunkSize};
                     `);
 
                 ++chunkNum;
 
-                if(chunk.length > 0)
-                    yield chunk;
+                if (chunk.length > 0) yield chunk;
 
                 if (chunk.length != chunkSize) break;
             }
         }).reduce(
-            async (prevStats: CommonStats, chunk: UserSignalPosition[]) =>
-                await this.calcStatistics(prevStats, chunk),
+            async (prevStats: CommonStats, chunk: UserSignalPosition[]) => await this.calcStatistics(prevStats, chunk),
             initStats
         );
     }
 
-    async calcUserRobotsAggr(userId: string, calcAll: boolean = false, exchange?: string, asset?: string) {
+    async calcUserRobotsAggr(userId: string, exchange?: string, asset?: string, calcAll: boolean = false) {
         const prevUserAggrStats: UserAggrStatsDB = await this.db.pg.maybeOne(sql`
             SELECT id, statistics, equity
             FROM user_aggr_stats
@@ -823,55 +871,49 @@ export default class StatisticCalcWorkerService extends BaseService {
         const conditionAsset = !asset ? sql`` : sql`AND r.asset = ${asset}`;
         const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
         const positionsCount: number = +(await this.db.pg.oneFirst(sql`
-            SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
-                    p.fee, o.entry_price, p.exit_price
-                    r.exchange,
-                    r.asset,
-                    r.currency,
-                    us.user_id,
-                    us.volume AS user_signal_volume
+            SELECT COUNT(*)
             FROM user_positions p,
-                    user_robots r,
-                    user_signals us
+                 user_robots r,
+                 user_signals us
             WHERE us.user_id = ${userId}
-                AND us.robot_id = r.id
-                AND p.robot_id = r.id
-                AND p.status IN ('closed', 'closedAuto')
-                AND p.entry_date >= us.subscribed_at
-                ${conditionExchange}
-                ${conditionAsset}
-                ${conditionExitDate}
+              AND us.robot_id = r.id
+              AND p.robot_id = r.id
+              AND p.status IN ('closed', 'closedAuto')
+              AND p.entry_date >= us.subscribed_at
+              ${conditionExchange}
+              ${conditionAsset}
+              ${conditionExitDate}
             ORDER BY p.exit_date;
         `));
 
-        if (positionsCount > 0) {
-            const { statistics, equity } =
-                positionsCount <= this.maxSingleQueryPosCount
-                    ? await this._calcUserRobotsAggrBySingleQuery(userId, initStats, calcFrom, exchange, asset)
-                    : await this._calcUserRobotsAggrByChunks(userId, initStats, calcFrom, exchange, asset);
+        if (positionsCount == 0) return;
 
-            /* if(prevUserAggrStats) {
-                await this.db.pg.any(sql`
-                    UPDATE user_aggr_stats
-                    SET statistics = ${this.db.sql.json(statistics)},
-                        equity = ${this.db.sql.json(equity)}
-                    WHERE id = ${prevUserAggrStats.id};
-                `);
-            } else {
-                await this.db.pg.any(sql`
-                    INSERT INTO user_aggr_stats
-                    (user_id, exchange, asset, \`type\`, statistics, equity)
-                    VALUES (
-                        ${userId},
-                        ${exchange},
-                        ${asset},
-                        'userRobot',
-                        ${this.db.sql.json(statistics)},
-                        ${this.db.sql.json(equity)}
-                    );
-                `);
-            } */
-        }
+        const { statistics, equity } =
+            positionsCount <= this.maxSingleQueryPosCount
+                ? await this._calcUserRobotsAggrBySingleQuery({ userId, exchange, asset, initStats, calcFrom })
+                : await this._calcUserRobotsAggrByChunks({ userId, exchange, asset, initStats, calcFrom });
+
+        /* if(prevUserAggrStats) {
+            await this.db.pg.any(sql`
+                UPDATE user_aggr_stats
+                SET statistics = ${this.db.sql.json(statistics)},
+                    equity = ${this.db.sql.json(equity)}
+                WHERE id = ${prevUserAggrStats.id};
+            `);
+        } else {
+            await this.db.pg.any(sql`
+                INSERT INTO user_aggr_stats
+                (user_id, exchange, asset, \`type\`, statistics, equity)
+                VALUES (
+                    ${userId},
+                    ${exchange},
+                    ${asset},
+                    'userRobot',
+                    ${this.db.sql.json(statistics)},
+                    ${this.db.sql.json(equity)}
+                );
+            `);
+        } */
     }
 
     async printUserAggrStats() {
