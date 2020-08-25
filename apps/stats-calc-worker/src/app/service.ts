@@ -66,9 +66,9 @@ export default class StatisticCalcWorkerService extends BaseService {
     }
 
     async process(job: Job) {
-        const { id, type, calcAll, robotId, userRobotId, userId, exchange, asset } = job.data as StatsCalcJob;
+        const { type, calcAll, robotId, userRobotId, userId, exchange, asset } = job.data as StatsCalcJob;
 
-        this.log.info(`StatisticCalcWorker #${id} - Starting ${type} calculate`);
+        this.log.info(`Starting job ${job.id}`);
 
         try {
             if (type === StatsCalcJobType.robot) {
@@ -84,8 +84,9 @@ export default class StatisticCalcWorkerService extends BaseService {
             } else if (type === StatsCalcJobType.userRobotAggr) {
                 await this.calcUserRobotsAggr(userId, exchange, asset, calcAll);
             }
+            this.log.info(`Job ${job.id} finished`);
         } catch (err) {
-            this.log.warn(`StatisticCalcWorker #${id}`, err);
+            this.log.error(`Error while processing job ${job.id}`, err);
             throw err;
         }
     }

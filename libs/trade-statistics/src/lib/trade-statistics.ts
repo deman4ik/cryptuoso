@@ -11,7 +11,6 @@ export const enum StatsCalcJobType {
 }
 
 export interface StatsCalcJob {
-    id: string;
     type: StatsCalcJobType;
     calcAll?: boolean;
     robotId?: string;
