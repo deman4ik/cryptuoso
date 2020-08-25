@@ -378,7 +378,7 @@ export default class StatisticsCalculator {
     }
 
     private validateRating(): StatisticsCalculator {
-        this.calculateRating(
+        this.currentStatistics.rating = this.calculateRating(
             this.currentStatistics.profitFactor,
             this.currentStatistics.payoffRatio,
             this.currentStatistics.recoveryFactor

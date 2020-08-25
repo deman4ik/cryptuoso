@@ -108,6 +108,7 @@ export class RobotStats {
     profitFactor? = new RobotNumberValue(null, null, null);
     recoveryFactor? = new RobotNumberValue(null, null, null);
     payoffRatio? = new RobotNumberValue(null, null, null);
+    rating? = new RobotNumberValue(null, null, null)
 }
 
 export function isRobotStats(object: any): object is RobotStats {
