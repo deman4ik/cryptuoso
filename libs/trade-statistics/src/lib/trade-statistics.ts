@@ -1,5 +1,6 @@
 import StatisticsCalculator from "./statistics-calculator";
 import EquityCalculator from "./equity-calculator";
+import { round } from "@cryptuoso/helpers";
 
 export const enum StatsCalcJobType {
     robot = "robot",
@@ -60,6 +61,22 @@ export class RobotNumberValue implements RobotStatVals<number> {
 export class RobotStringValue implements RobotStatVals<string> {
     [index: string]: string;
     constructor(public all: string = "", public long: string = "", public short: string = "") {}
+}
+
+export function roundToNumberOrNull(num: number, decimals: number = 0): number {
+    if(!isFinite(num) || (!num && num != 0)) return null;
+
+    return round(num, decimals);
+}
+
+export function roundRobotStatVals(vals: RobotNumberValue, decimals = 0): RobotNumberValue {
+    const result = { ...vals };
+
+    for (const key in result) {
+        result[key] = roundToNumberOrNull(result[key], decimals);
+    }
+
+    return result;
 }
 
 export class RobotStats {

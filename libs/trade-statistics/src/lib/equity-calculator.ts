@@ -4,17 +4,18 @@ import {
     isPositionDataForStats,
     RobotEquity,
     RobotStats,
-    isRobotStats
+    isRobotStats,
+    roundToNumberOrNull
 } from "./trade-statistics";
-import { chunkArray, round } from "@cryptuoso/helpers";
+import { chunkArray } from "@cryptuoso/helpers";
 
 function roundEquityValues(equity: RobotEquity): RobotEquity {
     const result = { ...equity };
 
-    result.lastProfit = round(result.lastProfit, 2);
-    result.profit = round(result.profit, 2);
-    result.maxDrawdown = round(result.maxDrawdown, 2);
-    result.winRate = round(result.winRate);
+    result.lastProfit = roundToNumberOrNull(result.lastProfit, 2);
+    result.profit = roundToNumberOrNull(result.profit, 2);
+    result.maxDrawdown = roundToNumberOrNull(result.maxDrawdown, 2);
+    result.winRate = roundToNumberOrNull(result.winRate);
 
     return result;
 }

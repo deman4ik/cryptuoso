@@ -6,7 +6,8 @@ import {
     isPositionDataForStats,
     RobotNumberValue,
     RobotStringValue,
-    PerformanceVals
+    PerformanceVals,
+    roundRobotStatVals
 } from "./trade-statistics";
 import dayjs from "@cryptuoso/dayjs";
 import { round } from "@cryptuoso/helpers";
@@ -15,16 +16,6 @@ function initializeValues(stat: RobotNumberValue): RobotNumberValue {
     const values = { ...stat };
     for (const key in values) if (values[key] == null) values[key] = 0;
     return values;
-}
-
-export function roundRobotStatVals(vals: RobotNumberValue, decimals = 0): RobotNumberValue {
-    const result = { ...vals };
-
-    for (const key in result) {
-        result[key] = result[key] ? round(result[key], decimals) : null;
-    }
-
-    return result;
 }
 
 function divide(a: number, b: number) {

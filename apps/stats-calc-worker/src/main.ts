@@ -12,8 +12,6 @@ async function start() {
 
         log.info("Connected");
 
-        //await service.printRobotPositions();
-
         testService(service);
     } catch (error) {
         log.error(error, `Failed to start service ${process.env.SERVICE}`);
