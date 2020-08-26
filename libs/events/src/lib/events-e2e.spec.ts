@@ -5,6 +5,8 @@ import { Events, EventsConfig } from "./events";
 import { sleep } from "@cryptuoso/helpers";
 import { ValidationSchema } from "fastest-validator";
 
+//TODO: stream name prefix
+
 jest.setTimeout(40000);
 const itif = (name: string, condition: () => boolean, cb: Function) => {
     it(name, (done) => {
@@ -30,8 +32,9 @@ describe("E2E test", () => {
         pendingMaxRetries: 1 // emit a dead-letter on firts pending handling failure
     };
     let redis: Redis.Redis;
-    describe("Test connection to redis instance", () => {
-        it("Should connect and assign a value to redis variable", (done) => {
+
+    describe("Test Events workflow", () => {
+        beforeAll((done) => {
             redis = new Redis({ port: 6379, host: "127.0.0.1" })
                 .on("error", (err) => {
                     console.warn("Connection to redis could not be established.\n" + err);
@@ -46,11 +49,18 @@ describe("E2E test", () => {
                     done();
                 })
                 .on("ready", async () => {
+                    //TODO: object with list of all test streams
+                    await redis.del("cpz:events:faulty-group-log");
+                    await redis.del("cpz:events:faulty-group-log-2");
+                    await redis.del("cpz:events:unbalanced-log");
+                    await redis.del("cpz:events:group-log");
+                    await redis.del("cpz:events:messager");
+                    await redis.del("cpz:events:group-messager");
+
                     done();
                 });
         });
-    });
-    describe("Test Events workflow", () => {
+
         const findDeadLetter = async (type: string) => {
             const arr = await redis.xread("COUNT", 100, "STREAMS", "cpz:events:dead-letter", "0");
             if (arr != [] && arr != null)
@@ -63,15 +73,6 @@ describe("E2E test", () => {
                 });
             return [];
         };
-
-        itif(
-            "Should flush redis data if connection is successful",
-            () => redis != null,
-            async (done: Function) => {
-                await redis.flushall();
-                done();
-            }
-        );
 
         const unbalancedMessageHandler = jest.fn(async ({ message }) => {
             console.log(message);
@@ -191,7 +192,7 @@ describe("E2E test", () => {
                             info: "This event is supposed to be processed"
                         }
                     });
-                    await sleep(3000);
+                    await sleep(5000);
 
                     events.subscribe({
                         "group-log": {
@@ -200,7 +201,7 @@ describe("E2E test", () => {
                         }
                     });
                     await events.start();
-                    await sleep(3000);
+                    await sleep(5000);
 
                     expect(groupLogHandler).toHaveBeenCalledTimes(1);
 
@@ -364,14 +365,9 @@ describe("E2E test", () => {
                     });
                     await sleep(3000);
 
-                    expect(divideHandler).toHaveBeenCalledTimes(1);
-                    expect(divideLogHandler).toHaveBeenCalledTimes(0);
-
-                    await events._receivePendingGroupMessagesTick("cpz:events:calc", "calc-divide");
-                    await sleep(3000);
-
                     expect(divideHandler).toHaveBeenCalledTimes(2);
                     expect(divideLogHandler).toHaveBeenCalledTimes(0);
+
                     done();
                 }
             );

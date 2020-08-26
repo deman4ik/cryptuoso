@@ -34,8 +34,12 @@ const BLOCK_TIMEOUT = 60000;
 const PENDING_RETRY_RATE = 30;
 const PENDING_MAX_RETRIES = 3;
 
+const DEAD_LETTER_TOPIC = "dead-letter";
+
 type StreamMsgVals = string[];
 type StreamMessage = [string, StreamMsgVals];
+
+//TODO: job for deleting dead consumers
 
 export class Events {
     #log: Logger;
@@ -58,15 +62,11 @@ export class Events {
             grouped?: {
                 redis: Redis; // need separate client for blocking
                 timerId?: any;
-                lastId?: string;
                 count?: number;
-                historyLoaded?: boolean;
             };
             pending?: {
                 timerId: any;
-                lastId?: string;
                 count?: number;
-                historyLoaded?: boolean;
             };
         };
     } = {};
@@ -144,7 +144,7 @@ export class Events {
 
     private async _createGroup(topic: string, group: string) {
         try {
-            await this.#redis.xgroup("CREATE", topic, group, "$", "MKSTREAM");
+            await this.#redis.xgroup("CREATE", topic, group, "0", "MKSTREAM");
         } catch (err) {
             if (!err.message.includes("BUSYGROUP")) throw err;
         }
@@ -250,18 +250,12 @@ export class Events {
                 this.#state[`${topic}-${group}`].grouped.count,
                 "STREAMS",
                 topic,
-                this.#state[`${topic}-${group}`].grouped.lastId
+                ">"
             );
             //  this.log.debug(rawData);
             const beacon = this.#lightship.createBeacon();
             if (rawData) {
                 const data = this._parseStreamResponse(rawData);
-                if (!this.#state[`${topic}-${group}`].grouped.historyLoaded) {
-                    this.log.debug(`Loaded events history for "${topic}" group "${group}"`);
-                    this.#state[`${topic}-${group}`].grouped.historyLoaded = true;
-                    this.#state[`${topic}-${group}`].grouped.lastId = ">";
-                    this.#state[`${topic}-${group}`].grouped.count = 10;
-                }
                 const events: { [key: string]: Event } = this._parseEvents(data[topic]);
                 await Promise.all(
                     Object.entries(events).map(async ([msgId, event]) => {
@@ -322,8 +316,6 @@ export class Events {
             if (!this.#state[`${topic}-${group}`]) this.#state[`${topic}-${group}`] = {};
             this.#state[`${topic}-${group}`].grouped = {
                 redis: this.#redis.duplicate(),
-                historyLoaded: false,
-                lastId: "0-0",
                 count: 20,
                 timerId: setTimeout(this._receiveGroupMessagesTick.bind(this, topic, group), 0)
             };
@@ -350,12 +342,6 @@ export class Events {
                     idleSeconds: number;
                     retries: number;
                 }[] = this._parsePendingResponse(rawData);
-                if (!this.#state[`${topic}-${group}`].pending.historyLoaded) {
-                    this.log.debug(`Loaded pending events history for "${topic}" group "${group}"`);
-                    this.#state[`${topic}-${group}`].pending.historyLoaded = true;
-                    this.#state[`${topic}-${group}`].pending.lastId = ">";
-                    this.#state[`${topic}-${group}`].pending.count = 10;
-                }
 
                 for (const { msgId, retries } of data.filter(
                     ({ idleSeconds, retries }) => idleSeconds > retries * this.#pendingRetryRate
@@ -442,8 +428,6 @@ export class Events {
         try {
             if (!this.#state[`${topic}-${group}`]) this.#state[`${topic}-${group}`] = {};
             this.#state[`${topic}-${group}`].pending = {
-                historyLoaded: false,
-                lastId: "0-0",
                 count: 100,
                 timerId: setTimeout(this._receivePendingGroupMessagesTick.bind(this, topic, group), 0)
             };
@@ -455,7 +439,7 @@ export class Events {
     async emitDeadLetter(deadLetter: DeadLetter) {
         const typeChunks = deadLetter.type.split(".");
         const evt = {
-            type: `dead-letter.${typeChunks.slice(2, typeChunks.length).join(".")}`,
+            type: `${DEAD_LETTER_TOPIC}.${typeChunks.slice(2, typeChunks.length).join(".")}`,
             data: deadLetter
         };
         await this.emit(evt);
@@ -504,7 +488,7 @@ export class Events {
 
     async start() {
         try {
-            await this._createGroup("dead-letter", "dead-letter");
+            await this._createGroup(`${BASE_REDIS_PREFIX}${DEAD_LETTER_TOPIC}`, DEAD_LETTER_TOPIC);
             await Promise.all(
                 this.#catalog.groups.map(async ({ topic, group }) => {
                     this.log.info(`Subscribing to "${topic}" group "${group}" events...`);

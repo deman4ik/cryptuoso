@@ -228,7 +228,7 @@ describe("Test 'BaseService' class", () => {
                         test("Should return right response", async () => {
                             const rightResponse = { success: true };
 
-                            createRoute(httpService, "my5", rightResponse, [], true);
+                            createRoute(httpService, "my5", rightResponse, undefined, true);
 
                             const res = await ajax.post(
                                 `http://localhost:${CONFIG.port}/actions/my5`,
@@ -335,7 +335,7 @@ describe("Test 'BaseService' class", () => {
                     describe("Testing with full arguments set", () => {
                         it("Should not throw error", () => {
                             expect(() => createRoute(httpService, "my9", {}, ["my-role"], true, {})).not.toThrowError();
-                            expect(() => createRoute(httpService, "my10", {}, [], true, {})).not.toThrowError();
+                            expect(() => createRoute(httpService, "my10", {}, undefined, true, {})).not.toThrowError();
                         });
                     });
 
@@ -409,9 +409,11 @@ describe("Test 'BaseService' class", () => {
                     test("Should throw error", async () => {
                         const rightResponse = { first: true };
 
-                        createRoute(httpService, "my16", rightResponse, [], true);
-                        expect(() => createRoute(httpService, "my16", rightResponse, [], true)).toThrowError();
-                        expect(() => createRoute(httpService, "my17", rightResponse, [], true)).not.toThrowError();
+                        createRoute(httpService, "my16", rightResponse, undefined, true);
+                        expect(() => createRoute(httpService, "my16", rightResponse, undefined, true)).toThrowError();
+                        expect(() =>
+                            createRoute(httpService, "my17", rightResponse, undefined, true)
+                        ).not.toThrowError();
                     });
                 });
 
@@ -419,8 +421,10 @@ describe("Test 'BaseService' class", () => {
                     test("Should not throw error", async () => {
                         const rightResponse = { first: true };
 
-                        createRoute(httpService, "my18", rightResponse, [], true);
-                        expect(() => createRoute(httpService, "my19", rightResponse, [], true)).not.toThrowError();
+                        createRoute(httpService, "my18", rightResponse, undefined, true);
+                        expect(() =>
+                            createRoute(httpService, "my19", rightResponse, undefined, true)
+                        ).not.toThrowError();
                     });
                 });
             });
