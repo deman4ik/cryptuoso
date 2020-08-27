@@ -12,7 +12,7 @@ async function start() {
 
         log.info("Connected");
 
-        testService(service);
+        //testService(service);
     } catch (error) {
         log.error(error, `Failed to start service ${process.env.SERVICE}`);
         process.exit(1);

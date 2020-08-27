@@ -8,7 +8,7 @@ import {
     StatsCalcRunnerSchema
 } from "@cryptuoso/stats-calc-events";
 import { RobotStatus } from "@cryptuoso/robot-state";
-import { UserSignals } from "@cryptuoso/user-state";
+import { UserSignals, UserRoles } from "@cryptuoso/user-state";
 
 export type StatisticCalcWorkerServiceConfig = HTTPServiceConfig;
 
@@ -22,7 +22,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
                 calcUserSignal: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_SIGNAL],
                     auth: true,
-                    roles: ["manager", "admin"],
+                    roles: [UserRoles.admin],
                     handler: (req, res) => this.HTTPHandler(
                         this.handleCalcUserSignalEvent.bind(this), req, res
                     )
@@ -30,7 +30,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
                 calcUserSignals: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_SIGNALS],
                     auth: true,
-                    roles: ["manager", "admin"],
+                    roles: [UserRoles.admin],
                     handler: (req, res) => this.HTTPHandler(
                         this.handleCalcUserSignalsEvent.bind(this), req, res
                     )
@@ -38,7 +38,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
                 calcRobot: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.ROBOT],
                     auth: true,
-                    roles: ["manager", "admin"],
+                    roles: [UserRoles.admin],
                     handler: (req, res) => this.HTTPHandler(
                         this.handleStatsCalcRobotEvent.bind(this), req, res
                     )
@@ -46,7 +46,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
                 calcRobots: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.ROBOTS],
                     auth: true,
-                    roles: ["manager", "admin"],
+                    roles: [UserRoles.admin],
                     handler: (req, res) => this.HTTPHandler(
                         this.handleStatsCalcRobotsEvent.bind(this), req, res
                     )
@@ -54,7 +54,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
                 calcUserRobot: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_ROBOT],
                     auth: true,
-                    roles: ["manager", "admin"],
+                    roles: [UserRoles.admin],
                     handler: (req, res) => this.HTTPHandler(
                         this.handleStatsCalcUserRobotEvent.bind(this), req, res
                     )
@@ -62,7 +62,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
                 calcUserRobots: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_ROBOTS],
                     auth: true,
-                    roles: ["manager", "admin"],
+                    roles: [UserRoles.admin],
                     handler: (req, res) => this.HTTPHandler(
                         this.handleStatsCalcUserRobotsEvent.bind(this), req, res
                     )
@@ -94,6 +94,8 @@ export default class StatisticCalcRunnerService extends HTTPService {
                     handler: this.handleStatsCalcUserRobotsEvent.bind(this)
                 }
             });
+            this.addOnStartHandler(this.onStartService);
+            this.addOnStopHandler(this.onStopService);
         } catch (err) {
             this.log.error(err, "While consctructing StatisticCalcRunnerService");
         }
@@ -130,9 +132,11 @@ export default class StatisticCalcRunnerService extends HTTPService {
 
     async queueJob(type: StatsCalcJobType, job: StatsCalcJob) {
         await this.queues.calcStatistics.add(
-            type,
-            { id: uuid(), ...job },
-            { removeOnComplete: true }
+            type, job, {
+                //jobId: uuid(),
+                removeOnComplete: true,
+                removeOnFail: true
+            }
         );
     }
 

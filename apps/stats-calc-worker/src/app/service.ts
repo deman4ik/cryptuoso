@@ -1,6 +1,7 @@
 import { DataStream } from "scramjet";
 import { spawn, Pool, Worker as ThreadsWorker } from "threads";
 import { Worker, Job } from "bullmq";
+import os from "os";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import { StatisticUtils } from "./statsWorker";
 import { sql } from "@cryptuoso/postgres";
@@ -35,6 +36,7 @@ export type StatisticCalcWorkerServiceConfig = BaseServiceConfig;
 export default class StatisticCalcWorkerService extends BaseService {
     private pool: Pool<any>;
     private workers: { [key: string]: Worker };
+    private cpus: number;
 
     maxSingleQueryPosCount: number = 750;
     defaultChunkSize: number = 500;
@@ -42,8 +44,9 @@ export default class StatisticCalcWorkerService extends BaseService {
     constructor(config?: StatisticCalcWorkerServiceConfig) {
         super(config);
         try {
-            this.addOnStartHandler(this._onStartService.bind(this));
-            this.addOnStopHandler(this._onStopService.bind(this));
+            this.cpus = os.cpus().length;
+            this.addOnStartHandler(this._onStartService);
+            this.addOnStopHandler(this._onStopService);
         } catch (err) {
             this.log.error("Error in StatisticCalcWorkerService constructor", err);
         }
@@ -55,7 +58,8 @@ export default class StatisticCalcWorkerService extends BaseService {
         });
         this.workers = {
             calcStatistics: new Worker("calcStatistics", async (job: Job) => this.process(job), {
-                connection: this.redis
+                connection: this.redis,
+                concurrency: this.cpus
             })
         };
     }
@@ -85,7 +89,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             } else if (type === StatsCalcJobType.userRobotAggr) {
                 await this.calcUserRobotsAggr(userId, exchange, asset, calcAll);
             }
-            await job.moveToCompleted(null, null);
+            //await job.moveToCompleted(null, null);
             this.log.info(`Job ${job.id} finished`);
         } catch (err) {
             this.log.error(`Error while processing job ${job.id}`, err);
@@ -458,13 +462,14 @@ export default class StatisticCalcWorkerService extends BaseService {
     }
 
     async calcUserSignalsAggr(userId: string, exchange?: string, asset?: string, calcAll: boolean = false) {
+
         const prevUserAggrStats: UserAggrStatsDB = await this.db.pg.maybeOne(sql`
             SELECT id, statistics, equity
             FROM user_aggr_stats
             WHERE user_id = ${userId}
                 AND type = 'signal'
-                AND exchange = ${exchange}
-                AND asset = ${asset};
+                AND exchange = ${exchange || null}
+                AND asset = ${asset || null};
         `);
 
         const { calcFrom, initStats } = getCalcFromAndInitStats(prevUserAggrStats, calcAll);
@@ -595,13 +600,14 @@ export default class StatisticCalcWorkerService extends BaseService {
     }
 
     async calcUserRobotsAggr(userId: string, exchange?: string, asset?: string, calcAll: boolean = false) {
+        
         const prevUserAggrStats: UserAggrStatsDB = await this.db.pg.maybeOne(sql`
             SELECT id, statistics, equity
             FROM user_aggr_stats
             WHERE user_id = ${userId}
                 AND type = 'userRobot'
-                AND exchange = ${exchange}
-                AND asset = ${asset};
+                AND exchange = ${exchange || null}
+                AND asset = ${asset || null};
         `);
 
         const { calcFrom, initStats } = getCalcFromAndInitStats(prevUserAggrStats, calcAll);

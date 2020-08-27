@@ -11,7 +11,8 @@ export const StatsCalcRunnerSchema = {
     [StatsCalcRunnerEvents.USER_SIGNAL]: {
         calcAll: {
             type: "boolean",
-            optional: true
+            optional: true,
+            default: false
         },
         userId: {
             type: "uuid"
@@ -23,7 +24,8 @@ export const StatsCalcRunnerSchema = {
     [StatsCalcRunnerEvents.USER_SIGNALS]: {
         calcAll: {
             type: "boolean",
-            optional: true
+            optional: true,
+            default: false
         },
         userId: {
             type: "uuid"
@@ -32,7 +34,8 @@ export const StatsCalcRunnerSchema = {
     [StatsCalcRunnerEvents.ROBOT]: {
         calcAll: {
             type: "boolean",
-            optional: true
+            optional: true,
+            default: false
         },
         robotId: {
             type: "uuid"
@@ -41,13 +44,15 @@ export const StatsCalcRunnerSchema = {
     [StatsCalcRunnerEvents.ROBOTS]: {
         calcAll: {
             type: "boolean",
-            optional: true
+            optional: true,
+            default: false
         }
     },
     [StatsCalcRunnerEvents.USER_ROBOT]: {
         calcAll: {
             type: "boolean",
-            optional: true
+            optional: true,
+            default: false
         },
         userRobotId: {
             type: "uuid"
@@ -56,16 +61,21 @@ export const StatsCalcRunnerSchema = {
     [StatsCalcRunnerEvents.USER_ROBOTS]: {
         calcAll: {
             type: "boolean",
-            optional: true
+            optional: true,
+            default: false
         },
         userId: {
             type: "uuid"
         },
         exchange: {
-            type: "string"
+            type: "string",
+            optional: true,
+            default: null as string
         },
         asset: {
-            type: "string"
+            type: "string",
+            optional: true,
+            default: null as string
         }
     },
 };
