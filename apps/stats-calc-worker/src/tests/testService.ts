@@ -30,42 +30,42 @@ export async function testService(service: Service) {
     )); */
 
     /* results.push(await measureFunction(
-        "calcRobot",
+        "calcUserSignalsAggr",
         service.calcUserSignalsAggr.bind(service),
         [userId, null, null, updateAll],
         count
     )); */
 
     /* results.push(await measureFunction(
-        "calcRobot",
+        "calcUserRobotsAggr",
         service.calcUserRobotsAggr.bind(service),
         [userId, 'kraken', 'BTC', updateAll],
         count
     )); */
 
     /* results.push(await measureFunction(
-        "calcRobot",
+        "calcUserRobot",
         service.calcUserRobot.bind(service),
         [userRobotId, updateAll],
         count
     )); */
 
     /* results.push(await measureFunction(
-        "calcRobot",
+        "calcUserSignalsAggr",
         service.calcUserSignalsAggr.bind(service),
         [userId, null, null, updateAll],
         count
     )); */
 
     /* results.push(await measureFunction(
-        "calcRobot",
+        "calcUserSignals",
         service.calcUserSignals.bind(service),
         [robotId, updateAll],
         count
     )); */
 
     results.push(await measureFunction(
-        "calcRobot",
+        "calcUserSignal",
         service.calcUserSignal.bind(service),
         ["8a671981-2b11-4ae5-bc3f-1a63befdba72", robotId, updateAll],
         count
@@ -77,6 +77,6 @@ export async function testService(service: Service) {
     //await service.printRobots();
 
     console.log(results);
-    console.log(JSON.stringify(results));
+    //console.log(JSON.stringify(results));
     return results;
 }

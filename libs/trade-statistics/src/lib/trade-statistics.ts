@@ -2,25 +2,6 @@ import StatisticsCalculator from "./statistics-calculator";
 import EquityCalculator from "./equity-calculator";
 import { round } from "@cryptuoso/helpers";
 
-export const enum StatsCalcJobType {
-    robot = "robot",
-    userSignal = "userSignal",
-    userSignals = "userSignals",
-    userRobot = "userRobot",
-    userSignalsAggr = "userSignalsAggr",
-    userRobotAggr = "userRobotAggr"
-}
-
-export interface StatsCalcJob {
-    type: StatsCalcJobType;
-    calcAll?: boolean;
-    robotId?: string;
-    userRobotId?: string;
-    userId?: string;
-    exchange?: string;
-    asset?: string;
-}
-
 export const enum PositionDirection {
     long = "long",
     short = "short"

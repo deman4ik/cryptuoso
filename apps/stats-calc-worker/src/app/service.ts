@@ -6,12 +6,11 @@ import { StatisticUtils } from "./statsWorker";
 import { sql } from "@cryptuoso/postgres";
 import { SqlSqlTokenType, QueryResultRowType } from "slonik";
 import {
-    StatsCalcJob,
-    StatsCalcJobType,
     CommonStats,
     PositionDataForStats,
     PositionDirection
 } from "@cryptuoso/trade-statistics";
+import { StatsCalcJob, StatsCalcJobType } from "@cryptuoso/stats-calc-events";
 import { UserSignals, UserAggrStatsDB, UserSignalPosition } from "@cryptuoso/user-state";
 import { round } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
@@ -66,8 +65,9 @@ export default class StatisticCalcWorkerService extends BaseService {
         await this.pool.terminate();
     }
 
-    async process(job: Job) {
-        const { type, calcAll, robotId, userRobotId, userId, exchange, asset } = job.data as StatsCalcJob;
+    async process(job: Job<StatsCalcJob>) {
+        const type = job.name as StatsCalcJobType;
+        const { calcAll, robotId, userRobotId, userId, exchange, asset } = job.data;
 
         this.log.info(`Starting job ${job.id}`);
 
@@ -85,6 +85,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             } else if (type === StatsCalcJobType.userRobotAggr) {
                 await this.calcUserRobotsAggr(userId, exchange, asset, calcAll);
             }
+            await job.moveToCompleted(null, null);
             this.log.info(`Job ${job.id} finished`);
         } catch (err) {
             this.log.error(`Error while processing job ${job.id}`, err);
@@ -93,7 +94,8 @@ export default class StatisticCalcWorkerService extends BaseService {
     }
 
     private makeChunksGenerator(query: QueryType, chunkSize: number = this.defaultChunkSize) {
-        if (chunkSize < 1) throw new Error("Argument 'chunkSize' must be positive number.");
+        if (!chunkSize || chunkSize < 1)
+            throw new Error("Argument 'chunkSize' must be positive number.");
 
         const pg = this.db.pg;
 

@@ -35,5 +35,5 @@ export async function measureFunction(
 
     monitor.stop();
     log.info(`${name} ends`);
-    return { name, ...res, ...monitor.getMetricks() };
+    return { name, args, ...res, ...monitor.getMetricks() };
 }
