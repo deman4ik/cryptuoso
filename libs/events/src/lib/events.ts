@@ -55,17 +55,17 @@ export class Events {
         [topic: string]: {
             unbalanced?: {
                 redis: Redis; // need separate client for blocking
-                timerId?: any;
+                timerId?: NodeJS.Timer;
                 lastId?: string;
                 count?: number;
             };
             grouped?: {
                 redis: Redis; // need separate client for blocking
-                timerId?: any;
+                timerId?: NodeJS.Timer;
                 count?: number;
             };
             pending?: {
-                timerId: any;
+                timerId: NodeJS.Timer;
                 count?: number;
             };
         };

@@ -19,7 +19,7 @@ WORKDIR /usr/src/app
 
 COPY . /usr/src/app/
 
-RUN npm install && npm run build:"$SERVICE_NAME" && npm prune --production
+RUN npm install && npm run build:"$SERVICE_NAME" && npm prune --production && npm cache clean --force
 
 FROM node:14-alpine as runtime
 RUN mkdir -p /usr/src/app

@@ -129,4 +129,8 @@ export class BaseService {
     get redis() {
         return this.#redisConnection;
     }
+
+    get lightship() {
+        return this.#lightship;
+    }
 }

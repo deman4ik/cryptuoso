@@ -6,7 +6,7 @@ import dayjs from "@cryptuoso/dayjs";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { Timeframe, CandleType, ExchangePrice, ExchangeCandle } from "@cryptuoso/market";
 import { createSocksProxyAgent } from "@cryptuoso/ccxt-public";
-import { uniqueElementsBy, sleep } from "@cryptuoso/helpers";
+import { sleep, groupBy } from "@cryptuoso/helpers";
 import {
     ImporterRunnerEvents,
     ImporterRunnerStart,
@@ -59,7 +59,9 @@ export class ExwatcherBaseService extends BaseService {
     connector: any; //!FIXME ccxtpro.Exchange;
     publicConnector: PublicConnector;
     subscriptions: { [key: string]: Exwatcher } = {};
-    candlesCurrent: { [key: string]: { [key: string]: ExchangeCandle } } = {};
+    candlesCurrent: { [id: string]: { [timeframe: string]: ExchangeCandle } } = {};
+    candlesToSave: Map<string, ExchangeCandle> = new Map();
+    candlesSaveTimer: NodeJS.Timer;
     lastTick: { [key: string]: ExchangePrice } = {};
     cronCheck: cron.ScheduledTask = cron.schedule("*/30 * * * * *", this.check.bind(this), {
         scheduled: false
@@ -97,6 +99,10 @@ export class ExwatcherBaseService extends BaseService {
         });
         this.addOnStartHandler(this.onStartService);
         this.addOnStopHandler(this.onStopService);
+    }
+
+    getCandleMapKey(candle: ExchangeCandle): string {
+        return `${candle.asset}.${candle.currency}.${candle.timeframe}.${candle.time}`;
     }
 
     get activeSubscriptions() {
@@ -145,6 +151,7 @@ export class ExwatcherBaseService extends BaseService {
         await this.resubscribe();
         this.cronHandleChanges.start();
         this.cronCheck.start();
+        this.candlesSaveTimer = setTimeout(this.handleCandlesToSave.bind(this), 0);
     }
 
     async onStopService() {
@@ -422,7 +429,7 @@ export class ExwatcherBaseService extends BaseService {
                     this.candlesCurrent[id][timeframe] = {
                         ...candle
                     };
-                    await this.saveCandles([this.candlesCurrent[id][timeframe]]);
+                    this.saveCandles([this.candlesCurrent[id][timeframe]]);
                 })
             );
         } catch (err) {
@@ -436,6 +443,14 @@ export class ExwatcherBaseService extends BaseService {
             await this.events.emit<ExwatcherTick>({ type: ExwatcherWorkerEvents.TICK, data: tick });
         } catch (err) {
             this.log.error("Failed to publich tick", err);
+        }
+    }
+
+    async publishCandle(candle: ExchangeCandle): Promise<void> {
+        try {
+            await this.events.emit<ExchangeCandle>({ type: ExwatcherWorkerEvents.CANDLE, data: candle });
+        } catch (err) {
+            this.log.error("Failed to publich candle", err);
         }
     }
 
@@ -472,11 +487,12 @@ export class ExwatcherBaseService extends BaseService {
 
     async handleCandles(): Promise<void> {
         try {
+            if (this.lightship.isServerShuttingDown()) return;
             // Текущие дата и время - минус одна секунда
             const date = dayjs.utc().add(-1, "second").startOf("second");
             // Есть ли подходящие по времени таймфреймы
             const currentTimeframes = Timeframe.timeframesByDate(date.toISOString());
-            const closedCandles: { [key: string]: ExchangeCandle[] } = {};
+            const closedCandles: Map<string, ExchangeCandle> = new Map();
 
             await Promise.all(
                 this.activeSubscriptions.map(async ({ id, asset, currency }: Exwatcher) => {
@@ -513,9 +529,8 @@ export class ExwatcherBaseService extends BaseService {
                                                         ? CandleType.previous
                                                         : CandleType.loaded;
                                             } else {
-                                                closedCandles[timeframe].push({
-                                                    ...this.candlesCurrent[id][timeframe]
-                                                });
+                                                const closedCandle = { ...this.candlesCurrent[id][timeframe] };
+                                                closedCandles.set(this.getCandleMapKey(closedCandle), closedCandle);
                                                 this.candlesCurrent[id][timeframe].time = candle[0];
                                                 this.candlesCurrent[id][timeframe].timestamp = dayjs
                                                     .utc(candle[0])
@@ -561,7 +576,7 @@ export class ExwatcherBaseService extends BaseService {
                                         }
                                     }
                                     if (this.candlesCurrent[id][timeframe])
-                                        currentCandles.push(this.candlesCurrent[id][timeframe]);
+                                        currentCandles.push({ ...this.candlesCurrent[id][timeframe] });
                                 } catch (error) {
                                     this.log.error(error);
                                 }
@@ -569,7 +584,7 @@ export class ExwatcherBaseService extends BaseService {
                         );
 
                         if (currentCandles.length > 0) {
-                            await this.saveCandles(currentCandles);
+                            this.saveCandles(currentCandles);
                         }
 
                         let tick: ExchangePrice;
@@ -615,59 +630,35 @@ export class ExwatcherBaseService extends BaseService {
             if (currentTimeframes.length > 0) {
                 // Сброс текущих свечей
                 currentTimeframes.forEach((timeframe) => {
-                    closedCandles[timeframe] = [];
-                    this.activeSubscriptions.forEach(({ id, asset, currency }: Exwatcher) => {
-                        const symbol = this.getSymbol(asset, currency);
+                    this.activeSubscriptions.forEach(({ id }: Exwatcher) => {
                         if (this.candlesCurrent[id] && this.candlesCurrent[id][timeframe]) {
-                            closedCandles[timeframe].push({
-                                ...this.candlesCurrent[id][timeframe]
-                            });
+                            const candle = { ...this.candlesCurrent[id][timeframe] };
+                            closedCandles.set(this.getCandleMapKey(candle), candle);
+                            const { close } = candle;
                             this.candlesCurrent[id][timeframe].time = date.startOf("minute").valueOf();
                             this.candlesCurrent[id][timeframe].timestamp = date.startOf("minute").toISOString();
-
-                            const candle: [number, number, number, number, number, number] = this.connector.ohlcvs[
-                                symbol
-                            ][Timeframe.get(timeframe).str][
-                                this.connector.ohlcvs[symbol][Timeframe.get(timeframe).str].length - 1
-                            ];
-                            if (candle[0] === date.valueOf()) {
-                                this.candlesCurrent[id][timeframe].open = candle[1];
-                                this.candlesCurrent[id][timeframe].high = candle[2];
-                                this.candlesCurrent[id][timeframe].low = candle[3];
-                                this.candlesCurrent[id][timeframe].close = candle[4];
-                                this.candlesCurrent[id][timeframe].volume = candle[5];
-                            } else {
-                                this.candlesCurrent[id][timeframe].open = candle[4];
-                                this.candlesCurrent[id][timeframe].high = candle[4];
-                                this.candlesCurrent[id][timeframe].low = candle[4];
-                                this.candlesCurrent[id][timeframe].close = candle[4];
-                                this.candlesCurrent[id][timeframe].volume = 0;
-                            }
-                            this.candlesCurrent[id][timeframe].type =
-                                this.candlesCurrent[id][timeframe].volume === 0
-                                    ? CandleType.previous
-                                    : CandleType.loaded;
+                            this.candlesCurrent[id][timeframe].high = close;
+                            this.candlesCurrent[id][timeframe].low = close;
+                            this.candlesCurrent[id][timeframe].open = close;
+                            this.candlesCurrent[id][timeframe].volume = 0;
+                            this.candlesCurrent[id][timeframe].type = CandleType.previous;
                         }
                     });
                 });
             }
 
-            if (Object.keys(closedCandles).length > 0) {
+            if (closedCandles.size > 0) {
+                const candles = [...closedCandles.values()];
+                this.log.info(
+                    `New ${candles.map(
+                        ({ exchange, asset, currency, timeframe }) => `${exchange}.${asset}.${currency}.${timeframe}`
+                    )} candles`
+                );
+                this.saveCandles(candles);
+
                 await Promise.all(
-                    Object.keys(closedCandles).map(async (timeframe) => {
-                        const candles = closedCandles[timeframe];
-                        if (candles && Array.isArray(candles) && candles.length > 0) {
-                            this.log.info(
-                                `New ${uniqueElementsBy(
-                                    candles,
-                                    (a, b) =>
-                                        a.exchange === b.exchange && a.asset === b.asset && a.currency === b.currency
-                                ).map(
-                                    ({ exchange, asset, currency }) => `${exchange}.${asset}.${currency}.${timeframe}`
-                                )} candles`
-                            );
-                            await this.saveCandles(candles);
-                        }
+                    candles.map(async (candle) => {
+                        await this.publishCandle(candle);
                     })
                 );
             }
@@ -680,12 +671,13 @@ export class ExwatcherBaseService extends BaseService {
 
     async handleTrades(): Promise<void> {
         try {
+            if (this.lightship.isServerShuttingDown()) return;
             // Текущие дата и время - минус одна секунда
             const date = dayjs.utc().add(-1, "second").startOf("second");
 
             // Есть ли подходящие по времени таймфреймы
             const currentTimeframes = Timeframe.timeframesByDate(date.toISOString());
-            const closedCandles: { [key: string]: ExchangeCandle[] } = {};
+            const closedCandles: Map<string, ExchangeCandle> = new Map();
 
             await Promise.all(
                 this.activeSubscriptions.map(async ({ id, asset, currency }: Exwatcher) => {
@@ -737,8 +729,9 @@ export class ExwatcherBaseService extends BaseService {
                                         .utc(Timeframe.validTimeframeDatePrev(date.toISOString(), timeframe))
                                         .valueOf();
                                     if (this.candlesCurrent[id][timeframe].time !== candleTime) {
-                                        currentCandles.push(this.candlesCurrent[id][timeframe]);
-                                        const { close } = this.candlesCurrent[id][timeframe];
+                                        const candle = { ...this.candlesCurrent[id][timeframe] };
+                                        closedCandles.set(this.getCandleMapKey(candle), candle);
+                                        const { close } = candle;
                                         this.candlesCurrent[id][timeframe].time = candleTime;
                                         this.candlesCurrent[id][timeframe].timestamp = dayjs
                                             .utc(candleTime)
@@ -769,12 +762,12 @@ export class ExwatcherBaseService extends BaseService {
                                         this.candlesCurrent[id][timeframe].volume === 0
                                             ? CandleType.previous
                                             : CandleType.created;
-                                    currentCandles.push(this.candlesCurrent[id][timeframe]);
+                                    currentCandles.push({ ...this.candlesCurrent[id][timeframe] });
                                 }
                             });
 
                             if (currentCandles.length > 0) {
-                                await this.saveCandles(currentCandles);
+                                this.saveCandles(currentCandles);
                             }
 
                             if (tick) {
@@ -788,12 +781,10 @@ export class ExwatcherBaseService extends BaseService {
             if (currentTimeframes.length > 0) {
                 // Сброс текущих свечей
                 currentTimeframes.forEach((timeframe) => {
-                    closedCandles[timeframe] = [];
                     this.activeSubscriptions.forEach(({ id }: Exwatcher) => {
                         if (this.candlesCurrent[id] && this.candlesCurrent[id][timeframe]) {
-                            closedCandles[timeframe].push({
-                                ...this.candlesCurrent[id][timeframe]
-                            });
+                            const candle = { ...this.candlesCurrent[id][timeframe] };
+                            closedCandles.set(this.getCandleMapKey(candle), candle);
                             const { close } = this.candlesCurrent[id][timeframe];
                             this.candlesCurrent[id][timeframe].time = date.startOf("minute").valueOf();
                             this.candlesCurrent[id][timeframe].timestamp = date.startOf("minute").toISOString();
@@ -807,22 +798,18 @@ export class ExwatcherBaseService extends BaseService {
                 });
             }
 
-            if (Object.keys(closedCandles).length > 0) {
+            if (closedCandles.size > 0) {
+                const candles = [...closedCandles.values()];
+                this.log.info(
+                    `New ${candles.map(
+                        ({ exchange, asset, currency, timeframe }) => `${exchange}.${asset}.${currency}.${timeframe}`
+                    )} candles`
+                );
+                this.saveCandles(candles);
+
                 await Promise.all(
-                    Object.keys(closedCandles).map(async (timeframe) => {
-                        const candles = closedCandles[timeframe];
-                        if (candles && Array.isArray(candles) && candles.length > 0) {
-                            this.log.info(
-                                `New ${uniqueElementsBy(
-                                    candles,
-                                    (a, b) =>
-                                        a.exchange === b.exchange && a.asset === b.asset && a.currency === b.currency
-                                ).map(
-                                    ({ exchange, asset, currency }) => `${exchange}.${asset}.${currency}.${timeframe}`
-                                )} candles`
-                            );
-                            await this.saveCandles(candles);
-                        }
+                    candles.map(async (candle) => {
+                        await this.publishCandle(candle);
                     })
                 );
             }
@@ -833,41 +820,85 @@ export class ExwatcherBaseService extends BaseService {
         }
     }
 
-    async saveCandles(candles: ExchangeCandle[]): Promise<void> {
+    saveCandles(candles: ExchangeCandle[]) {
+        candles.forEach(({ ...props }) => {
+            this.candlesToSave.set(this.getCandleMapKey({ ...props }), { ...props });
+        });
+    }
+
+    async handleCandlesToSave() {
         try {
-            for (const candle of candles) {
-                try {
-                    await this.db.pg.query(this.db.sql`
-                            insert into ${this.db.sql.identifier([`candles${candle.timeframe}`])}
-                (exchange, asset, currency, open, high, low, close, volume, time, timestamp, type)
-                values (
-                    ${candle.exchange},
-                    ${candle.asset},
-                    ${candle.currency},
-                    ${candle.open},
-                    ${candle.high},
-                    ${candle.low},
-                    ${candle.close},
-                    ${candle.volume},
-                    ${candle.time},
-                    ${candle.timestamp},
-                    ${candle.type}
-                )
-                ON CONFLICT ON CONSTRAINT ${this.db.sql.identifier([
-                    `candles${candle.timeframe}_time_exchange_asset_currency_key`
-                ])}
-                DO UPDATE SET open = excluded.open,
-                high = excluded.high,
-                low = excluded.low,
-                close = excluded.close,
-                volume = excluded.volume,
-                type = excluded.type;`);
-                } catch (e) {
-                    this.log.error(e);
+            if (this.candlesToSave.size > 0) {
+                const grouped: { [key: string]: ExchangeCandle[] } = groupBy(
+                    [...this.candlesToSave.values()],
+                    "timeframe"
+                );
+
+                for (const [timeframe, candles] of [...Object.entries(grouped)]) {
+                    try {
+                        this.log.debug(
+                            `Saving candles ${candles
+                                .map(
+                                    ({ asset, currency, timeframe, time }) =>
+                                        `${asset}.${currency}.${timeframe}.${time}`
+                                )
+                                .join(" ")}`
+                        );
+                        await this.db.pg.query(this.db.sql`
+                        insert into ${this.db.sql.identifier([`candles${timeframe}`])}
+                        (exchange, asset, currency, open, high, low, close, volume, time, timestamp, type)
+                        SELECT *
+                        FROM ${this.db.sql.unnest(
+                            this.db.util.prepareUnnest(candles, [
+                                "exchange",
+                                "asset",
+                                "currency",
+                                "open",
+                                "high",
+                                "low",
+                                "close",
+                                "volume",
+                                "time",
+                                "timestamp",
+                                "type"
+                            ]),
+                            [
+                                "varchar",
+                                "varchar",
+                                "varchar",
+                                "numeric",
+                                "numeric",
+                                "numeric",
+                                "numeric",
+                                "numeric",
+                                "int8",
+                                "timestamp",
+                                "varchar"
+                            ]
+                        )}
+                        ON CONFLICT ON CONSTRAINT ${this.db.sql.identifier([
+                            `candles${timeframe}_time_exchange_asset_currency_key`
+                        ])}
+                        DO UPDATE SET open = excluded.open,
+                        high = excluded.high,
+                        low = excluded.low,
+                        close = excluded.close,
+                        volume = excluded.volume,
+                        type = excluded.type;`);
+
+                        candles.forEach(({ asset, currency, timeframe, time }) => {
+                            this.candlesToSave.delete(`${asset}.${currency}.${timeframe}.${time}`);
+                        });
+                    } catch (e) {
+                        this.log.error(e);
+                    }
                 }
             }
-        } catch (e) {
-            this.log.error(e);
+        } catch (error) {
+            this.log.error(`Failed to save candles`, error);
+        }
+        if (!this.lightship.isServerShuttingDown()) {
+            this.candlesSaveTimer = setTimeout(this.handleCandlesToSave.bind(this), 2000);
         }
     }
 }
