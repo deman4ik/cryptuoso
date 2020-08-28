@@ -1,7 +1,9 @@
 import {
     PositionDataForStats,
     PositionDirection,
+    Statistics,
     RobotStats,
+    isStatistics,
     isRobotStats,
     isPositionDataForStats,
     RobotNumberValue,
@@ -10,7 +12,7 @@ import {
     roundRobotStatVals
 } from "./trade-statistics";
 import dayjs from "@cryptuoso/dayjs";
-import { round } from "@cryptuoso/helpers";
+import { round, chunkArray } from "@cryptuoso/helpers";
 
 function initializeValues(stat: RobotNumberValue): RobotNumberValue {
     const values = { ...stat };
@@ -25,7 +27,7 @@ function divide(a: number, b: number) {
 }
 
 // ignores integers
-function roundStatisticsValues(statistics: RobotStats): RobotStats {
+function roundStatisticsValues(statistics: Statistics): Statistics {
     const result = { ...statistics };
 
     result.winRate = roundRobotStatVals(result.winRate);
@@ -58,45 +60,96 @@ function validateArguments(...args: any[]) {
 
 export default class StatisticsCalculator {
     private readonly positions: PositionDataForStats[];
-    private prevStatistics: RobotStats;
-    private currentStatistics: RobotStats;
+    //private prevStatistics: Statistics;
+    //private currentStatistics: Statistics;
+    private prevRobotStats: RobotStats;
+    private currentRobotStats: RobotStats;
     private newPosition: PositionDataForStats;
     private dir: PositionDirection;
     private currentPositionIndex = 0;
 
-    public constructor(prevStatistics: RobotStats, positions: PositionDataForStats[]) {
+    private get prevStatistics() {
+        return this.prevRobotStats.statistics;
+    }
+    private set prevStatistics(value: Statistics) {
+        this.prevRobotStats.statistics = value;
+    }
+
+    private get currentStatistics() {
+        return this.currentRobotStats.statistics;
+    }
+    private set currentStatistics(value: Statistics) {
+        this.currentRobotStats.statistics = value;
+    }
+
+    public constructor(prevRobotStats: RobotStats, positions: PositionDataForStats[]) {
         if (positions.length < 1) throw new Error("At least 1 position expected");
 
         for (const pos of positions) if (!isPositionDataForStats(pos)) throw new Error("Invalid position provided");
 
-        if (prevStatistics != null && !isRobotStats(prevStatistics))
-            throw new Error("Invalid statistics object provided"); // calculations are allowed if null or valid obj is provided
+        if(prevRobotStats != null) {
+            if (!isRobotStats(prevRobotStats)) {
+                throw new Error("Invalid robotStatistics object provided"); // calculations are allowed if null or valid obj is provided
+            }
 
-        if (prevStatistics && prevStatistics.lastPositionExitDate != "") {
+            if (!isStatistics(prevRobotStats.statistics)) {
+                throw new Error("Invalid robotStats.statistics object provided"); // calculations are allowed if null or valid obj is provided
+            }
+        }
+
+        if (prevRobotStats && prevRobotStats.lastPositionExitDate != "") {
             this.positions = positions.filter(
-                (pos) => dayjs.utc(pos.exitDate).valueOf() > dayjs.utc(prevStatistics.lastPositionExitDate).valueOf()
+                (pos) => dayjs.utc(pos.exitDate).valueOf() > dayjs.utc(prevRobotStats.lastPositionExitDate).valueOf()
             );
             
             if (this.positions.length < 1) throw new Error("At least 1 fresh position expected");
         } else this.positions = positions;
 
         this.setPosition(0);
-        this.setStatistics(prevStatistics);
+        this.setRobotStats(prevRobotStats);
     }
 
     public getStats(): RobotStats {
         while (this.currentPositionIndex < this.positions.length) {
             this.selectNextPosition();
             this.updateStatisticsValues();
-            if (this.currentPositionIndex !== this.positions.length) this.setStatistics(this.currentStatistics);
+            if (this.currentPositionIndex !== this.positions.length) this.setRobotStats(this.currentRobotStats);
         }
 
-        return this.currentStatistics;
+        this.calculateEquityAvg();
+        
+        //this.currentRobotStats.statistics = this.currentStatistics;
+
+        return this.currentRobotStats;
     }
 
-    private setStatistics(prevStats: RobotStats) {
-        this.prevStatistics = prevStats || new RobotStats();
-        this.currentStatistics = JSON.parse(JSON.stringify(this.prevStatistics));
+    private setRobotStats(prevStats: RobotStats) {
+        this.prevRobotStats = prevStats || new RobotStats();
+        //this.prevStatistics = this.prevRobotStats.statistics;
+        this.currentRobotStats = JSON.parse(JSON.stringify(this.prevRobotStats));
+        //this.currentStatistics = this.currentRobotStats.statistics;
+    }
+
+    private calculateEquityAvg() {
+        const maxEquityLength = 50;
+        const equityChart = this.currentRobotStats.equity;
+
+        let chunkLength;
+
+        if (equityChart.length < maxEquityLength) {
+            chunkLength = 1;
+        } else if (equityChart.length > maxEquityLength && equityChart.length < maxEquityLength * 2) {
+            chunkLength = 1.5;
+        } else {
+            chunkLength = equityChart.length / maxEquityLength;
+        }
+
+        const equityChunks = chunkArray(equityChart, chunkLength);
+
+        this.currentRobotStats.equityAvg = equityChunks.map((chunk) => ({
+            x: chunk[chunk.length - 1].x,
+            y: chunk[chunk.length - 1].y
+        }));
     }
 
     private selectNextPosition() {
@@ -134,7 +187,7 @@ export default class StatisticsCalculator {
             .updateMaxSequence()
             .updateMaxDrawdown()
             .updateMaxDrawdownDate()
-            .updatePerformance()
+            .updateEquity()
             .updateRecoveryFactor()
             .validateRating()
             .roundCurrentStatistics()
@@ -342,9 +395,9 @@ export default class StatisticsCalculator {
         return this;
     }
 
-    private updatePerformance(): StatisticsCalculator {
-        this.currentStatistics.performance = this.calculatePerformance(
-            this.prevStatistics.performance,
+    private updateEquity(): StatisticsCalculator {
+        this.currentRobotStats.equity = this.calculateEquity(
+            this.currentRobotStats.equity,
             this.newPosition.profit,
             this.newPosition.exitDate
         );
@@ -372,7 +425,7 @@ export default class StatisticsCalculator {
     }
 
     private updateLastUpdated(): StatisticsCalculator {
-        this.currentStatistics.lastUpdatedAt = dayjs.utc().toISOString();
+        this.currentRobotStats.lastUpdatedAt = dayjs.utc().toISOString();
 
         return this;
     }
@@ -388,7 +441,7 @@ export default class StatisticsCalculator {
     }
 
     private updateLastExitDate(): StatisticsCalculator {
-        this.currentStatistics.lastPositionExitDate = this.newPosition.exitDate;
+        this.currentRobotStats.lastPositionExitDate = this.newPosition.exitDate;
         return this;
     }
     //#endregion
@@ -553,7 +606,7 @@ export default class StatisticsCalculator {
         return newDate;
     }
 
-    public calculatePerformance(prevPerformance: PerformanceVals, profit: number, exitDate: string): PerformanceVals {
+    public calculateEquity(prevPerformance: PerformanceVals, profit: number, exitDate: string): PerformanceVals {
         validateArguments(profit, exitDate);
 
         const newPerformance = [...prevPerformance];

@@ -1,6 +1,6 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import { Queue } from "bullmq";
-import { v4 as uuid } from "uuid";
+//import { v4 as uuid } from "uuid";
 import {
     StatsCalcJob,
     StatsCalcJobType,
@@ -8,7 +8,7 @@ import {
     StatsCalcRunnerSchema
 } from "@cryptuoso/stats-calc-events";
 import { RobotStatus } from "@cryptuoso/robot-state";
-import { UserSignals, UserRoles } from "@cryptuoso/user-state";
+import { UserRoles } from "@cryptuoso/user-state";
 
 export type StatisticCalcWorkerServiceConfig = HTTPServiceConfig;
 
@@ -198,8 +198,8 @@ export default class StatisticCalcRunnerService extends HTTPService {
         { calcAll, userId }: StatsCalcJob
     ) {
         try {
-            const userSignals: UserSignals[] = await this.db.pg.any(this.db.sql`
-                SELECT *
+            const userSignals: { robotId: string }[] = await this.db.pg.any(this.db.sql`
+                SELECT robot_id
                 FROM user_signals
                 WHERE user_id = ${userId};
             `);

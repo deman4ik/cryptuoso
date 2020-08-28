@@ -1,8 +1,8 @@
 import { expose } from "threads/worker";
-import { calcStatisticsCumulatively, CommonStats, PositionDataForStats } from "@cryptuoso/trade-statistics";
+import { calcStatisticsCumulatively, RobotStats, PositionDataForStats } from "@cryptuoso/trade-statistics";
 
 const statisticUtils = {
-    calcStatistics(prevStats: CommonStats, positions: PositionDataForStats[]) {
+    calcStatistics(prevStats: RobotStats, positions: PositionDataForStats[]) {
         return calcStatisticsCumulatively(prevStats, positions);
     }
 };

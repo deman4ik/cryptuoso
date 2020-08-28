@@ -7,24 +7,34 @@ import { StatisticUtils } from "./statsWorker";
 import { sql } from "@cryptuoso/postgres";
 import { SqlSqlTokenType, QueryResultRowType } from "slonik";
 import {
-    CommonStats,
+    RobotStats,
     PositionDataForStats,
-    PositionDirection
+    PositionDirection,
+    isRobotStats
 } from "@cryptuoso/trade-statistics";
 import { StatsCalcJob, StatsCalcJobType } from "@cryptuoso/stats-calc-events";
-import { UserSignals, UserAggrStatsDB, UserSignalPosition } from "@cryptuoso/user-state";
+import {
+    UserSignalPosition,
+    RobotStatsWithExists,
+    UserSignalsWithExists,
+    UserAggrStatsWithExists
+} from "@cryptuoso/user-state";
 import { round } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
 
-function getCalcFromAndInitStats(stats?: CommonStats, calcAll?: boolean) {
+function getCalcFromAndInitStats(stats?: RobotStatsWithExists, calcAll?: boolean) {
     let calcFrom: string;
-    let initStats: CommonStats;
+    let initStats: RobotStats = null;
 
-    if (calcAll || !stats || !stats.statistics || !stats.statistics.lastPositionExitDate) {
-        initStats = new CommonStats(null, null);
-    } else {
-        initStats = { equity: stats.equity, statistics: stats.statistics };
-        calcFrom = stats.statistics.lastPositionExitDate;
+    if (!calcAll && stats && stats.statsExists && isRobotStats(stats, false)) {
+        initStats = {
+            statistics: stats.statistics,
+            lastPositionExitDate: stats.lastPositionExitDate,
+            lastUpdatedAt: stats.lastUpdatedAt,
+            equity: stats.equity,
+            equityAvg: stats.equityAvg
+        };
+        calcFrom = stats.lastPositionExitDate;
     }
 
     return { calcFrom, initStats };
@@ -59,7 +69,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         this.workers = {
             calcStatistics: new Worker("calcStatistics", async (job: Job) => this.process(job), {
                 connection: this.redis,
-                concurrency: this.cpus
+                concurrency: process.env.production ? this.cpus : 3
             })
         };
     }
@@ -83,9 +93,9 @@ export default class StatisticCalcWorkerService extends BaseService {
             } else if (type === StatsCalcJobType.userSignal) {
                 await this.calcUserSignal(userId, robotId, calcAll);
             } else if (type === StatsCalcJobType.userSignals) {
-                await this.calcUserSignals(robotId, calcAll);
+                await this.calcUserSignalsWithExists(robotId, calcAll);
             } else if (type === StatsCalcJobType.userSignalsAggr) {
-                await this.calcUserSignalsAggr(userId, exchange, asset, calcAll);
+                await this.calcUserSignalsWithExistsAggr(userId, exchange, asset, calcAll);
             } else if (type === StatsCalcJobType.userRobotAggr) {
                 await this.calcUserRobotsAggr(userId, exchange, asset, calcAll);
             }
@@ -120,14 +130,60 @@ export default class StatisticCalcWorkerService extends BaseService {
         };
     }
 
-    async calcStatistics(prevStats: CommonStats, positions: PositionDataForStats[]): Promise<CommonStats> {
+    private async upsertStats(
+        params: {
+            table: QueryType,
+            fieldId: QueryType,
+            id: string,
+            addFields?: QueryType,
+            addFieldsValues?: QueryType
+        },
+        stats: RobotStats,
+        prevStats?: RobotStatsWithExists
+    ): Promise<void> {
+        console.log(params);
+        //return;
+        if (prevStats && prevStats.statsExists) {
+            await this.db.pg.query(sql`
+                UPDATE ${params.table}
+                SET statistics = ${sql.json(stats.statistics)},
+                    last_position_exit_date = ${stats.lastPositionExitDate},
+                    last_updated_at = ${stats.lastUpdatedAt},
+                    equity = ${sql.json(stats.equity)},
+                    equity_avg = ${sql.json(stats.equityAvg)}
+                WHERE ${params.fieldId} = ${params.id};
+            `);
+        } else {
+            await this.db.pg.query(sql`
+                INSERT INTO ${params.table} (
+                    statistics,
+                    last_position_exit_date,
+                    last_updated_at,
+                    equity,
+                    equity_avg
+                    
+                    ${params.addFields ? sql`, ${params.addFields}` : sql``}
+                ) VALUES (
+                    ${sql.json(stats.statistics)},
+                    ${stats.lastPositionExitDate},
+                    ${stats.lastUpdatedAt},
+                    ${sql.json(stats.equity)},
+                    ${sql.json(stats.equityAvg)}
+
+                    ${params.addFieldsValues ? sql`, ${params.addFieldsValues}` : sql``}
+                );
+            `);
+        }
+    }
+
+    async calcStatistics(prevStats: RobotStats, positions: PositionDataForStats[]): Promise<RobotStats> {
         return await this.pool.queue(async (utils: StatisticUtils) => utils.calcStatistics(prevStats, positions));
     }
 
     private async _calcRobotStatistics(
-        prevStats: CommonStats,
+        prevStats: RobotStats,
         positions: PositionDataForStats[]
-    ): Promise<CommonStats> {
+    ): Promise<RobotStats> {
         return await this.calcStatistics(
             prevStats,
             positions.map((pos) => ({
@@ -138,15 +194,17 @@ export default class StatisticCalcWorkerService extends BaseService {
     }
 
     async calcRobot(robotId: string, calcAll: boolean = false) {
-        const prevRobotStats: CommonStats = await this.db.pg.maybeOne(sql`
-            SELECT statistics, equity
-            FROM robots
-            WHERE id = ${robotId};
+        const prevRobotStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
+            SELECT rs.robot_id as "stats_exists",
+                   rs.*
+            FROM robots r
+            LEFT JOIN robot_stats rs
+                ON r.id = rs.robot_id
+            WHERE r.id = ${robotId};
         `);
 
-        if (!prevRobotStats) {
-            return; //throw new Error("Robot with this id doesn't exists");
-        }
+        if(!prevRobotStats)
+            return;
 
         const { calcFrom, initStats } = getCalcFromAndInitStats(prevRobotStats, calcAll);
 
@@ -173,30 +231,41 @@ export default class StatisticCalcWorkerService extends BaseService {
 
         if (positionsCount == 0) return;
 
-        const { statistics, equity } = await DataStream.from(
+        const newStats = await DataStream.from(
             this.makeChunksGenerator(
                 queryCommonPart,
                 positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
             )
         ).reduce(
-            async (prevStats: CommonStats, chunk: PositionDataForStats[]) =>
+            async (prevStats: RobotStats, chunk: PositionDataForStats[]) =>
                 await this._calcRobotStatistics(prevStats, chunk),
             initStats
         );
 
-        /* await this.db.pg.any(sql`
-            UPDATE robots
-            SET statistics = ${this.db.sql.json(statistics)},
-                equity = ${this.db.sql.json(equity)}
-            WHERE id = ${robotId};
-        `); */
+        if (prevRobotStats) {
+            return; //throw new Error("Robot with this id doesn't exists");
+        } else {
+
+        }
+
+        await this.upsertStats(
+            {
+                table: sql`robot_stats`,
+                fieldId: sql`robot_id`,
+                id: robotId,
+                addFields: sql`robot_id`,
+                addFieldsValues: sql`${robotId}`,
+            },
+            newStats,
+            prevRobotStats
+        )
     }
 
     private async _calcUserSignalStatistics(
-        prevStats: CommonStats,
+        prevStats: RobotStats,
         positions: UserSignalPosition[],
         userSignalVolume: number
-    ): Promise<CommonStats> {
+    ): Promise<RobotStats> {
         return await this.calcStatistics(
             prevStats,
             positions.map((pos) => {
@@ -217,16 +286,23 @@ export default class StatisticCalcWorkerService extends BaseService {
     }
 
     async calcUserSignal(userId: string, robotId: string, calcAll: boolean = false) {
-        const userSignal: UserSignals = await this.db.pg.maybeOne(sql`
-            SELECT id, subscribed_at, volume, statistics, equity
-            FROM user_signals
-            WHERE robot_id = ${robotId}
-              AND user_id = ${userId};
+        const userSignal: UserSignalsWithExists = await this.db.pg.maybeOne(sql`
+            SELECT us.id, us.subscribed_at, us.volume,
+                   uss.user_signal_id as "stats_exists",
+                   uss.statistics,
+                   uss.last_position_exit_date,
+                   uss.last_updated_at,
+                   uss.equity,
+                   uss.equity_avg
+            FROM user_signals us
+            LEFT JOIN user_signal_stats uss
+                ON us.id = uss.user_signal_id
+            WHERE us.robot_id = ${robotId}
+              AND us.user_id = ${userId};
         `);
 
-        if (!userSignal) {
-            return; //throw new Error("The signal doesn't exists");
-        }
+        if(!userSignal)
+            return;
 
         const { calcFrom, initStats } = getCalcFromAndInitStats(userSignal, calcAll);
 
@@ -255,32 +331,47 @@ export default class StatisticCalcWorkerService extends BaseService {
 
         if (positionsCount == 0) return;
 
-        const { statistics, equity } = await DataStream.from(
+        const newStats = await DataStream.from(
             this.makeChunksGenerator(
                 queryCommonPart,
                 positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
             )
         ).reduce(
-            async (prevStats: CommonStats, chunk: UserSignalPosition[]) =>
+            async (prevStats: RobotStats, chunk: UserSignalPosition[]) =>
                 await this._calcUserSignalStatistics(prevStats, chunk, userSignal.volume),
             initStats
         );
 
-        /* await this.db.pg.any(sql`
-            UPDATE user_signals
-            SET statistics = ${this.db.sql.json(statistics)},
-                equity = ${this.db.sql.json(equity)}
-            WHERE id = ${userSignal.id};
-        `); */
+        await this.upsertStats(
+            {
+                table: sql`user_signal_stats`,
+                fieldId: sql`user_signal_id`,
+                id: userSignal.id,
+                addFields: sql`user_signal_id`,
+                addFieldsValues: sql`${userSignal.id}`
+            },
+            newStats,
+            userSignal
+        );
     }
 
-    private async _calcUserSignalsBySingleQuery(params: {
+    private async _calcUserSignalsWithExistsBySingleQuery(params: {
         queryCommonPart: QueryType;
-        userSignals: UserSignals[];
+        userSignals: UserSignalsWithExists[];
         calcAll: boolean;
-    }): Promise<{ [key: string]: CommonStats }> {
+    }): Promise<{
+        [key: string]: {
+            newStats: RobotStats,
+            signal: UserSignalsWithExists
+        }
+    }> {
         const { queryCommonPart, userSignals, calcAll } = params;
-        const statsDict: { [key: string]: CommonStats } = {};
+        const statsDict: {
+            [key: string]: {
+                newStats: RobotStats,
+                signal: UserSignalsWithExists
+            }
+        } = {};
 
         const allPositions: UserSignalPosition[] = await this.db.pg.any(sql`
                 ${queryCommonPart};
@@ -293,25 +384,38 @@ export default class StatisticCalcWorkerService extends BaseService {
                 (pos) => userSignal.subscribedAt <= pos.entryDate && (!calcFrom || calcFrom <= pos.exitDate)
             );
 
-            statsDict[userSignal.id] = await this._calcUserSignalStatistics(initStats, positions, userSignal.volume);
+            statsDict[userSignal.id] = {
+                newStats: await this._calcUserSignalStatistics(initStats, positions, userSignal.volume),
+                signal: userSignal
+            };
         }
 
         return statsDict;
     }
 
-    private async _calcUserSignalsByChunks(params: {
+    private async _calcUserSignalsWithExistsByChunks(params: {
         queryCommonPart: QueryType;
-        userSignals: UserSignals[];
+        userSignals: UserSignalsWithExists[];
         calcAll?: boolean;
         chunkSize?: number;
-    }): Promise<{ [key: string]: CommonStats }> {
+    }): Promise<{
+        [key: string]: {
+            newStats: RobotStats,
+            signal: UserSignalsWithExists
+        }
+    }> {
         const { queryCommonPart, userSignals, calcAll, chunkSize } = params;
 
-        const statsDict: { [key: string]: CommonStats } = {};
+        const statsDict: {
+            [key: string]: {
+                newStats: RobotStats,
+                signal: UserSignalsWithExists
+            }
+        } = {};
         let statsAcc: {
-            signal: UserSignals;
+            signal: UserSignalsWithExists;
             calcFrom: string;
-            stats: CommonStats;
+            stats: RobotStats;
             updated: boolean;
         }[] = [];
 
@@ -355,22 +459,32 @@ export default class StatisticCalcWorkerService extends BaseService {
         );
 
         statsAcc.forEach((signalAcc) => {
-            if (signalAcc.updated) statsDict[signalAcc.signal.id] = signalAcc.stats;
+            if (signalAcc.updated) statsDict[signalAcc.signal.id] = {
+                newStats: signalAcc.stats,
+                signal: signalAcc.signal
+            };
         });
 
         return statsDict;
     }
 
-    async calcUserSignals(robotId: string, calcAll: boolean = false) {
-        const userSignals: UserSignals[] = await this.db.pg.any(sql`
-            SELECT id, subscribed_at, volume, statistics, equity
-            FROM user_signals
-            WHERE robot_id = ${robotId};
+    async calcUserSignalsWithExists(robotId: string, calcAll: boolean = false) {
+        const userSignals: UserSignalsWithExists[] = await this.db.pg.any(sql`
+            SELECT us.id, us.subscribed_at, us.volume,
+                   uss.user_signal_id as "stats_exists",
+                   uss.statistics,
+                   uss.last_position_exit_date,
+                   uss.last_updated_at,
+                   uss.equity,
+                   uss.equity_avg
+            FROM user_signals us
+            LEFT JOIN user_signal_stats uss
+                ON us.id = uss.user_signal_id
+            WHERE us.robot_id = ${robotId};
         `);
 
-        if (userSignals.length == 0) {
+        if (userSignals.length == 0)
             return; //throw new Error("No signals");
-        }
 
         const minSubscriptionDate = dayjs
             .utc(Math.min(...userSignals.map((us) => dayjs.utc(us.subscribedAt).valueOf())))
@@ -381,8 +495,8 @@ export default class StatisticCalcWorkerService extends BaseService {
         if (!calcAll) {
             const minExitTime = Math.min(
                 ...userSignals.map((us) => {
-                    if (us.statistics && us.statistics.lastPositionExitDate)
-                        return dayjs.utc(us.statistics.lastPositionExitDate).valueOf();
+                    if (us.lastPositionExitDate)
+                        return dayjs.utc(us.lastPositionExitDate).valueOf();
                     else return Infinity;
                 })
             );
@@ -417,31 +531,36 @@ export default class StatisticCalcWorkerService extends BaseService {
 
         const signalsStats =
             positionsCount > this.maxSingleQueryPosCount
-                ? await this._calcUserSignalsByChunks({
+                ? await this._calcUserSignalsWithExistsByChunks({
                     queryCommonPart,
                     userSignals,
                     calcAll
                 })
-                : await this._calcUserSignalsBySingleQuery({
+                : await this._calcUserSignalsWithExistsBySingleQuery({
                     queryCommonPart,
                     userSignals,
                     calcAll
                 });
 
-        for (const [signalId, { statistics, equity }] of Object.entries(signalsStats)) {
-            /* await this.db.pg.any(sql`
-                UPDATE user_signals
-                SET statistics = ${this.db.sql.json(statistics)},
-                    equity = ${this.db.sql.json(equity)}
-                WHERE id = ${signalId};
-            `); */
+        for (const [signalId, { newStats, signal }] of Object.entries(signalsStats)) {
+            await this.upsertStats(
+                {
+                    table: sql`user_signal_stats`,
+                    fieldId: sql`user_signal_id`,
+                    id: signalId,
+                    addFields: sql`user_signal_id`,
+                    addFieldsValues: sql`${signalId}`
+                },
+                newStats,
+                signal
+            );
         }
     }
 
-    private async _calcUserSignalsAggrStatistics(
-        prevStats: CommonStats,
+    private async _calcUserSignalsWithExistsAggrStatistics(
+        prevStats: RobotStats,
         positions: UserSignalPosition[]
-    ): Promise<CommonStats> {
+    ): Promise<RobotStats> {
         return await this.calcStatistics(
             prevStats,
             positions.map((pos) => {
@@ -461,16 +580,24 @@ export default class StatisticCalcWorkerService extends BaseService {
         );
     }
 
-    async calcUserSignalsAggr(userId: string, exchange?: string, asset?: string, calcAll: boolean = false) {
-
-        const prevUserAggrStats: UserAggrStatsDB = await this.db.pg.maybeOne(sql`
-            SELECT id, statistics, equity
+    async calcUserSignalsWithExistsAggr(userId: string, exchange?: string, asset?: string, calcAll: boolean = false) {
+        const prevUserAggrStats: UserAggrStatsWithExists = await this.db.pg.maybeOne(sql`
+            SELECT id as "stats_exists",
+                   id,
+                   statistics,
+                   last_position_exit_date,
+                   last_updated_at,
+                   equity,
+                   equity_avg
             FROM user_aggr_stats
             WHERE user_id = ${userId}
                 AND type = 'signal'
                 AND exchange = ${exchange || null}
                 AND asset = ${asset || null};
         `);
+
+        if (!prevUserAggrStats)
+            return;
 
         const { calcFrom, initStats } = getCalcFromAndInitStats(prevUserAggrStats, calcAll);
 
@@ -508,50 +635,46 @@ export default class StatisticCalcWorkerService extends BaseService {
 
         if (positionsCount == 0) return;
 
-        const { statistics, equity } = await DataStream.from(
+        const newStats = await DataStream.from(
             this.makeChunksGenerator(
                 queryCommonPart,
                 positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
             )
         ).reduce(
-            async (prevStats: CommonStats, chunk: UserSignalPosition[]) =>
-                await this._calcUserSignalsAggrStatistics(prevStats, chunk),
+            async (prevStats: RobotStats, chunk: UserSignalPosition[]) =>
+                await this._calcUserSignalsWithExistsAggrStatistics(prevStats, chunk),
             initStats
         );
 
-        /* if(prevUserAggrStats) {
-            await this.db.pg.any(sql`
-                UPDATE user_aggr_stats
-                SET statistics = ${this.db.sql.json(statistics)},
-                    equity = ${this.db.sql.json(equity)}
-                WHERE id = ${prevUserAggrStats.id};
-            `);
-        } else {
-            await this.db.pg.any(sql`
-                INSERT INTO user_aggr_stats
-                (user_id, exchange, asset, type, statistics, equity)
-                VALUES (
-                    ${userId},
-                    ${exchange},
-                    ${asset},
-                    'signal',
-                    ${this.db.sql.json(statistics)},
-                    ${this.db.sql.json(equity)}
-                );
-            `);
-        } */
+        await this.upsertStats(
+            {
+                table: sql`user_aggr_stats`,
+                fieldId: sql`id`,
+                id: prevUserAggrStats?.id,
+                addFields: sql`user_id, exchange, asset, type`,
+                addFieldsValues: sql`${userId}, ${exchange || null}, ${asset || null}, 'signal'`
+            },
+            newStats,
+            prevUserAggrStats
+        );
     }
 
     async calcUserRobot(userRobotId: string, calcAll: boolean = false) {
-        const prevRobotStats: CommonStats = await this.db.pg.maybeOne(sql`
-            SELECT statistics, equity
-            FROM user_robots
-            WHERE id = ${userRobotId};
+        const prevRobotStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
+            SELECT urs.user_robot_id as "stats_exists",
+                urs.statistics,
+                urs.last_position_exit_date,
+                urs.last_updated_at,
+                urs.equity,
+                urs.equity_avg
+            FROM user_robots ur
+            LEFT JOIN user_robot_stats urs
+                ON ur.id = urs.user_robot_id
+            WHERE ur.id = ${userRobotId};
         `);
 
-        if (!prevRobotStats) {
-            return; //throw new Error("Robot with this id doesn't exists");
-        }
+        if (!prevRobotStats)
+            return;
 
         const { calcFrom, initStats } = getCalcFromAndInitStats(prevRobotStats, calcAll);
 
@@ -578,37 +701,46 @@ export default class StatisticCalcWorkerService extends BaseService {
 
         if (positionsCount == 0) return;
 
-        const { statistics, equity } = await DataStream.from(
+        const newStats = await DataStream.from(
             this.makeChunksGenerator(
                 queryCommonPart,
                 positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
             )
         ).reduce(
-            async (prevStats: CommonStats, chunk: PositionDataForStats[]) =>
+            async (prevStats: RobotStats, chunk: PositionDataForStats[]) =>
                 await this.calcStatistics(prevStats, chunk),
             initStats
         );
 
-        console.log(prevRobotStats, statistics, equity, positionsCount);
-
-        /* await this.db.pg.any(sql`
-            UPDATE user_robots
-            SET statistics = ${this.db.sql.json(statistics)},
-                equity = ${this.db.sql.json(equity)}
-            WHERE id = ${userRobotId};
-        `); */
+        await this.upsertStats(
+            {
+                table: sql`user_robot_stats`,
+                fieldId: sql`user_robot_id`,
+                id: userRobotId
+            },
+            newStats,
+            prevRobotStats
+        );
     }
 
     async calcUserRobotsAggr(userId: string, exchange?: string, asset?: string, calcAll: boolean = false) {
-        
-        const prevUserAggrStats: UserAggrStatsDB = await this.db.pg.maybeOne(sql`
-            SELECT id, statistics, equity
+        const prevUserAggrStats: UserAggrStatsWithExists = await this.db.pg.maybeOne(sql`
+            SELECT id as "stats_exists",
+                   id,
+                   statistics,
+                   last_position_exit_date,
+                   last_updated_at,
+                   equity,
+                   equity_avg
             FROM user_aggr_stats
             WHERE user_id = ${userId}
                 AND type = 'userRobot'
                 AND exchange = ${exchange || null}
                 AND asset = ${asset || null};
         `);
+
+        if (!prevUserAggrStats)
+            return;
 
         const { calcFrom, initStats } = getCalcFromAndInitStats(prevUserAggrStats, calcAll);
 
@@ -639,36 +771,26 @@ export default class StatisticCalcWorkerService extends BaseService {
 
         if (positionsCount == 0) return;
 
-        const { statistics, equity } = await DataStream.from(
+        const newStats = await DataStream.from(
             this.makeChunksGenerator(
                 queryCommonPart,
                 positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
             )
         ).reduce(
-            async (prevStats: CommonStats, chunk: UserSignalPosition[]) => await this.calcStatistics(prevStats, chunk),
+            async (prevStats: RobotStats, chunk: UserSignalPosition[]) => await this.calcStatistics(prevStats, chunk),
             initStats
         );
 
-        /* if(prevUserAggrStats) {
-            await this.db.pg.any(sql`
-                UPDATE user_aggr_stats
-                SET statistics = ${this.db.sql.json(statistics)},
-                    equity = ${this.db.sql.json(equity)}
-                WHERE id = ${prevUserAggrStats.id};
-            `);
-        } else {
-            await this.db.pg.any(sql`
-                INSERT INTO user_aggr_stats
-                (user_id, exchange, asset, type, statistics, equity)
-                VALUES (
-                    ${userId},
-                    ${exchange},
-                    ${asset},
-                    'userRobot',
-                    ${this.db.sql.json(statistics)},
-                    ${this.db.sql.json(equity)}
-                );
-            `);
-        } */
+        await this.upsertStats(
+            {
+                table: sql`user_aggr_stats`,
+                fieldId: sql`id`,
+                id: prevUserAggrStats?.id,
+                addFields: sql`user_id, exchange, asset, type`,
+                addFieldsValues: sql`${userId}, ${exchange || null}, ${asset || null}, 'userRobot'`
+            },
+            newStats,
+            prevUserAggrStats
+        );
     }
 }
