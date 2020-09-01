@@ -142,7 +142,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         prevStats?: RobotStatsWithExists
     ): Promise<void> {
         console.log(params);
-        //return;
+        return;
         if (prevStats && prevStats.statsExists) {
             await this.db.pg.query(sql`
                 UPDATE ${params.table}

@@ -1,3 +1,7 @@
+import round from "./round";
+
+export { round };
+
 /**
  * Returnts a number rounded to a specified amout of digits.
  *
@@ -6,7 +10,7 @@
  * @example
  * round(12.345, 2); // 12.35
  */
-export const round = (n: number, decimals = 0): number => +Number(`${Math.round(+`${n}e${decimals}`)}e-${decimals}`);
+export const roundHard = (n: number, decimals = 0): number => +Number(`${Math.round(+`${n}e${decimals}`)}e-${decimals}`);
 
 /**
  * Returns the sum of numbers provided.

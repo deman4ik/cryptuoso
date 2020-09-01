@@ -23,49 +23,55 @@ export default class StatisticCalcRunnerService extends HTTPService {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_SIGNAL],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: (req, res) => this.HTTPHandler(
-                        this.handleCalcUserSignalEvent.bind(this), req, res
-                    )
+                    handler: this.HTTPHandler.bind(this, this.handleCalcUserSignalEvent)
                 },
                 calcUserSignals: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_SIGNALS],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: (req, res) => this.HTTPHandler(
-                        this.handleCalcUserSignalsEvent.bind(this), req, res
-                    )
+                    handler: this.HTTPHandler.bind(this, this.handleCalcUserSignalsEvent)
                 },
                 calcRobot: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.ROBOT],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: (req, res) => this.HTTPHandler(
-                        this.handleStatsCalcRobotEvent.bind(this), req, res
-                    )
+                    handler: this.HTTPHandler.bind(this, this.handleStatsCalcRobotEvent)
                 },
                 calcRobots: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.ROBOTS],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: (req, res) => this.HTTPHandler(
-                        this.handleStatsCalcRobotsEvent.bind(this), req, res
-                    )
+                    handler: this.HTTPHandler.bind(this, this.handleStatsCalcRobotsEvent)
                 },
                 calcUserRobot: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_ROBOT],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: (req, res) => this.HTTPHandler(
-                        this.handleStatsCalcUserRobotEvent.bind(this), req, res
-                    )
+                    handler: this.HTTPHandler.bind(this, this.handleStatsCalcUserRobotEvent)
                 },
                 calcUserRobots: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_ROBOTS],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: (req, res) => this.HTTPHandler(
-                        this.handleStatsCalcUserRobotsEvent.bind(this), req, res
-                    )
+                    handler: this.HTTPHandler.bind(this, this.handleStatsCalcUserRobotsEvent)
+                },
+                recalcAllRobots: {
+                    inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.RECALC_ALL_ROBOTS],
+                    auth: true,
+                    roles: [UserRoles.admin],
+                    handler: this.HTTPHandler.bind(this, this.handleRecalcAllRobotsEvent)
+                },
+                recalcAllUserSignals: {
+                    inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.RECALC_ALL_USER_SIGNALS],
+                    auth: true,
+                    roles: [UserRoles.admin],
+                    handler: this.HTTPHandler.bind(this, this.handleRecalcAllUserSignalsEvent)
+                },
+                recalcAllUserRobots: {
+                    inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.RECALC_ALL_USER_ROBOTS],
+                    auth: true,
+                    roles: [UserRoles.admin],
+                    handler: this.HTTPHandler.bind(this, this.handleRecalcAllUserRobotsEvent)
                 }
             });
             this.events.subscribe({
@@ -132,7 +138,9 @@ export default class StatisticCalcRunnerService extends HTTPService {
 
     async queueJob(type: StatsCalcJobType, job: StatsCalcJob) {
         await this.queues.calcStatistics.add(
-            type, job, {
+            type,
+            job,
+            {
                 //jobId: uuid(),
                 removeOnComplete: true,
                 removeOnFail: true
@@ -140,9 +148,11 @@ export default class StatisticCalcRunnerService extends HTTPService {
         );
     }
 
-    async handleCalcUserSignalEvent(
-        { calcAll, userId, robotId }: StatsCalcJob
-    ) {
+    handleCalcUserSignalEvent = async (params: {
+        calcAll?: boolean, userId: string, robotId: string
+    }) => {
+        const { calcAll, userId, robotId } = params;
+
         try {
             const {
                 exchange,
@@ -194,9 +204,11 @@ export default class StatisticCalcRunnerService extends HTTPService {
         }
     }
 
-    async handleCalcUserSignalsEvent(
-        { calcAll, userId }: StatsCalcJob
-    ) {
+    handleCalcUserSignalsEvent = async (params: {
+        calcAll?: boolean, userId: string
+    }) => {
+        const { calcAll, userId } = params;
+
         try {
             const userSignals: { robotId: string }[] = await this.db.pg.any(this.db.sql`
                 SELECT robot_id
@@ -266,9 +278,11 @@ export default class StatisticCalcRunnerService extends HTTPService {
         }
     }
 
-    async handleStatsCalcRobotEvent(
-        { calcAll, robotId }: StatsCalcJob
-    ) {
+    handleStatsCalcRobotEvent = async (params: {
+        calcAll?: boolean, robotId: string
+    }) => {
+        const { calcAll, robotId } = params;
+
         try {
             this.log.info(`New ${StatsCalcRunnerEvents.ROBOT} event - ${robotId}`);
 
@@ -349,12 +363,16 @@ export default class StatisticCalcRunnerService extends HTTPService {
         }
     }
 
-    async handleStatsCalcRobotsEvent({ calcAll }: StatsCalcJob) {
+    handleStatsCalcRobotsEvent = async (params: {
+        calcAll: boolean
+    }) => {
+        const { calcAll } = params;
+
         try {
             const startedRobots: {
                 id: string;
             }[] = await this.db.pg.any(this.db.sql`
-                SELECT id, exchange, asset
+                SELECT id
                 FROM robots
                 WHERE status = ${RobotStatus.started};
             `);
@@ -368,9 +386,11 @@ export default class StatisticCalcRunnerService extends HTTPService {
         }
     }
 
-    async handleStatsCalcUserRobotEvent(
-        { calcAll, userRobotId }: StatsCalcJob
-    ) {
+    handleStatsCalcUserRobotEvent = async (params: {
+        calcAll?: boolean, userRobotId: string
+    }) => {
+        const { calcAll, userRobotId } = params;
+
         try {
             this.log.info(
                 `New ${StatsCalcRunnerEvents.USER_ROBOT} event - ${userRobotId}`
@@ -397,9 +417,11 @@ export default class StatisticCalcRunnerService extends HTTPService {
         }
     }
 
-    async handleStatsCalcUserRobotsEvent(
-        { calcAll, userId, exchange, asset }: StatsCalcJob
-    ) {
+    handleStatsCalcUserRobotsEvent = async (params: {
+        calcAll?: boolean, userId: string, exchange?: string, asset?: string
+    }) => {
+        const { calcAll, userId, exchange, asset } = params;
+
         try {
             this.log.info(
                 `New ${StatsCalcRunnerEvents.USER_ROBOTS} event - ${userId}, ${exchange}, ${asset}`
@@ -409,6 +431,138 @@ export default class StatisticCalcRunnerService extends HTTPService {
             await this.queueJob(StatsCalcJobType.userRobotAggr, { calcAll, userId, exchange });
             await this.queueJob(StatsCalcJobType.userRobotAggr, { calcAll, userId, asset });
             await this.queueJob(StatsCalcJobType.userRobotAggr, { calcAll, userId, exchange, asset });
+
+            return { success: true };
+        } catch (e) {
+            this.log.error(e);
+            return { success: false, error: e.message };
+        }
+    }
+
+    handleRecalcAllRobotsEvent = async (params: {
+        exchange?: string, asset?: string, currency?: string, strategy?: string
+    }) => {
+        const { exchange, asset, currency, strategy } = params;
+
+        try {
+            const conditionExchange = !exchange ? this.db.sql`` : this.db.sql`AND r.exchange=${exchange}`;
+            const conditionAsset = !asset ? this.db.sql`` : this.db.sql`AND r.asset=${asset}`;
+            const conditionCurrency = !currency ? this.db.sql`` : this.db.sql`AND r.currency=${currency}`;
+            const conditionStrategy = !strategy ? this.db.sql`` : this.db.sql`AND r.strategy=${strategy}`;
+
+            const startedRobots: {
+                id: string;
+            }[] = await this.db.pg.any(this.db.sql`
+                SELECT r.id
+                FROM robots r
+                WHERE r.status = ${RobotStatus.started}
+                    ${conditionExchange}
+                    ${conditionAsset}
+                    ${conditionCurrency}
+                    ${conditionStrategy};
+            `);
+            for (const { id: robotId } of startedRobots) {
+                await this.handleStatsCalcRobotEvent({ robotId, calcAll: true });
+            }
+
+            const startedSignals: {
+                robotId: string;
+                userId: string;
+            }[] = await this.db.pg.any(this.db.sql`
+                SELECT us.robot_id, us.user_id
+                FROM user_signals us, robots r
+                WHERE r.status = ${RobotStatus.started}
+                    AND us.robot_id = r.id
+                    ${conditionExchange}
+                    ${conditionAsset}
+                    ${conditionCurrency}
+                    ${conditionStrategy}
+                GROUP BY us.robot_id, us.user_id;
+            `);
+            for (const { robotId, userId } of startedSignals) {
+                await this.handleCalcUserSignalEvent({ robotId, userId, calcAll: true });
+            }
+
+            return { success: true };
+        } catch (e) {
+            this.log.error(e);
+            return { success: false, error: e.message };
+        }
+    }
+
+    handleRecalcAllUserSignalsEvent = async (params: {
+        exchange?: string, asset?: string, currency?: string, strategy?: string,
+        robotId?: string, userId?: string
+    }) => {
+        const { exchange, asset, currency, strategy, robotId, userId } = params;
+
+        try {
+            const conditionRobotId = !robotId ? this.db.sql`` : this.db.sql`AND us.robot_id=${robotId}`;
+            const conditionUserId = !userId ? this.db.sql`` : this.db.sql`AND us.user_id=${userId}`;
+            const conditionExchange = !exchange ? this.db.sql`` : this.db.sql`AND r.exchange=${exchange}`;
+            const conditionAsset = !asset ? this.db.sql`` : this.db.sql`AND r.asset=${asset}`;
+            const conditionCurrency = !currency ? this.db.sql`` : this.db.sql`AND r.currency=${currency}`;
+            const conditionStrategy = !strategy ? this.db.sql`` : this.db.sql`AND r.strategy=${strategy}`;
+
+            const startedSignals: {
+                robotId: string;
+                userId: string;
+            }[] = await this.db.pg.any(this.db.sql`
+                SELECT us.robot_id, us.user_id
+                FROM user_signals us, robots r
+                WHERE r.status = ${RobotStatus.started}
+                    ${conditionRobotId}
+                    ${conditionUserId}
+                    AND us.robot_id = r.id
+                    ${conditionExchange}
+                    ${conditionAsset}
+                    ${conditionCurrency}
+                    ${conditionStrategy}
+                GROUP BY us.robot_id, us.user_id;
+            `);
+            for (const { robotId, userId } of startedSignals) {
+                await this.handleCalcUserSignalEvent({ robotId, userId, calcAll: true });
+            }
+
+            return { success: true };
+        } catch (e) {
+            this.log.error(e);
+            return { success: false, error: e.message };
+        }
+    }
+
+    handleRecalcAllUserRobotsEvent = async (params: {
+        exchange?: string, asset?: string, currency?: string, strategy?: string,
+        robotId?: string, userId?: string
+    }) => {
+        const { exchange, asset, currency, strategy, robotId, userId } = params;
+
+        try {
+            const conditionRobotId = !robotId ? this.db.sql`` : this.db.sql`AND ur.robot_id=${robotId}`;
+            const conditionUserId = !userId ? this.db.sql`` : this.db.sql`AND ur.user_id=${userId}`;
+            const conditionExchange = !exchange ? this.db.sql`` : this.db.sql`AND r.exchange=${exchange}`;
+            const conditionAsset = !asset ? this.db.sql`` : this.db.sql`AND r.asset=${asset}`;
+            const conditionCurrency = !currency ? this.db.sql`` : this.db.sql`AND r.currency=${currency}`;
+            const conditionStrategy = !strategy ? this.db.sql`` : this.db.sql`AND r.strategy=${strategy}`;
+
+            const startedUserRobots: {
+                id: string;
+            }[] = await this.db.pg.any(this.db.sql`
+                SELECT ur.id
+                FROM user_robots ur, robots r
+                WHERE r.status = ${RobotStatus.started}
+                    ${conditionRobotId}
+                    ${conditionUserId}
+                    AND ur.robot_id = r.id
+                    ${conditionExchange}
+                    ${conditionAsset}
+                    ${conditionCurrency}
+                    ${conditionStrategy}
+                GROUP BY ur.id;
+            `);
+            for (const { id: userRobotId } of startedUserRobots) {
+                await this.handleStatsCalcUserRobotEvent({ userRobotId, calcAll: true });
+            }
 
             return { success: true };
         } catch (e) {

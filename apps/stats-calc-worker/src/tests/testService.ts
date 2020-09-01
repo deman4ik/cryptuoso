@@ -3,7 +3,7 @@ import { measureFunction } from "./measuring";
 import log from "@cryptuoso/logger";
 
 export async function testService(service: Service) {
-    const count = 1;
+    const count = 20;
     const updateAll = true;
     const robotId = "51c90607-6d38-4b7c-81c9-d349886e80b0"; // 8504
     const userRobotId = "d2d1fe2d-c517-4161-a583-66f218c9217a";
@@ -22,12 +22,12 @@ export async function testService(service: Service) {
         await service.db.pg.query(service.db.sql`SELECT pg_cancel_backend(${backendProcessId})`);
     }, 3000); */
 
-    /* results.push(await measureFunction(
+    results.push(await measureFunction(
         "calcRobot",
         service.calcRobot.bind(service),
         [robotId, updateAll],
         count
-    )); */
+    ));
 
     /* results.push(await measureFunction(
         "calcUserSignalsAggr",
@@ -64,12 +64,12 @@ export async function testService(service: Service) {
         count
     )); */
 
-    results.push(await measureFunction(
+    /* results.push(await measureFunction(
         "calcUserSignal",
         service.calcUserSignal.bind(service),
         ["8a671981-2b11-4ae5-bc3f-1a63befdba72", robotId, updateAll],
         count
-    ));
+    )); */
 
     //await service.printUsers();
     //await service.printUserAggrStats("userRobot");
