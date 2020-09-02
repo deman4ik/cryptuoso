@@ -4,6 +4,7 @@ export const enum ExwatcherWorkerEvents {
     SUBSCRIBE = "in-exwatcher-worker.subscribe",
     SUBSCRIBE_ALL = "in-exwatcher-worker.subscribe-all",
     UNSUBSCRIBE_ALL = "in-exwatcher-worker.unsubscribe-all",
+    ADD_MARKET = "in-exwatcher-worker.add-market",
     TICK = "out-exwatcher-worker.tick",
     CANDLE = "out-exwatcher-worker.candle"
 }
@@ -19,6 +20,11 @@ export const ExwatcherSchema = {
     },
     [ExwatcherWorkerEvents.UNSUBSCRIBE_ALL]: {
         exchange: "string"
+    },
+    [ExwatcherWorkerEvents.ADD_MARKET]: {
+        exchange: "string",
+        asset: "string",
+        currency: "string"
     },
     [ExwatcherWorkerEvents.TICK]: {
         exchange: "string",
@@ -56,6 +62,12 @@ export interface ExwatcherSubscribeAll {
 
 export interface ExwatcherUnsubscribeAll {
     exchange: string;
+}
+
+export interface ExwatcherAddMarket {
+    exchange: string;
+    asset: string;
+    currency: string;
 }
 
 export type ExwatcherTick = ExchangePrice;
