@@ -171,31 +171,21 @@ export default class StatisticCalcRunnerService extends HTTPService {
 
             if (userSignalCount == 1) {
                 await this.queueJob(StatsCalcJobType.userSignalsAggr, {
-                    calcAll,
-                    userId
+                    calcAll, userId
                 });
             }
 
             await this.queueJob(StatsCalcJobType.userSignal, {
-                calcAll,
-                userId,
-                robotId
+                calcAll, userId, robotId
             });
             await this.queueJob(StatsCalcJobType.userSignalsAggr, {
-                calcAll,
-                userId,
-                exchange
+                calcAll, userId, exchange
             });
             await this.queueJob(StatsCalcJobType.userSignalsAggr, {
-                calcAll,
-                userId,
-                asset
+                calcAll, userId, asset
             });
             await this.queueJob(StatsCalcJobType.userSignalsAggr, {
-                calcAll,
-                userId,
-                exchange,
-                asset
+                calcAll, userId, exchange, asset
             });
             return { success: true };
         } catch (e) {
@@ -220,9 +210,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
 
             for (const { robotId } of userSignals) {
                 await this.queueJob(StatsCalcJobType.userSignal, {
-                    calcAll,
-                    userId,
-                    robotId
+                    calcAll, userId, robotId
                 });
             }
 
@@ -240,34 +228,26 @@ export default class StatisticCalcRunnerService extends HTTPService {
                 return;
 
             await this.queueJob(StatsCalcJobType.userSignalsAggr, {
-                calcAll,
-                userId
+                calcAll, userId
             });
 
             const exchanges = [...new Set(exchangesAssets.map((e) => e.exchange))];
             for (const exchange of exchanges) {
                 await this.queueJob(StatsCalcJobType.userSignalsAggr, {
-                    calcAll,
-                    userId,
-                    exchange
+                    calcAll, userId, exchange
                 });
             }
 
             const assets = [...new Set(exchangesAssets.map((e) => e.asset))];
             for (const asset of assets) {
                 await this.queueJob(StatsCalcJobType.userSignalsAggr, {
-                    calcAll,
-                    userId,
-                    asset
+                    calcAll, userId, asset
                 });
             }
 
             for (const { exchange, asset } of exchangesAssets) {
                 await this.queueJob(StatsCalcJobType.userSignalsAggr, {
-                    calcAll,
-                    userId,
-                    exchange,
-                    asset
+                    calcAll, userId, exchange, asset
                 });
             }
 
@@ -279,8 +259,10 @@ export default class StatisticCalcRunnerService extends HTTPService {
     }
 
     handleStatsCalcRobotEvent = async (params: {
-        calcAll?: boolean, robotId: string
-    }) => {
+            calcAll?: boolean, robotId: string
+        },
+        needCalcCommonAggr: boolean = true
+    ) => {
         const { calcAll, robotId } = params;
 
         try {
@@ -296,9 +278,12 @@ export default class StatisticCalcRunnerService extends HTTPService {
             `);
             await this.queueJob(StatsCalcJobType.robot, { calcAll, robotId });
             await this.queueJob(StatsCalcJobType.userSignals, { calcAll, robotId });
-            await this.queueJob(StatsCalcJobType.robotsAggr, { calcAll, exchange });
-            await this.queueJob(StatsCalcJobType.robotsAggr, { calcAll, asset });
-            await this.queueJob(StatsCalcJobType.robotsAggr, { calcAll, exchange, asset });
+
+            if (needCalcCommonAggr) {
+                await this.queueJob(StatsCalcJobType.robotsAggr, { calcAll, exchange });
+                await this.queueJob(StatsCalcJobType.robotsAggr, { calcAll, asset });
+                await this.queueJob(StatsCalcJobType.robotsAggr, { calcAll, exchange, asset });
+            }
 
             const usersByRobotId: {
                 userId: string
@@ -390,8 +375,10 @@ export default class StatisticCalcRunnerService extends HTTPService {
     }
 
     handleStatsCalcUserRobotEvent = async (params: {
-        calcAll?: boolean, userRobotId: string
-    }) => {
+            calcAll?: boolean, userRobotId: string
+        },
+        needCalcCommonAggr: boolean = true
+    ) => {
         const { calcAll, userRobotId } = params;
 
         try {
@@ -412,9 +399,12 @@ export default class StatisticCalcRunnerService extends HTTPService {
             await this.queueJob(StatsCalcJobType.userRobotAggr, { calcAll, userId, asset });
             //await this.queueJob(StatsCalcJobType.userRobotAggr, { calcAll, userId, asset });
             await this.queueJob(StatsCalcJobType.userRobotAggr, { calcAll, userId, exchange, asset });
-            await this.queueJob(StatsCalcJobType.usersRobotsAggr, { calcAll, exchange });
-            await this.queueJob(StatsCalcJobType.usersRobotsAggr, { calcAll, asset });
-            await this.queueJob(StatsCalcJobType.usersRobotsAggr, { calcAll, exchange, asset });
+
+            if (needCalcCommonAggr) {
+                await this.queueJob(StatsCalcJobType.usersRobotsAggr, { calcAll, exchange });
+                await this.queueJob(StatsCalcJobType.usersRobotsAggr, { calcAll, asset });
+                await this.queueJob(StatsCalcJobType.usersRobotsAggr, { calcAll, exchange, asset });
+            }
 
             return { success: true };
         } catch (e) {
@@ -424,8 +414,10 @@ export default class StatisticCalcRunnerService extends HTTPService {
     }
 
     handleStatsCalcUserRobotsEvent = async (params: {
-        calcAll?: boolean, userId: string, exchange?: string, asset?: string
-    }) => {
+            calcAll?: boolean, userId: string, exchange?: string, asset?: string
+        },
+        needCalcCommonAggr: boolean = true
+    ) => {
         const { calcAll, userId, exchange, asset } = params;
 
         try {
@@ -437,9 +429,12 @@ export default class StatisticCalcRunnerService extends HTTPService {
             await this.queueJob(StatsCalcJobType.userRobotAggr, { calcAll, userId, exchange });
             await this.queueJob(StatsCalcJobType.userRobotAggr, { calcAll, userId, asset });
             await this.queueJob(StatsCalcJobType.userRobotAggr, { calcAll, userId, exchange, asset });
-            await this.queueJob(StatsCalcJobType.usersRobotsAggr, { calcAll, exchange });
-            await this.queueJob(StatsCalcJobType.usersRobotsAggr, { calcAll, asset });
-            await this.queueJob(StatsCalcJobType.usersRobotsAggr, { calcAll, exchange, asset });
+
+            if (needCalcCommonAggr) {
+                await this.queueJob(StatsCalcJobType.usersRobotsAggr, { calcAll, exchange });
+                await this.queueJob(StatsCalcJobType.usersRobotsAggr, { calcAll, asset });
+                await this.queueJob(StatsCalcJobType.usersRobotsAggr, { calcAll, exchange, asset });
+            }
 
             return { success: true };
         } catch (e) {
@@ -471,8 +466,12 @@ export default class StatisticCalcRunnerService extends HTTPService {
                     ${conditionStrategy};
             `);
             for (const { id: robotId } of startedRobots) {
-                await this.handleStatsCalcRobotEvent({ robotId, calcAll: true });
+                await this.handleStatsCalcRobotEvent({ robotId, calcAll: true }, false);
             }
+
+            await this.queueJob(StatsCalcJobType.robotsAggr, { calcAll: true, exchange });
+            await this.queueJob(StatsCalcJobType.robotsAggr, { calcAll: true, asset });
+            await this.queueJob(StatsCalcJobType.robotsAggr, { calcAll: true, exchange, asset });
 
             const startedSignals: {
                 robotId: string;
@@ -567,8 +566,12 @@ export default class StatisticCalcRunnerService extends HTTPService {
                     ${conditionStrategy};
             `);
             for (const { id: userRobotId } of startedUserRobots) {
-                await this.handleStatsCalcUserRobotEvent({ userRobotId, calcAll: true });
+                await this.handleStatsCalcUserRobotEvent({ userRobotId, calcAll: true }, false);
             }
+
+            await this.queueJob(StatsCalcJobType.usersRobotsAggr, { calcAll: true, exchange });
+            await this.queueJob(StatsCalcJobType.usersRobotsAggr, { calcAll: true, asset });
+            await this.queueJob(StatsCalcJobType.usersRobotsAggr, { calcAll: true, exchange, asset });
 
             return { success: true };
         } catch (e) {
