@@ -15,15 +15,16 @@ import {
 import { StatsCalcJob, StatsCalcJobType } from "@cryptuoso/stats-calc-events";
 import {
     UserSignalPosition,
+    UserAggrStatsType,
     RobotStatsWithExists,
     UserSignalsWithExists,
     UserAggrStatsWithExists
 } from "@cryptuoso/user-state";
-import { round } from "@cryptuoso/helpers";
+import { round, isUndefinedOrNull } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
 
 function getCalcFromAndInitStats(stats?: RobotStatsWithExists, calcAll?: boolean) {
-    let calcFrom: string;
+    let calcFrom: string = null;
     let initStats: RobotStats = null;
 
     if (!calcAll && stats && stats.statsExists && isRobotStats(stats, false)) {
@@ -88,14 +89,18 @@ export default class StatisticCalcWorkerService extends BaseService {
         try {
             if (type === StatsCalcJobType.robot) {
                 await this.calcRobot(robotId, calcAll);
+            } else if (type === StatsCalcJobType.robotsAggr) {
+                await this.calcRobotsAggr(exchange, asset, calcAll);
+            } else if (type === StatsCalcJobType.usersRobotsAggr) {
+                await this.calcUsersRobotsAggr(exchange, asset, calcAll);
             } else if (type === StatsCalcJobType.userRobot) {
                 await this.calcUserRobot(userRobotId, calcAll);
             } else if (type === StatsCalcJobType.userSignal) {
                 await this.calcUserSignal(userId, robotId, calcAll);
             } else if (type === StatsCalcJobType.userSignals) {
-                await this.calcUserSignalsWithExists(robotId, calcAll);
+                await this.calcUserSignals(robotId, calcAll);
             } else if (type === StatsCalcJobType.userSignalsAggr) {
-                await this.calcUserSignalsWithExistsAggr(userId, exchange, asset, calcAll);
+                await this.calcUserSignalsAggr(userId, exchange, asset, calcAll);
             } else if (type === StatsCalcJobType.userRobotAggr) {
                 await this.calcUserRobotsAggr(userId, exchange, asset, calcAll);
             }
@@ -143,6 +148,7 @@ export default class StatisticCalcWorkerService extends BaseService {
     ): Promise<void> {
         console.log(params);
         return;
+        try {
         if (prevStats && prevStats.statsExists) {
             await this.db.pg.query(sql`
                 UPDATE ${params.table}
@@ -174,6 +180,10 @@ export default class StatisticCalcWorkerService extends BaseService {
                 );
             `);
         }
+    } catch(err) {
+        console.log(err);
+        throw err;
+    }
     }
 
     async calcStatistics(prevStats: RobotStats, positions: PositionDataForStats[]): Promise<RobotStats> {
@@ -242,12 +252,6 @@ export default class StatisticCalcWorkerService extends BaseService {
             initStats
         );
 
-        if (prevRobotStats) {
-            return; //throw new Error("Robot with this id doesn't exists");
-        } else {
-
-        }
-
         await this.upsertStats(
             {
                 table: sql`robot_stats`,
@@ -259,6 +263,149 @@ export default class StatisticCalcWorkerService extends BaseService {
             newStats,
             prevRobotStats
         )
+    }
+
+    async calcRobotsAggr(exchange?: string, asset?: string, calcAll: boolean = false) {
+        const isExchangeBad = isUndefinedOrNull(exchange);
+        const isAssetBad = isUndefinedOrNull(asset);
+
+        const prevRobotsAggrStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
+            SELECT id as "stats_exists",
+                   id,
+                   statistics,
+                   last_position_exit_date,
+                   last_updated_at,
+                   equity,
+                   equity_avg
+            FROM robot_aggr_stats
+            WHERE exchange ${isExchangeBad ? sql`IS NULL` : sql`= ${exchange}`}
+                AND asset ${isAssetBad ? sql`IS NULL` : sql`= ${asset}`};
+        `);
+
+        const { calcFrom, initStats } = getCalcFromAndInitStats(prevRobotsAggrStats, calcAll);
+
+        const conditionExchange = isExchangeBad ? sql`` : sql`AND exchange = ${exchange}`;
+        const conditionAsset = isAssetBad ? sql`` : sql`AND asset = ${asset}`;
+        const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
+        const querySelectPart = sql`
+            SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
+                   p.entry_price, p.exit_price, p.fee
+        `;
+        const queryFromAndConditionPart = sql`
+            FROM robot_positions p,
+                 robots r
+            WHERE r.id = p.robot_id
+              ${conditionExchange}
+              ${conditionAsset}
+              AND p.status = 'closed'
+              ${conditionExitDate}
+        `;
+        const queryCommonPart = sql`
+            ${querySelectPart}
+            ${queryFromAndConditionPart}
+            ORDER BY p.exit_date
+        `;
+
+        const positionsCount: number = +(await this.db.pg.oneFirst(sql`
+            SELECT COUNT(*)
+            ${queryFromAndConditionPart};
+        `));
+
+        console.log("Positions: ", positionsCount);
+
+        if (positionsCount == 0) return;
+
+        const newStats = await DataStream.from(
+            this.makeChunksGenerator(
+                queryCommonPart,
+                positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
+            )
+        ).reduce(
+            async (prevStats: RobotStats, chunk: UserSignalPosition[]) =>
+                await this._calcRobotStatistics(prevStats, chunk),
+            initStats
+        );
+
+        await this.upsertStats(
+            {
+                table: sql`robot_aggr_stats`,
+                fieldId: sql`id`,
+                id: prevRobotsAggrStats?.id,
+                addFields: sql`exchange, asset`,
+                addFieldsValues: sql`${isExchangeBad ? null : exchange}, ${isAssetBad ? null : asset}`
+            },
+            newStats,
+            prevRobotsAggrStats
+        );
+    }
+
+    async calcUsersRobotsAggr(exchange?: string, asset?: string, calcAll: boolean = false) {
+        const isExchangeBad = isUndefinedOrNull(exchange);
+        const isAssetBad = isUndefinedOrNull(asset);
+
+        const prevUsersRobotsAggrtats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
+            SELECT id as "stats_exists",
+                   id,
+                   statistics,
+                   last_position_exit_date,
+                   last_updated_at,
+                   equity,
+                   equity_avg
+            FROM user_robot_aggr_stats
+            WHERE exchange ${isExchangeBad ? sql`IS NULL` : sql`= ${exchange}`}
+                AND asset ${isAssetBad ? sql`IS NULL` : sql`= ${asset}`};
+        `);
+
+        const { calcFrom, initStats } = getCalcFromAndInitStats(prevUsersRobotsAggrtats, calcAll);
+
+        const conditionExchange = isExchangeBad ? sql`` : sql`AND exchange = ${exchange}`;
+        const conditionAsset = isAssetBad ? sql`` : sql`AND asset = ${asset}`;
+        const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
+        const querySelectPart = sql`
+            SELECT id, direction, exit_date, profit, bars_held
+        `;
+        const queryFromAndConditionPart = sql`
+            FROM user_positions
+            WHERE status IN ('closed', 'closedAuto')
+              ${conditionExchange}
+              ${conditionAsset}
+              ${conditionExitDate}
+        `;
+        const queryCommonPart = sql`
+            ${querySelectPart}
+            ${queryFromAndConditionPart}
+            ORDER BY exit_date
+        `;
+
+        const positionsCount: number = +(await this.db.pg.oneFirst(sql`
+            SELECT COUNT(*)
+            ${queryFromAndConditionPart};
+        `));
+
+        if (positionsCount == 0) return;
+
+        const newStats = await DataStream.from(
+            this.makeChunksGenerator(
+                queryCommonPart,
+                positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
+            )
+        ).reduce(
+            async (prevStats: RobotStats, chunk: UserSignalPosition[]) =>
+                await this.calcStatistics(prevStats, chunk),
+            initStats
+        );
+
+        await this.upsertStats(
+            {
+                table: sql`user_robot_aggr_stats`,
+                fieldId: sql`id`,
+                id: prevUsersRobotsAggrtats?.id,
+                addFields: sql`exchange, asset`,
+                addFieldsValues: sql`${isExchangeBad ? null : exchange}, ${isAssetBad ? null : asset}`
+            },
+            newStats,
+            prevUsersRobotsAggrtats
+        );
     }
 
     private async _calcUserSignalStatistics(
@@ -355,7 +502,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         );
     }
 
-    private async _calcUserSignalsWithExistsBySingleQuery(params: {
+    private async _calcUserSignalsBySingleQuery(params: {
         queryCommonPart: QueryType;
         userSignals: UserSignalsWithExists[];
         calcAll: boolean;
@@ -393,7 +540,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         return statsDict;
     }
 
-    private async _calcUserSignalsWithExistsByChunks(params: {
+    private async _calcUserSignalsByChunks(params: {
         queryCommonPart: QueryType;
         userSignals: UserSignalsWithExists[];
         calcAll?: boolean;
@@ -468,7 +615,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         return statsDict;
     }
 
-    async calcUserSignalsWithExists(robotId: string, calcAll: boolean = false) {
+    async calcUserSignals(robotId: string, calcAll: boolean = false) {
         const userSignals: UserSignalsWithExists[] = await this.db.pg.any(sql`
             SELECT us.id, us.subscribed_at, us.volume,
                    uss.user_signal_id as "stats_exists",
@@ -531,12 +678,12 @@ export default class StatisticCalcWorkerService extends BaseService {
 
         const signalsStats =
             positionsCount > this.maxSingleQueryPosCount
-                ? await this._calcUserSignalsWithExistsByChunks({
+                ? await this._calcUserSignalsByChunks({
                     queryCommonPart,
                     userSignals,
                     calcAll
                 })
-                : await this._calcUserSignalsWithExistsBySingleQuery({
+                : await this._calcUserSignalsBySingleQuery({
                     queryCommonPart,
                     userSignals,
                     calcAll
@@ -557,7 +704,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         }
     }
 
-    private async _calcUserSignalsWithExistsAggrStatistics(
+    private async _calcUserSignalsAggrStatistics(
         prevStats: RobotStats,
         positions: UserSignalPosition[]
     ): Promise<RobotStats> {
@@ -580,8 +727,11 @@ export default class StatisticCalcWorkerService extends BaseService {
         );
     }
 
-    async calcUserSignalsWithExistsAggr(userId: string, exchange?: string, asset?: string, calcAll: boolean = false) {
-        const prevUserAggrStats: UserAggrStatsWithExists = await this.db.pg.maybeOne(sql`
+    async calcUserSignalsAggr(userId: string, exchange?: string, asset?: string, calcAll: boolean = false) {
+        const isExchangeBad = isUndefinedOrNull(exchange);
+        const isAssetBad = isUndefinedOrNull(asset);
+
+        const prevUserAggrStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
             SELECT id as "stats_exists",
                    id,
                    statistics,
@@ -591,18 +741,15 @@ export default class StatisticCalcWorkerService extends BaseService {
                    equity_avg
             FROM user_aggr_stats
             WHERE user_id = ${userId}
-                AND type = 'signal'
-                AND exchange = ${exchange || null}
-                AND asset = ${asset || null};
+                AND type = ${UserAggrStatsType.signal}
+                AND exchange ${isExchangeBad ? sql`IS NULL` : sql`= ${exchange}`}
+                AND asset ${isAssetBad ? sql`IS NULL` : sql`= ${asset}`};
         `);
-
-        if (!prevUserAggrStats)
-            return;
 
         const { calcFrom, initStats } = getCalcFromAndInitStats(prevUserAggrStats, calcAll);
 
-        const conditionExchange = !exchange ? sql`` : sql`AND r.exchange = ${exchange}`;
-        const conditionAsset = !asset ? sql`` : sql`AND r.asset = ${asset}`;
+        const conditionExchange = isExchangeBad ? sql`` : sql`AND r.exchange = ${exchange}`;
+        const conditionAsset = isAssetBad ? sql`` : sql`AND r.asset = ${asset}`;
         const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
         const querySelectPart = sql`
             SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
@@ -642,7 +789,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             )
         ).reduce(
             async (prevStats: RobotStats, chunk: UserSignalPosition[]) =>
-                await this._calcUserSignalsWithExistsAggrStatistics(prevStats, chunk),
+                await this._calcUserSignalsAggrStatistics(prevStats, chunk),
             initStats
         );
 
@@ -652,7 +799,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 fieldId: sql`id`,
                 id: prevUserAggrStats?.id,
                 addFields: sql`user_id, exchange, asset, type`,
-                addFieldsValues: sql`${userId}, ${exchange || null}, ${asset || null}, 'signal'`
+                addFieldsValues: sql`${userId}, ${isExchangeBad ? null : exchange}, ${isAssetBad ? null : asset}, ${UserAggrStatsType.signal}`
             },
             newStats,
             prevUserAggrStats
@@ -724,7 +871,10 @@ export default class StatisticCalcWorkerService extends BaseService {
     }
 
     async calcUserRobotsAggr(userId: string, exchange?: string, asset?: string, calcAll: boolean = false) {
-        const prevUserAggrStats: UserAggrStatsWithExists = await this.db.pg.maybeOne(sql`
+        const isExchangeBad = isUndefinedOrNull(exchange);
+        const isAssetBad = isUndefinedOrNull(asset);
+
+        const prevUserAggrStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
             SELECT id as "stats_exists",
                    id,
                    statistics,
@@ -734,18 +884,15 @@ export default class StatisticCalcWorkerService extends BaseService {
                    equity_avg
             FROM user_aggr_stats
             WHERE user_id = ${userId}
-                AND type = 'userRobot'
-                AND exchange = ${exchange || null}
-                AND asset = ${asset || null};
+                AND type = ${UserAggrStatsType.userRobot}
+                AND exchange ${isExchangeBad ? sql`IS NULL` : sql`= ${exchange}`}
+                AND asset ${isAssetBad ? sql`IS NULL` : sql`= ${asset}`};
         `);
-
-        if (!prevUserAggrStats)
-            return;
 
         const { calcFrom, initStats } = getCalcFromAndInitStats(prevUserAggrStats, calcAll);
 
-        const conditionExchange = !exchange ? sql`` : sql`AND exchange = ${exchange}`;
-        const conditionAsset = !asset ? sql`` : sql`AND asset = ${asset}`;
+        const conditionExchange = isExchangeBad ? sql`` : sql`AND exchange = ${exchange}`;
+        const conditionAsset = isAssetBad ? sql`` : sql`AND asset = ${asset}`;
         const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
         const querySelectPart = sql`
             SELECT id, direction, exit_date, profit, bars_held
@@ -777,7 +924,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
             )
         ).reduce(
-            async (prevStats: RobotStats, chunk: UserSignalPosition[]) => await this.calcStatistics(prevStats, chunk),
+            async (prevStats: RobotStats, chunk: PositionDataForStats[]) => await this.calcStatistics(prevStats, chunk),
             initStats
         );
 
@@ -787,7 +934,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 fieldId: sql`id`,
                 id: prevUserAggrStats?.id,
                 addFields: sql`user_id, exchange, asset, type`,
-                addFieldsValues: sql`${userId}, ${exchange || null}, ${asset || null}, 'userRobot'`
+                addFieldsValues: sql`${userId}, ${isExchangeBad ? null : exchange}, ${isAssetBad ? null : asset}, ${UserAggrStatsType.userRobot}`
             },
             newStats,
             prevUserAggrStats

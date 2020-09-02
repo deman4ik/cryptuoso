@@ -45,6 +45,7 @@ function roundStatisticsValues(statistics: Statistics): Statistics {
     result.maxDrawdown = roundRobotStatVals(result.maxDrawdown, 2);
     result.profitFactor = roundRobotStatVals(result.profitFactor, 2);
     result.recoveryFactor = roundRobotStatVals(result.recoveryFactor, 2);
+    result.rating = roundRobotStatVals(result.rating, 2);
 
     return result;
 }

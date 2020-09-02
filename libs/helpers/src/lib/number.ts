@@ -10,7 +10,7 @@ export { round };
  * @example
  * round(12.345, 2); // 12.35
  */
-export const roundHard = (n: number, decimals = 0): number => +Number(`${Math.round(+`${n}e${decimals}`)}e-${decimals}`);
+export const roundOld = (n: number, decimals = 0): number => +Number(`${Math.round(+`${n}e${decimals}`)}e-${decimals}`);
 
 /**
  * Returns the sum of numbers provided.

@@ -24,16 +24,21 @@ export interface UserSignals {
     volume?: number;
 }
 
+export enum UserAggrStatsType {
+    signal = "signal",
+    userRobot = "userRobot"
+}
+
 export interface UserAggrStats {
     id: string;
     userId: string;
     exchange?: string;
     asset?: string;
-    type: "signal" | "userRobot";
+    type: UserAggrStatsType;
 }
 
-export interface UserSignalsWithExists extends UserSignals, RobotStatsWithExists {}
-export interface UserAggrStatsWithExists extends UserAggrStats, RobotStatsWithExists {}
+export type UserSignalsWithExists = UserSignals & RobotStatsWithExists;
+export type UserAggrStatsWithExists = UserAggrStats & RobotStatsWithExists;
 
 export const enum UserRoles {
     admin = "admin",

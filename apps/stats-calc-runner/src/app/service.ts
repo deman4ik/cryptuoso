@@ -296,6 +296,9 @@ export default class StatisticCalcRunnerService extends HTTPService {
             `);
             await this.queueJob(StatsCalcJobType.robot, { calcAll, robotId });
             await this.queueJob(StatsCalcJobType.userSignals, { calcAll, robotId });
+            await this.queueJob(StatsCalcJobType.robotsAggr, { calcAll, exchange });
+            await this.queueJob(StatsCalcJobType.robotsAggr, { calcAll, asset });
+            await this.queueJob(StatsCalcJobType.robotsAggr, { calcAll, exchange, asset });
 
             const usersByRobotId: {
                 userId: string
@@ -407,8 +410,11 @@ export default class StatisticCalcRunnerService extends HTTPService {
             await this.queueJob(StatsCalcJobType.userRobotAggr, { calcAll, userId });
             await this.queueJob(StatsCalcJobType.userRobotAggr, { calcAll, userId, exchange });
             await this.queueJob(StatsCalcJobType.userRobotAggr, { calcAll, userId, asset });
-            await this.queueJob(StatsCalcJobType.userRobotAggr, { calcAll, userId, asset });
+            //await this.queueJob(StatsCalcJobType.userRobotAggr, { calcAll, userId, asset });
             await this.queueJob(StatsCalcJobType.userRobotAggr, { calcAll, userId, exchange, asset });
+            await this.queueJob(StatsCalcJobType.usersRobotsAggr, { calcAll, exchange });
+            await this.queueJob(StatsCalcJobType.usersRobotsAggr, { calcAll, asset });
+            await this.queueJob(StatsCalcJobType.usersRobotsAggr, { calcAll, exchange, asset });
 
             return { success: true };
         } catch (e) {
@@ -431,6 +437,9 @@ export default class StatisticCalcRunnerService extends HTTPService {
             await this.queueJob(StatsCalcJobType.userRobotAggr, { calcAll, userId, exchange });
             await this.queueJob(StatsCalcJobType.userRobotAggr, { calcAll, userId, asset });
             await this.queueJob(StatsCalcJobType.userRobotAggr, { calcAll, userId, exchange, asset });
+            await this.queueJob(StatsCalcJobType.usersRobotsAggr, { calcAll, exchange });
+            await this.queueJob(StatsCalcJobType.usersRobotsAggr, { calcAll, asset });
+            await this.queueJob(StatsCalcJobType.usersRobotsAggr, { calcAll, exchange, asset });
 
             return { success: true };
         } catch (e) {
@@ -476,8 +485,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
                     ${conditionExchange}
                     ${conditionAsset}
                     ${conditionCurrency}
-                    ${conditionStrategy}
-                GROUP BY us.robot_id, us.user_id;
+                    ${conditionStrategy};
             `);
             for (const { robotId, userId } of startedSignals) {
                 await this.handleCalcUserSignalEvent({ robotId, userId, calcAll: true });
@@ -518,7 +526,6 @@ export default class StatisticCalcRunnerService extends HTTPService {
                     ${conditionAsset}
                     ${conditionCurrency}
                     ${conditionStrategy}
-                GROUP BY us.robot_id, us.user_id;
             `);
             for (const { robotId, userId } of startedSignals) {
                 await this.handleCalcUserSignalEvent({ robotId, userId, calcAll: true });
@@ -557,8 +564,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
                     ${conditionExchange}
                     ${conditionAsset}
                     ${conditionCurrency}
-                    ${conditionStrategy}
-                GROUP BY ur.id;
+                    ${conditionStrategy};
             `);
             for (const { id: userRobotId } of startedUserRobots) {
                 await this.handleStatsCalcUserRobotEvent({ userRobotId, calcAll: true });

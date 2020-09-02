@@ -171,6 +171,8 @@ export const StatsCalcRunnerSchema = {
 
 export const enum StatsCalcJobType {
     robot = "robot",
+    robotsAggr = "robotsAggr",
+    usersRobotsAggr = "usersRobotsAggr",
     userSignal = "userSignal",
     userSignals = "userSignals",
     userRobot = "userRobot",

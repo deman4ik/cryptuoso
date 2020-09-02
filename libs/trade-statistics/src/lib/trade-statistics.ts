@@ -115,8 +115,8 @@ export function isRobotStats(
         return true;
     const refObj = new RobotStats();
     if (checkPropsCount && Object.keys(object).length != Object.keys(refObj).length) return false;
-    for (const key in object) {
-        if (!(key in refObj)) return false;
+    for (const key in refObj) {
+        if (!(key in object)) return false;
     }
     return true;
 }
