@@ -60,7 +60,6 @@ export default class AuthService extends HTTPService {
                 },
                 loginTg: {
                     handler: this.loginTg.bind(this),
-                    roles: [UserRoles.anonymous],
                     inputSchema: {
                         id: "number",
                         // eslint-disable-next-line @typescript-eslint/camelcase
@@ -77,7 +76,6 @@ export default class AuthService extends HTTPService {
                 },
                 logout: {
                     handler: this.logout.bind(this),
-                    roles: [UserRoles.user],
                     auth: true
                 },
                 register: {
@@ -102,7 +100,7 @@ export default class AuthService extends HTTPService {
                 },
                 activateAccount: {
                     handler: this.activateAccount.bind(this),
-                    roles: [UserRoles.anonymous],
+                    roles: [UserRoles.anonymous, UserRoles.manager, UserRoles.admin],
                     inputSchema: {
                         userId: "string",
                         secretCode: { type: "string", empty: false, trim: true }
@@ -110,14 +108,12 @@ export default class AuthService extends HTTPService {
                 },
                 passwordReset: {
                     handler: this.passwordReset.bind(this),
-                    roles: [UserRoles.anonymous],
                     inputSchema: {
                         email: { type: "email", normalize: true }
                     }
                 },
                 confirmPasswordReset: {
                     handler: this.confirmPasswordReset.bind(this),
-                    roles: [UserRoles.anonymous],
                     inputSchema: {
                         userId: "string",
                         secretCode: { type: "string", empty: false, trim: true },
@@ -132,7 +128,7 @@ export default class AuthService extends HTTPService {
                 },
                 changeEmail: {
                     handler: this.changeEmail.bind(this),
-                    roles: [UserRoles.user],
+                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     auth: true,
                     inputSchema: {
                         email: { type: "email", normalize: true }
@@ -140,7 +136,7 @@ export default class AuthService extends HTTPService {
                 },
                 confirmChangeEmail: {
                     handler: this.confirmChangeEmail.bind(this),
-                    roles: [UserRoles.user],
+                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     auth: true,
                     inputSchema: {
                         secretCode: { type: "string", empty: false, trim: true }
