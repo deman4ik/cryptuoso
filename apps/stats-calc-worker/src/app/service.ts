@@ -20,7 +20,7 @@ import {
     UserSignalsWithExists,
     UserAggrStatsWithExists
 } from "@cryptuoso/user-state";
-import { round, isUndefinedOrNull } from "@cryptuoso/helpers";
+import { round } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
 
 function getCalcFromAndInitStats(stats?: RobotStatsWithExists, calcAll?: boolean) {
@@ -266,9 +266,6 @@ export default class StatisticCalcWorkerService extends BaseService {
     }
 
     async calcRobotsAggr(exchange?: string, asset?: string, calcAll: boolean = false) {
-        const isExchangeBad = isUndefinedOrNull(exchange);
-        const isAssetBad = isUndefinedOrNull(asset);
-
         const prevRobotsAggrStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
             SELECT id as "stats_exists",
                    id,
@@ -278,14 +275,14 @@ export default class StatisticCalcWorkerService extends BaseService {
                    equity,
                    equity_avg
             FROM robot_aggr_stats
-            WHERE exchange ${isExchangeBad ? sql`IS NULL` : sql`= ${exchange}`}
-                AND asset ${isAssetBad ? sql`IS NULL` : sql`= ${asset}`};
+            WHERE exchange ${!exchange ? sql`IS NULL` : sql`= ${exchange}`}
+                AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
         `);
 
         const { calcFrom, initStats } = getCalcFromAndInitStats(prevRobotsAggrStats, calcAll);
 
-        const conditionExchange = isExchangeBad ? sql`` : sql`AND exchange = ${exchange}`;
-        const conditionAsset = isAssetBad ? sql`` : sql`AND asset = ${asset}`;
+        const conditionExchange = !exchange ? sql`` : sql`AND exchange = ${exchange}`;
+        const conditionAsset = !asset ? sql`` : sql`AND asset = ${asset}`;
         const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
         const querySelectPart = sql`
             SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
@@ -332,7 +329,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 fieldId: sql`id`,
                 id: prevRobotsAggrStats?.id,
                 addFields: sql`exchange, asset`,
-                addFieldsValues: sql`${isExchangeBad ? null : exchange}, ${isAssetBad ? null : asset}`
+                addFieldsValues: sql`${!exchange ? null : exchange}, ${!asset ? null : asset}`
             },
             newStats,
             prevRobotsAggrStats
@@ -340,9 +337,6 @@ export default class StatisticCalcWorkerService extends BaseService {
     }
 
     async calcUsersRobotsAggr(exchange?: string, asset?: string, calcAll: boolean = false) {
-        const isExchangeBad = isUndefinedOrNull(exchange);
-        const isAssetBad = isUndefinedOrNull(asset);
-
         const prevUsersRobotsAggrtats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
             SELECT id as "stats_exists",
                    id,
@@ -352,14 +346,14 @@ export default class StatisticCalcWorkerService extends BaseService {
                    equity,
                    equity_avg
             FROM user_robot_aggr_stats
-            WHERE exchange ${isExchangeBad ? sql`IS NULL` : sql`= ${exchange}`}
-                AND asset ${isAssetBad ? sql`IS NULL` : sql`= ${asset}`};
+            WHERE exchange ${!exchange ? sql`IS NULL` : sql`= ${exchange}`}
+                AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
         `);
 
         const { calcFrom, initStats } = getCalcFromAndInitStats(prevUsersRobotsAggrtats, calcAll);
 
-        const conditionExchange = isExchangeBad ? sql`` : sql`AND exchange = ${exchange}`;
-        const conditionAsset = isAssetBad ? sql`` : sql`AND asset = ${asset}`;
+        const conditionExchange = !exchange ? sql`` : sql`AND exchange = ${exchange}`;
+        const conditionAsset = !asset ? sql`` : sql`AND asset = ${asset}`;
         const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
         const querySelectPart = sql`
             SELECT id, direction, exit_date, profit, bars_held
@@ -401,7 +395,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 fieldId: sql`id`,
                 id: prevUsersRobotsAggrtats?.id,
                 addFields: sql`exchange, asset`,
-                addFieldsValues: sql`${isExchangeBad ? null : exchange}, ${isAssetBad ? null : asset}`
+                addFieldsValues: sql`${!exchange ? null : exchange}, ${!asset ? null : asset}`
             },
             newStats,
             prevUsersRobotsAggrtats
@@ -728,9 +722,6 @@ export default class StatisticCalcWorkerService extends BaseService {
     }
 
     async calcUserSignalsAggr(userId: string, exchange?: string, asset?: string, calcAll: boolean = false) {
-        const isExchangeBad = isUndefinedOrNull(exchange);
-        const isAssetBad = isUndefinedOrNull(asset);
-
         const prevUserAggrStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
             SELECT id as "stats_exists",
                    id,
@@ -742,14 +733,14 @@ export default class StatisticCalcWorkerService extends BaseService {
             FROM user_aggr_stats
             WHERE user_id = ${userId}
                 AND type = ${UserAggrStatsType.signal}
-                AND exchange ${isExchangeBad ? sql`IS NULL` : sql`= ${exchange}`}
-                AND asset ${isAssetBad ? sql`IS NULL` : sql`= ${asset}`};
+                AND exchange ${!exchange ? sql`IS NULL` : sql`= ${exchange}`}
+                AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
         `);
 
         const { calcFrom, initStats } = getCalcFromAndInitStats(prevUserAggrStats, calcAll);
 
-        const conditionExchange = isExchangeBad ? sql`` : sql`AND r.exchange = ${exchange}`;
-        const conditionAsset = isAssetBad ? sql`` : sql`AND r.asset = ${asset}`;
+        const conditionExchange = !exchange ? sql`` : sql`AND r.exchange = ${exchange}`;
+        const conditionAsset = !asset ? sql`` : sql`AND r.asset = ${asset}`;
         const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
         const querySelectPart = sql`
             SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
@@ -799,7 +790,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 fieldId: sql`id`,
                 id: prevUserAggrStats?.id,
                 addFields: sql`user_id, exchange, asset, type`,
-                addFieldsValues: sql`${userId}, ${isExchangeBad ? null : exchange}, ${isAssetBad ? null : asset}, ${UserAggrStatsType.signal}`
+                addFieldsValues: sql`${userId}, ${!exchange ? null : exchange}, ${!asset ? null : asset}, ${UserAggrStatsType.signal}`
             },
             newStats,
             prevUserAggrStats
@@ -871,9 +862,6 @@ export default class StatisticCalcWorkerService extends BaseService {
     }
 
     async calcUserRobotsAggr(userId: string, exchange?: string, asset?: string, calcAll: boolean = false) {
-        const isExchangeBad = isUndefinedOrNull(exchange);
-        const isAssetBad = isUndefinedOrNull(asset);
-
         const prevUserAggrStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
             SELECT id as "stats_exists",
                    id,
@@ -885,14 +873,14 @@ export default class StatisticCalcWorkerService extends BaseService {
             FROM user_aggr_stats
             WHERE user_id = ${userId}
                 AND type = ${UserAggrStatsType.userRobot}
-                AND exchange ${isExchangeBad ? sql`IS NULL` : sql`= ${exchange}`}
-                AND asset ${isAssetBad ? sql`IS NULL` : sql`= ${asset}`};
+                AND exchange ${!exchange ? sql`IS NULL` : sql`= ${exchange}`}
+                AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
         `);
 
         const { calcFrom, initStats } = getCalcFromAndInitStats(prevUserAggrStats, calcAll);
 
-        const conditionExchange = isExchangeBad ? sql`` : sql`AND exchange = ${exchange}`;
-        const conditionAsset = isAssetBad ? sql`` : sql`AND asset = ${asset}`;
+        const conditionExchange = !exchange ? sql`` : sql`AND exchange = ${exchange}`;
+        const conditionAsset = !asset ? sql`` : sql`AND asset = ${asset}`;
         const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
         const querySelectPart = sql`
             SELECT id, direction, exit_date, profit, bars_held
@@ -934,7 +922,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 fieldId: sql`id`,
                 id: prevUserAggrStats?.id,
                 addFields: sql`user_id, exchange, asset, type`,
-                addFieldsValues: sql`${userId}, ${isExchangeBad ? null : exchange}, ${isAssetBad ? null : asset}, ${UserAggrStatsType.userRobot}`
+                addFieldsValues: sql`${userId}, ${!exchange ? null : exchange}, ${!asset ? null : asset}, ${UserAggrStatsType.userRobot}`
             },
             newStats,
             prevUserAggrStats
