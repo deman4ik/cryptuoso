@@ -896,7 +896,7 @@ describe("Test Auth class methods", () => {
                     //   //   bcryptUtils as any
                 );
 
-                await expect(auth.changeEmail(params)).resolves.toStrictEqual({ success: true });
+                await expect(auth.changeEmail(params)).resolves.not.toThrowError();
             });
         });
 

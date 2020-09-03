@@ -177,12 +177,11 @@ export default class AuthService extends HTTPService {
                 })
             );
             res.send({
-                success: true,
                 accessToken
             });
             res.end();
         } catch (err) {
-            console.error(err);
+            this.log.error(err);
             throw err;
         }
     }
@@ -201,7 +200,6 @@ export default class AuthService extends HTTPService {
             })
         );
         res.send({
-            success: true,
             accessToken
         });
         res.end();
@@ -218,13 +216,13 @@ export default class AuthService extends HTTPService {
                 secure: true
             })
         );
-        res.send({ success: true });
+        res.send({ result: "OK" });
         res.end();
     }
 
     async register(req: HttpRequest, res: HttpResponse) {
         const userId = await this.auth.register(req.body.input);
-        res.send({ success: true, userId });
+        res.send({ userId });
         res.end();
     }
 
@@ -251,7 +249,6 @@ export default class AuthService extends HTTPService {
             })
         );
         res.send({
-            success: true,
             accessToken,
             refreshToken,
             refreshTokenExpireAt
@@ -273,7 +270,6 @@ export default class AuthService extends HTTPService {
             })
         );
         res.send({
-            success: true,
             accessToken
         });
         res.end();
@@ -281,7 +277,7 @@ export default class AuthService extends HTTPService {
 
     async passwordReset(req: HttpRequest, res: HttpResponse) {
         const userId = await this.auth.passwordReset(req.body.input);
-        res.send({ success: true, userId });
+        res.send({ userId });
         res.end();
     }
 
@@ -301,7 +297,6 @@ export default class AuthService extends HTTPService {
             })
         );
         res.send({
-            success: true,
             accessToken
         });
         res.end();
@@ -312,7 +307,7 @@ export default class AuthService extends HTTPService {
             userId: req.body.session_variables["x-hasura-user-id"],
             email: req.body.input.email
         });
-        res.send({ success: true });
+        res.send({ result: "OK" });
         res.end();
     }
 
@@ -333,7 +328,6 @@ export default class AuthService extends HTTPService {
             })
         );
         res.send({
-            success: true,
             accessToken
         });
         res.end();

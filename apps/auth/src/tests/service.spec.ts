@@ -115,7 +115,6 @@ describe("Test 'AuthService' class methods", () => {
                     }
                 );
                 expect(res.status).toStrictEqual(200);
-                expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("accessToken");
                 expect(res.headers.get("set-cookie").includes("refresh_token")).toBeTruthy();
             });
@@ -144,7 +143,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(404);
-                expect(res.parsedBody).not.toHaveProperty("success");
             });
         });
 
@@ -182,7 +180,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(403);
-                expect(res.parsedBody).not.toHaveProperty("success");
             });
         });
     });
@@ -225,7 +222,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(200);
-                expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("accessToken");
                 expect(res.headers.get("set-cookie").includes("refresh_token")).toBeTruthy();
             });
@@ -259,7 +255,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(200);
-                expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("accessToken");
                 expect(res.headers.get("set-cookie").includes("refresh_token")).toBeTruthy();
             });
@@ -304,7 +299,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(403);
-                expect(res.parsedBody).not.toHaveProperty("success");
             });
         });
     });
@@ -329,7 +323,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(200);
-                expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.headers.get("set-cookie").includes("refresh_token=;")).toBeTruthy();
             });
         });
@@ -360,7 +353,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(200);
-                expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("userId");
             });
         });
@@ -399,7 +391,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(409);
-                expect(res.parsedBody).not.toHaveProperty("success");
             });
         });
     });
@@ -440,7 +431,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(200);
-                expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("accessToken");
                 expect(res.headers.get("set-cookie").includes("refresh_token")).toBeTruthy();
             });
@@ -470,7 +460,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(404);
-                expect(res.parsedBody).not.toHaveProperty("success");
             });
         });
     });
@@ -509,7 +498,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(200);
-                expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("accessToken");
                 expect(res.headers.get("set-cookie").includes("refresh_token")).toBeTruthy();
             });
@@ -538,7 +526,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(404);
-                expect(res.parsedBody).not.toHaveProperty("success");
             });
         });
 
@@ -575,7 +562,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(403);
-                expect(res.parsedBody).not.toHaveProperty("success");
             });
         });
     });
@@ -613,7 +599,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(200);
-                expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("userId", dbUser.id);
             });
         });
@@ -640,7 +625,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(404);
-                expect(res.parsedBody).not.toHaveProperty("success");
             });
         });
     });
@@ -680,7 +664,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(200);
-                expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("accessToken");
                 expect(res.headers.get("set-cookie").includes("refresh_token")).toBeTruthy();
             });
@@ -710,7 +693,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(404);
-                expect(res.parsedBody).not.toHaveProperty("success");
             });
         });
 
@@ -748,7 +730,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(403);
-                expect(res.parsedBody).not.toHaveProperty("success");
             });
         });
 
@@ -787,7 +768,6 @@ describe("Test 'AuthService' class methods", () => {
 
                 // from HttpService._checkValidation
                 expect(res.status).toStrictEqual(400);
-                expect(res.parsedBody).not.toHaveProperty("success");
             });
         });
     });
@@ -827,7 +807,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(200);
-                expect(res.parsedBody).toHaveProperty("success", true);
             });
         });
 
@@ -865,7 +844,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(409);
-                expect(res.parsedBody).not.toHaveProperty("success");
             });
         });
 
@@ -892,7 +870,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(404);
-                expect(res.parsedBody).not.toHaveProperty("success");
             });
         });
     });
@@ -932,7 +909,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(200);
-                expect(res.parsedBody).toHaveProperty("success", true);
                 expect(res.parsedBody).toHaveProperty("accessToken");
                 expect(res.headers.get("set-cookie").includes("refresh_token")).toBeTruthy();
             });
@@ -962,7 +938,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(404);
-                expect(res.parsedBody).not.toHaveProperty("success");
             });
         });
 
@@ -1000,7 +975,6 @@ describe("Test 'AuthService' class methods", () => {
                 );
 
                 expect(res.status).toStrictEqual(403);
-                expect(res.parsedBody).not.toHaveProperty("success");
             });
         });
     });

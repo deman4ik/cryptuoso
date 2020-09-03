@@ -417,8 +417,6 @@ export class Auth {
             },
             tags: ["auth"]
         });
-
-        return { success: true };
     }
 
     async confirmChangeEmail(params: { userId: string; secretCode: string }) {
