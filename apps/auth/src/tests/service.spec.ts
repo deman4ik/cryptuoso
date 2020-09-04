@@ -789,8 +789,9 @@ describe("Test 'AuthService' class methods", () => {
                     settings: userSettings
                 };
 
-                mockPG.maybeOne.mockImplementation(async () => dbUser);
+                mockPG.maybeOne.mockImplementationOnce(async () => dbUser);
                 mockPG.maybeOne.mockImplementationOnce(async () => null);
+                mockPG.maybeOne.mockImplementationOnce(async () => dbUser);
 
                 const res = await ajax.post(
                     `http://localhost:${CONFIG.port}/actions/changeEmail`,
@@ -848,12 +849,17 @@ describe("Test 'AuthService' class methods", () => {
         });
 
         describe("With wrong x-hasura-user-id", () => {
-            test("Should return userId", async () => {
+            test("Should return error response", async () => {
+                const userId = "user-id";
                 const params = {
                     email: "example@inbox.com"
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => null);
+                mockPG.maybeOne.mockImplementationOnce(async () => ({
+                    id: userId,
+                    roles: { allowedRoles: [UserRoles.user]}
+                }));
 
                 const res = await ajax.post(
                     `http://localhost:${CONFIG.port}/actions/changeEmail`,
@@ -916,12 +922,17 @@ describe("Test 'AuthService' class methods", () => {
 
         describe("With wrong userId", () => {
             test("Should return error", async () => {
+                const userId = "user-id";
                 const params = {
                     userId: "id",
                     secretCode: "secret"
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => null);
+                mockPG.maybeOne.mockImplementationOnce(async () => ({
+                    id: userId,
+                    roles: { allowedRoles: [UserRoles.user] }
+                }));
 
                 const res = await ajax.post(
                     `http://localhost:${CONFIG.port}/actions/confirmChangeEmail`,
@@ -931,7 +942,7 @@ describe("Test 'AuthService' class methods", () => {
                         input: params,
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         session_variables: {
-                            "x-hasura-user-id": "id",
+                            "x-hasura-user-id": userId,
                             "x-hasura-role": UserRoles.user
                         }
                     }

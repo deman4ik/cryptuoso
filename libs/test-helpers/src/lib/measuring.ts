@@ -4,15 +4,17 @@ import Monitoring from "./monitoring";
 /**
  * For using set `process.env.ENABLE_APP_METRICS = "true"`
  */
-export async function startSeveralFunctions(func: { (): Promise<any> }, copiesCount: number = 10) {
+export async function startSeveralFunctions(func: { (): Promise<any> }, copiesCount = 10) {
     const argArr = [];
     let errorsCount = 0;
     for (let i = 0; i < copiesCount; ++i)
-        argArr.push(func().catch((e) => {
-            //console.log("Function Error: ", e.message);
-            ++errorsCount;
-            return e.message;
-        }));
+        argArr.push(
+            func().catch((e) => {
+                //console.log("Function Error: ", e.message);
+                ++errorsCount;
+                return e.message;
+            })
+        );
     const errors = Array.from(new Set(await Promise.all(argArr))).filter((el) => el);
     return { copiesCount, errorsCount, errors };
 }
@@ -24,7 +26,7 @@ export async function measureFunction(
     name: string,
     func: { (...args: any): Promise<any> },
     args: any[],
-    copiesCount: number = 10
+    copiesCount = 10
 ) {
     /* log.info("Call GC");
     global.gc(); */

@@ -6,7 +6,7 @@ import Validator, { ValidationSchema, ValidationError } from "fastest-validator"
 import { BaseService, BaseServiceConfig } from "./BaseService";
 import { ActionsHandlerError } from "@cryptuoso/errors";
 import { User, UserRoles, UserStatus } from "@cryptuoso/user-state";
-import { JSONParse } from '@cryptuoso/helpers';
+import { JSONParse } from "@cryptuoso/helpers";
 
 //TODO: req/res typings
 
@@ -23,12 +23,12 @@ export interface ActionPayload {
 }
 
 export type RequestExtended<P extends Protocol> = Request<P> & {
-    body?: ActionPayload,
+    body?: ActionPayload;
     meta?: {
         [key: string]: any;
         user: User;
-    }
-}
+    };
+};
 
 export interface HTTPServiceConfig extends BaseServiceConfig {
     port?: number;
@@ -116,11 +116,7 @@ export class HTTPService extends BaseService {
         const validationErrors = route.validate(body);
 
         if (validationErrors === true) {
-            if (
-                !route.auth &&
-                route.roles.length > 0 &&
-                !route.roles.includes(body.session_variables["x-hasura-role"])
-            )
+            if (!route.auth && route.roles.length > 0 && !route.roles.includes(body.session_variables["x-hasura-role"]))
                 throw new ActionsHandlerError("Forbidden: Invalid role", null, "FORBIDDEN", 403);
             req.body = body;
             return next();
@@ -184,9 +180,7 @@ export class HTTPService extends BaseService {
 
             if (
                 this._routes[req.url].roles.length > 0 &&
-                !user.roles?.allowedRoles?.some((userRole) =>
-                    this._routes[req.url].roles.includes(userRole)
-                )
+                !user.roles?.allowedRoles?.some((userRole) => this._routes[req.url].roles.includes(userRole))
             )
                 throw new ActionsHandlerError("Forbidden: Invalid role", null, "FORBIDDEN", 403);
 

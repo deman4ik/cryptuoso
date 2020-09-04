@@ -1,4 +1,5 @@
 import { Service, Protocol } from "restana";
+// eslint-disable-next-line @nrwl/nx/enforce-module-boundaries
 import { HTTPService } from "@cryptuoso/service";
 import fetch, { Response } from "node-fetch";
 

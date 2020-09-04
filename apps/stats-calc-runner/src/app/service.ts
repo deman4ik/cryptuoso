@@ -120,9 +120,9 @@ export default class StatisticCalcRunnerService extends HTTPService {
     async HTTPHandler(
         handler: {
             (params: StatsCalcJob): Promise<{
-                success: boolean,
-                error?: string
-            }>
+                success: boolean;
+                error?: string;
+            }>;
         },
         req: {
             body: {
@@ -137,15 +137,11 @@ export default class StatisticCalcRunnerService extends HTTPService {
     }
 
     async queueJob(type: StatsCalcJobType, job: StatsCalcJob) {
-        await this.queues.calcStatistics.add(
-            type,
-            job,
-            {
-                //jobId: uuid(),
-                removeOnComplete: true,
-                removeOnFail: true
-            }
-        );
+        await this.queues.calcStatistics.add(type, job, {
+            //jobId: uuid(),
+            removeOnComplete: true,
+            removeOnFail: true
+        });
     }
 
     async queueJobWithExchangeAssetOption(
@@ -155,23 +151,18 @@ export default class StatisticCalcRunnerService extends HTTPService {
         asset?: string
     ) {
         await this.queueJob(type, job);
-        if(exchange)
-            await this.queueJob(type, { ...job, exchange });
-        if(asset)
-            await this.queueJob(type, { ...job, asset });
-        if(exchange && asset)
-            await this.queueJob(type, { ...job, exchange, asset });
+        if (exchange) await this.queueJob(type, { ...job, exchange });
+        if (asset) await this.queueJob(type, { ...job, asset });
+        if (exchange && asset) await this.queueJob(type, { ...job, exchange, asset });
     }
 
-    handleCalcUserSignalEvent = async (params: {
-        calcAll?: boolean, userId: string, robotId: string
-    }) => {
+    handleCalcUserSignalEvent = async (params: { calcAll?: boolean; userId: string; robotId: string }) => {
         const { calcAll, userId, robotId } = params;
 
         try {
             const userSignal: {
                 exchange: string;
-                asset: string
+                asset: string;
             } = await this.db.pg.maybeOne(this.db.sql`
                 SELECT r.exchange, r.asset
                 FROM user_signals us, robots r
@@ -180,18 +171,20 @@ export default class StatisticCalcRunnerService extends HTTPService {
                   AND us.robot_id = r.id;
             `);
 
-            if (!userSignal)
-                return;
+            if (!userSignal) return;
 
             const { exchange, asset } = userSignal;
 
             await this.queueJob(StatsCalcJobType.userSignal, {
-                calcAll, userId, robotId
+                calcAll,
+                userId,
+                robotId
             });
             await this.queueJobWithExchangeAssetOption(
                 StatsCalcJobType.userSignalsAggr,
                 { calcAll, userId },
-                exchange, asset
+                exchange,
+                asset
             );
 
             return { success: true };
@@ -199,11 +192,9 @@ export default class StatisticCalcRunnerService extends HTTPService {
             this.log.error(e);
             return { success: false, error: e.message };
         }
-    }
+    };
 
-    handleCalcUserSignalsEvent = async (params: {
-        calcAll?: boolean, userId: string
-    }) => {
+    handleCalcUserSignalsEvent = async (params: { calcAll?: boolean; userId: string }) => {
         const { calcAll, userId } = params;
 
         try {
@@ -212,12 +203,13 @@ export default class StatisticCalcRunnerService extends HTTPService {
                 FROM user_signals
                 WHERE user_id = ${userId};
             `);
-            if (userSignals.length === 0)
-                return;
+            if (userSignals.length === 0) return;
 
             for (const { robotId } of userSignals) {
                 await this.queueJob(StatsCalcJobType.userSignal, {
-                    calcAll, userId, robotId
+                    calcAll,
+                    userId,
+                    robotId
                 });
             }
 
@@ -231,11 +223,11 @@ export default class StatisticCalcRunnerService extends HTTPService {
                   AND us.robot_id = r.id
                 GROUP BY r.exchange, r.asset;
             `);
-            if (exchangesAssets.length === 0)
-                return;
+            if (exchangesAssets.length === 0) return;
 
             await this.queueJob(StatsCalcJobType.userSignalsAggr, {
-                calcAll, userId
+                calcAll,
+                userId
             });
 
             const exchangesSet = new Set(exchangesAssets.map((e) => e.exchange));
@@ -243,7 +235,9 @@ export default class StatisticCalcRunnerService extends HTTPService {
             const exchanges = [...exchangesSet];
             for (const exchange of exchanges) {
                 await this.queueJob(StatsCalcJobType.userSignalsAggr, {
-                    calcAll, userId, exchange
+                    calcAll,
+                    userId,
+                    exchange
                 });
             }
 
@@ -252,14 +246,19 @@ export default class StatisticCalcRunnerService extends HTTPService {
             const assets = [...assetsSet];
             for (const asset of assets) {
                 await this.queueJob(StatsCalcJobType.userSignalsAggr, {
-                    calcAll, userId, asset
+                    calcAll,
+                    userId,
+                    asset
                 });
             }
 
             for (const { exchange, asset } of exchangesAssets) {
-                if(exchange && asset)
+                if (exchange && asset)
                     await this.queueJob(StatsCalcJobType.userSignalsAggr, {
-                        calcAll, userId, exchange, asset
+                        calcAll,
+                        userId,
+                        exchange,
+                        asset
                     });
             }
 
@@ -268,22 +267,21 @@ export default class StatisticCalcRunnerService extends HTTPService {
             this.log.error(e);
             return { success: false, error: e.message };
         }
-    }
+    };
 
-    handleStatsCalcRobotEvent = async (params: {
-            calcAll?: boolean, robotId: string
+    handleStatsCalcRobotEvent = async (
+        params: {
+            calcAll?: boolean;
+            robotId: string;
         },
-        needCalcCommonAggr: boolean = true
+        needCalcCommonAggr = true
     ) => {
         const { calcAll, robotId } = params;
 
         try {
             this.log.info(`New ${StatsCalcRunnerEvents.ROBOT} event - ${robotId}`);
 
-            const {
-                exchange,
-                asset,
-            }: { exchange: string; asset: string } = await this.db.pg.maybeOne(this.db.sql`
+            const { exchange, asset }: { exchange: string; asset: string } = await this.db.pg.maybeOne(this.db.sql`
                 SELECT exchange, asset
                 FROM robots
                 WHERE id = ${robotId};
@@ -292,17 +290,13 @@ export default class StatisticCalcRunnerService extends HTTPService {
             await this.queueJob(StatsCalcJobType.userSignals, { calcAll, robotId });
 
             if (needCalcCommonAggr) {
-                await this.queueJobWithExchangeAssetOption(
-                    StatsCalcJobType.robotsAggr,
-                    { calcAll },
-                    exchange, asset
-                );
+                await this.queueJobWithExchangeAssetOption(StatsCalcJobType.robotsAggr, { calcAll }, exchange, asset);
             }
 
             const usersByRobotId: {
-                userId: string,
-                exchange: string,
-                asset: string
+                userId: string;
+                exchange: string;
+                asset: string;
             }[] = await this.db.pg.any(this.db.sql`
                 SELECT us.user_id, r.exchange, r.asset
                 FROM user_signals us, robots r
@@ -324,11 +318,9 @@ export default class StatisticCalcRunnerService extends HTTPService {
             this.log.error(e);
             return { success: false, error: e.message };
         }
-    }
+    };
 
-    handleStatsCalcRobotsEvent = async (params: {
-        calcAll: boolean
-    }) => {
+    handleStatsCalcRobotsEvent = async (params: { calcAll: boolean }) => {
         const { calcAll } = params;
 
         try {
@@ -349,19 +341,19 @@ export default class StatisticCalcRunnerService extends HTTPService {
             this.log.error(e);
             return { success: false, error: e.message };
         }
-    }
+    };
 
-    handleStatsCalcUserRobotEvent = async (params: {
-            calcAll?: boolean, userRobotId: string
+    handleStatsCalcUserRobotEvent = async (
+        params: {
+            calcAll?: boolean;
+            userRobotId: string;
         },
-        needCalcCommonAggr: boolean = true
+        needCalcCommonAggr = true
     ) => {
         const { calcAll, userRobotId } = params;
 
         try {
-            this.log.info(
-                `New ${StatsCalcRunnerEvents.USER_ROBOT} event - ${userRobotId}`
-            );
+            this.log.info(`New ${StatsCalcRunnerEvents.USER_ROBOT} event - ${userRobotId}`);
             const { userId, exchange, asset } = await this.db.pg.maybeOne(this.db.sql`
                 SELECT ur.user_id, r.exchange, r.asset
                 FROM user_robots ur,
@@ -376,14 +368,16 @@ export default class StatisticCalcRunnerService extends HTTPService {
                 await this.queueJobWithExchangeAssetOption(
                     StatsCalcJobType.usersRobotsAggr,
                     { calcAll },
-                    exchange, asset
+                    exchange,
+                    asset
                 );
             }
-            
+
             await this.queueJobWithExchangeAssetOption(
                 StatsCalcJobType.userRobotAggr,
                 { calcAll, userId },
-                exchange, asset
+                exchange,
+                asset
             );
 
             return { success: true };
@@ -391,31 +385,35 @@ export default class StatisticCalcRunnerService extends HTTPService {
             this.log.error(e);
             return { success: false, error: e.message };
         }
-    }
+    };
 
-    handleStatsCalcUserRobotsEvent = async (params: {
-            calcAll?: boolean, userId: string, exchange?: string, asset?: string
+    handleStatsCalcUserRobotsEvent = async (
+        params: {
+            calcAll?: boolean;
+            userId: string;
+            exchange?: string;
+            asset?: string;
         },
-        needCalcCommonAggr: boolean = true
+        needCalcCommonAggr = true
     ) => {
         const { calcAll, userId, exchange, asset } = params;
 
         try {
-            this.log.info(
-                `New ${StatsCalcRunnerEvents.USER_ROBOTS} event - ${userId}, ${exchange}, ${asset}`
-            );
+            this.log.info(`New ${StatsCalcRunnerEvents.USER_ROBOTS} event - ${userId}, ${exchange}, ${asset}`);
 
             await this.queueJobWithExchangeAssetOption(
                 StatsCalcJobType.userRobotAggr,
                 { calcAll, userId },
-                exchange, asset
+                exchange,
+                asset
             );
 
             if (needCalcCommonAggr) {
                 await this.queueJobWithExchangeAssetOption(
                     StatsCalcJobType.usersRobotsAggr,
                     { calcAll },
-                    exchange, asset
+                    exchange,
+                    asset
                 );
             }
 
@@ -424,10 +422,13 @@ export default class StatisticCalcRunnerService extends HTTPService {
             this.log.error(e);
             return { success: false, error: e.message };
         }
-    }
+    };
 
     handleRecalcAllRobotsEvent = async (params: {
-        exchange?: string, asset?: string, currency?: string, strategy?: string
+        exchange?: string;
+        asset?: string;
+        currency?: string;
+        strategy?: string;
     }) => {
         const { exchange, asset, currency, strategy } = params;
 
@@ -452,11 +453,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
                 await this.handleStatsCalcRobotEvent({ robotId, calcAll: true }, false);
             }
 
-            await this.queueJobWithExchangeAssetOption(
-                StatsCalcJobType.robotsAggr,
-                { calcAll: true },
-                exchange, asset
-            );
+            await this.queueJobWithExchangeAssetOption(StatsCalcJobType.robotsAggr, { calcAll: true }, exchange, asset);
 
             const startedSignals: {
                 robotId: string;
@@ -480,11 +477,15 @@ export default class StatisticCalcRunnerService extends HTTPService {
             this.log.error(e);
             return { success: false, error: e.message };
         }
-    }
+    };
 
     handleRecalcAllUserSignalsEvent = async (params: {
-        exchange?: string, asset?: string, currency?: string, strategy?: string,
-        robotId?: string, userId?: string
+        exchange?: string;
+        asset?: string;
+        currency?: string;
+        strategy?: string;
+        robotId?: string;
+        userId?: string;
     }) => {
         const { exchange, asset, currency, strategy, robotId, userId } = params;
 
@@ -520,11 +521,15 @@ export default class StatisticCalcRunnerService extends HTTPService {
             this.log.error(e);
             return { success: false, error: e.message };
         }
-    }
+    };
 
     handleRecalcAllUserRobotsEvent = async (params: {
-        exchange?: string, asset?: string, currency?: string, strategy?: string,
-        robotId?: string, userId?: string
+        exchange?: string;
+        asset?: string;
+        currency?: string;
+        strategy?: string;
+        robotId?: string;
+        userId?: string;
     }) => {
         const { exchange, asset, currency, strategy, robotId, userId } = params;
 
@@ -557,7 +562,8 @@ export default class StatisticCalcRunnerService extends HTTPService {
             await this.queueJobWithExchangeAssetOption(
                 StatsCalcJobType.usersRobotsAggr,
                 { calcAll: true },
-                exchange, asset
+                exchange,
+                asset
             );
 
             return { success: true };
@@ -565,5 +571,5 @@ export default class StatisticCalcRunnerService extends HTTPService {
             this.log.error(e);
             return { success: false, error: e.message };
         }
-    }
+    };
 }

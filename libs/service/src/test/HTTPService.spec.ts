@@ -5,6 +5,7 @@ process.env.API_KEY = "my_api_key";
 import { Service, Protocol } from "restana";
 import { HTTPService, HTTPServiceConfig } from "../lib/HTTPService";
 import { ActionsHandlerError } from "@cryptuoso/errors";
+// eslint-disable-next-line @nrwl/nx/enforce-module-boundaries
 import { ajax, setProperty, getServerFromService, createServiceRoute } from "@cryptuoso/test-helpers";
 
 const mockExit = jest.fn();
@@ -312,8 +313,8 @@ describe("Test 'BaseService' class", () => {
                             }
                         ];
 
-                        const res1 = await ajax.post.apply(ajax, reqArgs);
-                        const res2 = await ajax.post.apply(ajax, reqArgs);
+                        const res1 = await ajax.post.apply(null, reqArgs);
+                        const res2 = await ajax.post.apply(null, reqArgs);
 
                         expect(userJSON).toStrictEqual(JSON.stringify(user));
                         expect(res1.parsedBody).toEqual(rightResponse);
@@ -326,7 +327,6 @@ describe("Test 'BaseService' class", () => {
                         const routeName = "my44";
                         const rightResponse = { success: true };
                         const userId = "user-id";
-                        const userRole = "user-role";
                         const routeRole = "route-role";
 
                         createServiceRoute(httpService, routeName, rightResponse, [routeRole], false);

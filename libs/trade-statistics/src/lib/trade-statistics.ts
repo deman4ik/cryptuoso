@@ -43,8 +43,8 @@ export class RobotStringValue implements RobotStatVals<string> {
     constructor(public all: string = "", public long: string = "", public short: string = "") {}
 }
 
-export function roundToNumberOrNull(num: number, decimals: number = 0): number {
-    if(!isFinite(num) || (!num && num != 0)) return null;
+export function roundToNumberOrNull(num: number, decimals = 0): number {
+    if (!isFinite(num) || (!num && num != 0)) return null;
 
     return round(num, decimals);
 }
@@ -85,7 +85,7 @@ export class Statistics {
     profitFactor? = new RobotNumberValue(null, null, null);
     recoveryFactor? = new RobotNumberValue(null, null, null);
     payoffRatio? = new RobotNumberValue(null, null, null);
-    rating? = new RobotNumberValue(null, null, null)
+    rating? = new RobotNumberValue(null, null, null);
 }
 
 export function isStatistics(object: any): object is Statistics {
@@ -107,12 +107,8 @@ export class RobotStats {
     equityAvg: PerformanceVals = [];
 }
 
-export function isRobotStats(
-    object: any,
-    checkPropsCount: boolean = true
-): object is RobotStats {
-    if(object == null)
-        return true;
+export function isRobotStats(object: any, checkPropsCount = true): object is RobotStats {
+    if (object == null) return true;
     const refObj = new RobotStats();
     if (checkPropsCount && Object.keys(object).length != Object.keys(refObj).length) return false;
     for (const key in refObj) {

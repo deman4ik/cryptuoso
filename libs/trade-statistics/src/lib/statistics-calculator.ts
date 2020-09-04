@@ -21,7 +21,7 @@ function initializeValues(stat: RobotNumberValue): RobotNumberValue {
 }
 
 function divide(a: number, b: number) {
-    if(a === 0) return 0;
+    if (a === 0) return 0;
     if (!a || !b || b === 0) return null;
     return a / b;
 }
@@ -88,7 +88,7 @@ export default class StatisticsCalculator {
 
         for (const pos of positions) if (!isPositionDataForStats(pos)) throw new Error("Invalid position provided");
 
-        if(prevRobotStats != null) {
+        if (prevRobotStats != null) {
             if (!isRobotStats(prevRobotStats)) {
                 throw new Error("Invalid robotStatistics object provided"); // calculations are allowed if null or valid obj is provided
             }
@@ -102,7 +102,7 @@ export default class StatisticsCalculator {
             this.positions = positions.filter(
                 (pos) => dayjs.utc(pos.exitDate).valueOf() > dayjs.utc(prevRobotStats.lastPositionExitDate).valueOf()
             );
-            
+
             if (this.positions.length < 1) throw new Error("At least 1 fresh position expected");
         } else this.positions = positions;
 
@@ -118,7 +118,7 @@ export default class StatisticsCalculator {
         }
 
         this.calculateEquityAvg();
-        
+
         //this.currentRobotStats.statistics = this.currentStatistics;
 
         return this.currentRobotStats;
@@ -652,11 +652,7 @@ export default class StatisticsCalculator {
         recoveryFactorWeight = 0.25,
         payoffRatioWeight = 0.4
     ): RobotNumberValue {
-        validateArguments(
-            profitFactor.all,
-            payoffRatio.all,
-            recoveryFactor.all
-        );
+        validateArguments(profitFactor.all, payoffRatio.all, recoveryFactor.all);
 
         if (!isFinite(profitFactorWeight) || !isFinite(recoveryFactorWeight) || !isFinite(payoffRatioWeight))
             throw new Error("Arguments must be finite numbers");
@@ -666,8 +662,8 @@ export default class StatisticsCalculator {
 
         return new RobotNumberValue(
             profitFactorWeight * profitFactor.all +
-            payoffRatioWeight * payoffRatio.all +
-            recoveryFactorWeight * recoveryFactor.all
+                payoffRatioWeight * payoffRatio.all +
+                recoveryFactorWeight * recoveryFactor.all
         );
     }
     //#endregion

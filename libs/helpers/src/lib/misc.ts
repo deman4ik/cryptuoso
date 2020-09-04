@@ -14,11 +14,10 @@ export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve
 /**
  * Returns `true` if provided value is null or undefined
  * and `false` in other case
- * 
- * @param value 
+ *
+ * @param value
  */
-export const isUndefinedOrNull = (value: any): boolean =>
-    value === null || value === undefined;
+export const isUndefinedOrNull = (value: any): boolean => value === null || value === undefined;
 
 /**
  * Returns default value if provided value is null or undefined

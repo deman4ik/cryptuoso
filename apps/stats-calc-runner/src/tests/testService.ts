@@ -44,15 +44,24 @@ export async function testService(service: Service) {
         calcAll, userId, asset, exchange
     })); */
 
-    console.log("handleRecalcAllRobotsEvent", await service.handleRecalcAllRobotsEvent({
-        /* calcAll, userId, asset, exchange */
-    }));
+    console.log(
+        "handleRecalcAllRobotsEvent",
+        await service.handleRecalcAllRobotsEvent({
+            /* calcAll, userId, asset, exchange */
+        })
+    );
 
-    console.log("handleRecalcAllUserSignalsEvent", await service.handleRecalcAllUserSignalsEvent({
-        /* calcAll, userId, asset, exchange */
-    }));
+    console.log(
+        "handleRecalcAllUserSignalsEvent",
+        await service.handleRecalcAllUserSignalsEvent({
+            /* calcAll, userId, asset, exchange */
+        })
+    );
 
-    console.log("handleRecalcAllUserRobotsEvent", await service.handleRecalcAllUserRobotsEvent({
-        /* calcAll, userId, asset, exchange */
-    }));
+    console.log(
+        "handleRecalcAllUserRobotsEvent",
+        await service.handleRecalcAllUserRobotsEvent({
+            /* calcAll, userId, asset, exchange */
+        })
+    );
 }

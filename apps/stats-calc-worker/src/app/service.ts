@@ -6,19 +6,13 @@ import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import { StatisticUtils } from "./statsWorker";
 import { sql } from "@cryptuoso/postgres";
 import { SqlSqlTokenType, QueryResultRowType } from "slonik";
-import {
-    RobotStats,
-    PositionDataForStats,
-    PositionDirection,
-    isRobotStats
-} from "@cryptuoso/trade-statistics";
+import { RobotStats, PositionDataForStats, PositionDirection, isRobotStats } from "@cryptuoso/trade-statistics";
 import { StatsCalcJob, StatsCalcJobType } from "@cryptuoso/stats-calc-events";
 import {
     UserSignalPosition,
     UserAggrStatsType,
     RobotStatsWithExists,
-    UserSignalsWithExists,
-    UserAggrStatsWithExists
+    UserSignalsWithExists
 } from "@cryptuoso/user-state";
 import { round } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
@@ -49,8 +43,8 @@ export default class StatisticCalcWorkerService extends BaseService {
     private workers: { [key: string]: Worker };
     private cpus: number;
 
-    maxSingleQueryPosCount: number = 750;
-    defaultChunkSize: number = 500;
+    maxSingleQueryPosCount = 750;
+    defaultChunkSize = 500;
 
     constructor(config?: StatisticCalcWorkerServiceConfig) {
         super(config);
@@ -113,8 +107,7 @@ export default class StatisticCalcWorkerService extends BaseService {
     }
 
     private makeChunksGenerator(query: QueryType, chunkSize: number = this.defaultChunkSize) {
-        if (!chunkSize || chunkSize < 1)
-            throw new Error("Argument 'chunkSize' must be positive number.");
+        if (!chunkSize || chunkSize < 1) throw new Error("Argument 'chunkSize' must be positive number.");
 
         const pg = this.db.pg;
 
@@ -137,11 +130,11 @@ export default class StatisticCalcWorkerService extends BaseService {
 
     private async upsertStats(
         params: {
-            table: QueryType,
-            fieldId: QueryType,
-            id: string,
-            addFields?: QueryType,
-            addFieldsValues?: QueryType
+            table: QueryType;
+            fieldId: QueryType;
+            id: string;
+            addFields?: QueryType;
+            addFieldsValues?: QueryType;
         },
         stats: RobotStats,
         prevStats?: RobotStatsWithExists
@@ -180,7 +173,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     );
                 `);
             }
-        } catch(err) {
+        } catch (err) {
             console.log(err);
             throw err;
         }
@@ -190,10 +183,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         return await this.pool.queue(async (utils: StatisticUtils) => utils.calcStatistics(prevStats, positions));
     }
 
-    private async _calcRobotStatistics(
-        prevStats: RobotStats,
-        positions: PositionDataForStats[]
-    ): Promise<RobotStats> {
+    private async _calcRobotStatistics(prevStats: RobotStats, positions: PositionDataForStats[]): Promise<RobotStats> {
         return await this.calcStatistics(
             prevStats,
             positions.map((pos) => ({
@@ -203,7 +193,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         );
     }
 
-    async calcRobot(robotId: string, calcAll: boolean = false) {
+    async calcRobot(robotId: string, calcAll = false) {
         try {
             const prevRobotStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
                 SELECT rs.robot_id as "stats_exists",
@@ -214,8 +204,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 WHERE r.id = ${robotId};
             `);
 
-            if(!prevRobotStats)
-                throw new Error(`The robot doesn't exists (robotId: ${robotId})`);
+            if (!prevRobotStats) throw new Error(`The robot doesn't exists (robotId: ${robotId})`);
 
             const { calcFrom, initStats } = getCalcFromAndInitStats(prevRobotStats, calcAll);
 
@@ -259,18 +248,18 @@ export default class StatisticCalcWorkerService extends BaseService {
                     fieldId: sql`robot_id`,
                     id: robotId,
                     addFields: sql`robot_id`,
-                    addFieldsValues: sql`${robotId}`,
+                    addFieldsValues: sql`${robotId}`
                 },
                 newStats,
                 prevRobotStats
-            )
-        } catch(err) {
+            );
+        } catch (err) {
             this.log.error("Failed to calculate robot statistics", err);
             throw err;
         }
     }
 
-    async calcRobotsAggr(exchange?: string, asset?: string, calcAll: boolean = false) {
+    async calcRobotsAggr(exchange?: string, asset?: string, calcAll = false) {
         try {
             const prevRobotsAggrStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
                 SELECT id as "stats_exists",
@@ -338,13 +327,13 @@ export default class StatisticCalcWorkerService extends BaseService {
                 newStats,
                 prevRobotsAggrStats
             );
-        } catch(err) {
+        } catch (err) {
             this.log.error("Failed to calculate robots aggregate statistics", err);
             throw err;
         }
     }
 
-    async calcUsersRobotsAggr(exchange?: string, asset?: string, calcAll: boolean = false) {
+    async calcUsersRobotsAggr(exchange?: string, asset?: string, calcAll = false) {
         try {
             const prevUsersRobotsAggrtats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
                 SELECT id as "stats_exists",
@@ -409,7 +398,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 newStats,
                 prevUsersRobotsAggrtats
             );
-        } catch(err) {
+        } catch (err) {
             this.log.error("Failed to calculate users robots aggregate statistics", err);
             throw err;
         }
@@ -423,7 +412,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         return await this.calcStatistics(
             prevStats,
             positions.map((pos) => {
-                let profit: number = 0;
+                let profit = 0;
                 if (pos.direction === PositionDirection.long) {
                     profit = +round((pos.exitPrice - pos.entryPrice) * userSignalVolume, 6);
                 } else {
@@ -439,7 +428,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         );
     }
 
-    async calcUserSignal(userId: string, robotId: string, calcAll: boolean = false) {
+    async calcUserSignal(userId: string, robotId: string, calcAll = false) {
         try {
             const userSignal: UserSignalsWithExists = await this.db.pg.maybeOne(sql`
                 SELECT us.id, us.subscribed_at, us.volume,
@@ -456,8 +445,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 AND us.user_id = ${userId};
             `);
 
-            if(!userSignal)
-                throw new Error(`The signal doesn't exists (userId: ${userId}, robotId: ${robotId})`);
+            if (!userSignal) throw new Error(`The signal doesn't exists (userId: ${userId}, robotId: ${robotId})`);
 
             const { calcFrom, initStats } = getCalcFromAndInitStats(userSignal, calcAll);
 
@@ -508,7 +496,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 newStats,
                 userSignal
             );
-        } catch(err) {
+        } catch (err) {
             this.log.error("Failed to calculate user signal statistics", err);
             throw err;
         }
@@ -520,16 +508,16 @@ export default class StatisticCalcWorkerService extends BaseService {
         calcAll: boolean;
     }): Promise<{
         [key: string]: {
-            newStats: RobotStats,
-            signal: UserSignalsWithExists
-        }
+            newStats: RobotStats;
+            signal: UserSignalsWithExists;
+        };
     }> {
         const { queryCommonPart, userSignals, calcAll } = params;
         const statsDict: {
             [key: string]: {
-                newStats: RobotStats,
-                signal: UserSignalsWithExists
-            }
+                newStats: RobotStats;
+                signal: UserSignalsWithExists;
+            };
         } = {};
 
         const allPositions: UserSignalPosition[] = await this.db.pg.any(sql`
@@ -559,17 +547,17 @@ export default class StatisticCalcWorkerService extends BaseService {
         chunkSize?: number;
     }): Promise<{
         [key: string]: {
-            newStats: RobotStats,
-            signal: UserSignalsWithExists
-        }
+            newStats: RobotStats;
+            signal: UserSignalsWithExists;
+        };
     }> {
         const { queryCommonPart, userSignals, calcAll, chunkSize } = params;
 
         const statsDict: {
             [key: string]: {
-                newStats: RobotStats,
-                signal: UserSignalsWithExists
-            }
+                newStats: RobotStats;
+                signal: UserSignalsWithExists;
+            };
         } = {};
         let statsAcc: {
             signal: UserSignalsWithExists;
@@ -618,16 +606,17 @@ export default class StatisticCalcWorkerService extends BaseService {
         );
 
         statsAcc.forEach((signalAcc) => {
-            if (signalAcc.updated) statsDict[signalAcc.signal.id] = {
-                newStats: signalAcc.stats,
-                signal: signalAcc.signal
-            };
+            if (signalAcc.updated)
+                statsDict[signalAcc.signal.id] = {
+                    newStats: signalAcc.stats,
+                    signal: signalAcc.signal
+                };
         });
 
         return statsDict;
     }
 
-    async calcUserSignals(robotId: string, calcAll: boolean = false) {
+    async calcUserSignals(robotId: string, calcAll = false) {
         try {
             const userSignals: UserSignalsWithExists[] = await this.db.pg.any(sql`
                 SELECT us.id, us.subscribed_at, us.volume,
@@ -643,8 +632,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 WHERE us.robot_id = ${robotId};
             `);
 
-            if (userSignals.length == 0)
-                throw new Error(`Signals doesn't exists (robotId: ${robotId})`);
+            if (userSignals.length == 0) throw new Error(`Signals doesn't exists (robotId: ${robotId})`);
 
             const minSubscriptionDate = dayjs
                 .utc(Math.min(...userSignals.map((us) => dayjs.utc(us.subscribedAt).valueOf())))
@@ -655,8 +643,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             if (!calcAll) {
                 const minExitTime = Math.min(
                     ...userSignals.map((us) => {
-                        if (us.lastPositionExitDate)
-                            return dayjs.utc(us.lastPositionExitDate).valueOf();
+                        if (us.lastPositionExitDate) return dayjs.utc(us.lastPositionExitDate).valueOf();
                         else return Infinity;
                     })
                 );
@@ -692,15 +679,15 @@ export default class StatisticCalcWorkerService extends BaseService {
             const signalsStats =
                 positionsCount > this.maxSingleQueryPosCount
                     ? await this._calcUserSignalsByChunks({
-                        queryCommonPart,
-                        userSignals,
-                        calcAll
-                    })
+                          queryCommonPart,
+                          userSignals,
+                          calcAll
+                      })
                     : await this._calcUserSignalsBySingleQuery({
-                        queryCommonPart,
-                        userSignals,
-                        calcAll
-                    });
+                          queryCommonPart,
+                          userSignals,
+                          calcAll
+                      });
 
             for (const [signalId, { newStats, signal }] of Object.entries(signalsStats)) {
                 await this.upsertStats(
@@ -715,7 +702,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     signal
                 );
             }
-        } catch(err) {
+        } catch (err) {
             this.log.error("Failed to calculate user signals statistics", err);
             throw err;
         }
@@ -728,7 +715,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         return await this.calcStatistics(
             prevStats,
             positions.map((pos) => {
-                let profit: number = 0;
+                let profit = 0;
                 if (pos.direction === PositionDirection.long) {
                     profit = +round((pos.exitPrice - pos.entryPrice) * pos.userSignalVolume, 6);
                 } else {
@@ -744,7 +731,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         );
     }
 
-    async calcUserSignalsAggr(userId: string, exchange?: string, asset?: string, calcAll: boolean = false) {
+    async calcUserSignalsAggr(userId: string, exchange?: string, asset?: string, calcAll = false) {
         try {
             const prevUserAggrStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
                 SELECT id as "stats_exists",
@@ -814,18 +801,20 @@ export default class StatisticCalcWorkerService extends BaseService {
                     fieldId: sql`id`,
                     id: prevUserAggrStats?.id,
                     addFields: sql`user_id, exchange, asset, type`,
-                    addFieldsValues: sql`${userId}, ${!exchange ? null : exchange}, ${!asset ? null : asset}, ${UserAggrStatsType.signal}`
+                    addFieldsValues: sql`${userId}, ${!exchange ? null : exchange}, ${!asset ? null : asset}, ${
+                        UserAggrStatsType.signal
+                    }`
                 },
                 newStats,
                 prevUserAggrStats
             );
-        } catch(err) {
+        } catch (err) {
             this.log.error("Failed to calculate user signals aggregate statistics", err);
             throw err;
         }
     }
 
-    async calcUserRobot(userRobotId: string, calcAll: boolean = false) {
+    async calcUserRobot(userRobotId: string, calcAll = false) {
         try {
             const prevRobotStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
                 SELECT urs.user_robot_id as "stats_exists",
@@ -840,8 +829,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 WHERE ur.id = ${userRobotId};
             `);
 
-            if (!prevRobotStats)
-                throw new Error(`User robot doesn't exists (userRobotId: ${userRobotId})`);
+            if (!prevRobotStats) throw new Error(`User robot doesn't exists (userRobotId: ${userRobotId})`);
 
             const { calcFrom, initStats } = getCalcFromAndInitStats(prevRobotStats, calcAll);
 
@@ -888,13 +876,13 @@ export default class StatisticCalcWorkerService extends BaseService {
                 newStats,
                 prevRobotStats
             );
-        } catch(err) {
+        } catch (err) {
             this.log.error("Failed to calculate user robot statistics", err);
             throw err;
         }
     }
 
-    async calcUserRobotsAggr(userId: string, exchange?: string, asset?: string, calcAll: boolean = false) {
+    async calcUserRobotsAggr(userId: string, exchange?: string, asset?: string, calcAll = false) {
         try {
             const prevUserAggrStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
                 SELECT id as "stats_exists",
@@ -946,7 +934,8 @@ export default class StatisticCalcWorkerService extends BaseService {
                     positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
                 )
             ).reduce(
-                async (prevStats: RobotStats, chunk: PositionDataForStats[]) => await this.calcStatistics(prevStats, chunk),
+                async (prevStats: RobotStats, chunk: PositionDataForStats[]) =>
+                    await this.calcStatistics(prevStats, chunk),
                 initStats
             );
 
@@ -956,12 +945,14 @@ export default class StatisticCalcWorkerService extends BaseService {
                     fieldId: sql`id`,
                     id: prevUserAggrStats?.id,
                     addFields: sql`user_id, exchange, asset, type`,
-                    addFieldsValues: sql`${userId}, ${!exchange ? null : exchange}, ${!asset ? null : asset}, ${UserAggrStatsType.userRobot}`
+                    addFieldsValues: sql`${userId}, ${!exchange ? null : exchange}, ${!asset ? null : asset}, ${
+                        UserAggrStatsType.userRobot
+                    }`
                 },
                 newStats,
                 prevUserAggrStats
             );
-        } catch(err) {
+        } catch (err) {
             this.log.error("Failed to calculate user robot aggregate statistics", err);
             throw err;
         }
