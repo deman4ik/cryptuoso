@@ -1,0 +1,8 @@
+.github
+deployments
+dist
+node_modules
+tmp
+.local.env
+.env
+.env.compose

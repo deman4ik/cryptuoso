@@ -1,23 +1,25 @@
 import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
 import { v4 as uuid } from "uuid";
 import dayjs from "@cryptuoso/dayjs";
 import { ActionsHandlerError } from "@cryptuoso/errors";
 import logger from "@cryptuoso/logger";
-
 import mailUtil from "@cryptuoso/mail";
-
 import { User, UserStatus, UserRoles } from "@cryptuoso/user-state";
 import { formatTgName, checkTgLogin, getAccessValue } from "./auth-helper";
-import { DBFunctions } from "./types";
+import { DBFunctions, Bcrypt } from "./types";
+import bcrypt from "bcrypt";
 
 export class Auth {
     #db: DBFunctions;
+    #bcrypt: Bcrypt;
     #mailUtil: typeof mailUtil;
 
-    constructor(db: DBFunctions) {
+    constructor(
+        db: DBFunctions // bcrypt: Bcrypt
+    ) {
         try {
             this.#db = db;
+            this.#bcrypt = bcrypt;
             this.#mailUtil = mailUtil;
         } catch (e) {
             logger.error(e, "Failed to init Auth instance!");
@@ -40,7 +42,9 @@ export class Auth {
                 "FORBIDDEN",
                 403
             );
-        const passwordChecked = await bcrypt.compare(password, user.passwordHash);
+
+        const passwordChecked = await this.#bcrypt.compare(password, user.passwordHash);
+
         if (!passwordChecked) throw new ActionsHandlerError("Invalid password.", null, "FORBIDDEN", 403);
 
         let refreshToken;
@@ -137,7 +141,7 @@ export class Auth {
             name,
             email,
             status: UserStatus.new,
-            passwordHash: await bcrypt.hash(password, 10),
+            passwordHash: await this.#bcrypt.hash(password, 10),
             secretCode: this.generateCode(),
             roles: {
                 allowedRoles: [UserRoles.user],
@@ -347,7 +351,7 @@ export class Auth {
         }
         await this.#db.updateUserPassword({
             userId,
-            passwordHash: await bcrypt.hash(password, 10),
+            passwordHash: await this.#bcrypt.hash(password, 10),
             newSecretCode,
             newSecretCodeExpireAt,
             refreshToken,
@@ -413,8 +417,6 @@ export class Auth {
             },
             tags: ["auth"]
         });
-
-        return { success: true };
     }
 
     async confirmChangeEmail(params: { userId: string; secretCode: string }) {

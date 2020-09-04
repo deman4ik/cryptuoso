@@ -1,6 +1,6 @@
-FROM node:12-alpine as build
+FROM node:14-alpine as build
 
-RUN apk add --no-cache build-base git openssh-client
+RUN apk add --no-cache python postgresql-dev build-base git openssh-client
 
 ARG GITHUB_SSH_KEY
 ARG SERVICE_NAME
@@ -19,9 +19,9 @@ WORKDIR /usr/src/app
 
 COPY . /usr/src/app/
 
-RUN npm install && npm run build:"$SERVICE_NAME" && npm prune --production
+RUN npm install && npm run build:"$SERVICE_NAME" && npm prune --production && npm cache clean --force
 
-FROM node:12-alpine as runtime
+FROM node:14-alpine as runtime
 RUN mkdir -p /usr/src/app
 COPY --from=build ["/usr/src/app/node_modules","/usr/src/app/node_modules"]
 COPY --from=build ["/usr/src/app/dist","/usr/src/app/dist"]

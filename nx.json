@@ -6,9 +6,9 @@
             "dependencies": "*",
             "devDependencies": "*"
         },
-        "tsconfig.json": "*",
         ".eslintrc": "*",
-        "nx.json": "*"
+        "nx.json": "*",
+        "tsconfig.base.json": "*"
     },
     "tasksRunnerOptions": {
         "default": {
@@ -121,5 +121,8 @@
         "test-helpers": {
             "tags": []
         }
+    },
+    "affected": {
+        "defaultBase": "master"
     }
 }

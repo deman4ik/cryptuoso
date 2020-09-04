@@ -1,27 +1,26 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
-/* import { IncomingMessage, ServerResponse } from 'http'; */
+//import { spawn, Pool, Worker as ThreadsWorker } from "threads";
 import { Request, Response, Protocol } from "restana";
-import Cookies from "cookies";
+import Cookie from "cookie";
 import { User, UserStatus, UserRoles } from "@cryptuoso/user-state";
 import { DBFunctions } from "./types";
 import { Auth } from "./auth";
 import { sql } from "slonik";
 import dayjs from "@cryptuoso/dayjs";
+import { ActionsHandlerError } from "@cryptuoso/errors";
+//import { BcryptUtils } from "./bcryptWorker";
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-interface HttpRequest extends Request<Protocol.HTTP> /* , IncomingMessage */ {
+interface HttpRequest extends Request<Protocol.HTTP> {
     body: any;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-interface HttpResponse extends Response<Protocol.HTTP> /* , ServerResponse */ {}
+type HttpResponse = Response<Protocol.HTTP>;
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface AuthServiceConfig extends HTTPServiceConfig {}
+export type AuthServiceConfig = HTTPServiceConfig;
 
 export default class AuthService extends HTTPService {
-    #auth: Auth;
-    #dbFunctions: DBFunctions = {
+    auth: Auth;
+    dbFunctions: DBFunctions = {
         getUserByEmail: this._dbGetUserByEmail.bind(this),
         getUserById: this._dbGetUserById.bind(this),
         getUserTg: this._dbGetUserTg.bind(this),
@@ -35,12 +34,21 @@ export default class AuthService extends HTTPService {
         confirmChangeUserEmail: this._dbConfirmChangeUserEmail.bind(this),
         activateUser: this._dbActivateUser.bind(this)
     };
+    /*bcrypt: Bcrypt = {
+        compare: this._bcryptCompare.bind(this),
+        hash: this._bcryptHash.bind(this)
+    };
+     pool: Pool<any>;*/
 
     constructor(config?: AuthServiceConfig) {
         super(config);
         try {
-            this.#auth = new Auth(this.#dbFunctions);
-
+            this.auth = new Auth(
+                this.dbFunctions //this.bcrypt
+            );
+            /*
+          this.addOnStartHandler(this.onStartService);
+            this.addOnStopHandler(this.onStopService);*/
             this.createRoutes({
                 login: {
                     handler: this.login.bind(this),
@@ -50,9 +58,8 @@ export default class AuthService extends HTTPService {
                         password: { type: "string", empty: false, trim: true }
                     }
                 },
-                "login-tg": {
+                loginTg: {
                     handler: this.loginTg.bind(this),
-                    roles: [UserRoles.anonymous],
                     inputSchema: {
                         id: "number",
                         // eslint-disable-next-line @typescript-eslint/camelcase
@@ -69,7 +76,6 @@ export default class AuthService extends HTTPService {
                 },
                 logout: {
                     handler: this.logout.bind(this),
-                    roles: [UserRoles.user],
                     auth: true
                 },
                 register: {
@@ -87,30 +93,27 @@ export default class AuthService extends HTTPService {
                         name: { type: "string", optional: true, empty: false, trim: true }
                     }
                 },
-                "refresh-token": {
+                refreshToken: {
                     handler: this.refreshToken.bind(this),
-                    roles: [UserRoles.user],
-                    auth: true,
-                    inputSchema: {}
+                    auth: false,
+                    inputSchema: null
                 },
-                "activate-account": {
+                activateAccount: {
                     handler: this.activateAccount.bind(this),
-                    roles: [UserRoles.anonymous],
+                    roles: [UserRoles.anonymous, UserRoles.manager, UserRoles.admin],
                     inputSchema: {
                         userId: "string",
                         secretCode: { type: "string", empty: false, trim: true }
                     }
                 },
-                "password-reset": {
+                passwordReset: {
                     handler: this.passwordReset.bind(this),
-                    roles: [UserRoles.anonymous],
                     inputSchema: {
                         email: { type: "email", normalize: true }
                     }
                 },
-                "confirm-password-reset": {
+                confirmPasswordReset: {
                     handler: this.confirmPasswordReset.bind(this),
-                    roles: [UserRoles.anonymous],
                     inputSchema: {
                         userId: "string",
                         secretCode: { type: "string", empty: false, trim: true },
@@ -123,17 +126,17 @@ export default class AuthService extends HTTPService {
                         }
                     }
                 },
-                "change-email": {
+                changeEmail: {
                     handler: this.changeEmail.bind(this),
-                    roles: [UserRoles.user],
+                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     auth: true,
                     inputSchema: {
                         email: { type: "email", normalize: true }
                     }
                 },
-                "confirm-change-email": {
+                confirmChangeEmail: {
                     handler: this.confirmChangeEmail.bind(this),
-                    roles: [UserRoles.user],
+                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     auth: true,
                     inputSchema: {
                         secretCode: { type: "string", empty: false, trim: true }
@@ -145,83 +148,103 @@ export default class AuthService extends HTTPService {
         }
     }
 
+    /* async onStartService(): Promise<void> {
+        this.pool = Pool(() => spawn<BcryptUtils>(new ThreadsWorker("./bcryptWorker")), {
+            name: "bcrypt-utils"
+        });
+    }
+
+    async onStopService(): Promise<void> {
+        await this.pool.terminate();
+    }*/
+
     async login(req: HttpRequest, res: HttpResponse) {
-        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.#auth.login(req.body.input);
+        try {
+            const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.login(req.body.input);
 
-        const cookies = new Cookies(req, res);
-
-        cookies.set("refresh_token", refreshToken, {
-            expires: new Date(refreshTokenExpireAt),
-            httpOnly: true,
-            sameSite: "lax",
-            domain: ".cryptuoso.com",
-            overwrite: true
-        });
-        res.send({
-            success: true,
-            accessToken
-        });
-        res.end();
+            res.setHeader(
+                "Set-Cookie",
+                Cookie.serialize("refresh_token", refreshToken, {
+                    expires: new Date(refreshTokenExpireAt),
+                    httpOnly: true,
+                    sameSite: "lax",
+                    domain: ".cryptuoso.com",
+                    secure: true
+                })
+            );
+            res.send({
+                accessToken
+            });
+            res.end();
+        } catch (err) {
+            this.log.error(err);
+            throw err;
+        }
     }
 
     async loginTg(req: HttpRequest, res: HttpResponse) {
-        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.#auth.loginTg(req.body.input);
+        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.loginTg(req.body.input);
 
-        const cookies = new Cookies(req, res);
-
-        cookies.set("refresh_token", refreshToken, {
-            expires: new Date(refreshTokenExpireAt),
-            httpOnly: true,
-            sameSite: "lax",
-            domain: ".cryptuoso.com",
-            overwrite: true
-        });
+        res.setHeader(
+            "Set-Cookie",
+            Cookie.serialize("refresh_token", refreshToken, {
+                expires: new Date(refreshTokenExpireAt),
+                httpOnly: true,
+                sameSite: "lax",
+                domain: ".cryptuoso.com",
+                secure: true
+            })
+        );
         res.send({
-            success: true,
             accessToken
         });
         res.end();
     }
 
     async logout(req: HttpRequest, res: HttpResponse) {
-        const cookies = new Cookies(req, res);
-
-        cookies.set("refresh_token", "", {
-            expires: new Date(0),
-            httpOnly: true,
-            sameSite: "lax",
-            domain: ".cryptuoso.com",
-            overwrite: true
-        });
-        res.send({ success: true });
+        res.setHeader(
+            "Set-Cookie",
+            Cookie.serialize("refresh_token", "", {
+                expires: new Date(0),
+                httpOnly: true,
+                sameSite: "lax",
+                domain: ".cryptuoso.com",
+                secure: true
+            })
+        );
+        res.send({ result: "OK" });
         res.end();
     }
 
     async register(req: HttpRequest, res: HttpResponse) {
-        const userId = await this.#auth.register(req.body.input);
-        res.send({ success: true, userId });
+        const userId = await this.auth.register(req.body.input);
+        res.send({ userId });
         res.end();
     }
 
     async refreshToken(req: HttpRequest, res: HttpResponse) {
-        const cookies = new Cookies(req, res);
-        let oldRefreshToken = cookies.get("refresh_token");
+        const cookies = Cookie.parse((req.headers["cookie"] as string) || "");
+        let oldRefreshToken = cookies["refresh_token"];
+        this.log.info("cookie ", req.headers["cookie"], cookies, oldRefreshToken);
         if (!oldRefreshToken) {
             oldRefreshToken = req.headers["x-refresh-token"] as string;
         }
-        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.#auth.refreshToken({
+        if (!oldRefreshToken) throw new ActionsHandlerError("No refresh token", null, "FORBIDDEN", 403);
+        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.refreshToken({
             refreshToken: oldRefreshToken
         });
 
-        cookies.set("refresh_token", refreshToken, {
-            expires: new Date(refreshTokenExpireAt),
-            httpOnly: true,
-            sameSite: "lax",
-            domain: ".cryptuoso.com",
-            overwrite: true
-        });
+        res.setHeader(
+            "Set-Cookie",
+            Cookie.serialize("refresh_token", refreshToken, {
+                expires: new Date(refreshTokenExpireAt),
+                httpOnly: true,
+                sameSite: "lax",
+                domain: ".cryptuoso.com",
+                secure: true
+            })
+        );
         res.send({
-            success: true,
             accessToken,
             refreshToken,
             refreshTokenExpireAt
@@ -230,77 +253,77 @@ export default class AuthService extends HTTPService {
     }
 
     async activateAccount(req: HttpRequest, res: HttpResponse) {
-        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.#auth.activateAccount(req.body.input);
+        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.activateAccount(req.body.input);
 
-        const cookies = new Cookies(req, res);
-
-        cookies.set("refresh_token", refreshToken, {
-            expires: new Date(refreshTokenExpireAt),
-            httpOnly: true,
-            sameSite: "lax",
-            domain: ".cryptuoso.com",
-            overwrite: true
-        });
+        res.setHeader(
+            "Set-Cookie",
+            Cookie.serialize("refresh_token", refreshToken, {
+                expires: new Date(refreshTokenExpireAt),
+                httpOnly: true,
+                sameSite: "lax",
+                domain: ".cryptuoso.com",
+                secure: true
+            })
+        );
         res.send({
-            success: true,
             accessToken
         });
         res.end();
     }
 
     async passwordReset(req: HttpRequest, res: HttpResponse) {
-        const userId = await this.#auth.passwordReset(req.body.input);
-        res.send({ success: true, userId });
+        const userId = await this.auth.passwordReset(req.body.input);
+        res.send({ userId });
         res.end();
     }
 
     async confirmPasswordReset(req: HttpRequest, res: HttpResponse) {
-        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.#auth.confirmPasswordReset(
+        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.confirmPasswordReset(
             req.body.input
         );
 
-        const cookies = new Cookies(req, res);
-
-        cookies.set("refresh_token", refreshToken, {
-            expires: new Date(refreshTokenExpireAt),
-            httpOnly: true,
-            sameSite: "lax",
-            domain: ".cryptuoso.com",
-            overwrite: true
-        });
+        res.setHeader(
+            "Set-Cookie",
+            Cookie.serialize("refresh_token", refreshToken, {
+                expires: new Date(refreshTokenExpireAt),
+                httpOnly: true,
+                sameSite: "lax",
+                domain: ".cryptuoso.com",
+                secure: true
+            })
+        );
         res.send({
-            success: true,
             accessToken
         });
         res.end();
     }
 
     async changeEmail(req: HttpRequest, res: HttpResponse) {
-        /* const response =  */ await this.#auth.changeEmail({
+        /* const response =  */ await this.auth.changeEmail({
             userId: req.body.session_variables["x-hasura-user-id"],
             email: req.body.input.email
         });
-        res.send({ success: true });
+        res.send({ result: "OK" });
         res.end();
     }
 
     async confirmChangeEmail(req: HttpRequest, res: HttpResponse) {
-        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.#auth.confirmChangeEmail({
+        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.confirmChangeEmail({
             userId: req.body.session_variables["x-hasura-user-id"],
             secretCode: req.body.input.secretCode
         });
 
-        const cookies = new Cookies(req, res);
-
-        cookies.set("refresh_token", refreshToken, {
-            expires: new Date(refreshTokenExpireAt),
-            httpOnly: true,
-            sameSite: "lax",
-            domain: ".cryptuoso.com",
-            overwrite: true
-        });
+        res.setHeader(
+            "Set-Cookie",
+            Cookie.serialize("refresh_token", refreshToken, {
+                expires: new Date(refreshTokenExpireAt),
+                httpOnly: true,
+                sameSite: "lax",
+                domain: ".cryptuoso.com",
+                secure: true
+            })
+        );
         res.send({
-            success: true,
             accessToken
         });
         res.end();
@@ -499,4 +522,13 @@ export default class AuthService extends HTTPService {
             WHERE id = ${userId};
         `);
     }
+    /*
+    private async _bcryptCompare(data: any, encrypted: string): Promise<boolean> {
+        return this.pool.queue(async (utils: BcryptUtils) => utils.compare(data, encrypted));
+    }
+
+    private async _bcryptHash(data: any, saltOrRounds: string | number): Promise<string> {
+        return this.pool.queue(async (utils: BcryptUtils) => utils.hash(data, saltOrRounds));
+    }
+    */
 }

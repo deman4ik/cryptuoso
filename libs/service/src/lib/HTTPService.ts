@@ -54,12 +54,13 @@ export class HTTPService extends BaseService {
             this._server.use(
                 "/actions",
                 this._iu(this._checkAuth.bind(this)).iff(
-                    (req: any) => this._routes[req.url] && this._routes[req.url].auth
+                    (req: any) =>
+                        this._routes[req.url] && (this._routes[req.url].auth || this._routes[req.url].roles.length > 0)
                 )
             );
             this._server.use(async (req, res, next) => {
                 try {
-                    this.log.debug({ method: req.method, url: req.url, headers: req.headers, body: req.body });
+                    this.log.info({ method: req.method, url: req.url, headers: req.headers, body: req.body });
                     await next();
                 } catch (err) {
                     return next(err);
@@ -121,55 +122,18 @@ export class HTTPService extends BaseService {
 
     private async _checkAuth(req: any, res: Response<Protocol>, next: (err?: Error) => void) {
         try {
-            const userId = req.body.session_variables["x-hasura-user-id"];
-            if (!userId)
-                throw new ActionsHandlerError("Unauthorized: Invalid session variables", null, "UNAUTHORIZED", 401);
-
-            const role = req.body.session_variables["x-hasura-role"];
-            const route = this._routes[req.url];
-
-            //TODO: check user in DB and cache in Redis
-
-            const cachedUserKey = `cpz:users:${userId}`;
-            let user: User;
-
-            const cachedUserJSON = await this.redis.get(cachedUserKey);
-
-            if (cachedUserJSON) {
-                const parsed = JSONParse(cachedUserJSON);
-
-                if (parsed != cachedUserJSON) {
-                    user = parsed;
-                    await this.redis.expire(cachedUserKey, 60);
-                }
-            }
-
-            if (!user) {
-                user = await this.db.pg.maybeOne(this.db.sql`
-                    SELECT id, status, name, email, telegram_id, telegram_username, roles
-                    FROM users
-                    WHERE id = ${userId};
-                `);
-
-                if (!user)
+            if (this._routes[req.url].auth) {
+                const userId = req.body.session_variables["x-hasura-user-id"];
+                if (!userId)
                     throw new ActionsHandlerError("Unauthorized: Invalid session variables", null, "UNAUTHORIZED", 401);
-
-                await this.redis.setex(cachedUserKey, 60, JSON.stringify(user));
             }
+            if (this._routes[req.url].roles.length > 0) {
+                const role = req.body.session_variables["x-hasura-role"];
 
-            if (user.status == UserStatus.blocked)
-                throw new ActionsHandlerError("Forbidden: User blocked", null, "FORBIDDEN", 403);
-
-            if (
-                !role ||
-                !user.roles ||
-                !user.roles.allowedRoles ||
-                !user.roles.allowedRoles.includes(role)
-            )
-                throw new ActionsHandlerError("Forbidden: Invalid role", null, "FORBIDDEN", 403);
-
-            req.meta = { ...req.meta, user };
-
+                if (!this._routes[req.url].roles.includes(role))
+                    throw new ActionsHandlerError("Forbidden: Invalid role", null, "FORBIDDEN", 403);
+            }
+            //TODO: check user in DB and cache in Redis
             return next();
         } catch (err) {
             return next(err);
@@ -206,33 +170,39 @@ export class HTTPService extends BaseService {
         }
 
         for (const [name, route] of Object.entries(routes)) {
-            const { handler } = route;
-            let { auth, roles, inputSchema } = route;
+            const { handler, inputSchema } = route;
+            let { auth, roles } = route;
             if (!name) throw new Error("Route name is required");
             if (this._routes[`/actions/${name}`]) throw new Error("This route name is occupied");
             if (!handler && typeof handler !== "function") throw new Error("Route handler must be a function");
             auth = auth || false;
+            if (roles && (!Array.isArray(roles) || roles.length === 0))
+                throw new Error("Roles must be an array or undefined");
             roles = roles || [];
-            inputSchema = inputSchema || undefined;
-            const schema: ValidationSchema = {
-                action: {
-                    type: "object",
-                    props: {
-                        name: { type: "equal", value: name }
+            let schema: ValidationSchema;
+
+            if (inputSchema !== null || inputSchema === undefined) {
+                schema = {
+                    action: {
+                        type: "object",
+                        props: {
+                            name: { type: "equal", value: name }
+                        }
+                    },
+                    input: { type: "object", props: inputSchema },
+                    // eslint-disable-next-line @typescript-eslint/camelcase
+                    session_variables: {
+                        type: "object",
+                        props: {
+                            "x-hasura-user-id": { type: "string", optional: !auth },
+                            "x-hasura-role": { type: "string", optional: roles.length === 0 }
+                        }
                     }
-                },
-                input: { type: "object", props: inputSchema },
-                // eslint-disable-next-line @typescript-eslint/camelcase
-                session_variables: {
-                    type: "object",
-                    props: {
-                        "x-hasura-user-id": { type: "string", optional: !auth },
-                        "x-hasura-role": { type: "string", optional: roles.length === 0 }
-                    }
-                }
-            };
+                };
+            }
+
             this._routes[`/actions/${name}`] = {
-                validate: this._v.compile(schema),
+                validate: schema && this._v.compile(schema),
                 auth,
                 roles
             };

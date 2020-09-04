@@ -5,7 +5,7 @@ process.env.API_KEY = "my_api_key";
 import { Service, Protocol } from "restana";
 import { HTTPService, HTTPServiceConfig } from "../lib/HTTPService";
 import { ActionsHandlerError } from "@cryptuoso/errors";
-import { ajax, setProperty, getServerFromService, createServiceRoute } from "@cryptuoso/test-helpers";
+import { ajax, setProperty, getServerFromService, createRoute } from "./HTTPService.spec.helpers";
 
 const mockExit = jest.fn();
 const mockLightshipType = {
@@ -38,16 +38,9 @@ jest.mock("@cryptuoso/events");
 
 describe("Test 'BaseService' class", () => {
     const CONFIG: HTTPServiceConfig = { port: 4000 };
-    // Will be initialized in tests
+    // Willbe initialized in tests
     let httpService: HTTPService;
     let app: Service<Protocol.HTTP>;
-    let mockPG: {
-        mayBeOne: jest.Mock
-    };
-    let mockRedis: {
-        get: jest.Mock,
-        setex: jest.Mock
-    };
     let shutdownHandler: { (): Promise<any> };
 
     afterAll(async () => {
@@ -60,11 +53,6 @@ describe("Test 'BaseService' class", () => {
                 it("Should initialize correctly and doesn't call process.exit", () => {
                     httpService = new HTTPService(CONFIG);
                     app = getServerFromService(httpService);
-                    mockPG = { mayBeOne: httpService.db.pg.maybeOne as any };
-                    mockRedis = {
-                        get: httpService.redis.get as any,
-                        setex: httpService.redis.setex as any
-                    };
                     shutdownHandler = getLastRegisterShutdownHandler();
 
                     expect(mockExit).toHaveBeenCalledTimes(0);
@@ -154,7 +142,7 @@ describe("Test 'BaseService' class", () => {
                     test("Should return right response", async () => {
                         const rightResponse = { success: true };
 
-                        createServiceRoute(httpService, "my1", rightResponse);
+                        createRoute(httpService, "my1", rightResponse);
 
                         const res = await ajax.post(
                             `http://localhost:${CONFIG.port}/actions/my1`,
@@ -177,7 +165,7 @@ describe("Test 'BaseService' class", () => {
                     test("Should return error response with validation code", async () => {
                         const rightResponse = { success: true };
 
-                        createServiceRoute(httpService, "my2", rightResponse);
+                        createRoute(httpService, "my2", rightResponse);
 
                         const res = await ajax.post(
                             `http://localhost:${CONFIG.port}/actions/my2`,
@@ -197,7 +185,7 @@ describe("Test 'BaseService' class", () => {
                     test("Should return error response with validation code", async () => {
                         const rightResponse = { success: true };
 
-                        createServiceRoute(httpService, "my3", rightResponse);
+                        createRoute(httpService, "my3", rightResponse);
 
                         const res = await ajax.post(
                             `http://localhost:${CONFIG.port}/actions/my3`,
@@ -212,496 +200,232 @@ describe("Test 'BaseService' class", () => {
                     });
                 });
             });
-        });
 
-        describe("Testing _checkAuth method", () => {
-            describe("Testing with right requests", () => {
-                describe("Testing (no cache, data in DB) with right roles; user-id passed (auth = true)", () => {
-                    test("Should return right response", async () => {
-                        const routeName = "my4";
-                        const rightResponse = { success: true };
-                        const userId = "user-id";
-                        const userRole = "user-role";
+            describe("Testing _checkAuth method", () => {
+                describe("Testing with right requests", () => {
+                    describe("Testing with right roles; user-id passed", () => {
+                        test("Should return right response", async () => {
+                            const rightResponse = { success: true };
 
-                        createServiceRoute(httpService, routeName, rightResponse, [userRole], true);
-                        mockRedis.get.mockImplementationOnce(async () => null);
-                        mockPG.mayBeOne.mockImplementationOnce(async () => ({
-                            id: userId,
-                            roles: {
-                                allowedRoles: [userRole]
-                            }
-                        }));
-                        const res = await ajax.post(
-                            `http://localhost:${CONFIG.port}/actions/${routeName}`,
-                            { "x-api-key": process.env.API_KEY },
-                            {
-                                action: { name: routeName },
-                                input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
-                                session_variables: { "x-hasura-user-id": userId, "x-hasura-role": userRole }
-                            }
-                        );
+                            createRoute(httpService, "my4", rightResponse, ["my-role"], true);
 
-                        expect(res.parsedBody).toEqual(rightResponse);
-                    });
-                });
+                            const res = await ajax.post(
+                                `http://localhost:${CONFIG.port}/actions/my4`,
+                                { "x-api-key": process.env.API_KEY },
+                                {
+                                    action: { name: "my4" },
+                                    input: {},
+                                    // eslint-disable-next-line @typescript-eslint/camelcase
+                                    session_variables: { "x-hasura-user-id": "user-id", "x-hasura-role": "my-role" }
+                                }
+                            );
 
-                describe("Testing (data in cache) with right roles; user-id passed (auth = true)", () => {
-                    test("Should return right response", async () => {
-                        const routeName = "my41";
-                        const rightResponse = { success: true };
-                        const userId = "user-id";
-                        const userRole = "user-role";
-
-                        createServiceRoute(httpService, routeName, rightResponse, [userRole], true);
-                        mockRedis.get.mockImplementationOnce(async () => JSON.stringify({
-                            id: userId,
-                            roles: {
-                                allowedRoles: [userRole]
-                            }
-                        }));
-                        const res = await ajax.post(
-                            `http://localhost:${CONFIG.port}/actions/${routeName}`,
-                            { "x-api-key": process.env.API_KEY },
-                            {
-                                action: { name: routeName },
-                                input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
-                                session_variables: { "x-hasura-user-id": userId, "x-hasura-role": userRole }
-                            }
-                        );
-
-                        expect(res.parsedBody).toEqual(rightResponse);
-                    });
-                });
-
-                describe("Testing caching data (auth = true)", () => {
-                    test("Should return right response", async () => {
-                        const routeName = "my42";
-                        const rightResponse = { success: true };
-                        const userId = "user-id";
-                        const userRole = "user-role";
-                        const user = {
-                            id: userId,
-                            roles: {
-                                allowedRoles: [userRole]
-                            }
-                        };
-                        let userJSON: string;
-
-                        createServiceRoute(httpService, routeName, rightResponse, [userRole], true);
-                        // 1st request
-                        mockRedis.get.mockImplementationOnce(async () => null);
-                        mockPG.mayBeOne.mockImplementationOnce(async () => user);
-                        mockRedis.setex.mockImplementationOnce(async (a: any, b: any, dataString: string) => {
-                            userJSON = dataString;
+                            expect(res.parsedBody).toEqual(rightResponse);
                         });
-                        // 2nd request
-                        mockRedis.get.mockImplementationOnce(async () => userJSON);
+                    });
 
-                        const reqArgs = [
-                            `http://localhost:${CONFIG.port}/actions/${routeName}`,
-                            { "x-api-key": process.env.API_KEY },
-                            {
-                                action: { name: routeName },
-                                input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
-                                session_variables: { "x-hasura-user-id": userId, "x-hasura-role": userRole }
-                            }
-                        ];
+                    describe("Testing w/o roles", () => {
+                        test("Should return right response", async () => {
+                            const rightResponse = { success: true };
 
-                        const res1 = await ajax.post.apply(ajax, reqArgs);
-                        const res2 = await ajax.post.apply(ajax, reqArgs);
+                            createRoute(httpService, "my5", rightResponse, undefined, true);
 
-                        expect(res1.parsedBody).toEqual(rightResponse);
-                        expect(res2.parsedBody).toEqual(rightResponse);
+                            const res = await ajax.post(
+                                `http://localhost:${CONFIG.port}/actions/my5`,
+                                { "x-api-key": process.env.API_KEY },
+                                {
+                                    action: { name: "my5" },
+                                    input: {},
+                                    // eslint-disable-next-line @typescript-eslint/camelcase
+                                    session_variables: { "x-hasura-user-id": "user-id" }
+                                }
+                            );
+
+                            expect(res.parsedBody).toEqual(rightResponse);
+                        });
                     });
                 });
 
-                describe("Testing with 'role' from allowedRoles but not from route (auth = true)", () => {
-                    test("Should return right response", async () => {
-                        const routeName = "my43";
-                        const rightResponse = { success: true };
-                        const userId = "user-id";
-                        const userRole = "user-role";
-                        const routeRole = "route-role";
+                describe("Testing with wrong requests", () => {
+                    describe("Testing with empty 'user-id'", () => {
+                        test("Should return error response", async () => {
+                            const rightResponse = { success: true };
+                            const errorResponse = new ActionsHandlerError(
+                                "Unauthorized: Invalid session variables",
+                                null,
+                                "UNAUTHORIZED",
+                                401
+                            ).response;
 
-                        createServiceRoute(httpService, routeName, rightResponse, [routeRole], true);
-                        mockRedis.get.mockImplementationOnce(async () => JSON.stringify({
-                            id: userId,
-                            roles: {
-                                allowedRoles: [userRole]
-                            }
-                        }));
-                        const res = await ajax.post(
-                            `http://localhost:${CONFIG.port}/actions/${routeName}`,
-                            { "x-api-key": process.env.API_KEY },
-                            {
-                                action: { name: routeName },
-                                input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
-                                session_variables: { "x-hasura-user-id": userId, "x-hasura-role": userRole }
-                            }
-                        );
+                            createRoute(httpService, "my6", rightResponse, ["my-role"], true);
 
-                        expect(res.parsedBody).toEqual(rightResponse);
+                            const res = await ajax.post(
+                                `http://localhost:${CONFIG.port}/actions/my6`,
+                                { "x-api-key": process.env.API_KEY },
+                                {
+                                    action: { name: "my6" },
+                                    input: {},
+                                    // eslint-disable-next-line @typescript-eslint/camelcase
+                                    session_variables: { "x-hasura-user-id": "", "x-hasura-role": "my-role" }
+                                }
+                            );
+
+                            expect(res.parsedBody).toEqual(errorResponse);
+                        });
                     });
-                });
 
-                describe("Testing with 'role' from from route (auth = false)", () => {
-                    test("Should return right response", async () => {
-                        const routeName = "my44";
-                        const rightResponse = { success: true };
-                        const userId = "user-id";
-                        const userRole = "user-role";
-                        const routeRole = "route-role";
+                    describe("Testing with empty 'role'", () => {
+                        test("Should return error response", async () => {
+                            const rightResponse = { success: true };
+                            const errorResponse = new ActionsHandlerError(
+                                "Forbidden: Invalid role",
+                                null,
+                                "FORBIDDEN",
+                                403
+                            ).response;
 
-                        createServiceRoute(httpService, routeName, rightResponse, [routeRole], false);
-                        mockRedis.get.mockImplementationOnce(async () => JSON.stringify({
-                            id: userId,
-                            roles: {
-                                allowedRoles: [userRole]
-                            }
-                        }));
-                        const res = await ajax.post(
-                            `http://localhost:${CONFIG.port}/actions/${routeName}`,
-                            { "x-api-key": process.env.API_KEY },
-                            {
-                                action: { name: routeName },
-                                input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
-                                session_variables: { "x-hasura-user-id": userId, "x-hasura-role": routeRole }
-                            }
-                        );
+                            createRoute(httpService, "my7", rightResponse, ["my-role"], true);
 
-                        expect(res.parsedBody).toEqual(rightResponse);
+                            const res = await ajax.post(
+                                `http://localhost:${CONFIG.port}/actions/my7`,
+                                { "x-api-key": process.env.API_KEY },
+                                {
+                                    action: { name: "my7" },
+                                    input: {},
+                                    // eslint-disable-next-line @typescript-eslint/camelcase
+                                    session_variables: { "x-hasura-user-id": "user-id", "x-hasura-role": "" }
+                                }
+                            );
+
+                            expect(res.parsedBody).toEqual(errorResponse);
+                        });
                     });
-                });
 
-                describe("Testing w/o route roles", () => {
-                    test("Should return right response", async () => {
-                        const routeName = "my45";
-                        const rightResponse = { success: true };
-                        const userId = "user-id";
+                    describe("Testing with wrong 'role'", () => {
+                        test("Should return error response", async () => {
+                            const rightResponse = { success: true };
+                            const errorResponse = new ActionsHandlerError(
+                                "Forbidden: Invalid role",
+                                null,
+                                "FORBIDDEN",
+                                403
+                            ).response;
 
-                        createServiceRoute(httpService, routeName, rightResponse, [], true);
-                        mockRedis.get.mockImplementationOnce(async () => JSON.stringify({
-                            id: userId,
-                            roles: {
-                                allowedRoles: []
-                            }
-                        }));
-                        const res = await ajax.post(
-                            `http://localhost:${CONFIG.port}/actions/${routeName}`,
-                            { "x-api-key": process.env.API_KEY },
-                            {
-                                action: { name: routeName },
-                                input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
-                                session_variables: { "x-hasura-user-id": userId }
-                            }
-                        );
+                            createRoute(httpService, "my8", rightResponse, ["my-role"], true);
 
-                        expect(res.parsedBody).toEqual(rightResponse);
+                            const res = await ajax.post(
+                                `http://localhost:${CONFIG.port}/actions/my8`,
+                                { "x-api-key": process.env.API_KEY },
+                                {
+                                    action: { name: "my8" },
+                                    input: {},
+                                    // eslint-disable-next-line @typescript-eslint/camelcase
+                                    session_variables: { "x-hasura-user-id": "user-id", "x-hasura-role": "wrong" }
+                                }
+                            );
+
+                            expect(res.parsedBody).toEqual(errorResponse);
+                        });
                     });
                 });
             });
 
-            describe("Testing with wrong requests", () => {
-                describe("Testing with wrong user-id", () => {
-                    test("Should return error response", async () => {
-                        const routeName = "my5";
-                        const rightResponse = { success: true };
-                        const userId = "user-id";
-                        const routeRole = "route-role";
-                        const errorResponse = new ActionsHandlerError(
-                            "Unauthorized: Invalid session variables",
-                            null,
-                            "UNAUTHORIZED",
-                            401
-                        ).response;
+            describe("Tesing _createRoutes method", () => {
+                describe("Testing with right arguments set", () => {
+                    describe("Testing with full arguments set", () => {
+                        it("Should not throw error", () => {
+                            expect(() => createRoute(httpService, "my9", {}, ["my-role"], true, {})).not.toThrowError();
+                            expect(() => createRoute(httpService, "my10", {}, undefined, true, {})).not.toThrowError();
+                        });
+                    });
 
-                        createServiceRoute(httpService, routeName, rightResponse, [routeRole], true);
-                        mockRedis.get.mockImplementationOnce(async () => null);
-                        mockPG.mayBeOne.mockImplementationOnce(async () => null);
+                    describe("Testing w/o 'inputSchema'", () => {
+                        it("Should not throw error", () => {
+                            expect(() => createRoute(httpService, "my11", {}, ["my-role"], true)).not.toThrowError();
+                        });
+                    });
 
-                        const res = await ajax.post(
-                            `http://localhost:${CONFIG.port}/actions/${routeName}`,
-                            { "x-api-key": process.env.API_KEY },
-                            {
-                                action: { name: routeName },
-                                input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
-                                session_variables: { "x-hasura-user-id": userId, "x-hasura-role": routeRole }
-                            }
-                        );
+                    describe("Testing w/o 'auth' and 'inputSchema'", () => {
+                        it("Should not throw error", () => {
+                            expect(() => createRoute(httpService, "my12", {}, ["my-role"])).not.toThrowError();
+                        });
+                    });
 
-                        expect(res.parsedBody).toEqual(errorResponse);
+                    describe("Testing w/o 'roles, 'auth' and 'inputSchema'", () => {
+                        it("Should not throw error", () => {
+                            expect(() => createRoute(httpService, "my13", {})).not.toThrowError();
+                        });
                     });
                 });
 
-                describe("Testing with right roles; user-id passed; but User is blocked", () => {
-                    test("Should return error response", async () => {
-                        const routeName = "my51";
-                        const rightResponse = { success: true };
-                        const userId = "user-id";
-                        const userRole = "user-role";
-                        const errorResponse = new ActionsHandlerError(
-                            "Forbidden: User blocked",
-                            null,
-                            "FORBIDDEN",
-                            403
-                        ).response;
+                describe("Testing with wrong arguments set", () => {
+                    describe("Testing with empty 'name'", () => {
+                        it("Should to throw error", () => {
+                            expect(() => {
+                                const arg: { [key: string]: any } = {};
+                                arg[""] = {
+                                    handler: jest.fn(),
+                                    roles: ["my-role"],
+                                    auth: true,
+                                    schema: {}
+                                };
+                                httpService.createRoutes(arg);
+                            }).toThrowError();
+                        });
+                    });
 
-                        createServiceRoute(httpService, routeName, rightResponse, [userRole], true);
-                        mockRedis.get.mockImplementationOnce(async () => JSON.stringify({
-                            id: userId,
-                            roles: {
-                                allowedRoles: [userRole]
-                            },
-                            status: -1
-                        }));
-                        const res = await ajax.post(
-                            `http://localhost:${CONFIG.port}/actions/${routeName}`,
-                            { "x-api-key": process.env.API_KEY },
-                            {
-                                action: { name: routeName },
-                                input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
-                                session_variables: { "x-hasura-user-id": userId, "x-hasura-role": userRole }
-                            }
-                        );
+                    describe("Testing with empty 'handler'", () => {
+                        it("Should to throw error", () => {
+                            expect(() => {
+                                const arg: { [key: string]: any } = {};
+                                arg["my14"] = {
+                                    /* handler: () => {}, */
+                                    roles: ["my-role"],
+                                    auth: true,
+                                    schema: {}
+                                };
+                                httpService.createRoutes(arg);
+                            }).toThrowError();
+                        });
+                    });
 
-                        expect(res.parsedBody).toEqual(errorResponse);
+                    describe("Testing with non-function 'handler'", () => {
+                        it("Should to throw error", () => {
+                            expect(() => {
+                                const arg: { [key: string]: any } = {};
+                                arg["my15"] = {
+                                    handler: "handler",
+                                    roles: ["my-role"],
+                                    auth: true,
+                                    schema: {}
+                                };
+                                httpService.createRoutes(arg);
+                            }).toThrowError();
+                        });
                     });
                 });
 
-                describe("Testing with wrong user role but right route role (auth = true)", () => {
-                    test("Should return error response", async () => {
-                        const routeName = "my52";
-                        const rightResponse = { success: true };
-                        const userId = "user-id";
-                        const routeRole = "route-role";
-                        const errorResponse = new ActionsHandlerError(
-                            "Forbidden: Invalid role",
-                            null,
-                            "FORBIDDEN",
-                            403
-                        ).response;
+                describe("Adding handler to existing route", () => {
+                    test("Should throw error", async () => {
+                        const rightResponse = { first: true };
 
-                        createServiceRoute(httpService, routeName, rightResponse, [routeRole], true);
-                        mockRedis.get.mockImplementationOnce(async () => JSON.stringify({
-                            id: userId,
-                            roles: {
-                                allowedRoles: ["other-role"]
-                            }
-                        }));
-                        const res = await ajax.post(
-                            `http://localhost:${CONFIG.port}/actions/${routeName}`,
-                            { "x-api-key": process.env.API_KEY },
-                            {
-                                action: { name: routeName },
-                                input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
-                                session_variables: { "x-hasura-user-id": userId, "x-hasura-role": routeRole }
-                            }
-                        );
-
-                        expect(res.parsedBody).toEqual(errorResponse);
+                        createRoute(httpService, "my16", rightResponse, undefined, true);
+                        expect(() => createRoute(httpService, "my16", rightResponse, undefined, true)).toThrowError();
+                        expect(() =>
+                            createRoute(httpService, "my17", rightResponse, undefined, true)
+                        ).not.toThrowError();
                     });
                 });
 
-                describe("Testing with empty 'user-id'", () => {
-                    test("Should return error response", async () => {
-                        const rightResponse = { success: true };
-                        const errorResponse = new ActionsHandlerError(
-                            "Unauthorized: Invalid session variables",
-                            null,
-                            "UNAUTHORIZED",
-                            401
-                        ).response;
+                describe("Adding several handlers", () => {
+                    test("Should not throw error", async () => {
+                        const rightResponse = { first: true };
 
-                        createServiceRoute(httpService, "my6", rightResponse, ["my-role"], true);
-
-                        const res = await ajax.post(
-                            `http://localhost:${CONFIG.port}/actions/my6`,
-                            { "x-api-key": process.env.API_KEY },
-                            {
-                                action: { name: "my6" },
-                                input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
-                                session_variables: { "x-hasura-user-id": "", "x-hasura-role": "my-role" }
-                            }
-                        );
-
-                        expect(res.parsedBody).toEqual(errorResponse);
+                        createRoute(httpService, "my18", rightResponse, undefined, true);
+                        expect(() =>
+                            createRoute(httpService, "my19", rightResponse, undefined, true)
+                        ).not.toThrowError();
                     });
-                });
-
-                describe("Testing with wrong 'role' (auth = false)", () => {
-                    test("Should return error response", async () => {
-                        const routeName = "my7";
-                        const rightResponse = { success: true };
-                        const userId = "user-id";
-                        const routeRole = "route-role";
-                        const errorResponse = new ActionsHandlerError(
-                            "Forbidden: Invalid role",
-                            null,
-                            "FORBIDDEN",
-                            403
-                        ).response;
-
-                        createServiceRoute(httpService, routeName, rightResponse, [routeRole], false);
-                        mockRedis.get.mockImplementationOnce(async () => JSON.stringify({
-                            id: userId,
-                            roles: {
-                                allowedRoles: [routeRole]
-                            }
-                        }));
-                        const res = await ajax.post(
-                            `http://localhost:${CONFIG.port}/actions/${routeName}`,
-                            { "x-api-key": process.env.API_KEY },
-                            {
-                                action: { name: routeName },
-                                input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
-                                session_variables: { "x-hasura-user-id": userId, "x-hasura-role": "wrong-role" }
-                            }
-                        );
-
-                        expect(res.parsedBody).toEqual(errorResponse);
-                    });
-                });
-
-                describe("Testing with 'role' from allowedRoles but not from route (auth = false)", () => {
-                    test("Should return error response", async () => {
-                        const routeName = "my8";
-                        const rightResponse = { success: true };
-                        const userId = "user-id";
-                        const userRole = "user-role";
-                        const routeRole = "route-role";
-                        const errorResponse = new ActionsHandlerError(
-                            "Forbidden: Invalid role",
-                            null,
-                            "FORBIDDEN",
-                            403
-                        ).response;
-
-                        createServiceRoute(httpService, routeName, rightResponse, [routeRole], false);
-                        mockRedis.get.mockImplementationOnce(async () => JSON.stringify({
-                            id: userId,
-                            roles: {
-                                allowedRoles: [userRole]
-                            }
-                        }));
-                        const res = await ajax.post(
-                            `http://localhost:${CONFIG.port}/actions/${routeName}`,
-                            { "x-api-key": process.env.API_KEY },
-                            {
-                                action: { name: routeName },
-                                input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
-                                session_variables: { "x-hasura-user-id": userId, "x-hasura-role": userRole }
-                            }
-                        );
-
-                        expect(res.parsedBody).toEqual(errorResponse);
-                    });
-                });
-            });
-        });
-
-        describe("Tesing _createServiceRoutes method", () => {
-            describe("Testing with right arguments set", () => {
-                describe("Testing with full arguments set", () => {
-                    it("Should not throw error", () => {
-                        expect(() => createServiceRoute(httpService, "my9", {}, ["my-role"], true, {})).not.toThrowError();
-                        expect(() => createServiceRoute(httpService, "my10", {}, [], true, {})).not.toThrowError();
-                    });
-                });
-
-                describe("Testing w/o 'inputSchema'", () => {
-                    it("Should not throw error", () => {
-                        expect(() => createServiceRoute(httpService, "my11", {}, ["my-role"], true)).not.toThrowError();
-                    });
-                });
-
-                describe("Testing w/o 'auth' and 'inputSchema'", () => {
-                    it("Should not throw error", () => {
-                        expect(() => createServiceRoute(httpService, "my12", {}, ["my-role"])).not.toThrowError();
-                    });
-                });
-
-                describe("Testing w/o 'roles, 'auth' and 'inputSchema'", () => {
-                    it("Should not throw error", () => {
-                        expect(() => createServiceRoute(httpService, "my13", {})).not.toThrowError();
-                    });
-                });
-            });
-
-            describe("Testing with wrong arguments set", () => {
-                describe("Testing with empty 'name'", () => {
-                    it("Should to throw error", () => {
-                        expect(() => {
-                            const arg: { [key: string]: any } = {};
-                            arg[""] = {
-                                handler: jest.fn(),
-                                roles: ["my-role"],
-                                auth: true,
-                                schema: {}
-                            };
-                            httpService.createRoutes(arg);
-                        }).toThrowError();
-                    });
-                });
-
-                describe("Testing with empty 'handler'", () => {
-                    it("Should to throw error", () => {
-                        expect(() => {
-                            const arg: { [key: string]: any } = {};
-                            arg["my14"] = {
-                                /* handler: () => {}, */
-                                roles: ["my-role"],
-                                auth: true,
-                                schema: {}
-                            };
-                            httpService.createRoutes(arg);
-                        }).toThrowError();
-                    });
-                });
-
-                describe("Testing with non-function 'handler'", () => {
-                    it("Should to throw error", () => {
-                        expect(() => {
-                            const arg: { [key: string]: any } = {};
-                            arg["my15"] = {
-                                handler: "handler",
-                                roles: ["my-role"],
-                                auth: true,
-                                schema: {}
-                            };
-                            httpService.createRoutes(arg);
-                        }).toThrowError();
-                    });
-                });
-            });
-
-            describe("Adding handler to existing route", () => {
-                test("Should throw error", async () => {
-                    const rightResponse = { first: true };
-
-                    createServiceRoute(httpService, "my16", rightResponse, [], true);
-                    expect(() => createServiceRoute(httpService, "my16", rightResponse, [], true)).toThrowError();
-                    expect(() => createServiceRoute(httpService, "my17", rightResponse, [], true)).not.toThrowError();
-                });
-            });
-
-            describe("Adding several handlers", () => {
-                test("Should not throw error", async () => {
-                    const rightResponse = { first: true };
-
-                    createServiceRoute(httpService, "my18", rightResponse, [], true);
-                    expect(() => createServiceRoute(httpService, "my19", rightResponse, [], true)).not.toThrowError();
                 });
             });
         });

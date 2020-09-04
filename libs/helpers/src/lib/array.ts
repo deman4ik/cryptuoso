@@ -94,7 +94,7 @@ export function uniqueElementsBy<T>(arr: T[], fn: (a: T, b: T) => boolean): T[] 
  * Flattens an array up to the specified depth.
  *
  * @param {any[]} arr
- * @param {number} [depth=1] The depth of the targer array. Default value is 1.
+ * @param {number} [depth=1] The depth of the target array. Default value is 1.
  * @returns {any[]}
  * @example
  * flattenArray([1, [2], 3, 4]); // [1, 2, 3, 4]
@@ -115,7 +115,7 @@ export function flattenArray(arr: any[], depth = 1): any[] {
  * const objects = [{foo:1, bar:2}, {foo:1, bar:3, tar:5}, {foo: 5, tar: 1}]
  * groupBy(objects, (el)=>el.foo); // {1: [{foo:1, bar:2}, {foo:1, bar:3, tar:5}], 5: [{foo: 5, tar: 1}]}
  */
-export const groupBy = (arr: { [key: string]: any }[], fn: (...params: any[]) => any | string) =>
+export const groupBy = (arr: { [key: string]: any }[], fn: ((...params: any[]) => any) | string) =>
     arr.map(typeof fn === "function" ? fn : (val) => val[fn]).reduce((acc, val, i) => {
         acc[val] = (acc[val] || []).concat(arr[i]);
         return acc;

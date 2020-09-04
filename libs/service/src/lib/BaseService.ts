@@ -2,10 +2,11 @@ import { createLightship, LightshipType } from "lightship";
 import Redis from "ioredis";
 import logger, { Logger } from "@cryptuoso/logger";
 import { sql, pg, pgUtil } from "@cryptuoso/postgres";
-import { Events } from "@cryptuoso/events";
+import { Events, EventsConfig } from "@cryptuoso/events";
 
 export interface BaseServiceConfig {
     name?: string;
+    eventsConfig?: EventsConfig;
 }
 
 export class BaseService {
@@ -38,7 +39,8 @@ export class BaseService {
             this.#redisConnection = new Redis(
                 process.env.REDISCS //,{enableReadyCheck: false}
             );
-            this.#events = new Events(this.#redisConnection, this.#lightship);
+
+            this.#events = new Events(this.#redisConnection, this.#lightship, config?.eventsConfig);
         } catch (err) {
             console.error(err);
             process.exit(1);
@@ -126,5 +128,9 @@ export class BaseService {
 
     get redis() {
         return this.#redisConnection;
+    }
+
+    get lightship() {
+        return this.#lightship;
     }
 }
