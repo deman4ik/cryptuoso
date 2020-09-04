@@ -1,5 +1,5 @@
 import Service from "../app/service";
-import { measureFunction } from "./measuring";
+import { measureFunction } from "@cryptuoso/test-helpers";
 import log from "@cryptuoso/logger";
 
 export async function testService(service: Service) {

@@ -1164,6 +1164,30 @@
                     }
                 }
             }
+        },
+        "test-helpers": {
+            "root": "libs/test-helpers",
+            "sourceRoot": "libs/test-helpers/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": ["libs/test-helpers/tsconfig.lib.json", "libs/test-helpers/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/test-helpers/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/test-helpers/jest.config.js",
+                        "tsConfig": "libs/test-helpers/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
         }
     },
     "cli": {

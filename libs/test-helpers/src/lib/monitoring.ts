@@ -1,7 +1,17 @@
 import { round } from "@cryptuoso/helpers";
 import os from "os";
 
-const appmetrics = require("appmetrics");
+let appmetrics: any;
+if(process.env.ENABLE_APP_METRICS == "true") {
+    appmetrics = require("appmetrics");
+} else {
+    appmetrics = {
+        monitor: () => ({
+            addListener() {},
+            removeListener() {}
+        })
+    }
+}
 const monitoring = appmetrics.monitor();
 const cpus = os.cpus().length;
 
@@ -32,13 +42,13 @@ class Index {
         this._sum += value;
         ++this._count;
 
-        if(this._min == null || value < this._min)
+        if (this._min == null || value < this._min)
             this._min = value;
 
-        if(this._max == null || value > this._max)
+        if (this._max == null || value > this._max)
             this._max = value;
     }
-    
+
     getResults() {
         return {
             min: round(this.min, 1),
@@ -49,6 +59,9 @@ class Index {
     }
 };
 
+/**
+ * For using set `process.env.ENABLE_APP_METRICS = "true"`
+ */
 export default class Monitoring {
     private _started: boolean = false;
     private startTime: number;
@@ -57,18 +70,15 @@ export default class Monitoring {
     private cpu: Index = new Index;
     private memory: Index = new Index;
 
-    #cpuListener = this._cpuListener.bind(this);
-    #memoryListener = this._memoryListener.bind(this);
-
     constructor() {
 
     }
 
-    private _cpuListener(arg: any) {
+    private _cpuListener = (arg: any) => {
         this.cpu.add(arg.process * cpus * 100);
     }
 
-    private _memoryListener(arg: any) {
+    private _memoryListener = (arg: any) => {
         this.memory.add(arg.physical / 1024 / 1024);
     }
 
@@ -88,7 +98,7 @@ export default class Monitoring {
     }
 
     start() {
-        if(this._started)
+        if (this._started)
             return;
 
         this._started = true;
@@ -96,9 +106,9 @@ export default class Monitoring {
             Date.now() :
             Date.now() - (this.endTime - this.startTime);
         this.endTime = null;
-        
-        monitoring.addListener('cpu', this.#cpuListener);
-        monitoring.addListener('memory', this.#memoryListener);
+
+        monitoring.addListener('cpu', this._cpuListener);
+        monitoring.addListener('memory', this._memoryListener);
 
         return this;
     }
@@ -106,9 +116,9 @@ export default class Monitoring {
     stop() {
         this._started = false;
         this.endTime = Date.now();
-        
-        monitoring.removeListener('cpu', this.#cpuListener);
-        monitoring.removeListener('memory', this.#memoryListener);
+
+        monitoring.removeListener('cpu', this._cpuListener);
+        monitoring.removeListener('memory', this._memoryListener);
 
         return this;
     }

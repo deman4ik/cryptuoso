@@ -204,7 +204,7 @@ describe("Test Auth class methods", () => {
                         auth_date: Date.now(),
                         hash: ""
                     };
-                    params.hash = await makeTgHash(params, process.env.BOT_TOKEN);
+                    params.hash = makeTgHash(params, process.env.BOT_TOKEN);
                     const dbUser: User = {
                         id: "id",
                         telegramId: params.id,
@@ -240,7 +240,7 @@ describe("Test Auth class methods", () => {
                         auth_date: Date.now(),
                         hash: ""
                     };
-                    params.hash = await makeTgHash(params, process.env.BOT_TOKEN);
+                    params.hash = makeTgHash(params, process.env.BOT_TOKEN);
                     const dbUser: User = {
                         id: "id",
                         telegramId: params.id,
@@ -282,7 +282,7 @@ describe("Test Auth class methods", () => {
                         auth_date: Date.now(),
                         hash: ""
                     };
-                    params.hash = await makeTgHash(params, process.env.BOT_TOKEN);
+                    params.hash = makeTgHash(params, process.env.BOT_TOKEN);
                     const dbUser: User = {
                         id: "id",
                         telegramId: params.id,
@@ -324,7 +324,7 @@ describe("Test Auth class methods", () => {
                         auth_date: Date.now(),
                         hash: ""
                     };
-                    params.hash = await makeTgHash(params, process.env.BOT_TOKEN);
+                    params.hash = makeTgHash(params, process.env.BOT_TOKEN);
                     const dbf = {
                         getUserTg: jest.fn(async () => null),
                         registerUserTg: jest.fn(),
@@ -357,7 +357,7 @@ describe("Test Auth class methods", () => {
                         auth_date: Date.now(),
                         hash: ""
                     };
-                    //params.hash = await makeTgHash(params, process.env.BOT_TOKEN);
+                    //params.hash = makeTgHash(params, process.env.BOT_TOKEN);
                     const dbUser: User = {
                         id: "id",
                         telegramId: params.id,
@@ -389,7 +389,7 @@ describe("Test Auth class methods", () => {
                         auth_date: Date.now(),
                         hash: ""
                     };
-                    params.hash = await makeTgHash(params, process.env.BOT_TOKEN);
+                    params.hash = makeTgHash(params, process.env.BOT_TOKEN);
                     const dbUser: User = {
                         id: "id",
                         telegramId: params.id,

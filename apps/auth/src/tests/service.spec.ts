@@ -200,7 +200,7 @@ describe("Test 'AuthService' class methods", () => {
                     auth_date: Date.now(),
                     hash: ""
                 };
-                params.hash = await makeTgHash(params, process.env.BOT_TOKEN);
+                params.hash = makeTgHash(params, process.env.BOT_TOKEN);
                 const dbUser: User = {
                     id: "id",
                     telegramId: params.id,
@@ -244,7 +244,7 @@ describe("Test 'AuthService' class methods", () => {
                     auth_date: Date.now(),
                     hash: ""
                 };
-                params.hash = await makeTgHash(params, process.env.BOT_TOKEN);
+                params.hash = makeTgHash(params, process.env.BOT_TOKEN);
 
                 mockPG.maybeOne.mockImplementation(async () => null);
 

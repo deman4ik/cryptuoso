@@ -1,6 +1,9 @@
 import log from "@cryptuoso/logger";
 import Monitoring from "./monitoring";
 
+/**
+ * For using set `process.env.ENABLE_APP_METRICS = "true"`
+ */
 export async function startSeveralFunctions(func: { (): Promise<any> }, copiesCount: number = 10) {
     const argArr = [];
     let errorsCount = 0;
@@ -14,6 +17,9 @@ export async function startSeveralFunctions(func: { (): Promise<any> }, copiesCo
     return { copiesCount, errorsCount, errors };
 }
 
+/**
+ * For using set `process.env.ENABLE_APP_METRICS = "true"`
+ */
 export async function measureFunction(
     name: string,
     func: { (...args: any): Promise<any> },
