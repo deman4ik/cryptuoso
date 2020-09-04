@@ -5,15 +5,30 @@ import helmet from "helmet";
 import Validator, { ValidationSchema, ValidationError } from "fastest-validator";
 import { BaseService, BaseServiceConfig } from "./BaseService";
 import { ActionsHandlerError } from "@cryptuoso/errors";
+import { User, UserRoles, UserStatus } from "@cryptuoso/user-state";
+import { JSONParse } from "@cryptuoso/helpers";
 
 //TODO: req/res typings
+
 export interface ActionPayload {
     action: {
         name: string;
     };
     input: { [key: string]: any };
-    session_variables: { [key: string]: string };
+    session_variables: {
+        [key: string]: string;
+        "x-hasura-user-id"?: string;
+        "x-hasura-role"?: UserRoles;
+    };
 }
+
+export type RequestExtended<P extends Protocol> = Request<P> & {
+    body?: ActionPayload;
+    meta?: {
+        [key: string]: any;
+        user: User;
+    };
+};
 
 export interface HTTPServiceConfig extends BaseServiceConfig {
     port?: number;
@@ -96,9 +111,13 @@ export class HTTPService extends BaseService {
     }
 
     private _checkValidation(req: Request<Protocol>, res: Response<Protocol>, next: (err?: Error) => void) {
-        const body = req.body;
-        const validationErrors = this._routes[req.url].validate(body);
+        const route = this._routes[req.url];
+        const body: any = req.body;
+        const validationErrors = route.validate(body);
+
         if (validationErrors === true) {
+            if (!route.auth && route.roles.length > 0 && !route.roles.includes(body.session_variables["x-hasura-role"]))
+                throw new ActionsHandlerError("Forbidden: Invalid role", null, "FORBIDDEN", 403);
             req.body = body;
             return next();
         } else
@@ -110,20 +129,62 @@ export class HTTPService extends BaseService {
             );
     }
 
-    private _checkAuth(req: any, res: Response<Protocol>, next: (err?: Error) => void) {
+    private async _checkAuth(req: RequestExtended<Protocol>, res: Response<Protocol>, next: (err?: Error) => void) {
         try {
-            if (this._routes[req.url].auth) {
-                const userId = req.body.session_variables["x-hasura-user-id"];
-                if (!userId)
-                    throw new ActionsHandlerError("Unauthorized: Invalid session variables", null, "UNAUTHORIZED", 401);
-            }
-            if (this._routes[req.url].roles.length > 0) {
-                const role = req.body.session_variables["x-hasura-role"];
+            if (!this._routes[req.url].auth) {
+                if (this._routes[req.url].roles.length > 0) {
+                    const role = req.body.session_variables["x-hasura-role"];
 
-                if (!this._routes[req.url].roles.includes(role))
-                    throw new ActionsHandlerError("Forbidden: Invalid role", null, "FORBIDDEN", 403);
+                    if (!this._routes[req.url].roles.includes(role))
+                        throw new ActionsHandlerError("Forbidden: Invalid role", null, "FORBIDDEN", 403);
+                }
+
+                return next();
             }
+
             //TODO: check user in DB and cache in Redis
+            const userId = req.body.session_variables["x-hasura-user-id"];
+            if (!userId)
+                throw new ActionsHandlerError("Unauthorized: Invalid session variables", null, "UNAUTHORIZED", 401);
+
+            const cachedUserKey = `cpz:users:${userId}`;
+            let user: User;
+
+            const cachedUserJSON = await this.redis.get(cachedUserKey);
+
+            if (cachedUserJSON) {
+                const parsed = JSONParse(cachedUserJSON);
+
+                if (parsed != cachedUserJSON) {
+                    user = parsed;
+                    // Can be used when cached user data will be expiring by (un)blocking
+                    //await this.redis.expire(cachedUserKey, 15);
+                }
+            }
+
+            if (!user) {
+                user = await this.db.pg.maybeOne(this.db.sql`
+                    SELECT id, status, name, email, telegram_id, telegram_username, roles
+                    FROM users
+                    WHERE id = ${userId};
+                `);
+
+                if (!user)
+                    throw new ActionsHandlerError("Unauthorized: Invalid session variables", null, "UNAUTHORIZED", 401);
+
+                await this.redis.setex(cachedUserKey, 60, JSON.stringify(user));
+            }
+
+            if (user.status == UserStatus.blocked)
+                throw new ActionsHandlerError("Forbidden: User blocked", null, "FORBIDDEN", 403);
+
+            if (
+                this._routes[req.url].roles.length > 0 &&
+                !user.roles?.allowedRoles?.some((userRole) => this._routes[req.url].roles.includes(userRole))
+            )
+                throw new ActionsHandlerError("Forbidden: Invalid role", null, "FORBIDDEN", 403);
+
+            req.meta = { ...req.meta, user };
             return next();
         } catch (err) {
             return next(err);

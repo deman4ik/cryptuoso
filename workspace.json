@@ -994,6 +994,170 @@
                     }
                 }
             }
+        },
+        "stats-calc-worker": {
+            "root": "apps/stats-calc-worker",
+            "sourceRoot": "apps/stats-calc-worker/src",
+            "projectType": "application",
+            "prefix": "stats-calc-worker",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/stats-calc-worker",
+                        "main": "apps/stats-calc-worker/src/main.ts",
+                        "tsConfig": "apps/stats-calc-worker/tsconfig.app.json",
+                        "assets": ["apps/stats-calc-worker/src/assets"],
+                        "webpackConfig": "apps/stats-calc-worker/webpack.config.js"
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/stats-calc-worker/src/environments/environment.ts",
+                                    "with": "apps/stats-calc-worker/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "stats-calc-worker:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "apps/stats-calc-worker/tsconfig.app.json",
+                            "apps/stats-calc-worker/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!apps/stats-calc-worker/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/stats-calc-worker/jest.config.js",
+                        "tsConfig": "apps/stats-calc-worker/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "stats-calc-runner": {
+            "root": "apps/stats-calc-runner",
+            "sourceRoot": "apps/stats-calc-runner/src",
+            "projectType": "application",
+            "prefix": "stats-calc-runner",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/stats-calc-runner",
+                        "main": "apps/stats-calc-runner/src/main.ts",
+                        "tsConfig": "apps/stats-calc-runner/tsconfig.app.json",
+                        "assets": ["apps/stats-calc-runner/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/stats-calc-runner/src/environments/environment.ts",
+                                    "with": "apps/stats-calc-runner/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "stats-calc-runner:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "apps/stats-calc-runner/tsconfig.app.json",
+                            "apps/stats-calc-runner/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!apps/stats-calc-runner/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/stats-calc-runner/jest.config.js",
+                        "tsConfig": "apps/stats-calc-runner/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "stats-calc-events": {
+            "root": "libs/stats-calc-events",
+            "sourceRoot": "libs/stats-calc-events/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "libs/stats-calc-events/tsconfig.lib.json",
+                            "libs/stats-calc-events/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!libs/stats-calc-events/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/stats-calc-events/jest.config.js",
+                        "tsConfig": "libs/stats-calc-events/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "test-helpers": {
+            "root": "libs/test-helpers",
+            "sourceRoot": "libs/test-helpers/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": ["libs/test-helpers/tsconfig.lib.json", "libs/test-helpers/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/test-helpers/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/test-helpers/jest.config.js",
+                        "tsConfig": "libs/test-helpers/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
         }
     },
     "cli": {

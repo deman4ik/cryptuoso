@@ -1,10 +1,7 @@
 import crypto from "crypto";
-import { testHelpers } from "@cryptuoso/service";
+export { ajax, setProperty } from "@cryptuoso/test-helpers";
 
-export const ajax = testHelpers.ajax;
-export const setProperty = testHelpers.setProperty;
-
-export async function makeTgHash(
+export function makeTgHash(
     loginData: {
         id: number;
         first_name?: string;

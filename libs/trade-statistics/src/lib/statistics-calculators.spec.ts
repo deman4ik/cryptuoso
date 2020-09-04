@@ -1,9 +1,9 @@
-import StatisticsCalculator, { roundRobotStatVals } from "./statistics-calculator";
+import StatisticsCalculator from "./statistics-calculator";
 import positions from "./testData/positionsForStats";
 import correctFinalResult from "./testData/correctResultAfterRefactor";
 import statsWithoutLastPos from "./testData/correctWithoutLastPos";
 import dayjs from "@cryptuoso/dayjs";
-import { RobotStats, PositionDataForStats } from "./trade-statistics";
+import { RobotStats, PositionDataForStats, roundRobotStatVals } from "./trade-statistics";
 import { invalidStatistics, invalidPosition } from "./testData/invalidData";
 
 describe("statistics-calculator test", () => {

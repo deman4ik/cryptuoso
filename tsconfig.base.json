@@ -38,7 +38,9 @@
             "@cryptuoso/backtester-events": ["libs/backtester-events/src/index.ts"],
             "@cryptuoso/trade-statistics": ["libs/trade-statistics/src/index.ts"],
             "@cryptuoso/user-state": ["libs/user-state/src/index.ts"],
-            "@cryptuoso/mail": ["libs/mail/src/index.ts"]
+            "@cryptuoso/mail": ["libs/mail/src/index.ts"],
+            "@cryptuoso/stats-calc-events": ["libs/stats-calc-events/src/index.ts"],
+            "@cryptuoso/test-helpers": ["libs/test-helpers/src/index.ts"]
         }
     },
     "exclude": ["node_modules", "tmp"]

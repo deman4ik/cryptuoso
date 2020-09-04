@@ -51,7 +51,11 @@
         "build:backtester-worker": "nx build backtester-worker --prod",
         "serve:backtester-worker": "nx serve backtester-worker",
         "build:auth": "nx build auth --prod",
-        "serve:auth": "nx serve auth"
+        "serve:auth": "nx serve auth",
+        "build:stats-calc-worker": "nx build stats-calc-worker --prod",
+        "serve:stats-calc-worker": "nx serve stats-calc-worker",
+        "build:stats-calc-runner": "nx build stats-calc-runner --prod",
+        "serve:stats-calc-runner": "nx serve stats-calc-runner"
     },
     "private": true,
     "dependencies": {
@@ -111,6 +115,7 @@
         "@types/uuid": "^8.3.0",
         "@typescript-eslint/eslint-plugin": "2.19.2",
         "@typescript-eslint/parser": "2.19.2",
+        "appmetrics": "^5.1.1",
         "dotenv": "6.2.0",
         "eslint": "6.8.0",
         "eslint-config-prettier": "6.0.0",

@@ -108,6 +108,18 @@
         },
         "mail": {
             "tags": []
+        },
+        "stats-calc-worker": {
+            "tags": []
+        },
+        "stats-calc-runner": {
+            "tags": []
+        },
+        "stats-calc-events": {
+            "tags": []
+        },
+        "test-helpers": {
+            "tags": []
         }
     },
     "affected": {
