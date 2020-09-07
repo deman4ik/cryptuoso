@@ -11,7 +11,8 @@ import bcrypt from "bcrypt";
 import AuthService, { AuthServiceConfig } from "../app/service";
 import { User, UserStatus, UserRoles, UserSettings } from "@cryptuoso/user-state";
 import { pg } from "@cryptuoso/postgres";
-import { ajax, setProperty, makeTgHash } from "./helpers";
+import { makeTgHash } from "./helpers";
+import { ajax, setProperty } from "@cryptuoso/test-helpers";
 
 const userSettings: UserSettings = {
     notifications: {

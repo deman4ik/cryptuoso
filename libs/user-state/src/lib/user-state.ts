@@ -13,7 +13,7 @@ export interface UserSignalPosition extends PositionDataForStats {
 }
 
 export interface RobotStatsWithExists extends RobotStats {
-    statsExists: any;
+    statsExists?: any;
 }
 
 export interface UserSignals {

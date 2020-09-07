@@ -17,7 +17,7 @@ import {
 import { round } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
 
-function getCalcFromAndInitStats(stats?: RobotStatsWithExists, calcAll?: boolean) {
+export function getCalcFromAndInitStats(stats?: RobotStatsWithExists, calcAll?: boolean) {
     let calcFrom: string = null;
     let initStats: RobotStats = null;
 
@@ -195,6 +195,9 @@ export default class StatisticCalcWorkerService extends BaseService {
 
     async calcRobot(robotId: string, calcAll = false) {
         try {
+            if(!robotId)
+                throw new Error("robotId must be non-empty string");
+
             const prevRobotStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
                 SELECT rs.robot_id as "stats_exists",
                     rs.*
@@ -430,6 +433,9 @@ export default class StatisticCalcWorkerService extends BaseService {
 
     async calcUserSignal(userId: string, robotId: string, calcAll = false) {
         try {
+            if(!userId || !robotId)
+                throw new Error("userId and robotId must be non-empty string");
+                
             const userSignal: UserSignalsWithExists = await this.db.pg.maybeOne(sql`
                 SELECT us.id, us.subscribed_at, us.volume,
                     uss.user_signal_id as "stats_exists",
@@ -618,6 +624,9 @@ export default class StatisticCalcWorkerService extends BaseService {
 
     async calcUserSignals(robotId: string, calcAll = false) {
         try {
+            if(!robotId)
+                throw new Error("robotId must be non-empty string");
+
             const userSignals: UserSignalsWithExists[] = await this.db.pg.any(sql`
                 SELECT us.id, us.subscribed_at, us.volume,
                     uss.user_signal_id as "stats_exists",
@@ -733,6 +742,9 @@ export default class StatisticCalcWorkerService extends BaseService {
 
     async calcUserSignalsAggr(userId: string, exchange?: string, asset?: string, calcAll = false) {
         try {
+            if(!userId)
+                throw new Error("userId must be non-empty string");
+
             const prevUserAggrStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
                 SELECT id as "stats_exists",
                     id,
@@ -816,6 +828,9 @@ export default class StatisticCalcWorkerService extends BaseService {
 
     async calcUserRobot(userRobotId: string, calcAll = false) {
         try {
+            if(!userRobotId)
+                throw new Error("userRobotId must be non-empty string");
+            
             const prevRobotStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
                 SELECT urs.user_robot_id as "stats_exists",
                     urs.statistics,
@@ -884,6 +899,9 @@ export default class StatisticCalcWorkerService extends BaseService {
 
     async calcUserRobotsAggr(userId: string, exchange?: string, asset?: string, calcAll = false) {
         try {
+            if(!userId)
+                throw new Error("userId must be non-empty string");
+
             const prevUserAggrStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
                 SELECT id as "stats_exists",
                     id,
