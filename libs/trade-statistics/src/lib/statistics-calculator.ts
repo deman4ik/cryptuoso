@@ -131,7 +131,7 @@ export default class StatisticsCalculator {
         //this.currentStatistics = this.currentRobotStats.statistics;
     }
 
-    private calculateEquityAvg() {
+    calculateEquityAvg() {
         const maxEquityLength = 50;
         const equityChart = this.currentRobotStats.equity;
 
