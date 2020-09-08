@@ -67,6 +67,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 concurrency: process.env.production ? this.cpus : 3
             })
         };
+        //console.log(this);
     }
 
     private async _onStopService(): Promise<void> {
@@ -232,7 +233,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 ${queryFromAndConditionPart};
             `));
 
-            if (positionsCount == 0) return;
+            if (positionsCount == 0) return false;
 
             const newStats = await DataStream.from(
                 this.makeChunksGenerator(
@@ -256,6 +257,8 @@ export default class StatisticCalcWorkerService extends BaseService {
                 newStats,
                 prevRobotStats
             );
+
+            return true;
         } catch (err) {
             this.log.error("Failed to calculate robot statistics", err);
             throw err;
@@ -306,7 +309,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 ${queryFromAndConditionPart};
             `));
 
-            if (positionsCount == 0) return;
+            if (positionsCount == 0) return false;
 
             const newStats = await DataStream.from(
                 this.makeChunksGenerator(
@@ -330,6 +333,8 @@ export default class StatisticCalcWorkerService extends BaseService {
                 newStats,
                 prevRobotsAggrStats
             );
+
+            return true;
         } catch (err) {
             this.log.error("Failed to calculate robots aggregate statistics", err);
             throw err;
@@ -377,7 +382,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 ${queryFromAndConditionPart};
             `));
 
-            if (positionsCount == 0) return;
+            if (positionsCount == 0) return false;
 
             const newStats = await DataStream.from(
                 this.makeChunksGenerator(
@@ -401,6 +406,8 @@ export default class StatisticCalcWorkerService extends BaseService {
                 newStats,
                 prevUsersRobotsAggrtats
             );
+
+            return true;
         } catch (err) {
             this.log.error("Failed to calculate users robots aggregate statistics", err);
             throw err;
@@ -478,7 +485,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 ${queryFromAndConditionPart};
             `));
 
-            if (positionsCount == 0) return;
+            if (positionsCount == 0) return false;
 
             const newStats = await DataStream.from(
                 this.makeChunksGenerator(
@@ -502,6 +509,8 @@ export default class StatisticCalcWorkerService extends BaseService {
                 newStats,
                 userSignal
             );
+
+            return true;
         } catch (err) {
             this.log.error("Failed to calculate user signal statistics", err);
             throw err;
@@ -683,7 +692,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 ${queryFromAndConditionPart};
             `));
 
-            if (positionsCount == 0) return;
+            if (positionsCount == 0) return false;
 
             const signalsStats =
                 positionsCount > this.maxSingleQueryPosCount
@@ -698,6 +707,9 @@ export default class StatisticCalcWorkerService extends BaseService {
                           calcAll
                       });
 
+            if(Object.keys(signalsStats).length == 0)
+                return false;
+
             for (const [signalId, { newStats, signal }] of Object.entries(signalsStats)) {
                 await this.upsertStats(
                     {
@@ -711,6 +723,8 @@ export default class StatisticCalcWorkerService extends BaseService {
                     signal
                 );
             }
+
+            return true;
         } catch (err) {
             this.log.error("Failed to calculate user signals statistics", err);
             throw err;
@@ -770,6 +784,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     p.entry_price, p.exit_price, p.fee,
                     us.volume AS user_signal_volume
             `;
+            
             const queryFromAndConditionPart = sql`
                 FROM robot_positions p,
                     robots r,
@@ -794,7 +809,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 ${queryFromAndConditionPart};
             `));
 
-            if (positionsCount == 0) return;
+            if (positionsCount == 0) return false;
 
             const newStats = await DataStream.from(
                 this.makeChunksGenerator(
@@ -820,6 +835,8 @@ export default class StatisticCalcWorkerService extends BaseService {
                 newStats,
                 prevUserAggrStats
             );
+
+            return true;
         } catch (err) {
             this.log.error("Failed to calculate user signals aggregate statistics", err);
             throw err;
@@ -869,7 +886,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 ${queryFromAndConditionPart};
             `));
 
-            if (positionsCount == 0) return;
+            if (positionsCount == 0) return false;
 
             const newStats = await DataStream.from(
                 this.makeChunksGenerator(
@@ -891,6 +908,8 @@ export default class StatisticCalcWorkerService extends BaseService {
                 newStats,
                 prevRobotStats
             );
+
+            return true;
         } catch (err) {
             this.log.error("Failed to calculate user robot statistics", err);
             throw err;
@@ -944,7 +963,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 ${queryFromAndConditionPart};
             `));
 
-            if (positionsCount == 0) return;
+            if (positionsCount == 0) return false;
 
             const newStats = await DataStream.from(
                 this.makeChunksGenerator(
@@ -970,6 +989,8 @@ export default class StatisticCalcWorkerService extends BaseService {
                 newStats,
                 prevUserAggrStats
             );
+
+            return true;
         } catch (err) {
             this.log.error("Failed to calculate user robot aggregate statistics", err);
             throw err;
