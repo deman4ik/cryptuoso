@@ -3,18 +3,20 @@ import { spawn, Pool, Worker as ThreadsWorker } from "threads";
 import { Worker, Job } from "bullmq";
 import os from "os";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
-import { StatisticUtils } from "./statsWorker";
+import { StatisticsType, CalcStatistics, StatisticUtils } from "./statsWorkerTypes";
 import { sql } from "@cryptuoso/postgres";
 import { SqlSqlTokenType, QueryResultRowType } from "slonik";
-import { RobotStats, PositionDataForStats, PositionDirection, isRobotStats } from "@cryptuoso/trade-statistics";
+import { RobotStats, PositionDataForStats, isRobotStats } from "@cryptuoso/trade-statistics";
 import { StatsCalcJob, StatsCalcJobType } from "@cryptuoso/stats-calc-events";
 import {
-    UserSignalPosition,
+    ExtendedStatsPosition,
+    ExtendedStatsPositionWithDate,
+    ExtendedStatsPositionWithVolume,
+    SettingsVolume,
     UserAggrStatsType,
     RobotStatsWithExists,
     UserSignalsWithExists
 } from "@cryptuoso/user-state";
-import { round } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
 
 export function getCalcFromAndInitStats(stats?: RobotStatsWithExists, calcAll?: boolean) {
@@ -180,24 +182,20 @@ export default class StatisticCalcWorkerService extends BaseService {
         }
     }
 
-    async calcStatistics(prevStats: RobotStats, positions: PositionDataForStats[]): Promise<RobotStats> {
-        return await this.pool.queue(async (utils: StatisticUtils) => utils.calcStatistics(prevStats, positions));
-    }
-
-    private async _calcRobotStatistics(prevStats: RobotStats, positions: PositionDataForStats[]): Promise<RobotStats> {
-        return await this.calcStatistics(
-            prevStats,
-            positions.map((pos) => ({
-                ...pos,
-                profit: pos.fee && +pos.fee > 0 ? +round(pos.profit - pos.profit * pos.fee, 6) : pos.profit
-            }))
+    calcStatistics: CalcStatistics = async (
+        prevStats: RobotStats,
+        positions: any[],
+        type?: any,
+        volumes?: SettingsVolume[]
+    ) => {
+        return await this.pool.queue(async (utils: StatisticUtils) =>
+            utils.calcStatistics(prevStats, positions, type, volumes)
         );
-    }
+    };
 
     async calcRobot(robotId: string, calcAll = false) {
         try {
-            if(!robotId)
-                throw new Error("robotId must be non-empty string");
+            if (!robotId) throw new Error("robotId must be non-empty string");
 
             const prevRobotStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
                 SELECT rs.robot_id as "stats_exists",
@@ -212,20 +210,29 @@ export default class StatisticCalcWorkerService extends BaseService {
 
             const { calcFrom, initStats } = getCalcFromAndInitStats(prevRobotStats, calcAll);
 
-            const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
+            const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
             const querySelectPart = sql`
-                SELECT id, direction, exit_date, profit, bars_held, fee
+                SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
+                    p.fee, p.entry_price, p.exit_price,
+                    (
+                        SELECT usset.robot_settings -> 'volume'
+                        FROM robot_settings usset
+                        WHERE usset.robot_id = ${robotId}
+                            AND usset.active_from <= p.entry_date
+                        ORDER BY usset.active_from DESC
+                        LIMIT 1
+                    )::float AS volume
             `;
             const queryFromAndConditionPart = sql`
-                FROM robot_positions
-                WHERE robot_id = ${robotId}
-                    AND status = 'closed'
+                FROM robot_positions p
+                WHERE p.robot_id = ${robotId}
+                    AND p.status = 'closed'
                     ${conditionExitDate}
             `;
             const queryCommonPart = sql`
                 ${querySelectPart}
                 ${queryFromAndConditionPart}
-                ORDER BY exit_date
+                ORDER BY p.exit_date
             `;
 
             const positionsCount: number = +(await this.db.pg.oneFirst(sql`
@@ -241,8 +248,8 @@ export default class StatisticCalcWorkerService extends BaseService {
                     positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
                 )
             ).reduce(
-                async (prevStats: RobotStats, chunk: PositionDataForStats[]) =>
-                    await this._calcRobotStatistics(prevStats, chunk),
+                async (prevStats: RobotStats, chunk: ExtendedStatsPositionWithVolume[]) =>
+                    await this.calcStatistics(prevStats, chunk, StatisticsType.CalcByPositionsVolume),
                 initStats
             );
 
@@ -282,12 +289,20 @@ export default class StatisticCalcWorkerService extends BaseService {
 
             const { calcFrom, initStats } = getCalcFromAndInitStats(prevRobotsAggrStats, calcAll);
 
-            const conditionExchange = !exchange ? sql`` : sql`AND exchange = ${exchange}`;
-            const conditionAsset = !asset ? sql`` : sql`AND asset = ${asset}`;
+            const conditionExchange = !exchange ? sql`` : sql`AND r.exchange = ${exchange}`;
+            const conditionAsset = !asset ? sql`` : sql`AND r.asset = ${asset}`;
             const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
             const querySelectPart = sql`
                 SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
-                    p.entry_price, p.exit_price, p.fee
+                    p.entry_price, p.exit_price, p.fee,
+                    (
+                        SELECT usset.robot_settings -> 'volume'
+                        FROM robot_settings usset
+                        WHERE usset.robot_id = p.robot_id
+                            AND usset.active_from <= p.entry_date
+                        ORDER BY usset.active_from DESC
+                        LIMIT 1
+                    )::float AS volume
             `;
             const queryFromAndConditionPart = sql`
                 FROM robot_positions p,
@@ -317,8 +332,8 @@ export default class StatisticCalcWorkerService extends BaseService {
                     positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
                 )
             ).reduce(
-                async (prevStats: RobotStats, chunk: UserSignalPosition[]) =>
-                    await this._calcRobotStatistics(prevStats, chunk),
+                async (prevStats: RobotStats, chunk: ExtendedStatsPositionWithVolume[]) =>
+                    await this.calcStatistics(prevStats, chunk, StatisticsType.CalcByPositionsVolume),
                 initStats
             );
 
@@ -390,7 +405,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
                 )
             ).reduce(
-                async (prevStats: RobotStats, chunk: UserSignalPosition[]) =>
+                async (prevStats: RobotStats, chunk: PositionDataForStats[]) =>
                     await this.calcStatistics(prevStats, chunk),
                 initStats
             );
@@ -414,35 +429,10 @@ export default class StatisticCalcWorkerService extends BaseService {
         }
     }
 
-    private async _calcUserSignalStatistics(
-        prevStats: RobotStats,
-        positions: UserSignalPosition[],
-        userSignalVolume: number
-    ): Promise<RobotStats> {
-        return await this.calcStatistics(
-            prevStats,
-            positions.map((pos) => {
-                let profit = 0;
-                if (pos.direction === PositionDirection.long) {
-                    profit = +round((pos.exitPrice - pos.entryPrice) * userSignalVolume, 6);
-                } else {
-                    profit = +round((pos.entryPrice - pos.exitPrice) * userSignalVolume, 6);
-                }
-                profit = pos.fee && +pos.fee > 0 ? +round(profit - profit * pos.fee, 6) : profit;
-                return {
-                    ...pos,
-                    volume: userSignalVolume,
-                    profit
-                };
-            })
-        );
-    }
-
     async calcUserSignal(userId: string, robotId: string, calcAll = false) {
         try {
-            if(!userId || !robotId)
-                throw new Error("userId and robotId must be non-empty string");
-                
+            if (!userId || !robotId) throw new Error("userId and robotId must be non-empty string");
+
             const userSignal: UserSignalsWithExists = await this.db.pg.maybeOne(sql`
                 SELECT us.id, us.subscribed_at, us.volume,
                     uss.user_signal_id as "stats_exists",
@@ -464,20 +454,28 @@ export default class StatisticCalcWorkerService extends BaseService {
 
             const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
             const querySelectPart = sql`
-                SELECT id, direction, exit_date, profit, bars_held,
-                    entry_price, exit_price, fee
+                SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
+                    p.entry_price, p.exit_price, p.fee,
+                    (
+                        SELECT usset.signal_settings -> 'volume'
+                        FROM user_signal_settings usset
+                        WHERE usset.user_signal_id = us.id
+                            AND usset.active_from <= p.entry_date
+                        ORDER BY usset.active_from DESC
+                        LIMIT 1
+                    )::float AS volume
             `;
             const queryFromAndConditionPart = sql`
-                FROM robot_positions
-                WHERE robot_id = ${robotId}
-                    AND status = 'closed'
-                    AND entry_date >= ${userSignal.subscribedAt}
+                FROM robot_positions p
+                WHERE p.robot_id = ${robotId}
+                    AND p.status = 'closed'
+                    AND p.entry_date >= ${userSignal.subscribedAt}
                     ${conditionExitDate}
             `;
             const queryCommonPart = sql`
                 ${querySelectPart}
                 ${queryFromAndConditionPart}
-                ORDER BY exit_date
+                ORDER BY p.exit_date
             `;
 
             const positionsCount: number = +(await this.db.pg.oneFirst(sql`
@@ -493,8 +491,8 @@ export default class StatisticCalcWorkerService extends BaseService {
                     positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
                 )
             ).reduce(
-                async (prevStats: RobotStats, chunk: UserSignalPosition[]) =>
-                    await this._calcUserSignalStatistics(prevStats, chunk, userSignal.volume),
+                async (prevStats: RobotStats, chunk: ExtendedStatsPositionWithVolume[]) =>
+                    await this.calcStatistics(prevStats, chunk, StatisticsType.CalcByPositionsVolume),
                 initStats
             );
 
@@ -535,19 +533,24 @@ export default class StatisticCalcWorkerService extends BaseService {
             };
         } = {};
 
-        const allPositions: UserSignalPosition[] = await this.db.pg.any(sql`
+        const allPositions: ExtendedStatsPositionWithDate[] = await this.db.pg.any(sql`
                 ${queryCommonPart};
         `);
 
         for (const userSignal of userSignals) {
             const { calcFrom, initStats } = getCalcFromAndInitStats(userSignal, calcAll);
 
-            const positions: UserSignalPosition[] = allPositions.filter(
+            const positions: ExtendedStatsPositionWithDate[] = allPositions.filter(
                 (pos) => userSignal.subscribedAt <= pos.entryDate && (!calcFrom || calcFrom <= pos.exitDate)
             );
 
             statsDict[userSignal.id] = {
-                newStats: await this._calcUserSignalStatistics(initStats, positions, userSignal.volume),
+                newStats: await this.calcStatistics(
+                    initStats,
+                    positions,
+                    StatisticsType.CalcByProvidedVolumes,
+                    userSignal.volumes
+                ),
                 signal: userSignal
             };
         }
@@ -587,7 +590,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         });
 
         statsAcc = await DataStream.from(this.makeChunksGenerator(queryCommonPart, chunkSize)).reduce(
-            async (signalsAcc: typeof statsAcc, chunk: UserSignalPosition[]) => {
+            async (signalsAcc: typeof statsAcc, chunk: ExtendedStatsPositionWithDate[]) => {
                 const chunkMaxExitDate = chunk[chunk.length - 1].exitDate;
                 const chunkMaxEntryDate = dayjs
                     .utc(Math.max(...chunk.map((pos) => dayjs.utc(pos.entryDate).valueOf())))
@@ -606,10 +609,11 @@ export default class StatisticCalcWorkerService extends BaseService {
                             (!signalAcc.calcFrom || signalAcc.calcFrom <= pos.exitDate)
                     );
 
-                    signalAcc.stats = await this._calcUserSignalStatistics(
+                    signalAcc.stats = await this.calcStatistics(
                         signalAcc.stats,
                         positions,
-                        signalAcc.signal.volume
+                        StatisticsType.CalcByProvidedVolumes,
+                        signalAcc.signal.volumes
                     );
 
                     signalAcc.updated = true;
@@ -633,17 +637,25 @@ export default class StatisticCalcWorkerService extends BaseService {
 
     async calcUserSignals(robotId: string, calcAll = false) {
         try {
-            if(!robotId)
-                throw new Error("robotId must be non-empty string");
+            if (!robotId) throw new Error("robotId must be non-empty string");
 
             const userSignals: UserSignalsWithExists[] = await this.db.pg.any(sql`
-                SELECT us.id, us.subscribed_at, us.volume,
+                SELECT us.id, us.subscribed_at,
                     uss.user_signal_id as "stats_exists",
                     uss.statistics,
                     uss.last_position_exit_date,
                     uss.last_updated_at,
                     uss.equity,
-                    uss.equity_avg
+                    uss.equity_avg,
+                    ARRAY(
+                        SELECT json_build_object(
+                            'active_from', usset.active_from,
+                            'volume', (usset.signal_settings -> 'volume')::float
+                        )
+                        FROM user_signal_settings usset
+                        WHERE usset.user_signal_id = us.id
+                        ORDER BY usset.active_from
+                    ) as volumes
                 FROM user_signals us
                 LEFT JOIN user_signal_stats uss
                     ON us.id = uss.user_signal_id
@@ -707,8 +719,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                           calcAll
                       });
 
-            if(Object.keys(signalsStats).length == 0)
-                return false;
+            if (Object.keys(signalsStats).length == 0) return false;
 
             for (const [signalId, { newStats, signal }] of Object.entries(signalsStats)) {
                 await this.upsertStats(
@@ -731,33 +742,9 @@ export default class StatisticCalcWorkerService extends BaseService {
         }
     }
 
-    private async _calcUserSignalsAggrStatistics(
-        prevStats: RobotStats,
-        positions: UserSignalPosition[]
-    ): Promise<RobotStats> {
-        return await this.calcStatistics(
-            prevStats,
-            positions.map((pos) => {
-                let profit = 0;
-                if (pos.direction === PositionDirection.long) {
-                    profit = +round((pos.exitPrice - pos.entryPrice) * pos.userSignalVolume, 6);
-                } else {
-                    profit = +round((pos.entryPrice - pos.exitPrice) * pos.userSignalVolume, 6);
-                }
-                profit = pos.fee && +pos.fee > 0 ? +round(profit - profit * pos.fee, 6) : profit;
-                return {
-                    ...pos,
-                    volume: pos.userSignalVolume,
-                    profit
-                };
-            })
-        );
-    }
-
     async calcUserSignalsAggr(userId: string, exchange?: string, asset?: string, calcAll = false) {
         try {
-            if(!userId)
-                throw new Error("userId must be non-empty string");
+            if (!userId) throw new Error("userId must be non-empty string");
 
             const prevUserAggrStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
                 SELECT id as "stats_exists",
@@ -782,18 +769,23 @@ export default class StatisticCalcWorkerService extends BaseService {
             const querySelectPart = sql`
                 SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
                     p.entry_price, p.exit_price, p.fee,
-                    us.volume AS user_signal_volume
+                    (
+                        SELECT usset.signal_settings -> 'volume'
+                        FROM user_signal_settings usset
+                        WHERE usset.user_signal_id = us.id
+                            AND usset.active_from <= p.entry_date
+                        ORDER BY usset.active_from DESC
+                        LIMIT 1
+                    )::float AS volume
             `;
-            
+
             const queryFromAndConditionPart = sql`
                 FROM robot_positions p,
-                    robots r,
                     user_signals us
                 WHERE us.user_id = ${userId}
-                AND us.robot_id = r.id
-                AND p.robot_id = r.id
-                AND p.status = 'closed'
-                AND p.entry_date >= us.subscribed_at
+                    AND p.robot_id = us.robot_id
+                    AND p.status = 'closed'
+                    AND p.entry_date >= us.subscribed_at
                 ${conditionExchange}
                 ${conditionAsset}
                 ${conditionExitDate}
@@ -817,8 +809,8 @@ export default class StatisticCalcWorkerService extends BaseService {
                     positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
                 )
             ).reduce(
-                async (prevStats: RobotStats, chunk: UserSignalPosition[]) =>
-                    await this._calcUserSignalsAggrStatistics(prevStats, chunk),
+                async (prevStats: RobotStats, chunk: ExtendedStatsPositionWithVolume[]) =>
+                    await this.calcStatistics(prevStats, chunk, StatisticsType.CalcByPositionsVolume),
                 initStats
             );
 
@@ -845,9 +837,8 @@ export default class StatisticCalcWorkerService extends BaseService {
 
     async calcUserRobot(userRobotId: string, calcAll = false) {
         try {
-            if(!userRobotId)
-                throw new Error("userRobotId must be non-empty string");
-            
+            if (!userRobotId) throw new Error("userRobotId must be non-empty string");
+
             const prevRobotStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
                 SELECT urs.user_robot_id as "stats_exists",
                     urs.statistics,
@@ -918,8 +909,7 @@ export default class StatisticCalcWorkerService extends BaseService {
 
     async calcUserRobotsAggr(userId: string, exchange?: string, asset?: string, calcAll = false) {
         try {
-            if(!userId)
-                throw new Error("userId must be non-empty string");
+            if (!userId) throw new Error("userId must be non-empty string");
 
             const prevUserAggrStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
                 SELECT id as "stats_exists",

@@ -3,9 +3,9 @@ import { measureFunction } from "@cryptuoso/test-helpers";
 import log from "@cryptuoso/logger";
 
 export async function testService(service: Service) {
-    const count = 1;
-    //const updateAll = true;
-    //const robotId = "51c90607-6d38-4b7c-81c9-d349886e80b0"; // 8504
+    const count = 20;
+    const updateAll = true;
+    const robotId = "51c90607-6d38-4b7c-81c9-d349886e80b0"; // 8504
     //const userRobotId = "d2d1fe2d-c517-4161-a583-66f218c9217a";
     //const userId = "b6d0e992-f716-42d5-b69c-6a0b29ef4172"; //"8a671981-2b11-4ae5-bc3f-1a63befdba72"; //"b6d0e992-f716-42d5-b69c-6a0b29ef4172"; //"8a671981-2b11-4ae5-bc3f-1a63befdba72";
     const results = [];
@@ -22,16 +22,16 @@ export async function testService(service: Service) {
         await service.db.pg.query(service.db.sql`SELECT pg_cancel_backend(${backendProcessId})`);
     }, 3000); */
 
-    /* results.push(await measureFunction(
+    results.push(await measureFunction(
         "calcRobot",
         service.calcRobot.bind(service),
         [robotId, updateAll],
         count
-    )); */
+    ));
 
-    results.push(
+    /* results.push(
         await measureFunction("calcRobotsAggr", service.calcRobotsAggr.bind(service), ["binance_futures"], count)
-    );
+    ); */
 
     /* results.push(await measureFunction(
         "calcUsersRobotsAggr",
