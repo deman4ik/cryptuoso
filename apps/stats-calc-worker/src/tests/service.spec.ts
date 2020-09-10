@@ -1,17 +1,13 @@
-import Service, { StatisticCalcWorkerServiceConfig, getCalcFromAndInitStats } from "../app/service";
+import Service, { getCalcFromAndInitStats } from "../app/service";
 import { RobotStats, isRobotStats, PositionDataForStats } from "@cryptuoso/trade-statistics";
-import {
-    UserSignalPosition,
-    UserAggrStatsType,
-    RobotStatsWithExists,
-    UserSignalsWithExists
-} from "@cryptuoso/user-state";
+import { RobotStatsWithExists } from "@cryptuoso/user-state";
 import dayjs from "@cryptuoso/dayjs";
 import { pg } from "@cryptuoso/postgres";
 import { setProperty, getProperty } from "@cryptuoso/test-helpers";
 import { StatsCalcJobType, StatsCalcJob } from "@cryptuoso/stats-calc-events";
 import { Job } from "bullmq";
 import { Pool } from "threads";
+import { StatisticsType } from "../app/statsWorkerTypes";
 
 const mockPG = {
     any: pg.any as jest.Mock,
@@ -21,15 +17,6 @@ const mockPG = {
 };
 
 const mockExit = jest.fn();
-
-function getLastCallArg(fn: any): fn is jest.Mock {
-    const calls = fn.mock.calls;
-    return calls[calls.length - 1][0];
-}
-
-function makeJob(name: string, data: StatsCalcJob = {}) {
-    return { name, data } as Job<StatsCalcJob>;
-}
 
 setProperty(process, "exit", mockExit);
 
@@ -71,13 +58,16 @@ jest.mock("threads", () => ({
 jest.mock("bullmq");
 jest.mock("lightship");
 jest.mock("ioredis");
-jest.mock("@cryptuoso/logger");
+//jest.mock("@cryptuoso/logger");
 jest.mock("@cryptuoso/postgres");
 jest.mock("@cryptuoso/events");
 jest.mock("@cryptuoso/mail");
 
+function makeJob(name: string, data: StatsCalcJob = {}) {
+    return { name, data } as Job<StatsCalcJob>;
+}
+
 describe("getCalcFromAndInitStats function", () => {
-    const emptyRobotStats = new RobotStats();
     const robotStatsWithLastPosDate = new RobotStats();
 
     robotStatsWithLastPosDate.lastPositionExitDate = dayjs().toISOString();
@@ -166,6 +156,132 @@ describe("getCalcFromAndInitStats function", () => {
         });
     });
 });
+
+function getParams(func: { (...args: any[]): any }) {
+    let str = func.toString();
+
+    str = str
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/\/\/(.)*/g, "")
+        .replace(/{[\s\S]*}/, "")
+        .replace(/=>/g, "")
+        .trim();
+
+    const start = str.indexOf("(") + 1;
+    const end = str.length - 1;
+
+    const result = str.substring(start, end).split(", ");
+
+    const params: string[] = [];
+
+    result.forEach((element) => {
+        element = element.replace(/=[\s\S]*/g, "").trim();
+
+        if (element.length > 0) params.push(element);
+    });
+
+    return params;
+}
+
+async function combineArgs(
+    args: any[],
+    argsNames: string[],
+    minArgsCount: number,
+    callback: { (currentArgs: any[], currentArgsNames: string[]): any },
+    provideAll = false,
+    defaultValue: any = null
+) {
+    let cnt = minArgsCount ** 2;
+
+    if (!provideAll) --cnt;
+
+    for (let i = 0; i < cnt; ++i) {
+        const currentArgs = new Array(args.length).fill(defaultValue);
+        const currentArgsNames = [];
+
+        for (let j = 0; j < minArgsCount; ++j) {
+            if ((i >> j) % 2) {
+                currentArgs[j] = args[j];
+                currentArgsNames.push(argsNames[j]);
+            }
+        }
+
+        await callback(currentArgs, currentArgsNames);
+    }
+}
+
+function testStatsCalcMethod({
+    methodName, minArgsCount, args, needCheckStatsExisting = true, isStatsSingle = true
+}: {
+    methodName: string,
+    minArgsCount: number,
+    args: any[],
+    needCheckStatsExisting?: boolean,
+    isStatsSingle?: boolean
+}) {
+    describe(`${methodName} method`, () => {
+        const service = new Service();
+        const mockUpsertStats = jest.fn();
+
+        service.calcStatistics = jest.fn();
+        setProperty(service, "upsertStats", mockUpsertStats);
+
+        let func: { (...args: any[]): Promise<boolean> } = getProperty(service, methodName);
+        const argsNames = getParams(func);
+        func = func.bind(service);
+
+        const minArgsOtherNulls = new Array(args.length).fill(null);
+
+        for (let i = 0; i < minArgsCount; ++i) minArgsOtherNulls[i] = args[i];
+
+        describe("With combine nulls arguments", () => {
+            test("Should to throw errors", async () => {
+                await combineArgs(args, argsNames, minArgsCount, async (currentArgs, currentArgsNames) => {
+                    await expect(func(...currentArgs))
+                        .rejects.toThrowError()
+                        .catch(() => {
+                            throw new Error(`${currentArgsNames.join(", ")} args with nulls provided`);
+                        });
+                });
+            });
+        });
+
+        if (needCheckStatsExisting) {
+            describe(`${argsNames.slice(0, minArgsCount).join(", ")} provided but is wrong`, () => {
+                test("Should to throw error", async () => {
+                    if (isStatsSingle) mockPG.maybeOne.mockImplementation(async () => null);
+                    else mockPG.any.mockImplementation(async () => []);
+                    await expect(func(...minArgsOtherNulls)).rejects.toThrowError();
+                });
+            });
+        }
+
+        describe(`${argsNames.slice(0, minArgsCount).join(", ")} provided but positions not exists`, () => {
+            test("Should to throw error", async () => {
+                if (isStatsSingle) mockPG.maybeOne.mockImplementation(async () => ({}));
+                else mockPG.any.mockImplementationOnce(async () => [{}]);
+                mockPG.oneFirst.mockImplementation(async () => 0);
+                await expect(func(...minArgsOtherNulls)).resolves.toStrictEqual(false);
+            });
+        });
+
+        describe(`${argsNames.slice(0, minArgsCount).join(", ")} provided and positions exists`, () => {
+            test("Should to call upsertStats", async () => {
+                if (isStatsSingle) mockPG.maybeOne.mockImplementation(async () => ({}));
+                else mockPG.any.mockImplementationOnce(async () => [{}]);
+                mockPG.oneFirst.mockImplementation(async () => service.defaultChunkSize);
+                mockPG.any.mockImplementation(async () => [{}]);
+
+                mockUpsertStats.mockClear();
+
+                await func(...minArgsOtherNulls);
+
+                expect(service.calcStatistics).toHaveBeenCalled();
+                expect(mockUpsertStats).toHaveBeenCalledTimes(1);
+            });
+        });
+    });
+}
 
 describe("stats-calc-worker class", () => {
     describe("constructor", () => {
@@ -369,145 +485,66 @@ describe("stats-calc-worker class", () => {
             test("Should call queue of Pool", async () => {
                 const pool = getProperty(service, "pool") as Pool<any>;
 
-                await service.calcStatistics({} as RobotStats, [] as PositionDataForStats[]);
+                await service.calcStatistics(StatisticsType.Simple, {} as RobotStats, [] as PositionDataForStats[]);
 
                 expect(pool.queue).toHaveBeenCalledTimes(1);
             });
         });
     });
 
-    testMethod("calcRobot", 1, ["robot-id"]);
+    testStatsCalcMethod({
+        methodName: "calcRobot",
+        minArgsCount: 1,
+        args: ["robot-id"]
+    });
 
-    testMethod("calcUserSignal", 2, ["user-id", "robot-id"]);
+    testStatsCalcMethod({
+        methodName: "calcRobotsAggr",
+        minArgsCount: 0,
+        args: ["exchange", "asset"],
+        needCheckStatsExisting: false,
+        isStatsSingle: false
+    });
 
-    testMethod("calcUserSignals", 1, ["robot-id"]);
+    testStatsCalcMethod({
+        methodName: "calcUsersRobotsAggr",
+        minArgsCount: 0,
+        args: ["exchange", "asset"],
+        needCheckStatsExisting: false,
+        isStatsSingle: false
+    });
 
-    testMethod("calcUserSignalsAggr", 1, ["user-id", "exchange", "asset"]);
+    testStatsCalcMethod({
+        methodName: "calcUserSignal",
+        minArgsCount: 2,
+        args: ["user-id", "robot-id"]
+    });
 
-    testMethod("calcUserRobot", 1, ["user-robot-id"]);
+    testStatsCalcMethod({
+        methodName: "calcUserSignals",
+        minArgsCount: 1,
+        args: ["robot-id"],
+        needCheckStatsExisting: false,
+        isStatsSingle: false
+    });
 
-    testMethod("calcUserRobotsAggr", 1, ["user-id", "exchange", "asset"]);
+    testStatsCalcMethod({
+        methodName: "calcUserSignalsAggr",
+        minArgsCount: 1,
+        args: ["user-id", "exchange", "asset"],
+        needCheckStatsExisting: false
+    });
+
+    testStatsCalcMethod({
+        methodName: "calcUserRobot",
+        minArgsCount: 1,
+        args: ["user-robot-id"]
+    });
+
+    testStatsCalcMethod({
+        methodName: "calcUserRobotsAggr",
+        minArgsCount: 1,
+        args: ["user-id", "exchange", "asset"],
+        needCheckStatsExisting: false
+    });
 });
-
-function getParams(func: { (...args: any[]): any }) {
-    let str = func.toString();
-
-    str = str
-        .replace(/\/\*[\s\S]*?\*\//g, "")
-        .replace(/\/\/(.)*/g, "")
-        .replace(/{[\s\S]*}/, "")
-        .replace(/=>/g, "")
-        .trim();
-
-    const start = str.indexOf("(") + 1;
-    const end = str.length - 1;
-
-    const result = str.substring(start, end).split(", ");
-
-    const params: string[] = [];
-
-    result.forEach((element) => {
-        element = element.replace(/=[\s\S]*/g, "").trim();
-
-        if (element.length > 0) params.push(element);
-    });
-
-    return params;
-}
-
-function combineArgs(
-    args: any[], argsNames: string[], minArgsCount: number,
-    callback: { (currentArgs: any[], currentArgsNames: string[]): any },
-    provideAll = false, defultValue: any = null
-) {
-    const cnt = minArgsCount ** 2 + Number(provideAll);
-
-    for (let i = 0; i < cnt; ++i) {
-        const currentArgs = new Array(args.length).fill(defultValue);
-        const currentArgsNames = [];
-
-        for(let j=0; j < minArgsCount; ++j) {
-            if((i >> j) % 2) {
-                currentArgs[j] = args[j];
-                currentArgsNames.push(argsNames[j]);
-            }
-        }
-        
-        callback(currentArgs, currentArgsNames);
-    }
-}
-
-function testMethod(methodName: string, minArgsCount: number, args: any[]) {
-    describe(`${methodName} method`, () => {
-        const service = new Service();
-        const mockUpsertStats = jest.fn();
-
-        service.calcStatistics = jest.fn();
-        setProperty(service, "upsertStats", mockUpsertStats);
-
-        let func: { (...args: any[]): Promise<boolean> } = getProperty(service, methodName);
-        const argsNames = getParams(func);
-        func = func.bind(service);
-
-        const nullArgs = new Array(args.length);
-        const undefinedArgs = new Array(args.length);
-
-        for (let i = 0; i <= args.length; ++i) {
-            nullArgs[i] = new Array(args.length).fill(null);
-            undefinedArgs[i] = new Array(args.length).fill(undefined);
-
-            for (let j = 0; j < i; ++j) {
-                nullArgs[i][j] = args[j];
-                undefinedArgs[i][j] = args[j];
-            }
-        }
-
-        describe("with undefined arguments provided", () => {
-            test("Should to throw error", async () => {
-                expect(func(...undefinedArgs[0])).rejects.toThrowError();
-            });
-        });
-        
-        combineArgs(
-            args, argsNames, minArgsCount,
-            (currentArgs, currentArgsNames) => {
-                describe(`${currentArgsNames.join(", ")} args with nulls provided`, () => {
-                    test("Should to throw error", () => {
-                        expect(func(...currentArgs)).rejects.toThrowError();
-                    });
-                });
-            }
-        );
-
-        describe(`${argsNames.slice(0, minArgsCount).join(", ")} provided but is wrong`, () => {
-            test("Should to throw error", async () => {
-                mockPG.maybeOne.mockImplementation(async () => null);
-                expect(func(...nullArgs[minArgsCount])).rejects.toThrowError();
-            });
-        });
-
-        describe(`${argsNames.slice(0, minArgsCount).join(", ")} provided but positions not exists`, () => {
-            test("Should to throw error", async () => {
-                mockPG.maybeOne.mockImplementation(async () => ({}));
-                mockPG.oneFirst.mockImplementation(async () => 0);
-                expect(func(...nullArgs[minArgsCount])).resolves.toStrictEqual(false);
-            });
-        });
-
-        describe(`${argsNames.slice(0, minArgsCount).join(", ")} provided but positions exists`, () => {
-            test("Should to call upsertStats", async () => {
-                mockPG.maybeOne.mockImplementation(async () => ({}));
-                mockPG.oneFirst.mockImplementation(async () => service.defaultChunkSize);
-                mockPG.any.mockImplementation(async () => [{}]);
-
-                mockUpsertStats.mockImplementation(async () => {
-                    console.warn("upsertStats", methodName);
-                });
-                mockUpsertStats.mockClear();
-
-                console.log(await func(...nullArgs[minArgsCount]));
-                expect(mockUpsertStats).toHaveBeenCalledTimes(1);
-            });
-        });
-    });
-}

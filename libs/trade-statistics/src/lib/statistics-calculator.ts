@@ -94,6 +94,7 @@ export default class StatisticsCalculator {
             }
 
             if (!isStatistics(prevRobotStats.statistics)) {
+                console.log(prevRobotStats.statistics);
                 throw new Error("Invalid robotStats.statistics object provided"); // calculations are allowed if null or valid obj is provided
             }
         }

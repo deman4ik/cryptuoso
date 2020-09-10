@@ -9,24 +9,26 @@ import {
 } from "@cryptuoso/user-state";
 
 export enum StatisticsType {
+    Simple = "simple",
     CalcByPositionsVolume = "calcByPositionsVolume",
     CalcByProvidedVolumes = "calcByProvidedVolumes"
 }
 
 export type CalcStatistics = {
     (
+        type: StatisticsType.Simple,
         prevStats: RobotStats,
         positions: PositionDataForStats[]
     ): RobotStats | Promise<RobotStats>;
     (
+        type: StatisticsType.CalcByPositionsVolume,
         prevStats: RobotStats,
-        positions: ExtendedStatsPositionWithVolume[],
-        type: StatisticsType.CalcByPositionsVolume
+        positions: ExtendedStatsPositionWithVolume[]
     ): RobotStats | Promise<RobotStats>;
     (
+        type: StatisticsType.CalcByProvidedVolumes,
         prevStats: RobotStats,
         positions: ExtendedStatsPosition[],
-        type: StatisticsType.CalcByProvidedVolumes,
         volumes: SettingsVolume[]
     ): RobotStats | Promise<RobotStats>;
 };

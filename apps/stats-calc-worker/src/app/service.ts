@@ -66,7 +66,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         this.workers = {
             calcStatistics: new Worker("calcStatistics", async (job: Job) => this.process(job), {
                 connection: this.redis,
-                concurrency: process.env.production ? this.cpus : 3
+                concurrency: +process.env.JOBS_CONCURRENCY || this.cpus
             })
         };
         //console.log(this);
@@ -100,11 +100,13 @@ export default class StatisticCalcWorkerService extends BaseService {
                 await this.calcUserSignalsAggr(userId, exchange, asset, calcAll);
             } else if (type === StatsCalcJobType.userRobotAggr) {
                 await this.calcUserRobotsAggr(userId, exchange, asset, calcAll);
-            }
+            } else
+                throw new Error(`Unknown job type ${type}`);
+
             //await job.moveToCompleted(null, null);
             this.log.info(`Job ${job.id} finished`);
         } catch (err) {
-            this.log.error(`Error while processing job ${job.id}`, err);
+            this.log.error(`Error while processing job ${job.id} (${type})`, err);
             throw err;
         }
     }
@@ -142,377 +144,355 @@ export default class StatisticCalcWorkerService extends BaseService {
         stats: RobotStats,
         prevStats?: RobotStatsWithExists
     ): Promise<void> {
-        console.log(params);
-        return;
-        try {
-            if (prevStats && prevStats.statsExists) {
-                await this.db.pg.query(sql`
-                    UPDATE ${params.table}
-                    SET statistics = ${sql.json(stats.statistics)},
-                        last_position_exit_date = ${stats.lastPositionExitDate},
-                        last_updated_at = ${stats.lastUpdatedAt},
-                        equity = ${sql.json(stats.equity)},
-                        equity_avg = ${sql.json(stats.equityAvg)}
-                    WHERE ${params.fieldId} = ${params.id};
-                `);
-            } else {
-                await this.db.pg.query(sql`
-                    INSERT INTO ${params.table} (
-                        statistics,
-                        last_position_exit_date,
-                        last_updated_at,
-                        equity,
-                        equity_avg
-                        
-                        ${params.addFields ? sql`, ${params.addFields}` : sql``}
-                    ) VALUES (
-                        ${sql.json(stats.statistics)},
-                        ${stats.lastPositionExitDate},
-                        ${stats.lastUpdatedAt},
-                        ${sql.json(stats.equity)},
-                        ${sql.json(stats.equityAvg)}
+        /* console.log(params);
+        return; */
+        if (prevStats && prevStats.statsExists) {
+            await this.db.pg.query(sql`
+                UPDATE ${params.table}
+                SET statistics = ${sql.json(stats.statistics)},
+                    last_position_exit_date = ${stats.lastPositionExitDate},
+                    last_updated_at = ${stats.lastUpdatedAt},
+                    equity = ${sql.json(stats.equity)},
+                    equity_avg = ${sql.json(stats.equityAvg)}
+                WHERE ${params.fieldId} = ${params.id};
+            `);
+        } else {
+            await this.db.pg.query(sql`
+                INSERT INTO ${params.table} (
+                    statistics,
+                    last_position_exit_date,
+                    last_updated_at,
+                    equity,
+                    equity_avg
+                    
+                    ${params.addFields ? sql`, ${params.addFields}` : sql``}
+                ) VALUES (
+                    ${sql.json(stats.statistics)},
+                    ${stats.lastPositionExitDate},
+                    ${stats.lastUpdatedAt},
+                    ${sql.json(stats.equity)},
+                    ${sql.json(stats.equityAvg)}
 
-                        ${params.addFieldsValues ? sql`, ${params.addFieldsValues}` : sql``}
-                    );
-                `);
-            }
-        } catch (err) {
-            console.log(err);
-            throw err;
+                    ${params.addFieldsValues ? sql`, ${params.addFieldsValues}` : sql``}
+                );
+            `);
         }
     }
 
     calcStatistics: CalcStatistics = async (
+        type: any,
         prevStats: RobotStats,
         positions: any[],
-        type?: any,
         volumes?: SettingsVolume[]
     ) => {
         return await this.pool.queue(async (utils: StatisticUtils) =>
-            utils.calcStatistics(prevStats, positions, type, volumes)
+            utils.calcStatistics(type, prevStats, positions, volumes)
         );
     };
 
     async calcRobot(robotId: string, calcAll = false) {
-        try {
-            if (!robotId) throw new Error("robotId must be non-empty string");
+        if (!robotId) throw new Error("robotId must be non-empty string");
 
-            const prevRobotStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
-                SELECT rs.robot_id as "stats_exists",
-                    rs.*
-                FROM robots r
-                LEFT JOIN robot_stats rs
-                    ON r.id = rs.robot_id
-                WHERE r.id = ${robotId};
-            `);
+        const prevRobotStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
+            SELECT rs.robot_id as "stats_exists",
+                rs.*
+            FROM robots r
+            LEFT JOIN robot_stats rs
+                ON r.id = rs.robot_id
+            WHERE r.id = ${robotId};
+        `);
 
-            if (!prevRobotStats) throw new Error(`The robot doesn't exists (robotId: ${robotId})`);
+        if (!prevRobotStats) throw new Error(`The robot doesn't exists (robotId: ${robotId})`);
 
-            const { calcFrom, initStats } = getCalcFromAndInitStats(prevRobotStats, calcAll);
+        const { calcFrom, initStats } = getCalcFromAndInitStats(prevRobotStats, calcAll);
 
-            const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
-            const querySelectPart = sql`
-                SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
-                    p.fee, p.entry_price, p.exit_price,
-                    (
-                        SELECT usset.robot_settings -> 'volume'
-                        FROM robot_settings usset
-                        WHERE usset.robot_id = ${robotId}
-                            AND usset.active_from <= p.entry_date
-                        ORDER BY usset.active_from DESC
-                        LIMIT 1
-                    )::float AS volume
-            `;
-            const queryFromAndConditionPart = sql`
-                FROM robot_positions p
-                WHERE p.robot_id = ${robotId}
-                    AND p.status = 'closed'
-                    ${conditionExitDate}
-            `;
-            const queryCommonPart = sql`
-                ${querySelectPart}
-                ${queryFromAndConditionPart}
-                ORDER BY p.exit_date
-            `;
+        const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
+        const querySelectPart = sql`
+            SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
+                p.fee, p.entry_price, p.exit_price,
+                (
+                    SELECT usset.robot_settings -> 'volume'
+                    FROM robot_settings usset
+                    WHERE usset.robot_id = ${robotId}
+                        AND usset.active_from <= p.entry_date
+                    ORDER BY usset.active_from DESC
+                    LIMIT 1
+                )::float AS volume
+        `;
+        const queryFromAndConditionPart = sql`
+            FROM robot_positions p
+            WHERE p.robot_id = ${robotId}
+                AND p.status = 'closed'
+                ${conditionExitDate}
+        `;
+        const queryCommonPart = sql`
+            ${querySelectPart}
+            ${queryFromAndConditionPart}
+            ORDER BY p.exit_date
+        `;
 
-            const positionsCount: number = +(await this.db.pg.oneFirst(sql`
-                SELECT COUNT(*)
-                ${queryFromAndConditionPart};
-            `));
+        const positionsCount: number = +(await this.db.pg.oneFirst(sql`
+            SELECT COUNT(*)
+            ${queryFromAndConditionPart};
+        `));
 
-            if (positionsCount == 0) return false;
+        if (positionsCount == 0) return false;
 
-            const newStats = await DataStream.from(
-                this.makeChunksGenerator(
-                    queryCommonPart,
-                    positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
-                )
-            ).reduce(
-                async (prevStats: RobotStats, chunk: ExtendedStatsPositionWithVolume[]) =>
-                    await this.calcStatistics(prevStats, chunk, StatisticsType.CalcByPositionsVolume),
-                initStats
-            );
+        const newStats = await DataStream.from(
+            this.makeChunksGenerator(
+                queryCommonPart,
+                positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
+            )
+        ).reduce(
+            async (prevStats: RobotStats, chunk: ExtendedStatsPositionWithVolume[]) =>
+                await this.calcStatistics(StatisticsType.CalcByPositionsVolume, prevStats, chunk),
+            initStats
+        );
 
-            await this.upsertStats(
-                {
-                    table: sql`robot_stats`,
-                    fieldId: sql`robot_id`,
-                    id: robotId,
-                    addFields: sql`robot_id`,
-                    addFieldsValues: sql`${robotId}`
-                },
-                newStats,
-                prevRobotStats
-            );
+        await this.upsertStats(
+            {
+                table: sql`robot_stats`,
+                fieldId: sql`robot_id`,
+                id: robotId,
+                addFields: sql`robot_id`,
+                addFieldsValues: sql`${robotId}`
+            },
+            newStats,
+            prevRobotStats
+        );
 
-            return true;
-        } catch (err) {
-            this.log.error("Failed to calculate robot statistics", err);
-            throw err;
-        }
+        return true;
     }
 
     async calcRobotsAggr(exchange?: string, asset?: string, calcAll = false) {
-        try {
-            const prevRobotsAggrStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
-                SELECT id as "stats_exists",
-                    id,
-                    statistics,
-                    last_position_exit_date,
-                    last_updated_at,
-                    equity,
-                    equity_avg
-                FROM robot_aggr_stats
-                WHERE exchange ${!exchange ? sql`IS NULL` : sql`= ${exchange}`}
-                    AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
-            `);
+        const prevRobotsAggrStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
+            SELECT id as "stats_exists",
+                id,
+                statistics,
+                last_position_exit_date,
+                last_updated_at,
+                equity,
+                equity_avg
+            FROM robot_aggr_stats
+            WHERE exchange ${!exchange ? sql`IS NULL` : sql`= ${exchange}`}
+                AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
+        `);
 
-            const { calcFrom, initStats } = getCalcFromAndInitStats(prevRobotsAggrStats, calcAll);
+        const { calcFrom, initStats } = getCalcFromAndInitStats(prevRobotsAggrStats, calcAll);
 
-            const conditionExchange = !exchange ? sql`` : sql`AND r.exchange = ${exchange}`;
-            const conditionAsset = !asset ? sql`` : sql`AND r.asset = ${asset}`;
-            const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
-            const querySelectPart = sql`
-                SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
-                    p.entry_price, p.exit_price, p.fee,
-                    (
-                        SELECT usset.robot_settings -> 'volume'
-                        FROM robot_settings usset
-                        WHERE usset.robot_id = p.robot_id
-                            AND usset.active_from <= p.entry_date
-                        ORDER BY usset.active_from DESC
-                        LIMIT 1
-                    )::float AS volume
-            `;
-            const queryFromAndConditionPart = sql`
-                FROM robot_positions p,
-                    robots r
-                WHERE r.id = p.robot_id
-                ${conditionExchange}
-                ${conditionAsset}
-                AND p.status = 'closed'
-                ${conditionExitDate}
-            `;
-            const queryCommonPart = sql`
-                ${querySelectPart}
-                ${queryFromAndConditionPart}
-                ORDER BY p.exit_date
-            `;
+        const conditionExchange = !exchange ? sql`` : sql`AND r.exchange = ${exchange}`;
+        const conditionAsset = !asset ? sql`` : sql`AND r.asset = ${asset}`;
+        const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
+        const querySelectPart = sql`
+            SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
+                p.entry_price, p.exit_price, p.fee,
+                (
+                    SELECT usset.robot_settings -> 'volume'
+                    FROM robot_settings usset
+                    WHERE usset.robot_id = p.robot_id
+                        AND usset.active_from <= p.entry_date
+                    ORDER BY usset.active_from DESC
+                    LIMIT 1
+                )::float AS volume
+        `;
+        const queryFromAndConditionPart = sql`
+            FROM robot_positions p,
+                robots r
+            WHERE r.id = p.robot_id
+            ${conditionExchange}
+            ${conditionAsset}
+            AND p.status = 'closed'
+            ${conditionExitDate}
+        `;
+        const queryCommonPart = sql`
+            ${querySelectPart}
+            ${queryFromAndConditionPart}
+            ORDER BY p.exit_date
+        `;
 
-            const positionsCount: number = +(await this.db.pg.oneFirst(sql`
-                SELECT COUNT(*)
-                ${queryFromAndConditionPart};
-            `));
+        const positionsCount: number = +(await this.db.pg.oneFirst(sql`
+            SELECT COUNT(*)
+            ${queryFromAndConditionPart};
+        `));
 
-            if (positionsCount == 0) return false;
+        if (positionsCount == 0) return false;
 
-            const newStats = await DataStream.from(
-                this.makeChunksGenerator(
-                    queryCommonPart,
-                    positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
-                )
-            ).reduce(
-                async (prevStats: RobotStats, chunk: ExtendedStatsPositionWithVolume[]) =>
-                    await this.calcStatistics(prevStats, chunk, StatisticsType.CalcByPositionsVolume),
-                initStats
-            );
+        const newStats = await DataStream.from(
+            this.makeChunksGenerator(
+                queryCommonPart,
+                positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
+            )
+        ).reduce(
+            async (prevStats: RobotStats, chunk: ExtendedStatsPositionWithVolume[]) =>
+                await this.calcStatistics(StatisticsType.CalcByPositionsVolume, prevStats, chunk),
+            initStats
+        );
 
-            await this.upsertStats(
-                {
-                    table: sql`robot_aggr_stats`,
-                    fieldId: sql`id`,
-                    id: prevRobotsAggrStats?.id,
-                    addFields: sql`exchange, asset`,
-                    addFieldsValues: sql`${!exchange ? null : exchange}, ${!asset ? null : asset}`
-                },
-                newStats,
-                prevRobotsAggrStats
-            );
+        await this.upsertStats(
+            {
+                table: sql`robot_aggr_stats`,
+                fieldId: sql`id`,
+                id: prevRobotsAggrStats?.id,
+                addFields: sql`exchange, asset`,
+                addFieldsValues: sql`${!exchange ? null : exchange}, ${!asset ? null : asset}`
+            },
+            newStats,
+            prevRobotsAggrStats
+        );
 
-            return true;
-        } catch (err) {
-            this.log.error("Failed to calculate robots aggregate statistics", err);
-            throw err;
-        }
+        return true;
     }
 
     async calcUsersRobotsAggr(exchange?: string, asset?: string, calcAll = false) {
-        try {
-            const prevUsersRobotsAggrtats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
-                SELECT id as "stats_exists",
-                    id,
-                    statistics,
-                    last_position_exit_date,
-                    last_updated_at,
-                    equity,
-                    equity_avg
-                FROM user_robot_aggr_stats
-                WHERE exchange ${!exchange ? sql`IS NULL` : sql`= ${exchange}`}
-                    AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
-            `);
+        const prevUsersRobotsAggrtats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
+            SELECT id as "stats_exists",
+                id,
+                statistics,
+                last_position_exit_date,
+                last_updated_at,
+                equity,
+                equity_avg
+            FROM user_robot_aggr_stats
+            WHERE exchange ${!exchange ? sql`IS NULL` : sql`= ${exchange}`}
+                AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
+        `);
 
-            const { calcFrom, initStats } = getCalcFromAndInitStats(prevUsersRobotsAggrtats, calcAll);
+        const { calcFrom, initStats } = getCalcFromAndInitStats(prevUsersRobotsAggrtats, calcAll);
 
-            const conditionExchange = !exchange ? sql`` : sql`AND exchange = ${exchange}`;
-            const conditionAsset = !asset ? sql`` : sql`AND asset = ${asset}`;
-            const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
-            const querySelectPart = sql`
-                SELECT id, direction, exit_date, profit, bars_held
-            `;
-            const queryFromAndConditionPart = sql`
-                FROM user_positions
-                WHERE status IN ('closed', 'closedAuto')
-                ${conditionExchange}
-                ${conditionAsset}
-                ${conditionExitDate}
-            `;
-            const queryCommonPart = sql`
-                ${querySelectPart}
-                ${queryFromAndConditionPart}
-                ORDER BY exit_date
-            `;
+        const conditionExchange = !exchange ? sql`` : sql`AND exchange = ${exchange}`;
+        const conditionAsset = !asset ? sql`` : sql`AND asset = ${asset}`;
+        const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
+        const querySelectPart = sql`
+            SELECT id, direction, exit_date, profit, bars_held
+        `;
+        const queryFromAndConditionPart = sql`
+            FROM user_positions
+            WHERE status IN ('closed', 'closedAuto')
+            ${conditionExchange}
+            ${conditionAsset}
+            ${conditionExitDate}
+        `;
+        const queryCommonPart = sql`
+            ${querySelectPart}
+            ${queryFromAndConditionPart}
+            ORDER BY exit_date
+        `;
 
-            const positionsCount: number = +(await this.db.pg.oneFirst(sql`
-                SELECT COUNT(*)
-                ${queryFromAndConditionPart};
-            `));
+        const positionsCount: number = +(await this.db.pg.oneFirst(sql`
+            SELECT COUNT(*)
+            ${queryFromAndConditionPart};
+        `));
 
-            if (positionsCount == 0) return false;
+        if (positionsCount == 0) return false;
 
-            const newStats = await DataStream.from(
-                this.makeChunksGenerator(
-                    queryCommonPart,
-                    positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
-                )
-            ).reduce(
-                async (prevStats: RobotStats, chunk: PositionDataForStats[]) =>
-                    await this.calcStatistics(prevStats, chunk),
-                initStats
-            );
+        const newStats = await DataStream.from(
+            this.makeChunksGenerator(
+                queryCommonPart,
+                positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
+            )
+        ).reduce(
+            async (prevStats: RobotStats, chunk: PositionDataForStats[]) =>
+                await this.calcStatistics(StatisticsType.Simple, prevStats, chunk),
+            initStats
+        );
 
-            await this.upsertStats(
-                {
-                    table: sql`user_robot_aggr_stats`,
-                    fieldId: sql`id`,
-                    id: prevUsersRobotsAggrtats?.id,
-                    addFields: sql`exchange, asset`,
-                    addFieldsValues: sql`${!exchange ? null : exchange}, ${!asset ? null : asset}`
-                },
-                newStats,
-                prevUsersRobotsAggrtats
-            );
+        await this.upsertStats(
+            {
+                table: sql`user_robot_aggr_stats`,
+                fieldId: sql`id`,
+                id: prevUsersRobotsAggrtats?.id,
+                addFields: sql`exchange, asset`,
+                addFieldsValues: sql`${!exchange ? null : exchange}, ${!asset ? null : asset}`
+            },
+            newStats,
+            prevUsersRobotsAggrtats
+        );
 
-            return true;
-        } catch (err) {
-            this.log.error("Failed to calculate users robots aggregate statistics", err);
-            throw err;
-        }
+        return true;
     }
 
     async calcUserSignal(userId: string, robotId: string, calcAll = false) {
-        try {
-            if (!userId || !robotId) throw new Error("userId and robotId must be non-empty string");
+        if (!userId || !robotId) throw new Error("userId and robotId must be non-empty string");
 
-            const userSignal: UserSignalsWithExists = await this.db.pg.maybeOne(sql`
-                SELECT us.id, us.subscribed_at, us.volume,
-                    uss.user_signal_id as "stats_exists",
-                    uss.statistics,
-                    uss.last_position_exit_date,
-                    uss.last_updated_at,
-                    uss.equity,
-                    uss.equity_avg
-                FROM user_signals us
-                LEFT JOIN user_signal_stats uss
-                    ON us.id = uss.user_signal_id
-                WHERE us.robot_id = ${robotId}
-                AND us.user_id = ${userId};
-            `);
+        const userSignal: UserSignalsWithExists = await this.db.pg.maybeOne(sql`
+            SELECT us.id, us.subscribed_at, us.volume,
+                uss.user_signal_id as "stats_exists",
+                uss.statistics,
+                uss.last_position_exit_date,
+                uss.last_updated_at,
+                uss.equity,
+                uss.equity_avg
+            FROM user_signals us
+            LEFT JOIN user_signal_stats uss
+                ON us.id = uss.user_signal_id
+            WHERE us.robot_id = ${robotId}
+            AND us.user_id = ${userId};
+        `);
 
-            if (!userSignal) throw new Error(`The signal doesn't exists (userId: ${userId}, robotId: ${robotId})`);
+        if (!userSignal) throw new Error(`The signal doesn't exists (userId: ${userId}, robotId: ${robotId})`);
 
-            const { calcFrom, initStats } = getCalcFromAndInitStats(userSignal, calcAll);
+        const { calcFrom, initStats } = getCalcFromAndInitStats(userSignal, calcAll);
 
-            const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
-            const querySelectPart = sql`
-                SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
-                    p.entry_price, p.exit_price, p.fee,
-                    (
-                        SELECT usset.signal_settings -> 'volume'
-                        FROM user_signal_settings usset
-                        WHERE usset.user_signal_id = us.id
-                            AND usset.active_from <= p.entry_date
-                        ORDER BY usset.active_from DESC
-                        LIMIT 1
-                    )::float AS volume
-            `;
-            const queryFromAndConditionPart = sql`
-                FROM robot_positions p
-                WHERE p.robot_id = ${robotId}
-                    AND p.status = 'closed'
-                    AND p.entry_date >= ${userSignal.subscribedAt}
-                    ${conditionExitDate}
-            `;
-            const queryCommonPart = sql`
-                ${querySelectPart}
-                ${queryFromAndConditionPart}
-                ORDER BY p.exit_date
-            `;
+        const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
+        const querySelectPart = sql`
+            SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
+                p.entry_price, p.exit_price, p.fee,
+                (
+                    SELECT usset.signal_settings -> 'volume'
+                    FROM user_signal_settings usset
+                    WHERE usset.user_signal_id = us.id
+                        AND usset.active_from <= p.entry_date
+                    ORDER BY usset.active_from DESC
+                    LIMIT 1
+                )::float AS volume
+        `;
+        const queryFromAndConditionPart = sql`
+            FROM user_signals us,
+                robot_positions p
+            WHERE us.user_id = ${userId}
+                AND us.robot_id = ${robotId}
+                AND p.robot_id = us.robot_id
+                AND p.status = 'closed'
+                AND p.entry_date >= ${userSignal.subscribedAt}
+                ${conditionExitDate}
+        `;
+        const queryCommonPart = sql`
+            ${querySelectPart}
+            ${queryFromAndConditionPart}
+            ORDER BY p.exit_date
+        `;
 
-            const positionsCount: number = +(await this.db.pg.oneFirst(sql`
-                SELECT COUNT(*)
-                ${queryFromAndConditionPart};
-            `));
+        const positionsCount: number = +(await this.db.pg.oneFirst(sql`
+            SELECT COUNT(*)
+            ${queryFromAndConditionPart};
+        `));
 
-            if (positionsCount == 0) return false;
+        if (positionsCount == 0) return false;
 
-            const newStats = await DataStream.from(
-                this.makeChunksGenerator(
-                    queryCommonPart,
-                    positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
-                )
-            ).reduce(
-                async (prevStats: RobotStats, chunk: ExtendedStatsPositionWithVolume[]) =>
-                    await this.calcStatistics(prevStats, chunk, StatisticsType.CalcByPositionsVolume),
-                initStats
-            );
+        const newStats = await DataStream.from(
+            this.makeChunksGenerator(
+                queryCommonPart,
+                positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
+            )
+        ).reduce(
+            async (prevStats: RobotStats, chunk: ExtendedStatsPositionWithVolume[]) =>
+                await this.calcStatistics(StatisticsType.CalcByPositionsVolume, prevStats, chunk),
+            initStats
+        );
 
-            await this.upsertStats(
-                {
-                    table: sql`user_signal_stats`,
-                    fieldId: sql`user_signal_id`,
-                    id: userSignal.id,
-                    addFields: sql`user_signal_id`,
-                    addFieldsValues: sql`${userSignal.id}`
-                },
-                newStats,
-                userSignal
-            );
+        await this.upsertStats(
+            {
+                table: sql`user_signal_stats`,
+                fieldId: sql`user_signal_id`,
+                id: userSignal.id,
+                addFields: sql`user_signal_id`,
+                addFieldsValues: sql`${userSignal.id}`
+            },
+            newStats,
+            userSignal
+        );
 
-            return true;
-        } catch (err) {
-            this.log.error("Failed to calculate user signal statistics", err);
-            throw err;
-        }
+        return true;
     }
 
     private async _calcUserSignalsBySingleQuery(params: {
@@ -546,9 +526,9 @@ export default class StatisticCalcWorkerService extends BaseService {
 
             statsDict[userSignal.id] = {
                 newStats: await this.calcStatistics(
+                    StatisticsType.CalcByProvidedVolumes,
                     initStats,
                     positions,
-                    StatisticsType.CalcByProvidedVolumes,
                     userSignal.volumes
                 ),
                 signal: userSignal
@@ -610,9 +590,9 @@ export default class StatisticCalcWorkerService extends BaseService {
                     );
 
                     signalAcc.stats = await this.calcStatistics(
+                        StatisticsType.CalcByProvidedVolumes,
                         signalAcc.stats,
                         positions,
-                        StatisticsType.CalcByProvidedVolumes,
                         signalAcc.signal.volumes
                     );
 
@@ -636,354 +616,337 @@ export default class StatisticCalcWorkerService extends BaseService {
     }
 
     async calcUserSignals(robotId: string, calcAll = false) {
-        try {
-            if (!robotId) throw new Error("robotId must be non-empty string");
+        if (!robotId) throw new Error("robotId must be non-empty string");
 
-            const userSignals: UserSignalsWithExists[] = await this.db.pg.any(sql`
-                SELECT us.id, us.subscribed_at,
-                    uss.user_signal_id as "stats_exists",
-                    uss.statistics,
-                    uss.last_position_exit_date,
-                    uss.last_updated_at,
-                    uss.equity,
-                    uss.equity_avg,
-                    ARRAY(
-                        SELECT json_build_object(
-                            'active_from', usset.active_from,
-                            'volume', (usset.signal_settings -> 'volume')::float
-                        )
-                        FROM user_signal_settings usset
-                        WHERE usset.user_signal_id = us.id
-                        ORDER BY usset.active_from
-                    ) as volumes
-                FROM user_signals us
-                LEFT JOIN user_signal_stats uss
-                    ON us.id = uss.user_signal_id
-                WHERE us.robot_id = ${robotId};
-            `);
+        const userSignals: UserSignalsWithExists[] = await this.db.pg.any(sql`
+            SELECT us.id, us.subscribed_at,
+                uss.user_signal_id as "stats_exists",
+                uss.statistics,
+                uss.last_position_exit_date,
+                uss.last_updated_at,
+                uss.equity,
+                uss.equity_avg,
+                ARRAY(
+                    SELECT json_build_object(
+                        'active_from', usset.active_from,
+                        'volume', (usset.signal_settings -> 'volume')::float
+                    )
+                    FROM user_signal_settings usset
+                    WHERE usset.user_signal_id = us.id
+                    ORDER BY usset.active_from
+                ) as volumes
+            FROM user_signals us
+            LEFT JOIN user_signal_stats uss
+                ON us.id = uss.user_signal_id
+            WHERE us.robot_id = ${robotId};
+        `);
 
-            if (userSignals.length == 0) throw new Error(`Signals doesn't exists (robotId: ${robotId})`);
+        if (userSignals.length == 0)
+            return false; // throw new Error(`Signals doesn't exists (robotId: ${robotId})`);
 
-            const minSubscriptionDate = dayjs
-                .utc(Math.min(...userSignals.map((us) => dayjs.utc(us.subscribedAt).valueOf())))
-                .toISOString();
+        const minSubscriptionDate = dayjs
+            .utc(Math.min(...userSignals.map((us) => dayjs.utc(us.subscribedAt).valueOf())))
+            .toISOString();
 
-            let minExitDate;
+        let minExitDate;
 
-            if (!calcAll) {
-                const minExitTime = Math.min(
-                    ...userSignals.map((us) => {
-                        if (us.lastPositionExitDate) return dayjs.utc(us.lastPositionExitDate).valueOf();
-                        else return Infinity;
-                    })
-                );
+        if (!calcAll) {
+            const minExitTime = Math.min(
+                ...userSignals.map((us) => {
+                    if (us.lastPositionExitDate) return dayjs.utc(us.lastPositionExitDate).valueOf();
+                    else return Infinity;
+                })
+            );
 
-                minExitDate = isFinite(minExitTime) ? dayjs.utc(minExitTime).toISOString() : undefined;
-            }
-
-            const conditionExitDate = !minExitDate ? sql`` : sql`AND exit_date > ${minExitDate}`;
-            const querySelectPart = sql`
-                SELECT id, direction, exit_date, profit, bars_held,
-                    entry_price, exit_price, fee, entry_date
-            `;
-            const queryFromAndConditionPart = sql`
-                FROM robot_positions
-                WHERE robot_id = ${robotId}
-                    AND status = 'closed'
-                    AND entry_date > ${minSubscriptionDate}
-                    ${conditionExitDate}
-            `;
-            const queryCommonPart = sql`
-                ${querySelectPart}
-                ${queryFromAndConditionPart}
-                ORDER BY exit_date
-            `;
-
-            const positionsCount: number = +(await this.db.pg.oneFirst(sql`
-                SELECT COUNT(*)
-                ${queryFromAndConditionPart};
-            `));
-
-            if (positionsCount == 0) return false;
-
-            const signalsStats =
-                positionsCount > this.maxSingleQueryPosCount
-                    ? await this._calcUserSignalsByChunks({
-                          queryCommonPart,
-                          userSignals,
-                          calcAll
-                      })
-                    : await this._calcUserSignalsBySingleQuery({
-                          queryCommonPart,
-                          userSignals,
-                          calcAll
-                      });
-
-            if (Object.keys(signalsStats).length == 0) return false;
-
-            for (const [signalId, { newStats, signal }] of Object.entries(signalsStats)) {
-                await this.upsertStats(
-                    {
-                        table: sql`user_signal_stats`,
-                        fieldId: sql`user_signal_id`,
-                        id: signalId,
-                        addFields: sql`user_signal_id`,
-                        addFieldsValues: sql`${signalId}`
-                    },
-                    newStats,
-                    signal
-                );
-            }
-
-            return true;
-        } catch (err) {
-            this.log.error("Failed to calculate user signals statistics", err);
-            throw err;
+            minExitDate = isFinite(minExitTime) ? dayjs.utc(minExitTime).toISOString() : undefined;
         }
+
+        const conditionExitDate = !minExitDate ? sql`` : sql`AND exit_date > ${minExitDate}`;
+        const querySelectPart = sql`
+            SELECT id, direction, exit_date, profit, bars_held,
+                entry_price, exit_price, fee, entry_date
+        `;
+        const queryFromAndConditionPart = sql`
+            FROM robot_positions
+            WHERE robot_id = ${robotId}
+                AND status = 'closed'
+                AND entry_date > ${minSubscriptionDate}
+                ${conditionExitDate}
+        `;
+        const queryCommonPart = sql`
+            ${querySelectPart}
+            ${queryFromAndConditionPart}
+            ORDER BY exit_date
+        `;
+
+        const positionsCount: number = +(await this.db.pg.oneFirst(sql`
+            SELECT COUNT(*)
+            ${queryFromAndConditionPart};
+        `));
+
+        if (positionsCount == 0) return false;
+
+        const signalsStats =
+            positionsCount > this.maxSingleQueryPosCount
+                ? await this._calcUserSignalsByChunks({
+                        queryCommonPart,
+                        userSignals,
+                        calcAll
+                    })
+                : await this._calcUserSignalsBySingleQuery({
+                        queryCommonPart,
+                        userSignals,
+                        calcAll
+                    });
+
+        if (Object.keys(signalsStats).length == 0) return false;
+
+        for (const [signalId, { newStats, signal }] of Object.entries(signalsStats)) {
+            await this.upsertStats(
+                {
+                    table: sql`user_signal_stats`,
+                    fieldId: sql`user_signal_id`,
+                    id: signalId,
+                    addFields: sql`user_signal_id`,
+                    addFieldsValues: sql`${signalId}`
+                },
+                newStats,
+                signal
+            );
+        }
+
+        return true;
     }
 
     async calcUserSignalsAggr(userId: string, exchange?: string, asset?: string, calcAll = false) {
-        try {
-            if (!userId) throw new Error("userId must be non-empty string");
+        if (!userId) throw new Error("userId must be non-empty string");
 
-            const prevUserAggrStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
-                SELECT id as "stats_exists",
-                    id,
-                    statistics,
-                    last_position_exit_date,
-                    last_updated_at,
-                    equity,
-                    equity_avg
-                FROM user_aggr_stats
-                WHERE user_id = ${userId}
-                    AND type = ${UserAggrStatsType.signal}
-                    AND exchange ${!exchange ? sql`IS NULL` : sql`= ${exchange}`}
-                    AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
-            `);
+        const prevUserAggrStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
+            SELECT id as "stats_exists",
+                id,
+                statistics,
+                last_position_exit_date,
+                last_updated_at,
+                equity,
+                equity_avg
+            FROM user_aggr_stats
+            WHERE user_id = ${userId}
+                AND type = ${UserAggrStatsType.signal}
+                AND exchange ${!exchange ? sql`IS NULL` : sql`= ${exchange}`}
+                AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
+        `);
 
-            const { calcFrom, initStats } = getCalcFromAndInitStats(prevUserAggrStats, calcAll);
+        const { calcFrom, initStats } = getCalcFromAndInitStats(prevUserAggrStats, calcAll);
 
-            const conditionExchange = !exchange ? sql`` : sql`AND r.exchange = ${exchange}`;
-            const conditionAsset = !asset ? sql`` : sql`AND r.asset = ${asset}`;
-            const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
-            const querySelectPart = sql`
-                SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
-                    p.entry_price, p.exit_price, p.fee,
-                    (
-                        SELECT usset.signal_settings -> 'volume'
-                        FROM user_signal_settings usset
-                        WHERE usset.user_signal_id = us.id
-                            AND usset.active_from <= p.entry_date
-                        ORDER BY usset.active_from DESC
-                        LIMIT 1
-                    )::float AS volume
-            `;
+        const conditionExchange = !exchange ? sql`` : sql`AND r.exchange = ${exchange}`;
+        const conditionAsset = !asset ? sql`` : sql`AND r.asset = ${asset}`;
+        const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
+        const querySelectPart = sql`
+            SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
+                p.entry_price, p.exit_price, p.fee,
+                (
+                    SELECT usset.signal_settings -> 'volume'
+                    FROM user_signal_settings usset
+                    WHERE usset.user_signal_id = us.id
+                        AND usset.active_from <= p.entry_date
+                    ORDER BY usset.active_from DESC
+                    LIMIT 1
+                )::float AS volume
+        `;
 
-            const queryFromAndConditionPart = sql`
-                FROM robot_positions p,
-                    user_signals us
-                WHERE us.user_id = ${userId}
-                    AND p.robot_id = us.robot_id
-                    AND p.status = 'closed'
-                    AND p.entry_date >= us.subscribed_at
-                ${conditionExchange}
-                ${conditionAsset}
-                ${conditionExitDate}
-            `;
-            const queryCommonPart = sql`
-                ${querySelectPart}
-                ${queryFromAndConditionPart}
-                ORDER BY p.exit_date
-            `;
+        const queryFromAndConditionPart = sql`
+            FROM user_signals us,
+                robots r,
+                robot_positions p
+            WHERE us.user_id = ${userId}
+                AND r.id = us.robot_id
+                AND p.robot_id = us.robot_id
+                AND p.status = 'closed'
+                AND p.entry_date >= us.subscribed_at
+            ${conditionExchange}
+            ${conditionAsset}
+            ${conditionExitDate}
+        `;
+        const queryCommonPart = sql`
+            ${querySelectPart}
+            ${queryFromAndConditionPart}
+            ORDER BY p.exit_date
+        `;
 
-            const positionsCount: number = +(await this.db.pg.oneFirst(sql`
-                SELECT COUNT(*)
-                ${queryFromAndConditionPart};
-            `));
+        const positionsCount: number = +(await this.db.pg.oneFirst(sql`
+            SELECT COUNT(*)
+            ${queryFromAndConditionPart};
+        `));
 
-            if (positionsCount == 0) return false;
+        if (positionsCount == 0) return false;
 
-            const newStats = await DataStream.from(
-                this.makeChunksGenerator(
-                    queryCommonPart,
-                    positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
-                )
-            ).reduce(
-                async (prevStats: RobotStats, chunk: ExtendedStatsPositionWithVolume[]) =>
-                    await this.calcStatistics(prevStats, chunk, StatisticsType.CalcByPositionsVolume),
-                initStats
-            );
+        const newStats = await DataStream.from(
+            this.makeChunksGenerator(
+                queryCommonPart,
+                positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
+            )
+        ).reduce(
+            async (prevStats: RobotStats, chunk: ExtendedStatsPositionWithVolume[]) =>
+                await this.calcStatistics(StatisticsType.CalcByPositionsVolume, prevStats, chunk),
+            initStats
+        );
 
-            await this.upsertStats(
-                {
-                    table: sql`user_aggr_stats`,
-                    fieldId: sql`id`,
-                    id: prevUserAggrStats?.id,
-                    addFields: sql`user_id, exchange, asset, type`,
-                    addFieldsValues: sql`${userId}, ${!exchange ? null : exchange}, ${!asset ? null : asset}, ${
-                        UserAggrStatsType.signal
-                    }`
-                },
-                newStats,
-                prevUserAggrStats
-            );
+        await this.upsertStats(
+            {
+                table: sql`user_aggr_stats`,
+                fieldId: sql`id`,
+                id: prevUserAggrStats?.id,
+                addFields: sql`user_id, exchange, asset, type`,
+                addFieldsValues: sql`${userId}, ${!exchange ? null : exchange}, ${!asset ? null : asset}, ${
+                    UserAggrStatsType.signal
+                }`
+            },
+            newStats,
+            prevUserAggrStats
+        );
 
-            return true;
-        } catch (err) {
-            this.log.error("Failed to calculate user signals aggregate statistics", err);
-            throw err;
-        }
+        return true;
     }
 
     async calcUserRobot(userRobotId: string, calcAll = false) {
-        try {
-            if (!userRobotId) throw new Error("userRobotId must be non-empty string");
+        if (!userRobotId) throw new Error("userRobotId must be non-empty string");
 
-            const prevRobotStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
-                SELECT urs.user_robot_id as "stats_exists",
-                    urs.statistics,
-                    urs.last_position_exit_date,
-                    urs.last_updated_at,
-                    urs.equity,
-                    urs.equity_avg
-                FROM user_robots ur
-                LEFT JOIN user_robot_stats urs
-                    ON ur.id = urs.user_robot_id
-                WHERE ur.id = ${userRobotId};
-            `);
+        const prevRobotStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
+            SELECT urs.user_robot_id as "stats_exists",
+                urs.statistics,
+                urs.last_position_exit_date,
+                urs.last_updated_at,
+                urs.equity,
+                urs.equity_avg
+            FROM user_robots ur
+            LEFT JOIN user_robot_stats urs
+                ON ur.id = urs.user_robot_id
+            WHERE ur.id = ${userRobotId};
+        `);
 
-            if (!prevRobotStats) throw new Error(`User robot doesn't exists (userRobotId: ${userRobotId})`);
+        if (!prevRobotStats) throw new Error(`User robot doesn't exists (userRobotId: ${userRobotId})`);
 
-            const { calcFrom, initStats } = getCalcFromAndInitStats(prevRobotStats, calcAll);
+        const { calcFrom, initStats } = getCalcFromAndInitStats(prevRobotStats, calcAll);
 
-            const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
-            const querySelectPart = sql`
-                SELECT id, direction, exit_date, profit, bars_held
-            `;
-            const queryFromAndConditionPart = sql`
-                FROM user_positions
-                WHERE user_robot_id = ${userRobotId}
-                AND status IN ('closed', 'closedAuto')
-                ${conditionExitDate}
-            `;
-            const queryCommonPart = sql`
-                ${querySelectPart}
-                ${queryFromAndConditionPart}
-                ORDER BY exit_date
-            `;
+        const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
+        const querySelectPart = sql`
+            SELECT id, direction, exit_date, profit, bars_held
+        `;
+        const queryFromAndConditionPart = sql`
+            FROM user_positions
+            WHERE user_robot_id = ${userRobotId}
+            AND status IN ('closed', 'closedAuto')
+            ${conditionExitDate}
+        `;
+        const queryCommonPart = sql`
+            ${querySelectPart}
+            ${queryFromAndConditionPart}
+            ORDER BY exit_date
+        `;
 
-            const positionsCount: number = +(await this.db.pg.oneFirst(sql`
-                SELECT COUNT(*)
-                ${queryFromAndConditionPart};
-            `));
+        const positionsCount: number = +(await this.db.pg.oneFirst(sql`
+            SELECT COUNT(*)
+            ${queryFromAndConditionPart};
+        `));
 
-            if (positionsCount == 0) return false;
+        if (positionsCount == 0) return false;
 
-            const newStats = await DataStream.from(
-                this.makeChunksGenerator(
-                    queryCommonPart,
-                    positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
-                )
-            ).reduce(
-                async (prevStats: RobotStats, chunk: PositionDataForStats[]) =>
-                    await this.calcStatistics(prevStats, chunk),
-                initStats
-            );
+        const newStats = await DataStream.from(
+            this.makeChunksGenerator(
+                queryCommonPart,
+                positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
+            )
+        ).reduce(
+            async (prevStats: RobotStats, chunk: PositionDataForStats[]) =>
+                await this.calcStatistics(StatisticsType.Simple, prevStats, chunk),
+            initStats
+        );
 
-            await this.upsertStats(
-                {
-                    table: sql`user_robot_stats`,
-                    fieldId: sql`user_robot_id`,
-                    id: userRobotId
-                },
-                newStats,
-                prevRobotStats
-            );
+        await this.upsertStats(
+            {
+                table: sql`user_robot_stats`,
+                fieldId: sql`user_robot_id`,
+                id: userRobotId
+            },
+            newStats,
+            prevRobotStats
+        );
 
-            return true;
-        } catch (err) {
-            this.log.error("Failed to calculate user robot statistics", err);
-            throw err;
-        }
+        return true;
     }
 
     async calcUserRobotsAggr(userId: string, exchange?: string, asset?: string, calcAll = false) {
-        try {
-            if (!userId) throw new Error("userId must be non-empty string");
+        if (!userId) throw new Error("userId must be non-empty string");
 
-            const prevUserAggrStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
-                SELECT id as "stats_exists",
-                    id,
-                    statistics,
-                    last_position_exit_date,
-                    last_updated_at,
-                    equity,
-                    equity_avg
-                FROM user_aggr_stats
-                WHERE user_id = ${userId}
-                    AND type = ${UserAggrStatsType.userRobot}
-                    AND exchange ${!exchange ? sql`IS NULL` : sql`= ${exchange}`}
-                    AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
-            `);
+        const prevUserAggrStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
+            SELECT id as "stats_exists",
+                id,
+                statistics,
+                last_position_exit_date,
+                last_updated_at,
+                equity,
+                equity_avg
+            FROM user_aggr_stats
+            WHERE user_id = ${userId}
+                AND type = ${UserAggrStatsType.userRobot}
+                AND exchange ${!exchange ? sql`IS NULL` : sql`= ${exchange}`}
+                AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
+        `);
 
-            const { calcFrom, initStats } = getCalcFromAndInitStats(prevUserAggrStats, calcAll);
+        const { calcFrom, initStats } = getCalcFromAndInitStats(prevUserAggrStats, calcAll);
 
-            const conditionExchange = !exchange ? sql`` : sql`AND exchange = ${exchange}`;
-            const conditionAsset = !asset ? sql`` : sql`AND asset = ${asset}`;
-            const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
-            const querySelectPart = sql`
-                SELECT id, direction, exit_date, profit, bars_held
-            `;
-            const queryFromAndConditionPart = sql`
-                FROM user_positions p
-                WHERE user_id = ${userId}
-                AND status IN ('closed', 'closedAuto')
-                ${conditionExchange}
-                ${conditionAsset}
-                ${conditionExitDate}
-            `;
-            const queryCommonPart = sql`
-                ${querySelectPart}
-                ${queryFromAndConditionPart}
-                ORDER BY p.exit_date
-            `;
+        const conditionExchange = !exchange ? sql`` : sql`AND exchange = ${exchange}`;
+        const conditionAsset = !asset ? sql`` : sql`AND asset = ${asset}`;
+        const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
+        const querySelectPart = sql`
+            SELECT id, direction, exit_date, profit, bars_held
+        `;
+        const queryFromAndConditionPart = sql`
+            FROM user_positions p
+            WHERE user_id = ${userId}
+            AND status IN ('closed', 'closedAuto')
+            ${conditionExchange}
+            ${conditionAsset}
+            ${conditionExitDate}
+        `;
+        const queryCommonPart = sql`
+            ${querySelectPart}
+            ${queryFromAndConditionPart}
+            ORDER BY p.exit_date
+        `;
 
-            const positionsCount: number = +(await this.db.pg.oneFirst(sql`
-                SELECT COUNT(*)
-                ${queryFromAndConditionPart};
-            `));
+        const positionsCount: number = +(await this.db.pg.oneFirst(sql`
+            SELECT COUNT(*)
+            ${queryFromAndConditionPart};
+        `));
 
-            if (positionsCount == 0) return false;
+        if (positionsCount == 0) return false;
 
-            const newStats = await DataStream.from(
-                this.makeChunksGenerator(
-                    queryCommonPart,
-                    positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
-                )
-            ).reduce(
-                async (prevStats: RobotStats, chunk: PositionDataForStats[]) =>
-                    await this.calcStatistics(prevStats, chunk),
-                initStats
-            );
+        const newStats = await DataStream.from(
+            this.makeChunksGenerator(
+                queryCommonPart,
+                positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
+            )
+        ).reduce(
+            async (prevStats: RobotStats, chunk: PositionDataForStats[]) =>
+                await this.calcStatistics(StatisticsType.Simple, prevStats, chunk),
+            initStats
+        );
 
-            await this.upsertStats(
-                {
-                    table: sql`user_aggr_stats`,
-                    fieldId: sql`id`,
-                    id: prevUserAggrStats?.id,
-                    addFields: sql`user_id, exchange, asset, type`,
-                    addFieldsValues: sql`${userId}, ${!exchange ? null : exchange}, ${!asset ? null : asset}, ${
-                        UserAggrStatsType.userRobot
-                    }`
-                },
-                newStats,
-                prevUserAggrStats
-            );
+        await this.upsertStats(
+            {
+                table: sql`user_aggr_stats`,
+                fieldId: sql`id`,
+                id: prevUserAggrStats?.id,
+                addFields: sql`user_id, exchange, asset, type`,
+                addFieldsValues: sql`${userId}, ${!exchange ? null : exchange}, ${!asset ? null : asset}, ${
+                    UserAggrStatsType.userRobot
+                }`
+            },
+            newStats,
+            prevUserAggrStats
+        );
 
-            return true;
-        } catch (err) {
-            this.log.error("Failed to calculate user robot aggregate statistics", err);
-            throw err;
-        }
+        return true;
     }
 }

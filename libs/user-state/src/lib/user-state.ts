@@ -15,7 +15,7 @@ export interface ExtendedStatsPositionWithDate extends ExtendedStatsPosition {
 }
 
 export interface RobotStatsWithExists extends RobotStats {
-    statsExists?: any;
+    statsExists: any;
 }
 
 export interface SettingsVolume {
