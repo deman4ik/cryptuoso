@@ -1,33 +1,101 @@
 import Service from "../app/service";
-import {
-    StatsCalcJob,
-    StatsCalcJobType,
-    StatsCalcRunnerEvents,
-    StatsCalcRunnerSchema
-} from "@cryptuoso/stats-calc-events";
-import { makeServiceRequest } from "@cryptuoso/test-helpers";
-import { sleep } from '@cryptuoso/helpers';
+import { HTTPService } from "@cryptuoso/service";
+import { sql } from "slonik";
+import { getProperty, setProperty } from "@cryptuoso/test-helpers";
+import { StatsCalcJobType } from '@cryptuoso/stats-calc-events';
 
-describe("Testing stats-calc-runner service", () => {
-    //const CONFIG = { port: 5678 };
-    const service = new Service(/* CONFIG */);
+const mockLog = {
+    info: jest.fn(console.info),
+    error: jest.fn(console.error)
+};
+
+const mockEvents = {
+    subscribe: jest.fn()
+};
+
+const mockAddOnStartHandler = jest.fn();
+const mockAddOnStopHandler = jest.fn();
+const mockCreateRoutes = jest.fn();
+
+setProperty(HTTPService.prototype, "createRoutes", mockCreateRoutes);
+setProperty(HTTPService.prototype, "events", mockEvents);
+setProperty(HTTPService.prototype, "addOnStartHandler", mockAddOnStartHandler);
+setProperty(HTTPService.prototype, "addOnStopHandler", mockAddOnStopHandler);
+setProperty(HTTPService.prototype, "log", mockLog);
+
+jest.mock("@cryptuoso/service");
+jest.mock("bullmq");
+
+describe("methods", () => {
+    const service = new Service();
+    const mockPG = {
+        maybeOne: jest.fn(),
+        any: jest.fn()
+    };
+
+    setProperty(service, "db", {
+        sql,
+        pg: mockPG
+    });
+
+    let mockQueueAdd: jest.Mock;
+
+    beforeAll(async (cb) => {
+        //await service.startService();
+        await service.onStartService();
+        //mockQueueAdd = service.queues.calcStatistics.add as jest.Mock;
+        mockQueueAdd = jest.fn();
+        service.queueJob = mockQueueAdd;
+
+        cb();
+    });
     
-    test("Testing request", async () => {
-        await service.startService();
+    describe("handleCalcUserSignalEvent", () => {
+        test("Should call some methods", async () => {
+            mockPG.maybeOne.mockImplementation(async () => ({}));
 
-        const res = await makeServiceRequest({
-            //port: CONFIG.port,
-            actionName: "wrong",
-            userId: "user-id",
-            input: {
-                calcAll: true,
-                userId: "asffd",
-                robotId: "asfds"
-            }
+            mockQueueAdd.mockClear();
+
+            await service.handleCalcUserSignalEvent({userId: "", robotId: ""});
+
+            expect(mockQueueAdd).toHaveBeenCalledTimes(2);
         });
+    });
+    
+    describe("handleCalcUserSignalsEvent", () => {
+        test("Should call some methods", async () => {
+            const signal = { robotId: "id" };
+            const signalsCount = Math.trunc(1 + 10 * Math.random());
+            const signals = new Array(signalsCount).fill(signal);
 
-        console.warn(res);
-        
-        await sleep(1000);
+            const exchangeAsset = { exchange: "e", asset: "a" };
+            const exchangesAssetsCount = Math.trunc(1 + 10 * Math.random());
+            const exchangesAssets = new Array(exchangesAssetsCount).fill(exchangeAsset);
+            const args = { userId: "", calcAll: false };
+
+            mockPG.any.mockImplementation(async () => exchangesAssets);
+            mockPG.any.mockImplementationOnce(async () => signals);
+
+            mockQueueAdd.mockClear();
+
+            await service.handleCalcUserSignalsEvent(args);
+
+            expect(mockQueueAdd).toHaveBeenCalledTimes(signalsCount + 1 + 2 + exchangesAssetsCount);
+            expect(mockQueueAdd).toBeCalledWith(
+                StatsCalcJobType.userSignal, { ...args, robotId: signal.robotId }
+            );
+            expect(mockQueueAdd).toBeCalledWith(
+                StatsCalcJobType.userSignalsAggr, args
+            );
+            expect(mockQueueAdd).toBeCalledWith(
+                StatsCalcJobType.userSignalsAggr, { ...args, exchange: exchangeAsset.exchange }
+            );
+            expect(mockQueueAdd).toBeCalledWith(
+                StatsCalcJobType.userSignalsAggr, { ...args, asset: exchangeAsset.asset }
+            );
+            expect(mockQueueAdd).toBeCalledWith(
+                StatsCalcJobType.userSignalsAggr, { ...args, ...exchangeAsset }
+            );
+        });
     });
 });

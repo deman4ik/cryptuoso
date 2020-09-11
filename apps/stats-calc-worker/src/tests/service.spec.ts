@@ -68,7 +68,7 @@ function makeJob(name: string, data: StatsCalcJob = {}) {
 }
 
 describe("getCalcFromAndInitStats function", () => {
-    const robotStatsWithLastPosDate = new RobotStats();
+    const robotStatsWithLastPosDate = new RobotStats() as RobotStatsWithExists;
 
     robotStatsWithLastPosDate.lastPositionExitDate = dayjs().toISOString();
 
@@ -101,7 +101,7 @@ describe("getCalcFromAndInitStats function", () => {
 
     describe("stats is wrong object, calcAll = null", () => {
         test("Should returns nulls", () => {
-            const wrongStats = {} as RobotStats;
+            const wrongStats = {} as RobotStatsWithExists;
             const { calcFrom, initStats } = getCalcFromAndInitStats(wrongStats, null);
 
             expect(calcFrom).toStrictEqual(null);

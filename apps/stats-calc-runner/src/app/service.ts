@@ -23,55 +23,55 @@ export default class StatisticCalcRunnerService extends HTTPService {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_SIGNAL],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: this.HTTPHandler.bind(this, this.handleCalcUserSignalEvent)
+                    handler: this.HTTPHandler.bind(this, this.handleCalcUserSignalEvent.bind(this))
                 },
                 calcUserSignals: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_SIGNALS],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: this.HTTPHandler.bind(this, this.handleCalcUserSignalsEvent)
+                    handler: this.HTTPHandler.bind(this, this.handleCalcUserSignalsEvent.bind(this))
                 },
                 calcRobot: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.ROBOT],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: this.HTTPHandler.bind(this, this.handleStatsCalcRobotEvent)
+                    handler: this.HTTPHandler.bind(this, this.handleStatsCalcRobotEvent.bind(this))
                 },
                 calcRobots: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.ROBOTS],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: this.HTTPHandler.bind(this, this.handleStatsCalcRobotsEvent)
+                    handler: this.HTTPHandler.bind(this, this.handleStatsCalcRobotsEvent.bind(this))
                 },
                 calcUserRobot: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_ROBOT],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: this.HTTPHandler.bind(this, this.handleStatsCalcUserRobotEvent)
+                    handler: this.HTTPHandler.bind(this, this.handleStatsCalcUserRobotEvent.bind(this))
                 },
                 calcUserRobots: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_ROBOTS],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: this.HTTPHandler.bind(this, this.handleStatsCalcUserRobotsEvent)
+                    handler: this.HTTPHandler.bind(this, this.handleStatsCalcUserRobotsEvent.bind(this))
                 },
                 recalcAllRobots: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.RECALC_ALL_ROBOTS],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: this.HTTPHandler.bind(this, this.handleRecalcAllRobotsEvent)
+                    handler: this.HTTPHandler.bind(this, this.handleRecalcAllRobotsEvent.bind(this))
                 },
                 recalcAllUserSignals: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.RECALC_ALL_USER_SIGNALS],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: this.HTTPHandler.bind(this, this.handleRecalcAllUserSignalsEvent)
+                    handler: this.HTTPHandler.bind(this, this.handleRecalcAllUserSignalsEvent.bind(this))
                 },
                 recalcAllUserRobots: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.RECALC_ALL_USER_ROBOTS],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: this.HTTPHandler.bind(this, this.handleRecalcAllUserRobotsEvent)
+                    handler: this.HTTPHandler.bind(this, this.handleRecalcAllUserRobotsEvent.bind(this))
                 }
             });
             this.events.subscribe({
@@ -156,7 +156,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
         if (exchange && asset) await this.queueJob(type, { ...job, exchange, asset });
     }
 
-    handleCalcUserSignalEvent = async (params: { calcAll?: boolean; userId: string; robotId: string }) => {
+    async handleCalcUserSignalEvent(params: { calcAll?: boolean; userId: string; robotId: string }) {
         const { calcAll, userId, robotId } = params;
 
         try {
@@ -194,7 +194,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
         }
     };
 
-    handleCalcUserSignalsEvent = async (params: { calcAll?: boolean; userId: string }) => {
+    async handleCalcUserSignalsEvent(params: { calcAll?: boolean; userId: string }) {
         const { calcAll, userId } = params;
 
         try {
@@ -269,13 +269,13 @@ export default class StatisticCalcRunnerService extends HTTPService {
         }
     };
 
-    handleStatsCalcRobotEvent = async (
+    async handleStatsCalcRobotEvent(
         params: {
             calcAll?: boolean;
             robotId: string;
         },
         needCalcCommonAggr = true
-    ) => {
+    ) {
         const { calcAll, robotId } = params;
 
         try {
@@ -320,7 +320,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
         }
     };
 
-    handleStatsCalcRobotsEvent = async (params: { calcAll: boolean }) => {
+    async handleStatsCalcRobotsEvent(params: { calcAll?: boolean }) {
         const { calcAll } = params;
 
         try {
@@ -343,13 +343,13 @@ export default class StatisticCalcRunnerService extends HTTPService {
         }
     };
 
-    handleStatsCalcUserRobotEvent = async (
+    async handleStatsCalcUserRobotEvent(
         params: {
             calcAll?: boolean;
             userRobotId: string;
         },
         needCalcCommonAggr = true
-    ) => {
+    ) {
         const { calcAll, userRobotId } = params;
 
         try {
@@ -387,7 +387,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
         }
     };
 
-    handleStatsCalcUserRobotsEvent = async (
+    async handleStatsCalcUserRobotsEvent(
         params: {
             calcAll?: boolean;
             userId: string;
@@ -395,7 +395,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
             asset?: string;
         },
         needCalcCommonAggr = true
-    ) => {
+    ) {
         const { calcAll, userId, exchange, asset } = params;
 
         try {
@@ -424,12 +424,12 @@ export default class StatisticCalcRunnerService extends HTTPService {
         }
     };
 
-    handleRecalcAllRobotsEvent = async (params: {
+    async handleRecalcAllRobotsEvent(params: {
         exchange?: string;
         asset?: string;
         currency?: string;
         strategy?: string;
-    }) => {
+    }) {
         const { exchange, asset, currency, strategy } = params;
 
         try {
@@ -479,14 +479,14 @@ export default class StatisticCalcRunnerService extends HTTPService {
         }
     };
 
-    handleRecalcAllUserSignalsEvent = async (params: {
+    async handleRecalcAllUserSignalsEvent(params: {
         exchange?: string;
         asset?: string;
         currency?: string;
         strategy?: string;
         robotId?: string;
         userId?: string;
-    }) => {
+    }) {
         const { exchange, asset, currency, strategy, robotId, userId } = params;
 
         try {
@@ -523,14 +523,14 @@ export default class StatisticCalcRunnerService extends HTTPService {
         }
     };
 
-    handleRecalcAllUserRobotsEvent = async (params: {
+    async handleRecalcAllUserRobotsEvent(params: {
         exchange?: string;
         asset?: string;
         currency?: string;
         strategy?: string;
         robotId?: string;
         userId?: string;
-    }) => {
+    }) {
         const { exchange, asset, currency, strategy, robotId, userId } = params;
 
         try {
