@@ -4,9 +4,20 @@ import { createLightship } from "lightship";
 import { Events, EventsConfig } from "./events";
 import { sleep } from "@cryptuoso/helpers";
 import { ValidationSchema } from "fastest-validator";
+import { BASE_REDIS_PREFIX } from "./catalog";
 
-//TODO: stream name prefix
-
+//TODO: one service for all tests
+const SERVICES = {
+    deadLetter: "test-dead-letter",
+    calc: "test-calc",
+    faultyGroupLog: "test-faulty-group-log",
+    faultyGroupLog2: "test-faulty-group-log2",
+    unbalancedLog: "test-unbalanced-log",
+    groupLog: "test-group-log",
+    messager: "test-messager",
+    groupMessager: "test-group-messager"
+};
+jest.mock("tslog");
 jest.setTimeout(40000);
 const itif = (name: string, condition: () => boolean, cb: Function) => {
     it(name, (done) => {
@@ -26,6 +37,7 @@ const calcSchema: ValidationSchema = {
 describe("E2E test", () => {
     const lightship = createLightship();
     const eventsConfig: EventsConfig = {
+        deadLetterTopic: SERVICES.deadLetter,
         blockTimeout: 50,
         pendingMinIdleTime: 50,
         pendingRetryRate: -1,
@@ -49,33 +61,30 @@ describe("E2E test", () => {
                     done();
                 })
                 .on("ready", async () => {
-                    //TODO: object with list of all test streams
-                    await redis.del("cpz:events:faulty-group-log");
-                    await redis.del("cpz:events:faulty-group-log-2");
-                    await redis.del("cpz:events:unbalanced-log");
-                    await redis.del("cpz:events:group-log");
-                    await redis.del("cpz:events:messager");
-                    await redis.del("cpz:events:group-messager");
+                    for (const service of Object.values(SERVICES)) {
+                        await redis.del(`${BASE_REDIS_PREFIX}:${service}`);
+                    }
 
                     done();
                 });
         });
 
         const findDeadLetter = async (type: string) => {
-            const arr = await redis.xread("COUNT", 100, "STREAMS", "cpz:events:dead-letter", "0");
+            const arr = await redis.xread("COUNT", 100, "STREAMS", `${BASE_REDIS_PREFIX}:${SERVICES.deadLetter}`, "0");
             if (arr != [] && arr != null)
                 return arr[0][1].filter((item) => {
                     const eventType = JSON.parse(item[1][7]).type;
                     return (
                         eventType ===
-                        "com.cryptuoso.dead-letter." + type.split(".").slice(-type.split(".").length).join(".")
+                        `${BASE_REDIS_PREFIX}:${SERVICES.deadLetter}.` +
+                            type.split(".").slice(-type.split(".").length).join(".")
                     );
                 });
             return [];
         };
 
         const unbalancedMessageHandler = jest.fn(async ({ message }) => {
-            console.log(message);
+            //console.log(message);
         });
         describe("Single unbalanced subscriber scenario", () => {
             itif(
@@ -85,7 +94,7 @@ describe("E2E test", () => {
                     const events = new Events(redis, lightship, eventsConfig);
 
                     events.subscribe({
-                        messager: {
+                        [SERVICES.messager]: {
                             unbalanced: true,
                             handler: unbalancedMessageHandler
                         }
@@ -96,7 +105,7 @@ describe("E2E test", () => {
                     await sleep(3000);
 
                     await events.emit({
-                        type: "messager",
+                        type: SERVICES.messager,
                         data: { message: "This is a very cool message" }
                     });
                     await sleep(3000);
@@ -108,7 +117,7 @@ describe("E2E test", () => {
         });
 
         const groupMessageHandler = jest.fn(async ({ foo, bar }) => {
-            console.log("foo is " + foo + "\nbar is " + JSON.stringify(bar));
+            //console.log("foo is " + foo + "\nbar is " + JSON.stringify(bar));
         });
         describe("Single group subscriber scenario", () => {
             itif(
@@ -118,8 +127,8 @@ describe("E2E test", () => {
                     const events = new Events(redis, lightship, eventsConfig);
 
                     events.subscribe({
-                        "group-messager": {
-                            group: "data-supply",
+                        [SERVICES.groupMessager]: {
+                            group: "test-data-supply",
                             handler: groupMessageHandler
                         }
                     });
@@ -129,7 +138,7 @@ describe("E2E test", () => {
                     await sleep(3000);
 
                     await events.emit({
-                        type: "group-messager",
+                        type: SERVICES.groupMessager,
                         data: {
                             foo: "bar",
                             bar: { 1: "one", 2: "two", 3: "three" }
@@ -145,7 +154,7 @@ describe("E2E test", () => {
         });
 
         const unbalancedLogHandler = jest.fn(async (data) => {
-            console.log("The data object is:\n" + JSON.stringify(data));
+            //console.log("The data object is:\n" + JSON.stringify(data));
         });
         describe("Subscribing after unbalanced event is emitted scenario", () => {
             itif(
@@ -155,14 +164,14 @@ describe("E2E test", () => {
                     const events = new Events(redis, lightship, eventsConfig);
 
                     await events.emit({
-                        type: "unbalanced-log",
+                        type: SERVICES.unbalancedLog,
                         data: {
                             info: "This event is not to be processed"
                         }
                     });
 
                     events.subscribe({
-                        "unbalanced-log": {
+                        [SERVICES.unbalancedLog]: {
                             unbalanced: true,
                             handler: unbalancedLogHandler
                         }
@@ -177,7 +186,7 @@ describe("E2E test", () => {
         });
 
         const groupLogHandler = jest.fn(async ({ info }) => {
-            console.log(info);
+            //console.log(info);
         });
         describe("Subscribing after event is emitted scenario", () => {
             itif(
@@ -187,7 +196,7 @@ describe("E2E test", () => {
                     const events = new Events(redis, lightship, eventsConfig);
 
                     await events.emit({
-                        type: "group-log",
+                        type: SERVICES.groupLog,
                         data: {
                             info: "This event is supposed to be processed"
                         }
@@ -195,8 +204,8 @@ describe("E2E test", () => {
                     await sleep(5000);
 
                     events.subscribe({
-                        "group-log": {
-                            group: "group-log",
+                        [SERVICES.groupLog]: {
+                            group: SERVICES.groupLog,
                             handler: groupLogHandler
                         }
                     });
@@ -221,8 +230,8 @@ describe("E2E test", () => {
                     const events = new Events(redis, lightship, eventsConfig);
 
                     events.subscribe({
-                        "faulty-group-log": {
-                            group: "error-group",
+                        [SERVICES.faultyGroupLog]: {
+                            group: "test-error-group",
                             handler: faultyHandler
                         }
                     });
@@ -230,17 +239,11 @@ describe("E2E test", () => {
                     await sleep(3000);
 
                     await events.emit({
-                        type: "faulty-group-log",
+                        type: SERVICES.faultyGroupLog,
                         data: {
                             foo: "bar"
                         }
                     });
-                    await sleep(3000);
-
-                    expect(faultyHandler).toHaveBeenCalledTimes(1);
-
-                    await sleep(3000);
-                    await events._receivePendingGroupMessagesTick("cpz:events:faulty-group-log", "error-group");
                     await sleep(3000);
 
                     expect(faultyHandler).toHaveBeenCalledTimes(2);
@@ -258,8 +261,8 @@ describe("E2E test", () => {
                     const events = new Events(redis, lightship, eventsConfig);
 
                     events.subscribe({
-                        "faulty-group-log-2": {
-                            group: "error-group-2",
+                        [SERVICES.faultyGroupLog2]: {
+                            group: "test-error-group-2",
                             handler: faultyHandler
                         }
                     });
@@ -267,17 +270,20 @@ describe("E2E test", () => {
                     await sleep(3000);
 
                     await events.emit({
-                        type: "faulty-group-log-2",
+                        type: SERVICES.faultyGroupLog2,
                         data: {
                             foo: "bar"
                         }
                     });
                     await sleep(3000);
 
-                    await events._receivePendingGroupMessagesTick("cpz:events:faulty-group-log-2", "error-group-2");
+                    await events._receivePendingGroupMessagesTick(
+                        `${BASE_REDIS_PREFIX}:${SERVICES.faultyGroupLog2}`,
+                        "test-error-group-2"
+                    );
                     await sleep(3000);
 
-                    const letters = await findDeadLetter("faulty-group-log-2");
+                    const letters = await findDeadLetter(SERVICES.faultyGroupLog2);
 
                     expect(letters.length).toBe(1);
                     done();
@@ -287,10 +293,10 @@ describe("E2E test", () => {
 
         const sumHandler = jest.fn(async ({ info, numbers }) => {
                 const sum = numbers.reduce((acc: number, n: number) => acc + n, 0);
-                console.log(info + "\nSum of numbers is " + sum);
+                //console.log(info + "\nSum of numbers is " + sum);
             }),
             sumLogHandler = jest.fn(async (data) => {
-                console.log("This event will be logged\n" + "The data object is:\n" + JSON.stringify(data));
+                //console.log("This event will be logged\n" + "The data object is:\n" + JSON.stringify(data));
             });
         describe("Multiple subscribers scenario", () => {
             itif(
@@ -300,13 +306,13 @@ describe("E2E test", () => {
                     const events = new Events(redis, lightship, eventsConfig);
 
                     events.subscribe({
-                        "calc.sum": {
-                            group: "calc-sum",
+                        [`${SERVICES.calc}.sum`]: {
+                            group: `${SERVICES.calc}-sum`,
                             handler: sumHandler,
                             schema: calcSchema
                         },
-                        "calc.*": {
-                            group: "calc-sum",
+                        [`${SERVICES.calc}.*`]: {
+                            group: `${SERVICES.calc}-sum`,
                             handler: sumLogHandler
                         }
                     });
@@ -314,7 +320,7 @@ describe("E2E test", () => {
                     await sleep(3000);
 
                     await events.emit({
-                        type: "calc.sum",
+                        type: `${SERVICES.calc}.sum`,
                         data: {
                             info: "Calculate a sum",
                             numbers: [1, 2, 3, 4, 5]
@@ -335,7 +341,7 @@ describe("E2E test", () => {
                 throw new Error("This error is expected");
             }),
             divideLogHandler = jest.fn(async (data) => {
-                console.log("This event will be logged\n" + "The data object is:\n" + JSON.stringify(data));
+                //console.log("This event will be logged\n" + "The data object is:\n" + JSON.stringify(data));
             });
         describe("Handling pending event with handling error in one of the subs", () => {
             itif(
@@ -345,12 +351,12 @@ describe("E2E test", () => {
                     const events = new Events(redis, lightship, eventsConfig);
 
                     events.subscribe({
-                        "calc.divide": {
-                            group: "calc-divide",
+                        [`${SERVICES.calc}.divide`]: {
+                            group: `${SERVICES.calc}-divide`,
                             handler: divideHandler
                         },
-                        "calc.*": {
-                            group: "calc-divide",
+                        [`${SERVICES.calc}.*`]: {
+                            group: `${SERVICES.calc}-divide`,
                             handler: divideLogHandler
                         }
                     });
@@ -358,7 +364,7 @@ describe("E2E test", () => {
                     await sleep(3000);
 
                     await events.emit({
-                        type: "calc.divide",
+                        type: `${SERVICES.calc}.divide`,
                         data: {
                             info: "This is a faulty event, error is expected"
                         }
@@ -384,8 +390,8 @@ describe("E2E test", () => {
                     const events = new Events(redis, lightship, eventsConfig);
 
                     events.subscribe({
-                        "calc.group-substract": {
-                            group: "calc-substract",
+                        [`${SERVICES.calc}.group-substract`]: {
+                            group: `${SERVICES.calc}-substract"`,
                             handler: groupSubstractHandler,
                             schema: calcSchema
                         }
@@ -395,12 +401,12 @@ describe("E2E test", () => {
                     await sleep(3000);
 
                     await events.emit({
-                        type: "calc.group-substract",
+                        type: `${SERVICES.calc}.group-substract`,
                         data: { msg: "This message is not expected" }
                     });
                     await sleep(3000);
 
-                    const deadLetters = await findDeadLetter("calc.group-substract");
+                    const deadLetters = await findDeadLetter(`${SERVICES.calc}.group-substract`);
                     await sleep(3000);
 
                     expect(deadLetters.length).toBe(1);
@@ -421,7 +427,7 @@ describe("E2E test", () => {
                     const events = new Events(redis, lightship, eventsConfig);
 
                     events.subscribe({
-                        "calc.unbalanced-substract": {
+                        [`${SERVICES.calc}.unbalanced-substract`]: {
                             unbalanced: true,
                             handler: unbalancedSubstractHandler,
                             schema: calcSchema
@@ -432,12 +438,12 @@ describe("E2E test", () => {
                     await sleep(3000);
 
                     await events.emit({
-                        type: "calc.unbalanced-substract",
+                        type: `${SERVICES.calc}.unbalanced-substract`,
                         data: { msg: "This message is not expected" }
                     });
                     await sleep(3000);
 
-                    const deadLetters = await findDeadLetter("calc.unbalanced-substract");
+                    const deadLetters = await findDeadLetter(`${SERVICES.calc}.unbalanced-substract`);
                     await sleep(3000);
 
                     expect(deadLetters.length).toBe(1);

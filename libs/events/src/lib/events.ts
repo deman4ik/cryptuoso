@@ -17,9 +17,11 @@ export interface NewEvent<T> {
 }
 export interface EventsConfig {
     blockTimeout?: number;
+    pendingInterval?: number;
     pendingRetryRate?: number;
     pendingMinIdleTime?: number;
     pendingMaxRetries?: number;
+    deadLetterTopic?: string;
 }
 
 export interface DeadLetter {
@@ -31,9 +33,9 @@ export interface DeadLetter {
 }
 
 const BLOCK_TIMEOUT = 60000;
+const PENDING_INTERVAL = 15000;
 const PENDING_RETRY_RATE = 30;
 const PENDING_MAX_RETRIES = 3;
-
 const DEAD_LETTER_TOPIC = "dead-letter";
 
 type StreamMsgVals = string[];
@@ -48,9 +50,11 @@ export class Events {
     #lightship: LightshipType;
     #consumerId: string;
     #blockTimeout: number;
+    #pendingInterval: number;
     #pendingRetryRate: number;
     #pendingMinIdleTime: number;
     #pendingMaxRetries: number;
+    #deadLetterTopic: string;
     #state: {
         [topic: string]: {
             unbalanced?: {
@@ -78,9 +82,11 @@ export class Events {
         this.#consumerId = uuid();
         this.#catalog = new EventsCatalog();
         this.#blockTimeout = config?.blockTimeout || BLOCK_TIMEOUT;
+        this.#pendingInterval = config?.pendingInterval || PENDING_INTERVAL;
         this.#pendingMinIdleTime = config?.pendingMinIdleTime || BLOCK_TIMEOUT;
         this.#pendingRetryRate = config?.pendingRetryRate || PENDING_RETRY_RATE;
         this.#pendingMaxRetries = config?.pendingMaxRetries || PENDING_MAX_RETRIES;
+        this.#deadLetterTopic = config?.deadLetterTopic || DEAD_LETTER_TOPIC;
     }
 
     get log() {
@@ -419,7 +425,7 @@ export class Events {
         if (!this.#lightship.isServerShuttingDown()) {
             this.#state[`${topic}-${group}`].pending.timerId = setTimeout(
                 this._receivePendingGroupMessagesTick.bind(this, topic, group),
-                60000
+                this.#pendingInterval
             );
         }
     }
@@ -439,7 +445,7 @@ export class Events {
     async emitDeadLetter(deadLetter: DeadLetter) {
         const typeChunks = deadLetter.type.split(".");
         const evt = {
-            type: `${DEAD_LETTER_TOPIC}.${typeChunks.slice(2, typeChunks.length).join(".")}`,
+            type: `${this.#deadLetterTopic}.${typeChunks.slice(2, typeChunks.length).join(".")}`,
             data: deadLetter
         };
         await this.emit(evt);
@@ -488,7 +494,7 @@ export class Events {
 
     async start() {
         try {
-            await this._createGroup(`${BASE_REDIS_PREFIX}${DEAD_LETTER_TOPIC}`, DEAD_LETTER_TOPIC);
+            await this._createGroup(`${BASE_REDIS_PREFIX}${this.#deadLetterTopic}`, this.#deadLetterTopic);
             await Promise.all(
                 this.#catalog.groups.map(async ({ topic, group }) => {
                     this.log.info(`Subscribing to "${topic}" group "${group}" events...`);
@@ -503,6 +509,24 @@ export class Events {
                     await this._receiveMessages(topic);
                 })
             );
+        } catch (error) {
+            this.log.error(error);
+        }
+    }
+
+    closeConnections() {
+        try {
+            this.log.info("Closing connection redis...");
+            this.#redis.quit();
+            this.#catalog.groups.map(async ({ topic, group }) => {
+                this.log.info(`Closing connection "${topic}" group "${group}" ...`);
+                this.#state[`${topic}-${group}`].grouped.redis.quit();
+            });
+
+            this.#catalog.unbalancedTopics.map(async (topic) => {
+                this.log.info(`Closing connection "${topic}" unbalanced ...`);
+                this.#state[topic].unbalanced.redis.quit();
+            });
         } catch (error) {
             this.log.error(error);
         }
