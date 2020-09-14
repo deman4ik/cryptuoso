@@ -12,6 +12,7 @@
     ],
     "scripts": {
         "nx": "nx",
+        "nx:test:e2e": "nx test --e2e=true",
         "start": "nx run-many --target=serve --all --parallel --maxParallel=20",
         "build": "nx run-many --target=build --all --parallel --progress --with-deps --memoryLimit=512",
         "test": "nx run-many --target=test --all --parallel --with-deps",

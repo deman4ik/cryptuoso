@@ -34,7 +34,7 @@ const calcSchema: ValidationSchema = {
     numbers: { type: "array", items: "number" }
 };
 
-describe("E2E test", () => {
+fdescribe("E2E test", () => {
     const lightship = createLightship();
     const eventsConfig: EventsConfig = {
         deadLetterTopic: SERVICES.deadLetter,
