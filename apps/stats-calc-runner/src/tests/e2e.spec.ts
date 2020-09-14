@@ -1,11 +1,5 @@
 import Service from "../app/service";
-import { ActionsHandlerError } from "@cryptuoso/errors";
-import {
-    StatsCalcJob,
-    StatsCalcJobType,
-    StatsCalcRunnerEvents,
-    StatsCalcRunnerSchema
-} from "@cryptuoso/stats-calc-events";
+import { StatsCalcJob } from "@cryptuoso/stats-calc-events";
 import { User, UserStatus, UserRoles } from "@cryptuoso/user-state";
 import { makeServiceRequest, getProperty, setProperty } from "@cryptuoso/test-helpers";
 import { pg } from "@cryptuoso/postgres";
@@ -29,7 +23,7 @@ const routes: {
         handlerName: string;
         roles: UserRoles[];
         requiredInput: StatsCalcJob;
-        optionalInput: StatsCalcJob
+        optionalInput: StatsCalcJob;
     };
 } = {
     calcUserSignal: {
@@ -111,7 +105,7 @@ async function testRoute({
     responseError,
     responseStatus
 }: {
-    service: Service,
+    service: Service;
     name: string;
     role?: UserRoles;
     input?: StatsCalcJob;
@@ -129,14 +123,11 @@ async function testRoute({
         settings: null
     };
 
-    let methodResult: any;
     let mockHandler: jest.Mock;
 
-    if(handlerName) {
-        methodResult = { rand: Math.trunc(1e6 * Math.random()) };
+    if (handlerName) {
         mockHandler = getProperty(service, handlerName);
         mockHandler.mockClear();
-        mockHandler.mockImplementation(async () => methodResult);
     }
 
     mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -152,10 +143,7 @@ async function testRoute({
     try {
         if (handlerName) {
             expect(mockHandler).toBeCalledTimes(1);
-            expect(mockHandler.mock.calls[0][0]).toEqual(
-                expect.objectContaining(input)
-            );
-            expect(res.parsedBody).toStrictEqual(methodResult);
+            expect(mockHandler.mock.calls[0][0]).toEqual(expect.objectContaining(input));
         }
 
         if (responseError) expect(res.parsedBody).toStrictEqual(responseError);
@@ -175,8 +163,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
     let service: Service;
 
     beforeAll(async (cb) => {
-        for(const schema of Object.values(routes))
-            setProperty(Service.prototype, schema.handlerName, jest.fn());
+        for (const schema of Object.values(routes)) setProperty(Service.prototype, schema.handlerName, jest.fn());
 
         config = { port: 5679 };
         service = new Service(config);
@@ -203,7 +190,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
     describe("Testing requests w/o x-hasura-role", () => {
         test("Should answer with error (code 400)", async () => {
             for (const [route, schema] of Object.entries(routes)) {
-                if(schema.roles.length > 0) {
+                if (schema.roles.length > 0) {
                     try {
                         await testRoute({
                             service,
@@ -221,7 +208,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
     describe("Testing requests with wrong DB user roles and right input", () => {
         test("Should answer with errors (code 403)", async () => {
             for (const [route, schema] of Object.entries(routes)) {
-                if(schema.roles.length > 0) {
+                if (schema.roles.length > 0) {
                     try {
                         await testRoute({
                             service,
@@ -241,7 +228,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
     describe("Testing requests with right meta but with optional input only", () => {
         test("Should answer with errors (code 400)", async () => {
             for (const [route, schema] of Object.entries(routes)) {
-                if(Object.keys(schema.requiredInput).length > 0) {
+                if (Object.keys(schema.requiredInput).length > 0) {
                     try {
                         await testRoute({
                             service,
@@ -271,7 +258,6 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
                         responseStatus: 200
                     });
                 } catch (err) {
-                    console.warn(err);
                     throw new Error(`Wrong answer from route "${route}"`);
                 }
             }
