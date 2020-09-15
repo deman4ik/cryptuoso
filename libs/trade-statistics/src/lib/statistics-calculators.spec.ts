@@ -3,26 +3,28 @@ import positions from "./testData/positionsForStats";
 import correctFinalResult from "./testData/correctResultAfterRefactor";
 import statsWithoutLastPos from "./testData/correctWithoutLastPos";
 import dayjs from "@cryptuoso/dayjs";
-import { RobotStats, PositionDataForStats, roundRobotStatVals } from "./trade-statistics";
+import {
+    TradeStats, TradeStatsClass, PositionDataForStats, roundRobotStatVals, Statistics
+} from "./trade-statistics";
 import { invalidStatistics, invalidPosition } from "./testData/invalidData";
 
 describe("statistics-calculator test", () => {
     const newPosition = positions[positions.length - 1];
-    const prevStatisticsObject = statsWithoutLastPos.statistics;
-    const correctFinalStatistics = correctFinalResult.statistics;
+    /* const prevStatisticsObject = statsWithoutLastPos.statistics;
+    const correctFinalStatistics = correctFinalResult.statistics; */
     describe("Testing StatisticsCalculator with valid input", () => {
         describe("Resulting object values test", () => {
-            const statsCalculator = new StatisticsCalculator(prevStatisticsObject, [newPosition]);
+            const statsCalculator = new StatisticsCalculator(statsWithoutLastPos, [newPosition]);
             const calculatedStats = statsCalculator.getStats();
-            correctFinalStatistics.lastUpdatedAt = dayjs.utc().toISOString(); // might not match desired value
+            correctFinalResult.lastUpdatedAt = dayjs.utc().toISOString(); // might not match desired value
 
             for (const prop in calculatedStats) {
                 it(`Should be equal to  ${prop} of reference object`, () => {
                     if (prop == "lastUpdatedAt")
                         expect((calculatedStats[prop] as string).slice(0, 22)).toStrictEqual(
-                            (correctFinalStatistics[prop] as string).slice(0, 22)
+                            (correctFinalResult[prop] as string).slice(0, 22)
                         );
-                    else expect(calculatedStats[prop]).toStrictEqual(correctFinalStatistics[prop]);
+                    else expect((calculatedStats as any)[prop]).toStrictEqual((correctFinalResult as any)[prop]);
                 });
             }
         });
@@ -47,10 +49,10 @@ describe("statistics-calculator test", () => {
         });
 
         describe("Data integrity validation test", () => {
-            const validObject = new RobotStats();
-            validObject.profitFactor = null;
-            validObject.recoveryFactor = null;
-            validObject.payoffRatio = null;
+            const validObject = new TradeStatsClass();
+            validObject.statistics.profitFactor = null;
+            validObject.statistics.recoveryFactor = null;
+            validObject.statistics.payoffRatio = null;
 
             const validPosition: PositionDataForStats = positions[0];
             describe("Testing constructor with semi-valid statistics and valid position", () => {
@@ -71,7 +73,7 @@ describe("statistics-calculator test", () => {
 
             describe("Testing constructor with valid statistics and invalid position", () => {
                 it("Should throw error", () => {
-                    const validStatistics: RobotStats = correctFinalResult.statistics;
+                    const validStatistics: TradeStats = correctFinalResult;
 
                     expect(() => {
                         new StatisticsCalculator(validStatistics, [invalidPosition]);
@@ -83,15 +85,18 @@ describe("statistics-calculator test", () => {
 });
 
 describe("Statistics functions test", () => {
-    const referenceStatisticsObject: RobotStats = correctFinalResult.statistics,
-        prevStatisticsObject: RobotStats = statsWithoutLastPos.statistics;
+    const prevTradeStatsObject = statsWithoutLastPos,
+        prevStatisticsObject = statsWithoutLastPos.statistics;
+    const referenceTradeStatsObject = correctFinalResult,
+        referenceStatisticsObject = referenceTradeStatsObject.statistics;
 
-    const currentStatisticsObject: RobotStats = JSON.parse(JSON.stringify(prevStatisticsObject));
+    const currentTradeStatsObject: TradeStats = JSON.parse(JSON.stringify(prevTradeStatsObject));
+    const currentStatisticsObject: Statistics = currentTradeStatsObject.statistics;
 
     const newPos: PositionDataForStats = positions[positions.length - 1],
         profit = newPos.profit;
 
-    const sc = new StatisticsCalculator(prevStatisticsObject, [newPos]);
+    const sc = new StatisticsCalculator(prevTradeStatsObject, [newPos]);
 
     describe("incrementTradesCount test", () => {
         it("Should increment tradesCount, tradesWinning, tradesLosing", () => {
@@ -305,14 +310,21 @@ describe("Statistics functions test", () => {
         });
     });
 
-    describe("calculatePerformance test", () => {
-        it("Should update preformance", () => {
-            const prevPerformance = prevStatisticsObject.performance,
+    describe("calculateEquity test", () => {
+        it("Should update equity", () => {
+            const prevEquity = prevTradeStatsObject.equity,
                 exitDate = newPos.exitDate;
 
-            currentStatisticsObject.performance = sc.calculatePerformance(prevPerformance, profit, exitDate);
+            currentTradeStatsObject.equity = sc.calculateEquity(prevEquity, profit, exitDate);
 
-            expect(currentStatisticsObject.performance).toStrictEqual(referenceStatisticsObject.performance);
+            expect(currentTradeStatsObject.equity).toStrictEqual(referenceTradeStatsObject.equity);
+        });
+    });
+
+    describe("calculateEquityAvg test", () => {
+        it(`Should be equal to equityAvg of reference object`, () => {
+            currentTradeStatsObject.equityAvg = sc.calculateEquityAvg(currentTradeStatsObject.equity);
+            expect(currentTradeStatsObject.equityAvg).toStrictEqual(referenceTradeStatsObject.equityAvg);
         });
     });
 
@@ -387,7 +399,7 @@ describe("Statistics functions test", () => {
 
 describe("Data validation test", () => {
     const pos = positions[0],
-        validObject = new RobotStats();
+        validObject = new Statistics();
     const statsCalculator = new StatisticsCalculator(null, [pos]);
 
     describe("Calling calculateRating before all statistics are calculated", () => {

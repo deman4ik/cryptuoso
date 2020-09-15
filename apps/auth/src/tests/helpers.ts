@@ -1,5 +1,4 @@
 import crypto from "crypto";
-export { ajax, setProperty } from "@cryptuoso/test-helpers";
 
 export function makeTgHash(
     loginData: {

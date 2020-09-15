@@ -9,14 +9,14 @@ import { ActionsHandlerError } from "@cryptuoso/errors";
 import { ajax, setProperty, getServerFromService, createServiceRoute } from "@cryptuoso/test-helpers";
 
 const mockExit = jest.fn();
-const mockLightshipType = {
+const mockLightship = {
     registerShutdownHandler: jest.fn(),
     signalReady: jest.fn(),
     shutdown: jest.fn()
 };
 
 function getLastRegisterShutdownHandler(): { (): Promise<any> } {
-    const calls = mockLightshipType.registerShutdownHandler.mock.calls;
+    const calls = mockLightship.registerShutdownHandler.mock.calls;
     return calls[calls.length - 1][0];
 }
 
@@ -25,10 +25,10 @@ setProperty(console, "error", jest.fn());
 jest.mock("lightship", () => {
     return {
         LightshipType: jest.fn().mockImplementation(() => {
-            return mockLightshipType;
+            return typeof mockLightship;
         }),
         createLightship: jest.fn().mockImplementation(() => {
-            return mockLightshipType;
+            return mockLightship;
         })
     };
 });
