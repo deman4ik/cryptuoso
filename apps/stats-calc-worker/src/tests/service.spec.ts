@@ -1,6 +1,11 @@
 import Service, { getCalcFromAndInitStats } from "../app/service";
-import { RobotStats, isRobotStats, PositionDataForStats } from "@cryptuoso/trade-statistics";
-import { RobotStatsWithExists } from "@cryptuoso/user-state";
+import {
+    TradeStats,
+    TradeStatsClass,
+    isTradeStats,
+    PositionDataForStats,
+    TradeStatsWithExists
+} from "@cryptuoso/trade-statistics";
 import dayjs from "@cryptuoso/dayjs";
 import { pg } from "@cryptuoso/postgres";
 import { setProperty, getProperty } from "@cryptuoso/test-helpers";
@@ -68,7 +73,7 @@ function makeJob(name: string, data: StatsCalcJob = {}) {
 }
 
 describe("getCalcFromAndInitStats function", () => {
-    const robotStatsWithLastPosDate = new RobotStats() as RobotStatsWithExists;
+    const robotStatsWithLastPosDate = new TradeStatsClass() as TradeStatsWithExists;
 
     robotStatsWithLastPosDate.lastPositionExitDate = dayjs().toISOString();
 
@@ -101,7 +106,7 @@ describe("getCalcFromAndInitStats function", () => {
 
     describe("stats is wrong object, calcAll = null", () => {
         test("Should returns nulls", () => {
-            const wrongStats = {} as RobotStatsWithExists;
+            const wrongStats = {} as TradeStatsWithExists;
             const { calcFrom, initStats } = getCalcFromAndInitStats(wrongStats, null);
 
             expect(calcFrom).toStrictEqual(null);
@@ -111,7 +116,7 @@ describe("getCalcFromAndInitStats function", () => {
 
     describe("stats is wrong with `statsExists` property, calcAll = null", () => {
         test("Should returns nulls", () => {
-            const wrongStats = {} as RobotStatsWithExists;
+            const wrongStats = {} as TradeStatsWithExists;
             wrongStats.statsExists = "id";
             const { calcFrom, initStats } = getCalcFromAndInitStats(wrongStats, null);
 
@@ -131,7 +136,7 @@ describe("getCalcFromAndInitStats function", () => {
 
     describe("stats is right with `statsExists` property, calcAll = true", () => {
         test("Should returns nulls", () => {
-            const rightStats: RobotStatsWithExists = { ...robotStatsWithLastPosDate, statsExists: "id" };
+            const rightStats: TradeStatsWithExists = { ...robotStatsWithLastPosDate, statsExists: "id" };
             const { calcFrom, initStats } = getCalcFromAndInitStats(rightStats, true);
 
             expect(calcFrom).toStrictEqual(null);
@@ -140,13 +145,13 @@ describe("getCalcFromAndInitStats function", () => {
     });
 
     describe("stats is right with `statsExists` property, calcAll = false", () => {
-        test("Should returns right calcFrom date and initStats typeof RobotStats", () => {
-            const rightStats: RobotStatsWithExists = { ...robotStatsWithLastPosDate, statsExists: "id" };
+        test("Should returns right calcFrom date and initStats typeof TradeStats", () => {
+            const rightStats: TradeStatsWithExists = { ...robotStatsWithLastPosDate, statsExists: "id" };
             const { calcFrom, initStats } = getCalcFromAndInitStats(rightStats, false);
 
             expect(calcFrom).toStrictEqual(rightStats.lastPositionExitDate);
 
-            expect(isRobotStats(initStats)).toBeTruthy();
+            expect(isTradeStats(initStats)).toBeTruthy();
 
             expect(initStats.equity).toStrictEqual(rightStats.equity);
             expect(initStats.equityAvg).toStrictEqual(rightStats.equityAvg);
@@ -211,13 +216,17 @@ async function combineArgs(
 }
 
 function testStatsCalcMethod({
-    methodName, minArgsCount, args, needCheckStatsExisting = true, isStatsSingle = true
+    methodName,
+    minArgsCount,
+    args,
+    needCheckStatsExisting = true,
+    isStatsSingle = true
 }: {
-    methodName: string,
-    minArgsCount: number,
-    args: any[],
-    needCheckStatsExisting?: boolean,
-    isStatsSingle?: boolean
+    methodName: string;
+    minArgsCount: number;
+    args: any[];
+    needCheckStatsExisting?: boolean;
+    isStatsSingle?: boolean;
 }) {
     describe(`${methodName} method`, () => {
         const service = new Service();
@@ -485,7 +494,7 @@ describe("stats-calc-worker class", () => {
             test("Should call queue of Pool", async () => {
                 const pool = getProperty(service, "pool") as Pool<any>;
 
-                await service.calcStatistics(StatisticsType.Simple, {} as RobotStats, [] as PositionDataForStats[]);
+                await service.calcStatistics(StatisticsType.Simple, {} as TradeStats, [] as PositionDataForStats[]);
 
                 expect(pool.queue).toHaveBeenCalledTimes(1);
             });

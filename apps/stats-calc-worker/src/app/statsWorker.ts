@@ -1,11 +1,11 @@
 import { expose } from "threads/worker";
 import {
-    calcStatisticsCumulatively,
-    RobotStats,
-    PositionDataForStats,
+    calcStatistics,
+    ExtendedStatsPosition, ExtendedStatsPositionWithVolume, SettingsVolume,
+    TradeStats,
+    //PositionDataForStats,
     PositionDirection
 } from "@cryptuoso/trade-statistics";
-import { ExtendedStatsPosition, ExtendedStatsPositionWithVolume, SettingsVolume } from "@cryptuoso/user-state";
 import { round } from "@cryptuoso/helpers";
 import { StatisticsType } from "./statsWorkerTypes";
 
@@ -38,24 +38,24 @@ function prepareSignalByPositionsVolume(positions: ExtendedStatsPositionWithVolu
 
 function prepareSignalByItsVolumes(positions: ExtendedStatsPosition[], volumes: SettingsVolume[]) {
     return positions.map((pos) => {
-        const userSignalVolume = getVolume(pos, volumes);
+        const signalVolume = getVolume(pos, volumes);
         let profit = 0;
         if (pos.direction === PositionDirection.long) {
-            profit = +round((pos.exitPrice - pos.entryPrice) * userSignalVolume, 6);
+            profit = +round((pos.exitPrice - pos.entryPrice) * signalVolume, 6);
         } else {
-            profit = +round((pos.entryPrice - pos.exitPrice) * userSignalVolume, 6);
+            profit = +round((pos.entryPrice - pos.exitPrice) * signalVolume, 6);
         }
         profit = pos.fee && +pos.fee > 0 ? +round(profit - profit * pos.fee, 6) : profit;
         return {
             ...pos,
-            volume: userSignalVolume,
+            volume: signalVolume,
             profit
         };
     });
 }
 
 const statisticUtils = {
-    calcStatistics(type: StatisticsType, prevStats: RobotStats, positions: any[], volumes?: SettingsVolume[]) {
+    calcStatistics(type: StatisticsType, prevStats: TradeStats, positions: any[], volumes?: SettingsVolume[]) {
         if (type == StatisticsType.CalcByPositionsVolume)
             positions = prepareSignalByPositionsVolume(positions);
         else if (type == StatisticsType.CalcByProvidedVolumes)
@@ -63,7 +63,7 @@ const statisticUtils = {
         else if(type != StatisticsType.Simple)
             throw new Error("Unknow calculation type");
 
-        return calcStatisticsCumulatively(prevStats, positions);
+        return calcStatistics(prevStats, positions);
     }
 };
 

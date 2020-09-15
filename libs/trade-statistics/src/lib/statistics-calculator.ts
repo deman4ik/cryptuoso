@@ -2,9 +2,10 @@ import {
     PositionDataForStats,
     PositionDirection,
     Statistics,
-    RobotStats,
+    TradeStats,
+    TradeStatsClass,
     isStatistics,
-    isRobotStats,
+    isTradeStats,
     isPositionDataForStats,
     RobotNumberValue,
     RobotStringValue,
@@ -63,92 +64,97 @@ export default class StatisticsCalculator {
     private readonly positions: PositionDataForStats[];
     //private prevStatistics: Statistics;
     //private currentStatistics: Statistics;
-    private prevRobotStats: RobotStats;
-    private currentRobotStats: RobotStats;
+    private prevTradeStats: TradeStats;
+    private currentTradeStats: TradeStats;
     private newPosition: PositionDataForStats;
     private dir: PositionDirection;
     private currentPositionIndex = 0;
 
     private get prevStatistics() {
-        return this.prevRobotStats.statistics;
+        return this.prevTradeStats.statistics;
     }
     private set prevStatistics(value: Statistics) {
-        this.prevRobotStats.statistics = value;
+        this.prevTradeStats.statistics = value;
     }
 
     private get currentStatistics() {
-        return this.currentRobotStats.statistics;
+        return this.currentTradeStats.statistics;
     }
     private set currentStatistics(value: Statistics) {
-        this.currentRobotStats.statistics = value;
+        this.currentTradeStats.statistics = value;
     }
 
-    public constructor(prevRobotStats: RobotStats, positions: PositionDataForStats[]) {
+    public constructor(prevTradeStats: TradeStats, positions: PositionDataForStats[]) {
         if (positions.length < 1) throw new Error("At least 1 position expected");
 
         for (const pos of positions) if (!isPositionDataForStats(pos)) throw new Error("Invalid position provided");
 
-        if (prevRobotStats != null) {
-            if (!isRobotStats(prevRobotStats)) {
+        if (prevTradeStats != null) {
+            if (!isTradeStats(prevTradeStats)) {
                 throw new Error("Invalid robotStatistics object provided"); // calculations are allowed if null or valid obj is provided
             }
 
-            if (!isStatistics(prevRobotStats.statistics)) {
-                console.log(prevRobotStats.statistics);
+            if (!isStatistics(prevTradeStats.statistics)) {
+                console.log(prevTradeStats.statistics);
                 throw new Error("Invalid robotStats.statistics object provided"); // calculations are allowed if null or valid obj is provided
             }
         }
 
-        if (prevRobotStats && prevRobotStats.lastPositionExitDate != "") {
+        if (prevTradeStats && prevTradeStats.lastPositionExitDate != "") {
             this.positions = positions.filter(
-                (pos) => dayjs.utc(pos.exitDate).valueOf() > dayjs.utc(prevRobotStats.lastPositionExitDate).valueOf()
+                (pos) => dayjs.utc(pos.exitDate).valueOf() > dayjs.utc(prevTradeStats.lastPositionExitDate).valueOf()
             );
 
             if (this.positions.length < 1) throw new Error("At least 1 fresh position expected");
         } else this.positions = positions;
 
         this.setPosition(0);
-        this.setRobotStats(prevRobotStats);
+        this.setTradeStats(prevTradeStats);
     }
 
-    public getStats(): RobotStats {
+    public getStats(): TradeStats {
         while (this.currentPositionIndex < this.positions.length) {
             this.selectNextPosition();
             this.updateStatisticsValues();
-            if (this.currentPositionIndex !== this.positions.length) this.setRobotStats(this.currentRobotStats);
+            if (this.currentPositionIndex !== this.positions.length) this.setTradeStats(this.currentTradeStats);
         }
 
-        this.calculateEquityAvg();
+        this.updateEquityAvg();
 
-        //this.currentRobotStats.statistics = this.currentStatistics;
+        //this.currentTradeStats.statistics = this.currentStatistics;
 
-        return this.currentRobotStats;
+        return this.currentTradeStats;
     }
 
-    private setRobotStats(prevStats: RobotStats) {
-        this.prevRobotStats = prevStats || new RobotStats();
-        //this.prevStatistics = this.prevRobotStats.statistics;
-        this.currentRobotStats = JSON.parse(JSON.stringify(this.prevRobotStats));
-        //this.currentStatistics = this.currentRobotStats.statistics;
+    private setTradeStats(prevStats: TradeStats) {
+        this.prevTradeStats = prevStats || new TradeStatsClass();
+        //this.prevStatistics = this.prevTradeStats.statistics;
+        this.currentTradeStats = JSON.parse(JSON.stringify(this.prevTradeStats));
+        //this.currentStatistics = this.currentTradeStats.statistics;
     }
 
-    calculateEquityAvg() {
+    updateEquityAvg() {
+        this.currentTradeStats.equityAvg = this.calculateEquityAvg(this.currentTradeStats.equity);
+        return this;
+    }
+
+    calculateEquityAvg(equity: PerformanceVals): PerformanceVals{
         const maxEquityLength = 50;
-        const equityChart = this.currentRobotStats.equity;
+        //const equityChart = this.currentTradeStats.equity;
 
         let chunkLength;
 
-        if (equityChart.length < maxEquityLength) {
+        if (equity.length < maxEquityLength) {
             chunkLength = 1;
-        } else if (equityChart.length > maxEquityLength && equityChart.length < maxEquityLength * 2) {
+        } else if (equity.length > maxEquityLength && equity.length < maxEquityLength * 2) {
             chunkLength = 1.5;
         } else {
-            chunkLength = equityChart.length / maxEquityLength;
+            chunkLength = equity.length / maxEquityLength;
         }
 
-        const equityChunks = chunkArray(equityChart, chunkLength);
+        const equityChunks = chunkArray(equity, chunkLength);
 
-        this.currentRobotStats.equityAvg = equityChunks.map((chunk) => ({
+        return equityChunks.map((chunk) => ({
             x: chunk[chunk.length - 1].x,
             y: chunk[chunk.length - 1].y
         }));
@@ -398,8 +404,8 @@ export default class StatisticsCalculator {
     }
 
     private updateEquity(): StatisticsCalculator {
-        this.currentRobotStats.equity = this.calculateEquity(
-            this.currentRobotStats.equity,
+        this.currentTradeStats.equity = this.calculateEquity(
+            this.currentTradeStats.equity,
             this.newPosition.profit,
             this.newPosition.exitDate
         );
@@ -427,7 +433,7 @@ export default class StatisticsCalculator {
     }
 
     private updateLastUpdated(): StatisticsCalculator {
-        this.currentRobotStats.lastUpdatedAt = dayjs.utc().toISOString();
+        this.currentTradeStats.lastUpdatedAt = dayjs.utc().toISOString();
 
         return this;
     }
@@ -443,7 +449,7 @@ export default class StatisticsCalculator {
     }
 
     private updateLastExitDate(): StatisticsCalculator {
-        this.currentRobotStats.lastPositionExitDate = this.newPosition.exitDate;
+        this.currentTradeStats.lastPositionExitDate = this.newPosition.exitDate;
         return this;
     }
     //#endregion
@@ -518,20 +524,20 @@ export default class StatisticsCalculator {
 
     public calculateAverageProfit(
         prevAvgProfit: RobotNumberValue,
-        currentProfit: RobotNumberValue,
+        currentGrossProfit: RobotNumberValue,
         currentTradesCount: RobotNumberValue
     ): RobotNumberValue {
         validateArguments(
-            currentProfit.all,
-            currentProfit[this.dir],
+            currentGrossProfit.all,
+            currentGrossProfit[this.dir],
             currentTradesCount.all,
             currentTradesCount[this.dir]
         );
 
         const newAvgProfit = { ...prevAvgProfit };
 
-        newAvgProfit.all = currentProfit.all / currentTradesCount.all;
-        newAvgProfit[this.dir] = currentProfit[this.dir] / currentTradesCount[this.dir];
+        newAvgProfit.all = currentGrossProfit.all / currentTradesCount.all;
+        newAvgProfit[this.dir] = currentGrossProfit[this.dir] / currentTradesCount[this.dir];
 
         return newAvgProfit;
     }

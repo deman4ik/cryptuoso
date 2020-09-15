@@ -1,6 +1,6 @@
 import MockDate from "mockdate";
 import dayjs from "@cryptuoso/dayjs";
-import { calcStatisticsCumulatively } from "./trade-statistics";
+import { calcStatistics } from "./trade-statistics";
 import positions from "./testData/positionsForStats";
 import correctResult from "./testData/correctResultAfterRefactor";
 
@@ -15,7 +15,7 @@ describe("Test 'tradeStatistics' utils", () => {
     // Refactored to automatically round every value
     describe("Test calcStatisticsCumulatively with no previous statistics", () => {
         it("Should cumulatively calculate statistics", () => {
-            const result = calcStatisticsCumulatively(null, positions);
+            const result = calcStatistics(null, positions);
 
             correctResult.lastUpdatedAt = dayjs.utc().toISOString();
 

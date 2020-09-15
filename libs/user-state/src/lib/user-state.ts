@@ -1,51 +1,9 @@
-import { PositionDataForStats, RobotStats } from "@cryptuoso/trade-statistics";
-
-export interface ExtendedStatsPosition extends PositionDataForStats {
-    exitPrice: number;
-    entryPrice: number;
-    fee: number;
-}
-
-export interface ExtendedStatsPositionWithVolume extends ExtendedStatsPosition {
-    volume: number;
-}
-
-export interface ExtendedStatsPositionWithDate extends ExtendedStatsPosition {
-    entryDate: string;
-}
-
-export interface RobotStatsWithExists extends RobotStats {
-    statsExists: any;
-}
-
-export interface SettingsVolume {
-    activeFrom: string;
-    volume: number;
-}
-
 export interface UserSignals {
     id: string;
     robotId?: string;
     userId?: string;
     subscribedAt?: string;
-    volumes?: SettingsVolume[];
 }
-
-export enum UserAggrStatsType {
-    signal = "signal",
-    userRobot = "userRobot"
-}
-
-export interface UserAggrStats {
-    id: string;
-    userId: string;
-    exchange?: string;
-    asset?: string;
-    type: UserAggrStatsType;
-}
-
-export type UserSignalsWithExists = UserSignals & RobotStatsWithExists;
-export type UserAggrStatsWithExists = UserAggrStats & RobotStatsWithExists;
 
 export const enum UserRoles {
     admin = "admin",

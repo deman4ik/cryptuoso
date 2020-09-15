@@ -1,6 +1,6 @@
-import { RobotStats } from "../trade-statistics";
+import { TradeStats } from "../trade-statistics";
 
-const result: RobotStats = {
+const result: TradeStats = {
     statistics: {
         tradesCount: { all: 317, long: 176, short: 141 },
         tradesWinning: { all: 137, long: 76, short: 61 },

@@ -8,7 +8,7 @@ export async function testService(service: Service) {
     const exchange = "kraken"; // "bitfinex"
     const asset = "BTC"; //
 
-    /* console.log("handleCalcUserSignalEvent", await service.handleCalcUserSignalEvent({
+    console.log("handleCalcUserSignalEvent", await service.handleCalcUserSignalEvent({
         calcAll, userId, robotId
     }));
 
@@ -42,7 +42,7 @@ export async function testService(service: Service) {
 
     console.log("handleStatsCalcUserRobotsEvent", await service.handleStatsCalcUserRobotsEvent({
         calcAll, userId, asset, exchange
-    })); */
+    }));
 
     console.log(
         "handleRecalcAllRobotsEvent",

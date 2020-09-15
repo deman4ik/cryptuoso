@@ -1,7 +1,7 @@
 import Service from "../app/service";
 import { HTTPService } from "@cryptuoso/service";
 import { sql } from "slonik";
-import { getProperty, setProperty } from "@cryptuoso/test-helpers";
+import { setProperty } from "@cryptuoso/test-helpers";
 import { StatsCalcJobType } from "@cryptuoso/stats-calc-events";
 
 const mockLog = {

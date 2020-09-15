@@ -3,27 +3,29 @@ import { spawn, Pool, Worker as ThreadsWorker } from "threads";
 import { Worker, Job } from "bullmq";
 import os from "os";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
-import { StatisticsType, CalcStatistics, StatisticUtils } from "./statsWorkerTypes";
+import { StatisticsType, CalcStatistics, StatisticsUtils } from "./statsWorkerTypes";
 import { sql } from "@cryptuoso/postgres";
 import { SqlSqlTokenType, QueryResultRowType } from "slonik";
-import { RobotStats, PositionDataForStats, isRobotStats } from "@cryptuoso/trade-statistics";
-import { StatsCalcJob, StatsCalcJobType } from "@cryptuoso/stats-calc-events";
 import {
-    ExtendedStatsPosition,
+    TradeStats,
+    PositionDataForStats,
+    isTradeStats,
     ExtendedStatsPositionWithDate,
     ExtendedStatsPositionWithVolume,
     SettingsVolume,
     UserAggrStatsType,
-    RobotStatsWithExists,
-    UserSignalsWithExists
-} from "@cryptuoso/user-state";
+    TradeStatsWithExists,
+    TradeStatsWithExistsAndId,
+    UserSignalStatsWithExists
+} from "@cryptuoso/trade-statistics";
+import { StatsCalcJob, StatsCalcJobType } from "@cryptuoso/stats-calc-events";
 import dayjs from "@cryptuoso/dayjs";
 
-export function getCalcFromAndInitStats(stats?: RobotStatsWithExists, calcAll?: boolean) {
+export function getCalcFromAndInitStats(stats?: TradeStatsWithExists, calcAll?: boolean) {
     let calcFrom: string = null;
-    let initStats: RobotStats = null;
+    let initStats: TradeStats = null;
 
-    if (!calcAll && stats && stats.statsExists && isRobotStats(stats, false)) {
+    if (!calcAll && stats && stats.statsExists && isTradeStats(stats, false)) {
         initStats = {
             statistics: stats.statistics,
             lastPositionExitDate: stats.lastPositionExitDate,
@@ -60,7 +62,7 @@ export default class StatisticCalcWorkerService extends BaseService {
     }
 
     private async _onStartService(): Promise<void> {
-        this.pool = Pool(() => spawn<StatisticUtils>(new ThreadsWorker("./statsWorker")), {
+        this.pool = Pool(() => spawn<StatisticsUtils>(new ThreadsWorker("./statsWorker")), {
             name: "statistics-utils"
         });
         this.workers = {
@@ -100,8 +102,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 await this.calcUserSignalsAggr(userId, exchange, asset, calcAll);
             } else if (type === StatsCalcJobType.userRobotAggr) {
                 await this.calcUserRobotsAggr(userId, exchange, asset, calcAll);
-            } else
-                throw new Error(`Unknown job type ${type}`);
+            } else throw new Error(`Unknown job type ${type}`);
 
             //await job.moveToCompleted(null, null);
             this.log.info(`Job ${job.id} finished`);
@@ -141,8 +142,8 @@ export default class StatisticCalcWorkerService extends BaseService {
             addFields?: QueryType;
             addFieldsValues?: QueryType;
         },
-        stats: RobotStats,
-        prevStats?: RobotStatsWithExists
+        stats: TradeStats,
+        prevStats?: TradeStatsWithExists
     ): Promise<void> {
         /* console.log(params);
         return; */
@@ -181,11 +182,11 @@ export default class StatisticCalcWorkerService extends BaseService {
 
     calcStatistics: CalcStatistics = async (
         type: any,
-        prevStats: RobotStats,
+        prevStats: TradeStats,
         positions: any[],
         volumes?: SettingsVolume[]
     ) => {
-        return await this.pool.queue(async (utils: StatisticUtils) =>
+        return await this.pool.queue(async (utils: StatisticsUtils) =>
             utils.calcStatistics(type, prevStats, positions, volumes)
         );
     };
@@ -193,7 +194,7 @@ export default class StatisticCalcWorkerService extends BaseService {
     async calcRobot(robotId: string, calcAll = false) {
         if (!robotId) throw new Error("robotId must be non-empty string");
 
-        const prevRobotStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
+        const prevTradeStats: TradeStatsWithExists = await this.db.pg.maybeOne(sql`
             SELECT rs.robot_id as "stats_exists",
                 rs.*
             FROM robots r
@@ -202,9 +203,9 @@ export default class StatisticCalcWorkerService extends BaseService {
             WHERE r.id = ${robotId};
         `);
 
-        if (!prevRobotStats) throw new Error(`The robot doesn't exists (robotId: ${robotId})`);
+        if (!prevTradeStats) throw new Error(`The robot doesn't exists (robotId: ${robotId})`);
 
-        const { calcFrom, initStats } = getCalcFromAndInitStats(prevRobotStats, calcAll);
+        const { calcFrom, initStats } = getCalcFromAndInitStats(prevTradeStats, calcAll);
 
         const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
         const querySelectPart = sql`
@@ -244,7 +245,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
             )
         ).reduce(
-            async (prevStats: RobotStats, chunk: ExtendedStatsPositionWithVolume[]) =>
+            async (prevStats: TradeStats, chunk: ExtendedStatsPositionWithVolume[]) =>
                 await this.calcStatistics(StatisticsType.CalcByPositionsVolume, prevStats, chunk),
             initStats
         );
@@ -258,14 +259,14 @@ export default class StatisticCalcWorkerService extends BaseService {
                 addFieldsValues: sql`${robotId}`
             },
             newStats,
-            prevRobotStats
+            prevTradeStats
         );
 
         return true;
     }
 
     async calcRobotsAggr(exchange?: string, asset?: string, calcAll = false) {
-        const prevRobotsAggrStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
+        const prevRobotsAggrStats: TradeStatsWithExistsAndId = await this.db.pg.maybeOne(sql`
             SELECT id as "stats_exists",
                 id,
                 statistics,
@@ -323,7 +324,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
             )
         ).reduce(
-            async (prevStats: RobotStats, chunk: ExtendedStatsPositionWithVolume[]) =>
+            async (prevStats: TradeStats, chunk: ExtendedStatsPositionWithVolume[]) =>
                 await this.calcStatistics(StatisticsType.CalcByPositionsVolume, prevStats, chunk),
             initStats
         );
@@ -344,7 +345,7 @@ export default class StatisticCalcWorkerService extends BaseService {
     }
 
     async calcUsersRobotsAggr(exchange?: string, asset?: string, calcAll = false) {
-        const prevUsersRobotsAggrtats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
+        const prevUsersRobotsAggrtats: TradeStatsWithExistsAndId = await this.db.pg.maybeOne(sql`
             SELECT id as "stats_exists",
                 id,
                 statistics,
@@ -391,7 +392,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
             )
         ).reduce(
-            async (prevStats: RobotStats, chunk: PositionDataForStats[]) =>
+            async (prevStats: TradeStats, chunk: PositionDataForStats[]) =>
                 await this.calcStatistics(StatisticsType.Simple, prevStats, chunk),
             initStats
         );
@@ -414,7 +415,7 @@ export default class StatisticCalcWorkerService extends BaseService {
     async calcUserSignal(userId: string, robotId: string, calcAll = false) {
         if (!userId || !robotId) throw new Error("userId and robotId must be non-empty string");
 
-        const userSignal: UserSignalsWithExists = await this.db.pg.maybeOne(sql`
+        const userSignal: UserSignalStatsWithExists = await this.db.pg.maybeOne(sql`
             SELECT us.id, us.subscribed_at, us.volume,
                 uss.user_signal_id as "stats_exists",
                 uss.statistics,
@@ -438,7 +439,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
                 p.entry_price, p.exit_price, p.fee,
                 (
-                    SELECT usset.signal_settings -> 'volume'
+                    SELECT usset.user_signal_settings -> 'volume'
                     FROM user_signal_settings usset
                     WHERE usset.user_signal_id = us.id
                         AND usset.active_from <= p.entry_date
@@ -475,7 +476,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
             )
         ).reduce(
-            async (prevStats: RobotStats, chunk: ExtendedStatsPositionWithVolume[]) =>
+            async (prevStats: TradeStats, chunk: ExtendedStatsPositionWithVolume[]) =>
                 await this.calcStatistics(StatisticsType.CalcByPositionsVolume, prevStats, chunk),
             initStats
         );
@@ -497,19 +498,19 @@ export default class StatisticCalcWorkerService extends BaseService {
 
     private async _calcUserSignalsBySingleQuery(params: {
         queryCommonPart: QueryType;
-        userSignals: UserSignalsWithExists[];
+        userSignals: UserSignalStatsWithExists[];
         calcAll: boolean;
     }): Promise<{
         [key: string]: {
-            newStats: RobotStats;
-            signal: UserSignalsWithExists;
+            newStats: TradeStats;
+            signal: UserSignalStatsWithExists;
         };
     }> {
         const { queryCommonPart, userSignals, calcAll } = params;
         const statsDict: {
             [key: string]: {
-                newStats: RobotStats;
-                signal: UserSignalsWithExists;
+                newStats: TradeStats;
+                signal: UserSignalStatsWithExists;
             };
         } = {};
 
@@ -540,27 +541,27 @@ export default class StatisticCalcWorkerService extends BaseService {
 
     private async _calcUserSignalsByChunks(params: {
         queryCommonPart: QueryType;
-        userSignals: UserSignalsWithExists[];
+        userSignals: UserSignalStatsWithExists[];
         calcAll?: boolean;
         chunkSize?: number;
     }): Promise<{
         [key: string]: {
-            newStats: RobotStats;
-            signal: UserSignalsWithExists;
+            newStats: TradeStats;
+            signal: UserSignalStatsWithExists;
         };
     }> {
         const { queryCommonPart, userSignals, calcAll, chunkSize } = params;
 
         const statsDict: {
             [key: string]: {
-                newStats: RobotStats;
-                signal: UserSignalsWithExists;
+                newStats: TradeStats;
+                signal: UserSignalStatsWithExists;
             };
         } = {};
         let statsAcc: {
-            signal: UserSignalsWithExists;
+            signal: UserSignalStatsWithExists;
             calcFrom: string;
-            stats: RobotStats;
+            stats: TradeStats;
             updated: boolean;
         }[] = [];
 
@@ -618,7 +619,7 @@ export default class StatisticCalcWorkerService extends BaseService {
     async calcUserSignals(robotId: string, calcAll = false) {
         if (!robotId) throw new Error("robotId must be non-empty string");
 
-        const userSignals: UserSignalsWithExists[] = await this.db.pg.any(sql`
+        const userSignals: UserSignalStatsWithExists[] = await this.db.pg.any(sql`
             SELECT us.id, us.subscribed_at,
                 uss.user_signal_id as "stats_exists",
                 uss.statistics,
@@ -628,12 +629,12 @@ export default class StatisticCalcWorkerService extends BaseService {
                 uss.equity_avg,
                 ARRAY(
                     SELECT json_build_object(
-                        'active_from', usset.active_from,
-                        'volume', (usset.signal_settings -> 'volume')::float
+                        'activeFrom', usset.active_from,
+                        'volume', (usset.user_signal_settings -> 'volume')::float
                     )
                     FROM user_signal_settings usset
                     WHERE usset.user_signal_id = us.id
-                    ORDER BY usset.active_from
+                    ORDER BY usset.active_from ASC
                 ) as volumes
             FROM user_signals us
             LEFT JOIN user_signal_stats uss
@@ -641,8 +642,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             WHERE us.robot_id = ${robotId};
         `);
 
-        if (userSignals.length == 0)
-            return false; // throw new Error(`Signals doesn't exists (robotId: ${robotId})`);
+        if (userSignals.length == 0) return false; // throw new Error(`Signals doesn't exists (robotId: ${robotId})`);
 
         const minSubscriptionDate = dayjs
             .utc(Math.min(...userSignals.map((us) => dayjs.utc(us.subscribedAt).valueOf())))
@@ -689,15 +689,15 @@ export default class StatisticCalcWorkerService extends BaseService {
         const signalsStats =
             positionsCount > this.maxSingleQueryPosCount
                 ? await this._calcUserSignalsByChunks({
-                        queryCommonPart,
-                        userSignals,
-                        calcAll
-                    })
+                      queryCommonPart,
+                      userSignals,
+                      calcAll
+                  })
                 : await this._calcUserSignalsBySingleQuery({
-                        queryCommonPart,
-                        userSignals,
-                        calcAll
-                    });
+                      queryCommonPart,
+                      userSignals,
+                      calcAll
+                  });
 
         if (Object.keys(signalsStats).length == 0) return false;
 
@@ -721,7 +721,7 @@ export default class StatisticCalcWorkerService extends BaseService {
     async calcUserSignalsAggr(userId: string, exchange?: string, asset?: string, calcAll = false) {
         if (!userId) throw new Error("userId must be non-empty string");
 
-        const prevUserAggrStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
+        const prevUserAggrStats: TradeStatsWithExistsAndId = await this.db.pg.maybeOne(sql`
             SELECT id as "stats_exists",
                 id,
                 statistics,
@@ -745,7 +745,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held,
                 p.entry_price, p.exit_price, p.fee,
                 (
-                    SELECT usset.signal_settings -> 'volume'
+                    SELECT usset.user_signal_settings -> 'volume'
                     FROM user_signal_settings usset
                     WHERE usset.user_signal_id = us.id
                         AND usset.active_from <= p.entry_date
@@ -786,7 +786,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
             )
         ).reduce(
-            async (prevStats: RobotStats, chunk: ExtendedStatsPositionWithVolume[]) =>
+            async (prevStats: TradeStats, chunk: ExtendedStatsPositionWithVolume[]) =>
                 await this.calcStatistics(StatisticsType.CalcByPositionsVolume, prevStats, chunk),
             initStats
         );
@@ -811,7 +811,7 @@ export default class StatisticCalcWorkerService extends BaseService {
     async calcUserRobot(userRobotId: string, calcAll = false) {
         if (!userRobotId) throw new Error("userRobotId must be non-empty string");
 
-        const prevRobotStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
+        const prevTradeStats: TradeStatsWithExists = await this.db.pg.maybeOne(sql`
             SELECT urs.user_robot_id as "stats_exists",
                 urs.statistics,
                 urs.last_position_exit_date,
@@ -824,9 +824,9 @@ export default class StatisticCalcWorkerService extends BaseService {
             WHERE ur.id = ${userRobotId};
         `);
 
-        if (!prevRobotStats) throw new Error(`User robot doesn't exists (userRobotId: ${userRobotId})`);
+        if (!prevTradeStats) throw new Error(`User robot doesn't exists (userRobotId: ${userRobotId})`);
 
-        const { calcFrom, initStats } = getCalcFromAndInitStats(prevRobotStats, calcAll);
+        const { calcFrom, initStats } = getCalcFromAndInitStats(prevTradeStats, calcAll);
 
         const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
         const querySelectPart = sql`
@@ -857,7 +857,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
             )
         ).reduce(
-            async (prevStats: RobotStats, chunk: PositionDataForStats[]) =>
+            async (prevStats: TradeStats, chunk: PositionDataForStats[]) =>
                 await this.calcStatistics(StatisticsType.Simple, prevStats, chunk),
             initStats
         );
@@ -869,7 +869,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 id: userRobotId
             },
             newStats,
-            prevRobotStats
+            prevTradeStats
         );
 
         return true;
@@ -878,7 +878,7 @@ export default class StatisticCalcWorkerService extends BaseService {
     async calcUserRobotsAggr(userId: string, exchange?: string, asset?: string, calcAll = false) {
         if (!userId) throw new Error("userId must be non-empty string");
 
-        const prevUserAggrStats: RobotStatsWithExists = await this.db.pg.maybeOne(sql`
+        const prevUserAggrStats: TradeStatsWithExistsAndId = await this.db.pg.maybeOne(sql`
             SELECT id as "stats_exists",
                 id,
                 statistics,
@@ -928,7 +928,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
             )
         ).reduce(
-            async (prevStats: RobotStats, chunk: PositionDataForStats[]) =>
+            async (prevStats: TradeStats, chunk: PositionDataForStats[]) =>
                 await this.calcStatistics(StatisticsType.Simple, prevStats, chunk),
             initStats
         );

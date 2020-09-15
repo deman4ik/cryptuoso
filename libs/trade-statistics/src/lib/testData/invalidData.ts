@@ -1,6 +1,6 @@
-import { RobotStats, PositionDataForStats } from "../trade-statistics";
+import { TradeStats, PositionDataForStats } from "../trade-statistics";
 
-export const invalidStatistics: RobotStats = {
+export const invalidStatistics: TradeStats = {
     statistics: {
         tradesCount: null,
         tradesWinning: null,

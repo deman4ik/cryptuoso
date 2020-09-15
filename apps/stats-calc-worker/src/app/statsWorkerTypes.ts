@@ -1,12 +1,10 @@
 import {
-    RobotStats,
-    PositionDataForStats
-} from "@cryptuoso/trade-statistics";
-import {
+    TradeStats,
+    PositionDataForStats,
     ExtendedStatsPosition,
     ExtendedStatsPositionWithVolume,
     SettingsVolume
-} from "@cryptuoso/user-state";
+} from "@cryptuoso/trade-statistics";
 
 export enum StatisticsType {
     Simple = "simple",
@@ -17,22 +15,25 @@ export enum StatisticsType {
 export type CalcStatistics = {
     (
         type: StatisticsType.Simple,
-        prevStats: RobotStats,
+        prevStats: TradeStats,
         positions: PositionDataForStats[]
-    ): RobotStats | Promise<RobotStats>;
+    ): TradeStats | Promise<TradeStats>;
     (
         type: StatisticsType.CalcByPositionsVolume,
-        prevStats: RobotStats,
+        prevStats: TradeStats,
         positions: ExtendedStatsPositionWithVolume[]
-    ): RobotStats | Promise<RobotStats>;
+    ): TradeStats | Promise<TradeStats>;
+    /**
+     * @param volumes - must be sorted in ascending order
+     */
     (
         type: StatisticsType.CalcByProvidedVolumes,
-        prevStats: RobotStats,
+        prevStats: TradeStats,
         positions: ExtendedStatsPosition[],
         volumes: SettingsVolume[]
-    ): RobotStats | Promise<RobotStats>;
+    ): TradeStats | Promise<TradeStats>;
 };
 
-export type StatisticUtils = {
+export type StatisticsUtils = {
     calcStatistics: CalcStatistics
 };
