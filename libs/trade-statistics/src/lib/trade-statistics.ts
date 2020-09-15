@@ -1,5 +1,6 @@
-import StatisticsCalculator from "./statistics-calculator";
 import { round } from "@cryptuoso/helpers";
+import { UserSignals } from "@cryptuoso/user-state";
+import StatisticsCalculator from "./statistics-calculator";
 
 export const enum PositionDirection {
     long = "long",
@@ -22,6 +23,20 @@ export function isPositionDataForStats(object: any): object is PositionDataForSt
         if (object[key] == null) return false;
     }
     return true;
+}
+
+export interface ExtendedStatsPosition extends PositionDataForStats {
+    exitPrice: number;
+    entryPrice: number;
+    fee: number;
+}
+
+export interface ExtendedStatsPositionWithVolume extends ExtendedStatsPosition {
+    volume: number;
+}
+
+export interface ExtendedStatsPositionWithDate extends ExtendedStatsPosition {
+    entryDate: string;
 }
 
 export interface RobotStatVals<T> {
@@ -60,7 +75,6 @@ export function roundRobotStatVals(vals: RobotNumberValue, decimals = 0): RobotN
 }
 
 export class Statistics {
-    [index: string]: any;
     tradesCount = new RobotNumberValue();
     tradesWinning = new RobotNumberValue();
     tradesLosing = new RobotNumberValue();
@@ -74,6 +88,7 @@ export class Statistics {
     avgNetProfit = new RobotNumberValue(null, null, null);
     grossProfit = new RobotNumberValue(null, null, null);
     avgProfit = new RobotNumberValue(null, null, null);
+    //avgProfitWinners = new RobotNumberValue(null, null, null);
     grossLoss = new RobotNumberValue(null, null, null);
     avgLoss = new RobotNumberValue(null, null, null);
     maxConsecWins = new RobotNumberValue();
@@ -92,14 +107,22 @@ export function isStatistics(object: any): object is Statistics {
     const refObj = new Statistics();
     for (const key in refObj) {
         if (!(key in object)) return false;
-        if (refObj[key].all != null)
+        if ((refObj as any)[key].all != null)
             if (object[key].all == null || object[key].long == null || object[key].short == null) return false;
     }
     return true;
 }
 
-export class RobotStats {
-    [index: string]: any;
+export interface TradeStats {
+    statistics: Statistics;
+    lastPositionExitDate: string;
+    lastUpdatedAt: string;
+    equity: PerformanceVals;
+    equityAvg: PerformanceVals;
+}
+
+export class TradeStatsClass {
+    [key: string]: any;
     statistics = new Statistics();
     lastPositionExitDate = "";
     lastUpdatedAt = "";
@@ -107,9 +130,9 @@ export class RobotStats {
     equityAvg: PerformanceVals = [];
 }
 
-export function isRobotStats(object: any, checkPropsCount = true): object is RobotStats {
+export function isTradeStats(object: any, checkPropsCount = true): object is TradeStats {
     if (object == null) return true;
-    const refObj = new RobotStats();
+    const refObj = new TradeStatsClass();
     if (checkPropsCount && Object.keys(object).length != Object.keys(refObj).length) return false;
     for (const key in refObj) {
         if (!(key in object)) return false;
@@ -117,11 +140,44 @@ export function isRobotStats(object: any, checkPropsCount = true): object is Rob
     return true;
 }
 
+export interface SettingsVolume {
+    activeFrom: string;
+    volume: number;
+}
+
+export interface UserSignalWithVolumes extends UserSignals {
+    volumes?: SettingsVolume[];
+}
+
+export enum UserAggrStatsType {
+    signal = "signal",
+    userRobot = "userRobot"
+}
+
+export interface UserAggrStats extends TradeStats {
+    id: string;
+    userId: string;
+    exchange?: string;
+    asset?: string;
+    type: UserAggrStatsType;
+}
+
+export interface TradeStatsWithExists extends TradeStats {
+    statsExists: any;
+}
+
+export interface TradeStatsWithExistsAndId extends TradeStatsWithExists {
+    id: string;
+}
+
+export type UserSignalStatsWithExists = UserSignalWithVolumes & TradeStatsWithExists;
+export type UserAggrStatsWithExists = UserAggrStats & TradeStatsWithExists;
+
 // It is now expected that every value is rounded after each cumulative calculatuion
-export function calcStatisticsCumulatively(
-    previousRobotStatistics: RobotStats,
+export function calcStatistics(
+    previousRobotStatistics: TradeStats,
     positions: PositionDataForStats[]
-): RobotStats {
+): TradeStats {
     if (!positions || positions.length < 1) return previousRobotStatistics;
 
     return new StatisticsCalculator(previousRobotStatistics, positions).getStats();

@@ -53,6 +53,31 @@ ajax.post = async (url: string, headers?: {}, body?: {}): Promise<MyResponse> =>
     });
 };
 
+export async function makeServiceRequest({
+    actionName, userId, role,
+    input = {},
+    apiKey = process.env.API_KEY,
+    port = +process.env.PORT || +process.env.NODE_PORT || 3000,
+    entryPoint = `http://localhost:${port}/actions`
+}: {
+    actionName: string, userId?: string, role?: string,
+    input?: { [key: string]: any },
+    apiKey?: string,
+    port?: number,
+    entryPoint?: string
+}) {
+    return await ajax.post(
+        `${entryPoint}/${actionName}`,
+        { "x-api-key": apiKey },
+        {
+            action: { name: actionName },
+            input,
+            // eslint-disable-next-line @typescript-eslint/camelcase
+            session_variables: { "x-hasura-user-id": userId, "x-hasura-role": role }
+        }
+    );
+}
+
 export function setProperty(object: any, property: any, value: any) {
     const originalProperty = Object.getOwnPropertyDescriptor(object, property);
     Object.defineProperty(object, property, { value });

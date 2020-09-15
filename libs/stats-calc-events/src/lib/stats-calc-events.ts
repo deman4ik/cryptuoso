@@ -187,4 +187,6 @@ export interface StatsCalcJob {
     userId?: string;
     exchange?: string;
     asset?: string;
+    currency?: string;
+    strategy?: string;
 }
