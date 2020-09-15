@@ -23,6 +23,7 @@ import {
     ExwatcherUnsubscribeAll,
     ExwatcherTick
 } from "@cryptuoso/exwatcher-events";
+import { sql } from "@cryptuoso/postgres";
 
 // !FIXME: ccxt.pro typings
 
@@ -247,7 +248,7 @@ export class ExwatcherBaseService extends BaseService {
     async resubscribe() {
         try {
             const subscriptions: Exwatcher[] = await this.db.pg.many(
-                this.db.sql`select * from exwatchers where exchange = ${this.exchange}`
+                sql`select * from exwatchers where exchange = ${this.exchange}`
             );
             if (subscriptions && Array.isArray(subscriptions) && subscriptions.length > 0) {
                 await Promise.all(
@@ -271,7 +272,7 @@ export class ExwatcherBaseService extends BaseService {
     async subscribeAll({ exchange }: ExwatcherSubscribeAll) {
         try {
             if (exchange !== this.exchange) return;
-            const markets: { asset: string; currency: string }[] = await this.db.pg.many(this.db.sql`
+            const markets: { asset: string; currency: string }[] = await this.db.pg.many(sql`
             SELECT asset, currency 
             FROM markets
             WHERE exchange = ${this.exchange} AND available > 0;
@@ -457,7 +458,7 @@ export class ExwatcherBaseService extends BaseService {
 
     async saveSubscription(subscription: Exwatcher): Promise<void> {
         const { id, exchange, asset, currency, status, importerId, error } = subscription;
-        await this.db.pg.query(this.db.sql`INSERT INTO exwatchers 
+        await this.db.pg.query(sql`INSERT INTO exwatchers 
         ( id, 
             exchange,
             asset,
@@ -483,7 +484,7 @@ export class ExwatcherBaseService extends BaseService {
     }
 
     async deleteSubscription(id: string): Promise<void> {
-        await this.db.pg.query(this.db.sql`DELETE FROM exwatchers WHERE id = ${id}`);
+        await this.db.pg.query(sql`DELETE FROM exwatchers WHERE id = ${id}`);
     }
 
     async handleCandles(): Promise<void> {
@@ -897,11 +898,11 @@ export class ExwatcherBaseService extends BaseService {
                                 )
                                 .join(" ")}`
                         );
-                        await this.db.pg.query(this.db.sql`
-                        insert into ${this.db.sql.identifier([`candles${timeframe}`])}
+                        await this.db.pg.query(sql`
+                        insert into ${sql.identifier([`candles${timeframe}`])}
                         (exchange, asset, currency, open, high, low, close, volume, time, timestamp, type)
                         SELECT *
-                        FROM ${this.db.sql.unnest(
+                        FROM ${sql.unnest(
                             this.db.util.prepareUnnest(candles, [
                                 "exchange",
                                 "asset",
@@ -929,7 +930,7 @@ export class ExwatcherBaseService extends BaseService {
                                 "varchar"
                             ]
                         )}
-                        ON CONFLICT ON CONSTRAINT ${this.db.sql.identifier([
+                        ON CONFLICT ON CONSTRAINT ${sql.identifier([
                             `candles${timeframe}_time_exchange_asset_currency_key`
                         ])}
                         DO UPDATE SET open = excluded.open,

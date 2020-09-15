@@ -1,4 +1,4 @@
-import { RobotSettings, RobotStats, RobotEquity, Robot, StrategyCode } from "@cryptuoso/robot-state";
+import { RobotSettings, Robot, StrategyCode, StrategySettings } from "@cryptuoso/robot-state";
 import { ValidTimeframe, Candle } from "@cryptuoso/market";
 import dayjs from "@cryptuoso/dayjs";
 import { round, defaultValue } from "@cryptuoso/helpers";
@@ -39,9 +39,11 @@ export interface BacktesterState {
     status: Status;
     startedAt?: string;
     finishedAt?: string;
-    statistics?: { [key: string]: RobotStats };
-    equity?: { [key: string]: RobotEquity };
-    robotSettings?: { [key: string]: RobotSettings };
+    statistics?: { [key: string]: any }; //!!! FIXME after #54
+    strategySettings?: {
+        [key: string]: StrategySettings;
+    };
+    robotSettings?: RobotSettings;
     robotInstances?: { [key: string]: Robot };
     error?: string;
 }
@@ -65,9 +67,11 @@ export class Backtester {
     #status: Status;
     #startedAt?: string;
     #finishedAt?: string;
-    #statistics?: { [key: string]: RobotStats };
-    #equity?: { [key: string]: RobotEquity };
-    #robotSettings?: { [key: string]: RobotSettings };
+    #statistics?: { [key: string]: any }; //!!! FIXME after #54
+    #strategySettings?: {
+        [key: string]: StrategySettings;
+    };
+    #robotSettings?: RobotSettings;
     #robotInstances?: { [key: string]: Robot } = {};
     #error?: string;
 
@@ -87,6 +91,7 @@ export class Backtester {
             savePositions: defaultValue(state.settings.savePositions, true),
             saveLogs: defaultValue(state.settings.saveLogs, false)
         };
+        this.#strategySettings = state.strategySettings;
         this.#robotSettings = state.robotSettings;
         this.#totalBars = defaultValue(state.totalBars, 0);
         this.#processedBars = defaultValue(state.processedBars, 0);
@@ -96,7 +101,6 @@ export class Backtester {
         this.#startedAt = state.startedAt || null;
         this.#finishedAt = state.finishedAt || null;
         this.#statistics = state.statistics;
-        this.#equity = state.equity;
         this.#error = state.error || null;
     }
 
@@ -112,6 +116,7 @@ export class Backtester {
             dateFrom: this.#dateFrom,
             dateTo: this.#dateTo,
             settings: this.#settings,
+            strategySettings: this.#strategySettings,
             robotSettings: this.#robotSettings,
             totalBars: this.#totalBars,
             processedBars: this.#processedBars,
@@ -121,7 +126,6 @@ export class Backtester {
             startedAt: this.#startedAt,
             finishedAt: this.#finishedAt,
             statistics: this.#statistics,
-            equity: this.#equity,
             error: this.#error
         };
     }
@@ -240,14 +244,6 @@ export class Backtester {
         this.#statistics = statistics;
     }
 
-    get equity() {
-        return this.#equity;
-    }
-
-    set equity(equity) {
-        this.#equity = equity;
-    }
-
     get robotSettings() {
         return this.#robotSettings;
     }
@@ -269,7 +265,7 @@ export class Backtester {
     }
 
     initRobots(strategyCode: StrategyCode) {
-        for (const [id, settings] of Object.entries(this.#robotSettings)) {
+        for (const [id, settings] of Object.entries(this.#strategySettings)) {
             this.#robotInstances[id] = new Robot({
                 id,
                 exchange: this.#exchange,
@@ -277,7 +273,8 @@ export class Backtester {
                 currency: this.#currency,
                 timeframe: this.#timeframe,
                 strategyName: this.#strategyName,
-                settings,
+                strategySettings: settings,
+                robotSettings: this.#robotSettings,
                 backtest: true
             });
             this.#robotInstances[id].setStrategy(strategyCode);
@@ -286,7 +283,7 @@ export class Backtester {
     }
 
     initIndicators(indicatorsCode: { fileName: string; code: IndicatorCode }[]) {
-        Object.keys(this.#robotInstances).forEach(([id]) => {
+        Object.keys(this.#robotInstances).forEach((id) => {
             this.#robotInstances[id].setBaseIndicatorsCode(indicatorsCode);
             this.#robotInstances[id].setIndicators();
             this.#robotInstances[id].initIndicators();
@@ -294,9 +291,16 @@ export class Backtester {
     }
 
     handleHistoryCandles(candles: Candle[]) {
-        Object.keys(this.#robotInstances).forEach(([id]) => {
+        Object.keys(this.#robotInstances).forEach((id) => {
             this.#robotInstances[id].handleHistoryCandles(candles);
         });
+    }
+
+    handleCandle(candle: Candle) {
+        Object.keys(this.#robotInstances).forEach((id) => {
+            this.#robotInstances[id].handleCandle(candle);
+        });
+        //TODO
     }
 
     finish(cancel = false) {

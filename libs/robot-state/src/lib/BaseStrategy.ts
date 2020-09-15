@@ -9,17 +9,13 @@ import { NewEvent } from "@cryptuoso/events";
 import { RobotWorkerEvents, Signal } from "@cryptuoso/robot-events";
 import logger from "@cryptuoso/logger";
 
-interface RobotSettings {
-    strategyParameters?: { [key: string]: any };
-    volume?: number;
-    requiredHistoryMaxBars?: number;
+export interface StrategySettings {
+    [key: string]: number | string;
 }
 
-interface RobotsPostionInternalState {
-    [key: string]: any;
-    highestHigh?: number;
-    lowestLow?: number;
-    stop?: number;
+export interface RobotSettings {
+    volume: number;
+    requiredHistoryMaxBars: number;
 }
 
 export interface StrategyProps {
@@ -33,8 +29,8 @@ export interface StrategyProps {
 }
 
 export interface StrategyState extends StrategyProps {
-    parameters?: { [key: string]: number | string };
-    robotSettings: { [key: string]: any };
+    strategySettings: StrategySettings;
+    robotSettings: RobotSettings;
     exchange: string;
     asset: string;
     currency: string;
@@ -48,7 +44,7 @@ export interface StrategyState extends StrategyProps {
 export class BaseStrategy {
     [key: string]: any;
     _initialized: boolean;
-    _parameters: { [key: string]: number | string };
+    _strategySettings: { [key: string]: number | string };
     _robotSettings: RobotSettings;
     _exchange: string;
     _asset: string;
@@ -68,12 +64,12 @@ export class BaseStrategy {
     _consts: { [key: string]: string };
     _eventsToSend: NewEvent<any>[];
     _positionsToSave: RobotPositionState[];
-    _log = logger.debug;
+    _log = logger.debug.bind(logger);
     _dayjs = dayjs;
 
     constructor(state: StrategyState) {
         this._initialized = state.initialized || false; // стратегия инициализирована
-        this._parameters = state.parameters || {};
+        this._strategySettings = state.strategySettings || {};
         this._robotSettings = state.robotSettings;
         this._exchange = state.exchange;
         this._asset = state.asset;
@@ -128,7 +124,7 @@ export class BaseStrategy {
 
     _checkParameters() {
         if (this._parametersSchema && Object.keys(this._parametersSchema).length > 0) {
-            validate(this._parameters, this._parametersSchema);
+            validate(this._strategySettings, this._parametersSchema);
         }
     }
 
@@ -254,7 +250,7 @@ export class BaseStrategy {
             parentId: parentId,
             backtest: this._backtest
         });
-        this._positions[code]._log = this._log.bind(this);
+        this._positions[code]._log = logger.debug.bind(logger);
         this._positions[code]._handleCandle(this._candle);
         return this._positions[code];
     }
@@ -297,7 +293,7 @@ export class BaseStrategy {
         if (positions && Array.isArray(positions) && positions.length > 0) {
             positions.forEach((position) => {
                 this._positions[position.code] = new RobotPosition(position);
-                this._positions[position.code]._log = this._log.bind(this);
+                this._positions[position.code]._log = logger.debug.bind(logger);
             });
         }
     }
@@ -399,7 +395,7 @@ export class BaseStrategy {
     }
 
     get parameters() {
-        return this._parameters;
+        return this._strategySettings;
     }
 
     get robotSettings() {

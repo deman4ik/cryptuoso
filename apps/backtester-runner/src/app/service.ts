@@ -4,7 +4,7 @@ import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import dayjs from "@cryptuoso/dayjs";
 import { CANDLES_RECENT_AMOUNT } from "@cryptuoso/helpers";
 import { BaseError } from "@cryptuoso/errors";
-import { Timeframe } from "@cryptuoso/market";
+import { Timeframe, ValidTimeframe } from "@cryptuoso/market";
 import {
     BacktesterRunnerEvents,
     BacktesterWorkerEvents,
@@ -15,8 +15,9 @@ import {
     BacktesterWorkerCancel,
     BacktesterWorkerFailed
 } from "@cryptuoso/backtester-events";
-import { RobotState } from "@cryptuoso/robot-state";
-import { BacktesterState } from "@cryptuoso/backtester-state";
+import { RobotSettings, RobotState, StrategySettings } from "@cryptuoso/robot-state";
+import { Backtester, BacktesterState, Status } from "@cryptuoso/backtester-state";
+import { sql } from "@cryptuoso/postgres";
 
 export type BacktesterRunnerServiceConfig = HTTPServiceConfig;
 
@@ -105,16 +106,40 @@ export default class BacktesterRunnerService extends HTTPService {
         return "free";
     };
 
+    #countHistoryCandles = async (
+        exchange: string,
+        asset: string,
+        currency: string,
+        timeframe: ValidTimeframe,
+        loadFrom: string,
+        limit: number
+    ): Promise<number> =>
+        +(await this.db.pg.query(
+            sql`select count(1)
+            from ${sql.identifier([`candles${timeframe}`])}
+            where
+            exchange = ${exchange}
+            and asset = ${asset}
+            and currency = ${currency}
+            and time < ${dayjs.utc(loadFrom).valueOf()}
+                 order by time desc
+                 limit ${limit} `
+        ));
+
     async start(params: BacktesterRunnerStart) {
         const id: string = params.id || uuid();
 
         try {
             //Validation
             if (!params.robotId && !params.robotParams)
-                throw new BaseError("Wrong parameters: robotId or robotParams must be specefied", null, "VALIDATION");
+                throw new BaseError("Wrong parameters: robotId or robotParams must be specified", null, "VALIDATION");
 
-            if (!params.robotId && !params.robotSettings)
-                throw new BaseError("Wrong parameters: robotId or robotSettings must be specefied", null, "VALIDATION");
+            if (!params.robotId && (!params.robotSettings || !params.strategySettings))
+                throw new BaseError(
+                    "Wrong parameters: robotId or strategy and robot settings must be specified",
+                    null,
+                    "VALIDATION"
+                );
 
             if (params.settings?.populateHistory && (!params.robotId || id != params.robotId))
                 throw new BaseError(
@@ -138,11 +163,24 @@ export default class BacktesterRunnerService extends HTTPService {
 
             // Combine robot parameters and settings
             let robotParams = params.robotParams;
-            let robotSettings;
+            let strategySettings: StrategySettings;
+            let robotSettings: RobotSettings;
             if (params.robotId) {
-                const robot: RobotState = await this.db.pg.one(
-                    this.db
-                        .sql`select exchange, asset, currency, timeframe, strategy_name, settings from robots where id = ${id}`
+                const robot: {
+                    exchange: string;
+                    asset: string;
+                    currency: string;
+                    timeframe: ValidTimeframe;
+                    strategyName: string;
+                    strategySettings?: StrategySettings;
+                    robotSettings?: RobotSettings;
+                } = await this.db.pg.one(
+                    sql`SELECT r.exchange, r.asset, r.currency,
+                               r.timeframe, r.strategy_name, 
+                               s.strategy_settings, s.robot_settings
+                         FROM robots r, v_robot_settings s
+                         WHERE s.robot_id = r.id
+                         AND r.id = ${id};`
                 );
                 robotParams = {
                     exchange: robot.exchange,
@@ -152,7 +190,12 @@ export default class BacktesterRunnerService extends HTTPService {
                     strategyName: robot.strategyName
                 };
 
-                robotSettings = { ...robot.settings };
+                strategySettings = { ...robot.strategySettings };
+                robotSettings = { ...robot.robotSettings };
+            }
+
+            if (params.strategySettings) {
+                strategySettings = { ...strategySettings, ...params.strategySettings };
             }
 
             if (params.robotSettings) {
@@ -160,18 +203,50 @@ export default class BacktesterRunnerService extends HTTPService {
             }
 
             // Check history
-            //TODO
-
+            const historyCandlesCount = await this.#countHistoryCandles(
+                robotParams.exchange,
+                robotParams.asset,
+                robotParams.currency,
+                robotParams.timeframe,
+                params.dateFrom,
+                robotSettings.requiredHistoryMaxBars
+            );
+            if (historyCandlesCount < robotSettings.requiredHistoryMaxBars)
+                this.log.warn(
+                    `Backtester #${id} - Not enough history candles! Required: ${robotSettings.requiredHistoryMaxBars} bars but loaded: ${historyCandlesCount} bars`
+                );
+            if (robotSettings.requiredHistoryMaxBars > 0 && historyCandlesCount === 0)
+                throw new Error(
+                    `Not enough history candles! Required: ${robotSettings.requiredHistoryMaxBars} bars but loaded: ${historyCandlesCount} bars`
+                );
             // Delete previous backtester state if exists
-            const existedBacktest: { id: string } = await this.db.pg.maybeOne(this.db.sql`
-             select id from backtests where id = ${id}
+            const existedBacktest: { id: string } = await this.db.pg.maybeOne(sql`
+             SELECT id FROM backtests WHERE id = ${id}
              `);
             if (existedBacktest) {
                 this.log.info(`Backtester #${id} - Found previous backtest. Deleting...`);
-                await this.db.pg.query(this.db.sql`delete from backtests where id = ${id}`);
+                await this.db.pg.query(sql`DELETE FROM backtests WHERE id = ${id}`);
             }
 
-            //TODO queue job
+            const backtester = new Backtester({
+                id,
+                robotId: params.robotId,
+                ...robotParams,
+                dateFrom: params.dateFrom,
+                dateTo: params.dateTo,
+                settings: params.settings,
+                strategySettings: {
+                    [id]: strategySettings
+                },
+                robotSettings,
+                status: Status.queued
+            });
+
+            await this.queues.backtest.add("single", backtester.state, {
+                jobId: backtester.id,
+                removeOnComplete: true
+            });
+            return { result: backtester.id };
         } catch (error) {
             this.log.error(error);
             await this.events.emit<BacktesterWorkerFailed>({

@@ -215,7 +215,7 @@ export class RobotPosition {
         return this._internalState.lowestLow;
     }
 
-    public get state() {
+    public get state(): RobotPositionState {
         return {
             id: this._id,
             robotId: this._robotId,
