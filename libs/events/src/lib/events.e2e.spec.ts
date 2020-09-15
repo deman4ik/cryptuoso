@@ -8,14 +8,24 @@ import { BASE_REDIS_PREFIX } from "./catalog";
 
 //TODO: one service for all tests
 const SERVICES = {
-    deadLetter: "test-dead-letter",
-    calc: "test-calc",
-    faultyGroupLog: "test-faulty-group-log",
-    faultyGroupLog2: "test-faulty-group-log2",
-    unbalancedLog: "test-unbalanced-log",
-    groupLog: "test-group-log",
-    messager: "test-messager",
-    groupMessager: "test-group-messager"
+    deadLetter: "test-events-e2e-dead-letter",
+    calc: "test-events-e2e-calc",
+    calc2: "test-events-e2e-calc2",
+    faultyGroupLog: "test-events-e2e-faulty-group-log",
+    faultyGroupLog2: "test-events-e2e-faulty-group-log2",
+    unbalancedLog: "test-events-e2e-unbalanced-log",
+    groupLog: "test-events-e2e-group-log",
+    messager: "test-events-e2e-messager",
+    groupMessager: "test-events-e2e-group-messager"
+};
+const GROUPS = {
+    testDataSupply: "test-events-e2e-group-data-supply",
+    log: "test-events-e2e-group-log",
+    testError: "test-events-e2e-group-error",
+    testError2: "test-events-e2e-group-error2",
+    sum: `${SERVICES.calc}-sum`,
+    divide2: `${SERVICES.calc2}-divide`,
+    subtract: `${SERVICES.calc}-substract`
 };
 jest.mock("tslog");
 jest.setTimeout(40000);
@@ -34,7 +44,7 @@ const calcSchema: ValidationSchema = {
     numbers: { type: "array", items: "number" }
 };
 
-fdescribe("E2E test", () => {
+describe("E2E test", () => {
     const lightship = createLightship();
     const eventsConfig: EventsConfig = {
         deadLetterTopic: SERVICES.deadLetter,
@@ -44,6 +54,14 @@ fdescribe("E2E test", () => {
         pendingMaxRetries: 1 // emit a dead-letter on firts pending handling failure
     };
     let redis: Redis.Redis;
+
+    const clearEvents = async () => {
+        if(redis) {
+            for (const service of Object.values(SERVICES)) {
+                await redis.del(`${BASE_REDIS_PREFIX}${service}`);
+            }
+        }
+    }
 
     describe("Test Events workflow", () => {
         beforeAll((done) => {
@@ -61,29 +79,35 @@ fdescribe("E2E test", () => {
                     done();
                 })
                 .on("ready", async () => {
-                    for (const service of Object.values(SERVICES)) {
-                        await redis.del(`${BASE_REDIS_PREFIX}:${service}`);
-                    }
+                    await clearEvents();
 
                     done();
                 });
         });
 
+        afterAll(async (done) => {
+            if(redis) {
+                await clearEvents();
+                await redis.quit();
+            }
+            done();
+        });
+
         const findDeadLetter = async (type: string) => {
-            const arr = await redis.xread("COUNT", 100, "STREAMS", `${BASE_REDIS_PREFIX}:${SERVICES.deadLetter}`, "0");
+            const arr = await redis.xread("COUNT", 100, "STREAMS", `${BASE_REDIS_PREFIX}${SERVICES.deadLetter}`, "0");
             if (arr != [] && arr != null)
                 return arr[0][1].filter((item) => {
                     const eventType = JSON.parse(item[1][7]).type;
                     return (
                         eventType ===
-                        `${BASE_REDIS_PREFIX}:${SERVICES.deadLetter}.` +
+                        `com.cryptuoso.${SERVICES.deadLetter}.` +
                             type.split(".").slice(-type.split(".").length).join(".")
                     );
                 });
             return [];
         };
 
-        const unbalancedMessageHandler = jest.fn(async ({ message }) => {
+        const testHandlerUnbalacedMessage = jest.fn(async ({ message }) => {
             //console.log(message);
         });
         describe("Single unbalanced subscriber scenario", () => {
@@ -96,7 +120,7 @@ fdescribe("E2E test", () => {
                     events.subscribe({
                         [SERVICES.messager]: {
                             unbalanced: true,
-                            handler: unbalancedMessageHandler
+                            handler: testHandlerUnbalacedMessage
                         }
                     });
 
@@ -110,13 +134,15 @@ fdescribe("E2E test", () => {
                     });
                     await sleep(3000);
 
-                    expect(unbalancedMessageHandler).toHaveBeenCalledTimes(1);
+                    expect(testHandlerUnbalacedMessage).toHaveBeenCalledTimes(1);
+
+                    events.closeConnections();
                     done();
                 }
             );
         });
 
-        const groupMessageHandler = jest.fn(async ({ foo, bar }) => {
+        const testHandlerGroupMessage = jest.fn(async ({ foo, bar }) => {
             //console.log("foo is " + foo + "\nbar is " + JSON.stringify(bar));
         });
         describe("Single group subscriber scenario", () => {
@@ -128,8 +154,8 @@ fdescribe("E2E test", () => {
 
                     events.subscribe({
                         [SERVICES.groupMessager]: {
-                            group: "test-data-supply",
-                            handler: groupMessageHandler
+                            group: GROUPS.testDataSupply,
+                            handler: testHandlerGroupMessage
                         }
                     });
 
@@ -146,14 +172,15 @@ fdescribe("E2E test", () => {
                     });
                     await sleep(3000);
 
-                    expect(groupMessageHandler).toHaveBeenCalledTimes(1);
+                    expect(testHandlerGroupMessage).toHaveBeenCalledTimes(1);
 
+                    events.closeConnections();
                     done();
                 }
             );
         });
 
-        const unbalancedLogHandler = jest.fn(async (data) => {
+        const testHandlerUnbalancedLog = jest.fn(async (data) => {
             //console.log("The data object is:\n" + JSON.stringify(data));
         });
         describe("Subscribing after unbalanced event is emitted scenario", () => {
@@ -173,19 +200,21 @@ fdescribe("E2E test", () => {
                     events.subscribe({
                         [SERVICES.unbalancedLog]: {
                             unbalanced: true,
-                            handler: unbalancedLogHandler
+                            handler: testHandlerUnbalancedLog
                         }
                     });
                     await events.start();
                     await sleep(3000);
 
-                    expect(unbalancedLogHandler).not.toHaveBeenCalled();
+                    expect(testHandlerUnbalancedLog).not.toHaveBeenCalled();
+
+                    events.closeConnections();
                     done();
                 }
             );
         });
 
-        const groupLogHandler = jest.fn(async ({ info }) => {
+        const testHandlerGroupLog = jest.fn(async ({ info }) => {
             //console.log(info);
         });
         describe("Subscribing after event is emitted scenario", () => {
@@ -205,21 +234,22 @@ fdescribe("E2E test", () => {
 
                     events.subscribe({
                         [SERVICES.groupLog]: {
-                            group: SERVICES.groupLog,
-                            handler: groupLogHandler
+                            group: GROUPS.log,
+                            handler: testHandlerGroupLog
                         }
                     });
                     await events.start();
                     await sleep(5000);
 
-                    expect(groupLogHandler).toHaveBeenCalledTimes(1);
+                    expect(testHandlerGroupLog).toHaveBeenCalledTimes(1);
 
+                    events.closeConnections();
                     done();
                 }
             );
         });
 
-        const faultyHandler = jest.fn((data) => {
+        const testHandlerFaulty = jest.fn((data) => {
             throw new Error("Cannot process the data:\n" + data);
         });
         describe("Error in a group event handler scenario", () => {
@@ -231,23 +261,26 @@ fdescribe("E2E test", () => {
 
                     events.subscribe({
                         [SERVICES.faultyGroupLog]: {
-                            group: "test-error-group",
-                            handler: faultyHandler
+                            group: GROUPS.testError,
+                            handler: testHandlerFaulty
                         }
                     });
+                    
                     await events.start();
                     await sleep(3000);
 
+                    
                     await events.emit({
                         type: SERVICES.faultyGroupLog,
                         data: {
                             foo: "bar"
                         }
                     });
-                    await sleep(3000);
+                    await sleep(15000);
+                    
+                    expect(testHandlerFaulty).toHaveBeenCalledTimes(2);
 
-                    expect(faultyHandler).toHaveBeenCalledTimes(2);
-
+                    events.closeConnections();
                     done();
                 }
             );
@@ -262,8 +295,8 @@ fdescribe("E2E test", () => {
 
                     events.subscribe({
                         [SERVICES.faultyGroupLog2]: {
-                            group: "test-error-group-2",
-                            handler: faultyHandler
+                            group: GROUPS.testError2,
+                            handler: testHandlerFaulty
                         }
                     });
                     await events.start();
@@ -278,24 +311,26 @@ fdescribe("E2E test", () => {
                     await sleep(3000);
 
                     await events._receivePendingGroupMessagesTick(
-                        `${BASE_REDIS_PREFIX}:${SERVICES.faultyGroupLog2}`,
-                        "test-error-group-2"
+                        `${BASE_REDIS_PREFIX}${SERVICES.faultyGroupLog2}`,
+                        GROUPS.testError2
                     );
-                    await sleep(3000);
+                    await sleep(15000);
 
                     const letters = await findDeadLetter(SERVICES.faultyGroupLog2);
 
                     expect(letters.length).toBe(1);
+                    
+                    events.closeConnections();
                     done();
                 }
             );
         });
 
-        const sumHandler = jest.fn(async ({ info, numbers }) => {
+        const testHandlerSum = jest.fn(async ({ info, numbers }) => {
                 const sum = numbers.reduce((acc: number, n: number) => acc + n, 0);
                 //console.log(info + "\nSum of numbers is " + sum);
             }),
-            sumLogHandler = jest.fn(async (data) => {
+            testHandlerSumLog = jest.fn(async (data) => {
                 //console.log("This event will be logged\n" + "The data object is:\n" + JSON.stringify(data));
             });
         describe("Multiple subscribers scenario", () => {
@@ -304,23 +339,25 @@ fdescribe("E2E test", () => {
                 () => redis != null,
                 async (done: Function) => {
                     const events = new Events(redis, lightship, eventsConfig);
+                    const type = `${SERVICES.calc}.sum`;
+                    const typeParentAll = `${SERVICES.calc}.*`;
 
                     events.subscribe({
-                        [`${SERVICES.calc}.sum`]: {
-                            group: `${SERVICES.calc}-sum`,
-                            handler: sumHandler,
+                        [type]: {
+                            group: GROUPS.sum,
+                            handler: testHandlerSum,
                             schema: calcSchema
                         },
-                        [`${SERVICES.calc}.*`]: {
-                            group: `${SERVICES.calc}-sum`,
-                            handler: sumLogHandler
+                        [typeParentAll]: {
+                            group: GROUPS.sum,
+                            handler: testHandlerSumLog
                         }
                     });
                     await events.start();
                     await sleep(3000);
 
                     await events.emit({
-                        type: `${SERVICES.calc}.sum`,
+                        type,
                         data: {
                             info: "Calculate a sum",
                             numbers: [1, 2, 3, 4, 5]
@@ -328,19 +365,21 @@ fdescribe("E2E test", () => {
                     });
                     await sleep(3000);
 
-                    expect(sumHandler).toHaveBeenCalledTimes(1);
-                    expect(sumLogHandler).toHaveBeenCalledTimes(1);
+                    expect(testHandlerSum).toHaveBeenCalledTimes(1);
+                    expect(testHandlerSumLog).toHaveBeenCalledTimes(1);
 
-                    expect(sumLogHandler).toHaveBeenCalledAfter(sumHandler);
+                    expect(testHandlerSumLog).toHaveBeenCalledAfter(testHandlerSum);
+                    
+                    events.closeConnections();
                     done();
                 }
             );
         });
 
-        const divideHandler = jest.fn(async () => {
+        const testHandlerDivide = jest.fn(async () => {
                 throw new Error("This error is expected");
             }),
-            divideLogHandler = jest.fn(async (data) => {
+            testHandlerDivideLog = jest.fn(async (data) => {
                 //console.log("This event will be logged\n" + "The data object is:\n" + JSON.stringify(data));
             });
         describe("Handling pending event with handling error in one of the subs", () => {
@@ -349,37 +388,40 @@ fdescribe("E2E test", () => {
                 () => redis != null,
                 async (done: Function) => {
                     const events = new Events(redis, lightship, eventsConfig);
+                    const type = `${SERVICES.calc2}.divide`;
+                    const typeParentAll = `${SERVICES.calc2}.*`;
 
                     events.subscribe({
-                        [`${SERVICES.calc}.divide`]: {
-                            group: `${SERVICES.calc}-divide`,
-                            handler: divideHandler
+                        [type]: {
+                            group: GROUPS.divide2,
+                            handler: testHandlerDivide
                         },
-                        [`${SERVICES.calc}.*`]: {
-                            group: `${SERVICES.calc}-divide`,
-                            handler: divideLogHandler
+                        [typeParentAll]: {
+                            group: GROUPS.divide2,
+                            handler: testHandlerDivideLog
                         }
                     });
                     await events.start();
                     await sleep(3000);
 
                     await events.emit({
-                        type: `${SERVICES.calc}.divide`,
+                        type,
                         data: {
                             info: "This is a faulty event, error is expected"
                         }
                     });
-                    await sleep(3000);
+                    await sleep(15000);
 
-                    expect(divideHandler).toHaveBeenCalledTimes(2);
-                    expect(divideLogHandler).toHaveBeenCalledTimes(0);
+                    expect(testHandlerDivide).toHaveBeenCalledTimes(2);
+                    expect(testHandlerDivideLog).toHaveBeenCalledTimes(0);
 
+                    events.closeConnections();
                     done();
                 }
             );
         });
 
-        const groupSubstractHandler = jest.fn(async () => {
+        const testHandlerSubstract = jest.fn(async () => {
             console.error("This should not have been called");
         });
         describe("Handling group event with validation error", () => {
@@ -388,11 +430,12 @@ fdescribe("E2E test", () => {
                 () => redis != null,
                 async (done: Function) => {
                     const events = new Events(redis, lightship, eventsConfig);
+                    const type = `${SERVICES.calc}.group-substract`;
 
                     events.subscribe({
-                        [`${SERVICES.calc}.group-substract`]: {
-                            group: `${SERVICES.calc}-substract"`,
-                            handler: groupSubstractHandler,
+                        [type]: {
+                            group: GROUPS.subtract,
+                            handler: testHandlerSubstract,
                             schema: calcSchema
                         }
                     });
@@ -401,22 +444,24 @@ fdescribe("E2E test", () => {
                     await sleep(3000);
 
                     await events.emit({
-                        type: `${SERVICES.calc}.group-substract`,
+                        type,
                         data: { msg: "This message is not expected" }
                     });
                     await sleep(3000);
 
-                    const deadLetters = await findDeadLetter(`${SERVICES.calc}.group-substract`);
+                    const deadLetters = await findDeadLetter(type);
                     await sleep(3000);
 
                     expect(deadLetters.length).toBe(1);
-                    expect(groupSubstractHandler).not.toHaveBeenCalled();
+                    expect(testHandlerSubstract).not.toHaveBeenCalled();
+                    
+                    events.closeConnections();
                     done();
                 }
             );
         });
 
-        const unbalancedSubstractHandler = jest.fn(async () => {
+        const testHandlerUnbalancedSubstract = jest.fn(async () => {
             console.error("This should not have been called");
         });
         describe("Handling unbalanced event with validation error", () => {
@@ -426,10 +471,12 @@ fdescribe("E2E test", () => {
                 async (done: Function) => {
                     const events = new Events(redis, lightship, eventsConfig);
 
+                    const type = `${SERVICES.calc}.unbalanced-substract`;
+
                     events.subscribe({
-                        [`${SERVICES.calc}.unbalanced-substract`]: {
+                        [type]: {
                             unbalanced: true,
-                            handler: unbalancedSubstractHandler,
+                            handler: testHandlerUnbalancedSubstract,
                             schema: calcSchema
                         }
                     });
@@ -438,7 +485,7 @@ fdescribe("E2E test", () => {
                     await sleep(3000);
 
                     await events.emit({
-                        type: `${SERVICES.calc}.unbalanced-substract`,
+                        type,
                         data: { msg: "This message is not expected" }
                     });
                     await sleep(3000);
@@ -447,8 +494,9 @@ fdescribe("E2E test", () => {
                     await sleep(3000);
 
                     expect(deadLetters.length).toBe(1);
-                    expect(unbalancedSubstractHandler).not.toHaveBeenCalled();
+                    expect(testHandlerUnbalancedSubstract).not.toHaveBeenCalled();
 
+                    events.closeConnections();
                     done();
                 }
             );
