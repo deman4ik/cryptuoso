@@ -236,7 +236,7 @@ export default class AuthService extends HTTPService {
 
         await this.db.pg.query(this.db.sql`
             UPDATE users
-            SET last_active_at = CURRENT_TIMESTAMP
+            SET last_active_at = now()
             WHERE id = ${userId};
         `);
 
