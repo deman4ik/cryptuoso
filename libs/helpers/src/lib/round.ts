@@ -33,7 +33,10 @@ function numberToString(x: number): string {
 
 const round = (x: number, numPrecisionDigits = 0) => {
     if (!isFinite(x) || (!x && x !== 0)) return null;
-    if (numPrecisionDigits == 0) return Math.round(x);
+    /* if (numPrecisionDigits == 0) {
+        const r = Math.round(x)
+        return r === -0 ? 0 : r;
+    } */
 
     /*  Convert to a string (if needed), skip leading minus sign (if any)   */
 

@@ -40,6 +40,7 @@ function roundStatisticsValues(statistics: Statistics): Statistics {
     result.avgNetProfit = roundRobotStatVals(result.avgNetProfit, 2);
     result.grossProfit = roundRobotStatVals(result.grossProfit, 2);
     result.avgProfit = roundRobotStatVals(result.avgProfit, 2);
+    result.avgProfitWinners = roundRobotStatVals(result.avgProfitWinners, 2);
     result.grossLoss = roundRobotStatVals(result.grossLoss, 2);
     result.avgLoss = roundRobotStatVals(result.avgLoss, 2);
     result.payoffRatio = roundRobotStatVals(result.payoffRatio, 2);
@@ -138,7 +139,7 @@ export default class StatisticsCalculator {
         return this;
     }
 
-    calculateEquityAvg(equity: PerformanceVals): PerformanceVals{
+    calculateEquityAvg(equity: PerformanceVals): PerformanceVals {
         const maxEquityLength = 50;
         //const equityChart = this.currentTradeStats.equity;
 
@@ -189,6 +190,7 @@ export default class StatisticsCalculator {
             .updateGrossLoss()
             .updateAvgNetProfit()
             .updateAvgProfit()
+            .updateAvgProfitWinners()
             .updateAvgLoss()
             .updateProfitFactor()
             .updatePayoffRatio()
@@ -315,7 +317,7 @@ export default class StatisticsCalculator {
     }
 
     private updateAvgNetProfit(): StatisticsCalculator {
-        this.currentStatistics.avgNetProfit = this.calculateAverageProfit(
+        this.currentStatistics.avgNetProfit = this.calculateAverageMark(
             this.prevStatistics.avgNetProfit,
             this.currentStatistics.netProfit,
             this.currentStatistics.tradesCount
@@ -329,6 +331,18 @@ export default class StatisticsCalculator {
             this.currentStatistics.avgProfit = this.calculateAverageProfit(
                 this.prevStatistics.avgProfit,
                 this.currentStatistics.grossProfit,
+                this.currentStatistics.grossLoss,
+                this.currentStatistics.tradesCount
+            );
+        this.currentStatistics.avgProfit = initializeValues(this.currentStatistics.avgProfit);
+        return this;
+    }
+
+    private updateAvgProfitWinners(): StatisticsCalculator {
+        if (this.newPosition.profit > 0)
+            this.currentStatistics.avgProfitWinners = this.calculateAverageMark(
+                this.prevStatistics.avgProfitWinners,
+                this.currentStatistics.grossProfit,
                 this.currentStatistics.tradesWinning
             );
         this.currentStatistics.avgProfit = initializeValues(this.currentStatistics.avgProfit);
@@ -337,7 +351,7 @@ export default class StatisticsCalculator {
 
     private updateAvgLoss(): StatisticsCalculator {
         if (this.newPosition.profit < 0)
-            this.currentStatistics.avgLoss = this.calculateAverageProfit(
+            this.currentStatistics.avgLoss = this.calculateAverageMark(
                 this.prevStatistics.avgLoss,
                 this.currentStatistics.grossLoss,
                 this.currentStatistics.tradesLosing
@@ -525,19 +539,38 @@ export default class StatisticsCalculator {
     public calculateAverageProfit(
         prevAvgProfit: RobotNumberValue,
         currentGrossProfit: RobotNumberValue,
+        currentGrossLoss: RobotNumberValue,
         currentTradesCount: RobotNumberValue
     ): RobotNumberValue {
         validateArguments(
             currentGrossProfit.all,
             currentGrossProfit[this.dir],
+            currentGrossLoss.all,
+            currentGrossLoss[this.dir],
             currentTradesCount.all,
             currentTradesCount[this.dir]
         );
 
         const newAvgProfit = { ...prevAvgProfit };
 
-        newAvgProfit.all = currentGrossProfit.all / currentTradesCount.all;
-        newAvgProfit[this.dir] = currentGrossProfit[this.dir] / currentTradesCount[this.dir];
+        newAvgProfit.all = (currentGrossProfit.all + currentGrossLoss.all) / currentTradesCount.all;
+        newAvgProfit[this.dir] =
+            (currentGrossProfit[this.dir] + currentGrossLoss[this.dir]) / currentTradesCount[this.dir];
+
+        return newAvgProfit;
+    }
+
+    public calculateAverageMark(
+        prevAvgProfit: RobotNumberValue,
+        currentMark: RobotNumberValue,
+        currentTradesCount: RobotNumberValue
+    ): RobotNumberValue {
+        validateArguments(currentMark.all, currentMark[this.dir], currentTradesCount.all, currentTradesCount[this.dir]);
+
+        const newAvgProfit = { ...prevAvgProfit };
+
+        newAvgProfit.all = currentMark.all / currentTradesCount.all;
+        newAvgProfit[this.dir] = currentMark[this.dir] / currentTradesCount[this.dir];
 
         return newAvgProfit;
     }

@@ -1,4 +1,4 @@
-process.env.PGSC = "localhost:0"
+process.env.PGSC = "localhost:0";
 
 import Service from "../app/service";
 import { StatsCalcJob } from "@cryptuoso/stats-calc-events";

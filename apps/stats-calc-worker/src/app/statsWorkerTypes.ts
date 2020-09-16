@@ -13,16 +13,12 @@ export enum StatisticsType {
 }
 
 export type CalcStatistics = {
-    (
-        type: StatisticsType.Simple,
-        prevStats: TradeStats,
-        positions: PositionDataForStats[]
-    ): TradeStats | Promise<TradeStats>;
-    (
-        type: StatisticsType.CalcByPositionsVolume,
-        prevStats: TradeStats,
-        positions: ExtendedStatsPositionWithVolume[]
-    ): TradeStats | Promise<TradeStats>;
+    (type: StatisticsType.Simple, prevStats: TradeStats, positions: PositionDataForStats[]):
+        | TradeStats
+        | Promise<TradeStats>;
+    (type: StatisticsType.CalcByPositionsVolume, prevStats: TradeStats, positions: ExtendedStatsPositionWithVolume[]):
+        | TradeStats
+        | Promise<TradeStats>;
     /**
      * @param volumes - must be sorted in ascending order
      */
@@ -35,5 +31,5 @@ export type CalcStatistics = {
 };
 
 export type StatisticsUtils = {
-    calcStatistics: CalcStatistics
+    calcStatistics: CalcStatistics;
 };
