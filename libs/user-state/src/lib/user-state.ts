@@ -53,4 +53,5 @@ export interface User {
     refreshTokenExpireAt?: string;
     roles: UserRolesList;
     settings: UserSettings;
+    lastActiveAt?: string;
 }

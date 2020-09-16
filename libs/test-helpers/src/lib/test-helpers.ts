@@ -60,7 +60,8 @@ export async function makeServiceRequest({
     input = {},
     apiKey = process.env.API_KEY,
     port = +process.env.PORT || +process.env.NODE_PORT || 3000,
-    entryPoint = `http://localhost:${port}/actions`
+    entryPoint = `http://localhost:${port}/actions`,
+    headers
 }: {
     actionName: string;
     userId?: string;
@@ -69,10 +70,11 @@ export async function makeServiceRequest({
     apiKey?: string;
     port?: number;
     entryPoint?: string;
+    headers?: { [key: string]: any }; 
 }) {
     return await ajax.post(
         `${entryPoint}/${actionName}`,
-        { "x-api-key": apiKey },
+        { "x-api-key": apiKey, ...headers },
         {
             action: { name: actionName },
             input,
