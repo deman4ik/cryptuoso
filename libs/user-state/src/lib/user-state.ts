@@ -1,8 +1,16 @@
-export interface UserSignals {
+import { TradeStats } from "@cryptuoso/trade-statistics";
+
+export enum UserAggrStatsTypes {
+    signal = "signal",
+    userRobot = "userRobot"
+}
+
+export interface UserAggrStats extends TradeStats {
     id: string;
-    robotId?: string;
-    userId?: string;
-    subscribedAt?: string;
+    userId: string;
+    exchange?: string;
+    asset?: string;
+    type: UserAggrStatsTypes;
 }
 
 export const enum UserRoles {

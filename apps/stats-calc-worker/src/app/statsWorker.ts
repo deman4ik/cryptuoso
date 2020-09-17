@@ -2,16 +2,16 @@ import { expose } from "threads/worker";
 import {
     calcStatistics,
     ExtendedStatsPosition,
-    ExtendedStatsPositionWithVolume,
-    SettingsVolume,
+    SettingsVolumes,
     TradeStats,
     //PositionDataForStats,
     PositionDirection
 } from "@cryptuoso/trade-statistics";
 import { round } from "@cryptuoso/helpers";
+import { ExtendedStatsPositionWithVolume } from "./service";
 import { StatisticsType } from "./statsWorkerTypes";
 
-const getVolume = (pos: ExtendedStatsPosition, volumes: SettingsVolume[]) =>
+const getVolume = (pos: ExtendedStatsPosition, volumes: SettingsVolumes) =>
     (volumes.find((el) => pos.entryDate >= el.activeFrom) || { volume: null }).volume;
 
 /* function prepareRobot(positions: PositionDataForStats[]) {
@@ -38,7 +38,7 @@ function prepareSignalByPositionsVolume(positions: ExtendedStatsPositionWithVolu
     });
 }
 
-function prepareSignalByItsVolumes(positions: ExtendedStatsPosition[], volumes: SettingsVolume[]) {
+function prepareSignalByItsVolumes(positions: ExtendedStatsPosition[], volumes: SettingsVolumes) {
     return positions.map((pos) => {
         const signalVolume = getVolume(pos, volumes);
         let profit = 0;
@@ -57,7 +57,7 @@ function prepareSignalByItsVolumes(positions: ExtendedStatsPosition[], volumes: 
 }
 
 const statisticUtils = {
-    calcStatistics(type: StatisticsType, prevStats: TradeStats, positions: any[], volumes?: SettingsVolume[]) {
+    calcStatistics(type: StatisticsType, prevStats: TradeStats, positions: any[], volumes?: SettingsVolumes) {
         if (type == StatisticsType.CalcByPositionsVolume) positions = prepareSignalByPositionsVolume(positions);
         else if (type == StatisticsType.CalcByProvidedVolumes)
             positions = prepareSignalByItsVolumes(positions, volumes);

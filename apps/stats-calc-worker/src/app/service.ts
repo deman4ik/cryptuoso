@@ -9,14 +9,12 @@ import { SqlSqlTokenType, QueryResultRowType } from "slonik";
 import {
     TradeStats,
     PositionDataForStats,
+    ExtendedStatsPosition,
     isTradeStats,
-    ExtendedStatsPositionWithDate,
-    ExtendedStatsPositionWithVolume,
-    SettingsVolume,
-    UserAggrStatsType,
-    TradeStatsWithId,
-    UserSignalStats
+    SettingsVolumes
 } from "@cryptuoso/trade-statistics";
+import { UserAggrStatsTypes } from "@cryptuoso/user-state";
+import { UserSignalStats } from "@cryptuoso/user-signals-state";
 import { StatsCalcJob, StatsCalcJobType } from "@cryptuoso/stats-calc-events";
 import dayjs from "@cryptuoso/dayjs";
 
@@ -36,6 +34,18 @@ export function getCalcFromAndInitStats(stats?: TradeStats, calcAll?: boolean) {
     }
 
     return { calcFrom, initStats };
+}
+
+export interface ExtendedStatsPositionWithVolume extends ExtendedStatsPosition {
+    volume: number;
+}
+
+interface ExtendedStatsPositionWithDate extends ExtendedStatsPosition {
+    entryDate: string;
+}
+
+interface TradeStatsWithId extends TradeStats {
+    id: string;
 }
 
 type QueryType = SqlSqlTokenType<QueryResultRowType<any>>;
@@ -183,7 +193,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         type: any,
         prevStats: TradeStats,
         positions: any[],
-        volumes?: SettingsVolume[]
+        volumes?: SettingsVolumes
     ) => {
         return await this.pool.queue(async (utils: StatisticsUtils) =>
             utils.calcStatistics(type, prevStats, positions, volumes)
@@ -724,7 +734,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 equity_avg
             FROM user_aggr_stats
             WHERE user_id = ${userId}
-                AND type = ${UserAggrStatsType.signal}
+                AND type = ${UserAggrStatsTypes.signal}
                 AND exchange ${!exchange ? sql`IS NULL` : sql`= ${exchange}`}
                 AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
         `);
@@ -791,7 +801,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 id: prevUserAggrStats?.id,
                 addFields: sql`user_id, exchange, asset, type`,
                 addFieldsValues: sql`${userId}, ${!exchange ? null : exchange}, ${!asset ? null : asset}, ${
-                    UserAggrStatsType.signal
+                    UserAggrStatsTypes.signal
                 }`
             },
             newStats,
@@ -879,7 +889,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 equity_avg
             FROM user_aggr_stats
             WHERE user_id = ${userId}
-                AND type = ${UserAggrStatsType.userRobot}
+                AND type = ${UserAggrStatsTypes.userRobot}
                 AND exchange ${!exchange ? sql`IS NULL` : sql`= ${exchange}`}
                 AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
         `);
@@ -931,7 +941,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 id: prevUserAggrStats?.id,
                 addFields: sql`user_id, exchange, asset, type`,
                 addFieldsValues: sql`${userId}, ${!exchange ? null : exchange}, ${!asset ? null : asset}, ${
-                    UserAggrStatsType.userRobot
+                    UserAggrStatsTypes.userRobot
                 }`
             },
             newStats,
