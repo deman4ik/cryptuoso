@@ -6,13 +6,12 @@ import {
     IndicatorCode,
     IndicatorType
 } from "@cryptuoso/robot-indicators";
-import { ValidTimeframe, Candle, CandleProps } from "@cryptuoso/market";
+import { ValidTimeframe, CandleProps, DBCandle, RobotPositionStatus } from "@cryptuoso/market";
 import { RobotWorkerEvents } from "@cryptuoso/robot-events";
 import { NewEvent } from "@cryptuoso/events";
 import { CANDLES_RECENT_AMOUNT } from "@cryptuoso/helpers";
-import logger from "@cryptuoso/logger";
-import { BaseStrategy, StrategyProps } from "./BaseStrategy";
-import { RobotPositionState, RobotPositionStatus } from "./RobotPosition";
+import { BaseStrategy, RobotSettings, StrategyProps, StrategySettings } from "./BaseStrategy";
+import { RobotPositionState } from "./RobotPosition";
 
 export const enum RobotStatus {
     pending = "pending",
@@ -22,12 +21,6 @@ export const enum RobotStatus {
     stopped = "stopped",
     paused = "paused",
     failed = "failed"
-}
-
-export interface RobotSettings {
-    strategyParameters?: { [key: string]: any };
-    volume?: number;
-    requiredHistoryMaxBars?: number;
 }
 
 export interface RobotTradeSettings {
@@ -55,48 +48,6 @@ export interface RobotHead {
     name?: string;
 }
 
-//TODO: move to another lib
-export interface RobotStatVals<T> {
-    all?: T;
-    long?: T;
-    short?: T;
-}
-
-export interface RobotStats {
-    lastUpdatedAt?: string;
-    performance?: { x: number; y: number }[];
-    tradesCount?: RobotStatVals<number>;
-    tradesWinning?: RobotStatVals<number>;
-    tradesLosing?: RobotStatVals<number>;
-    winRate?: RobotStatVals<number>;
-    lossRate?: RobotStatVals<number>;
-    avgBarsHeld?: RobotStatVals<number>;
-    avgBarsHeldWinning?: RobotStatVals<number>;
-    avgBarsHeldLosing?: RobotStatVals<number>;
-    netProfit?: RobotStatVals<number>;
-    avgNetProfit?: RobotStatVals<number>;
-    grossProfit?: RobotStatVals<number>;
-    avgProfit?: RobotStatVals<number>;
-    grossLoss?: RobotStatVals<number>;
-    avgLoss?: RobotStatVals<number>;
-    maxConnsecWins?: RobotStatVals<number>;
-    maxConsecLosses?: RobotStatVals<number>;
-    maxDrawdown?: RobotStatVals<number>;
-    maxDrawdownDate?: RobotStatVals<string>;
-    profitFactor?: RobotStatVals<number>;
-    recoveryFactor?: RobotStatVals<number>;
-    payoffRatio?: RobotStatVals<number>;
-}
-
-export interface RobotEquity {
-    profit?: number;
-    lastProfit?: number;
-    tradesCount?: number;
-    winRate?: number;
-    maxDrawdown?: number;
-    changes?: { x: number; y: number }[];
-}
-
 export interface RobotState extends RobotHead {
     exchange: string;
     asset: string;
@@ -104,17 +55,16 @@ export interface RobotState extends RobotHead {
     timeframe: ValidTimeframe;
     available?: number;
     strategyName: string;
-    settings: RobotSettings;
+    strategySettings: StrategySettings;
+    robotSettings: RobotSettings;
     tradeSettings?: RobotTradeSettings;
-    lastCandle?: Candle;
+    lastCandle?: DBCandle;
     state?: StrategyProps;
     hasAlerts?: boolean;
     indicators?: { [key: string]: IndicatorState };
     status?: RobotStatus;
     startedAt?: string;
     stoppedAt?: string;
-    statistics?: RobotStats;
-    equity?: RobotEquity;
     backtest?: boolean;
 }
 
@@ -136,16 +86,17 @@ export class Robot {
     _currency: string;
     _timeframe: ValidTimeframe;
     _strategyName: string;
-    _settings: { [key: string]: any };
-    _lastCandle: Candle;
+    _strategySettings: StrategySettings;
+    _robotSettings: RobotSettings;
+    _lastCandle: DBCandle;
     _strategy: StrategyProps;
     _strategyInstance: BaseStrategy;
     _indicatorInstances: { [key: string]: BaseIndicator };
     _hasAlerts: boolean;
     _indicators: { [key: string]: IndicatorState };
     _baseIndicatorsCode: { [key: string]: IndicatorCode };
-    _candle: Candle;
-    _candles: Candle[];
+    _candle: DBCandle;
+    _candles: DBCandle[];
     _candlesProps: CandleProps;
     _status: RobotStatus;
     _startedAt: string;
@@ -154,7 +105,6 @@ export class Robot {
     _postionsToSave: RobotPositionState[];
     _backtest: boolean;
     _error: any;
-    _log = logger.info;
 
     constructor(state: RobotState) {
         /* Идентификатор робота */
@@ -177,11 +127,13 @@ export class Robot {
         this._strategyName = state.strategyName;
 
         /* Настройки */
-        this._settings = {
-            strategyParameters: state.settings.strategyParameters || {},
-            requiredHistoryMaxBars: state.settings.requiredHistoryMaxBars || CANDLES_RECENT_AMOUNT,
-            volume: state.settings.volume || 1
+        this._robotSettings = {
+            requiredHistoryMaxBars: state.robotSettings.requiredHistoryMaxBars || CANDLES_RECENT_AMOUNT,
+            volume: state.robotSettings.volume || 1
         };
+
+        this._strategySettings = state.strategySettings || {};
+
         /* Последняя свеча */
         this._lastCandle = state.lastCandle;
         /* Состояне стратегии */
@@ -223,6 +175,10 @@ export class Robot {
 
     get hasClosedPositions() {
         return this._postionsToSave.filter(({ status }) => status === RobotPositionStatus.closed).length > 0;
+    }
+
+    get closedPositions() {
+        return this._postionsToSave.filter(({ status }) => status === RobotPositionStatus.closed);
     }
 
     get alertEventsToSend() {
@@ -296,7 +252,7 @@ export class Robot {
     }
 
     update(settings: RobotSettings) {
-        this._settings = { ...this._settings, ...settings };
+        this._robotSettings = { ...this._robotSettings, ...settings };
         this._eventsToSend.push({
             type: RobotWorkerEvents.UPDATED,
             data: {
@@ -326,7 +282,7 @@ export class Robot {
     }
 
     get requiredHistoryMaxBars() {
-        return this._settings.requiredHistoryMaxBars;
+        return this._robotSettings.requiredHistoryMaxBars;
     }
 
     get id() {
@@ -346,7 +302,7 @@ export class Robot {
     }
 
     get settings() {
-        return this._settings;
+        return this._robotSettings;
     }
 
     get statistics() {
@@ -403,8 +359,8 @@ export class Robot {
         // Создаем новый инстанс класса стратегии
         this._strategyInstance = new BaseStrategy({
             initialized: strategyState.initialized,
-            parameters: this._settings.strategyParameters,
-            robotSettings: this._settings,
+            strategySettings: this._strategySettings,
+            robotSettings: this._robotSettings,
             exchange: this._exchange,
             asset: this._asset,
             currency: this._currency,
@@ -457,7 +413,7 @@ export class Robot {
                         asset: this._asset,
                         currency: this._currency,
                         timeframe: this._timeframe,
-                        robotSettings: this._settings,
+                        robotSettings: this._robotSettings,
                         robotId: this._id,
                         parametersSchema,
                         indicatorFunctions, // функции индикатора
@@ -474,7 +430,7 @@ export class Robot {
                         asset: this._asset,
                         currency: this._currency,
                         timeframe: this._timeframe,
-                        robotSettings: this._settings,
+                        robotSettings: this._robotSettings,
                         robotId: this._id,
                         parameters: indicator.parameters,
                         ...indicator // стейт индикатора
@@ -597,7 +553,7 @@ export class Robot {
         this.getStrategyState();
     }
 
-    handleHistoryCandles(candles: Candle[]) {
+    handleHistoryCandles(candles: DBCandle[]) {
         this._candles = candles;
     }
 
@@ -623,7 +579,7 @@ export class Robot {
         });
     }
 
-    handleCandle(candle: Candle) {
+    handleCandle(candle: DBCandle) {
         if (this._lastCandle && candle.id === this._lastCandle.id) {
             return {
                 success: false,
@@ -633,7 +589,7 @@ export class Robot {
         if (this._candles.filter(({ time }) => time === candle.time).length === 0) {
             this._candles = [...this._candles, candle];
         }
-        this._candles = this._candles.slice(-this._settings.requiredHistoryMaxBars);
+        this._candles = this._candles.slice(-this._robotSettings.requiredHistoryMaxBars);
         this._candle = candle;
         if (!this._lastCandle && this._candles.length > 1) this._lastCandle = this._candles[this._candles.length - 2];
         this._prepareCandles();
@@ -653,7 +609,7 @@ export class Robot {
         return { success: true };
     }
 
-    handleCurrentCandle(candle: Candle) {
+    handleCurrentCandle(candle: DBCandle) {
         this._candle = candle;
     }
 
@@ -722,7 +678,8 @@ export class Robot {
             currency: this._currency,
             timeframe: this._timeframe,
             strategyName: this._strategyName,
-            settings: this._settings,
+            strategySettings: this._strategySettings,
+            robotSettings: this._robotSettings,
             lastCandle: this._lastCandle,
             hasAlerts: this._hasAlerts,
             status: this._status,

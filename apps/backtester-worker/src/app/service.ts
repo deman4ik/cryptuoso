@@ -1,21 +1,21 @@
 import { DataStream } from "scramjet";
-import { Worker, Job } from "bullmq";
+import { Worker, Job, QueueBase } from "bullmq";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import dayjs from "@cryptuoso/dayjs";
 import { BaseError } from "@cryptuoso/errors";
-import { BacktesterState, Backtester } from "@cryptuoso/backtester-state";
+import { BacktesterState, Backtester, Status } from "@cryptuoso/backtester-state";
 import requireFromString from "require-from-string";
 import { StrategyCode } from "@cryptuoso/robot-state";
 import { IndicatorCode } from "@cryptuoso/robot-indicators";
 import { ValidTimeframe, Candle, DBCandle } from "@cryptuoso/market";
 import { sortAsc, sleep } from "@cryptuoso/helpers";
-import { pg, pgUtil } from "@cryptuoso/postgres";
+import { makeChunksGenerator, pg, pgUtil, sql } from "@cryptuoso/postgres";
 
 export type BacktesterWorkerServiceConfig = BaseServiceConfig;
 
 export default class BacktesterWorkerService extends BaseService {
-    pgJs: typeof pg;
     abort: { [key: string]: boolean } = {};
+    defaultChunkSize = 500;
     constructor(config?: BacktesterWorkerServiceConfig) {
         super(config);
         try {
@@ -26,16 +26,15 @@ export default class BacktesterWorkerService extends BaseService {
                     unbalanced: true
                 }
             });*/
-            this.pgJs = pgUtil.createJSPool();
-            this.addOnStopHandler(this.onStopService);
+            // this.addOnStopHandler(this.onStopService);
         } catch (err) {
             this.log.error("Error in BacktesterWorkerService constructor", err);
         }
     }
 
-    async onStopService(): Promise<void> {
-        await this.pgJs.end();
-    }
+    /* async onStopService(): Promise<void> {
+        
+    }*/
 
     /*pause({ id }: BacktesterWorkerPause): void {
         this.abort[id] = true;
@@ -44,10 +43,12 @@ export default class BacktesterWorkerService extends BaseService {
     #loadStrategyCode = async (strategyName: string, local: boolean) => {
         let strategyCode: StrategyCode;
         if (local) {
+            this.log.debug(`Loading local strategy ${strategyName}`);
             strategyCode = await import(`../../../../strategies/${strategyName}`);
         } else {
+            this.log.debug(`Loading remote strategy ${strategyName}`);
             const { file }: { file: string } = await this.db.pg.one(
-                this.db.sql`select file from strategies where id = ${strategyName}`
+                sql`select file from strategies where id = ${strategyName}`
             );
             strategyCode = requireFromString(file);
         }
@@ -63,7 +64,7 @@ export default class BacktesterWorkerService extends BaseService {
                     code = await import(`../../../../indicators/${fileName}`);
                 } else {
                     const { file }: { file: string } = await this.db.pg.one(
-                        this.db.sql`select file from indicators where id = ${fileName}`
+                        sql`select file from indicators where id = ${fileName}`
                     );
                     code = requireFromString(file);
                 }
@@ -82,8 +83,8 @@ export default class BacktesterWorkerService extends BaseService {
         limit: number
     ): Promise<Candle[]> => {
         const requiredCandles: DBCandle[] = await this.db.pg.many(
-            this.db.sql`select *
-            from ${this.db.sql.identifier([`candles${timeframe}`])}
+            sql`select *
+            from ${sql.identifier([`candles${timeframe}`])}
             where
             exchange = ${exchange}
             and asset = ${asset}
@@ -162,45 +163,86 @@ export default class BacktesterWorkerService extends BaseService {
                 });*/
                 return backtester.state;
         } catch (err) {
-            this.log.error(`Error while processing job ${job.id}`, err);
+            this.log.error(`Error while processing job ${job.id}`, err.message);
             throw err;
         }
     };
 
     async run(job: Job<BacktesterState, BacktesterState>, backtester: Backtester): Promise<void> {
         try {
-            await this.pgJs.stream(
-                this.db.sql`select * from candles1440 where exchange = 'binance_futures' and asset = 'BTC' limit 10`,
-                async (stream) => {
-                    await DataStream.from(stream, { maxParallel: 1 })
-                        .map(async (data: { row: DBCandle }) => {
-                            const { row: candle } = data;
+            const query = sql`${sql.identifier([`candles${backtester.timeframe}`])} 
+              WHERE exchange = ${backtester.exchange}
+              AND asset = ${backtester.asset}
+              AND currency = ${backtester.currency} 
+              AND timestamp >= ${backtester.dateFrom}
+              AND timestamp <= ${backtester.dateTo}
+              AND type != 'previous'`;
+            const candlesCount: number = +(await this.db.pg.oneFirst(sql`
+               SELECT COUNT(*) FROM ${query}`));
+            backtester.init(candlesCount);
+            await DataStream.from(
+                makeChunksGenerator(
+                    this.db.pg,
+                    sql`SELECT * FROM ${query} ORDER BY time`,
+                    candlesCount > this.defaultChunkSize ? this.defaultChunkSize : candlesCount
+                )
+            )
+                .flatMap((i) => i)
+                .each(async (candle: DBCandle) => {
+                    await backtester.handleCandle(candle);
+                    backtester.incrementProgress();
+                })
+                .whenEnd();
 
-                            //   await sleep(1000);
-                            this.log.info(data.row.timestamp);
-                        })
-                        .whenEnd();
-                }
-            );
+            Object.entries(backtester.robots).forEach(([id, robot]) => {
+                this.log.info("alerts", robot.data.alerts.length);
+                this.log.info("trades", robot.data.trades.length);
+                this.log.info("positions", Object.keys(robot.data.positions).length);
+            });
         } catch (err) {
-            this.log.error(`Backtester #${backtester.id} - Failed`, err);
+            this.log.error(`Backtester #${backtester.id} - Failed`, err.message);
             throw err;
         }
     }
 
     async test(): Promise<void> {
         try {
-            await this.pgJs.stream(
-                this.db.sql`select * from candles1440 where exchange = 'binance_futures' and asset = 'BTC' limit 2`,
-                async (stream) => {
-                    await DataStream.from(stream, { maxParallel: 1 })
-                        .map(async (data: { row: DBCandle }) => {
-                            //   await sleep(1000);
-                            this.log.info(data.row.timestamp);
-                        })
-                        .whenEnd();
-                }
+            const job = new Job(
+                new QueueBase("test"),
+                "test",
+                new Backtester({
+                    id: "test",
+                    robotId: "test",
+                    exchange: "binance_futures",
+                    asset: "BTC",
+                    currency: "USDT",
+                    strategyName: "breakout",
+                    timeframe: 5,
+                    settings: {
+                        local: true,
+                        populateHistory: false,
+                        saveAlerts: false,
+                        savePositions: true,
+                        saveLogs: false
+                    },
+                    strategySettings: {
+                        ["test"]: {
+                            adxHigh: 30,
+                            lookback: 10,
+                            adxPeriod: 25,
+                            trailBars: 1
+                        }
+                    },
+                    robotSettings: {
+                        volume: 0.002,
+                        requiredHistoryMaxBars: 300
+                    },
+                    dateFrom: "2020-09-15T00:00:00.000Z",
+                    dateTo: "2020-09-15T20:15:00.000Z",
+                    status: Status.queued
+                }).state
             );
+            await this.#process(job);
         } catch (err) {
             this.log.error(err);
         }

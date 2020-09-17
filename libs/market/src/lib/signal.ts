@@ -1,4 +1,5 @@
 import { TradeAction, OrderType } from "@cryptuoso/market";
+import { ValidTimeframe } from "./timeframe";
 
 export const enum SignalType {
     alert = "alert",
@@ -19,4 +20,14 @@ export interface SignalInfo extends AlertInfo {
     positionCode: string;
     positionParentId?: string;
     positionBarsHeld?: number;
+}
+
+export interface SignalEvent extends SignalInfo {
+    id: string;
+    robotId: string;
+    exchange: string;
+    asset: string;
+    currency: string;
+    timeframe: ValidTimeframe;
+    timestamp: string;
 }

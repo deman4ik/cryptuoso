@@ -40,7 +40,9 @@
             "@cryptuoso/user-state": ["libs/user-state/src/index.ts"],
             "@cryptuoso/mail": ["libs/mail/src/index.ts"],
             "@cryptuoso/stats-calc-events": ["libs/stats-calc-events/src/index.ts"],
-            "@cryptuoso/test-helpers": ["libs/test-helpers/src/index.ts"]
+            "@cryptuoso/test-helpers": ["libs/test-helpers/src/index.ts"],
+            "@cryptuoso/user-signals-state": ["libs/user-signals-state/src/index.ts"],
+            "@cryptuoso/user-robots-state": ["libs/user-robots-state/src/index.ts"]
         }
     },
     "exclude": ["node_modules", "tmp"]
