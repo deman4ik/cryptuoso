@@ -162,16 +162,11 @@ export interface UserAggrStats extends TradeStats {
     type: UserAggrStatsType;
 }
 
-export interface TradeStatsWithExists extends TradeStats {
-    statsExists: any;
-}
-
-export interface TradeStatsWithExistsAndId extends TradeStatsWithExists {
+export interface TradeStatsWithId extends TradeStats {
     id: string;
 }
 
-export type UserSignalStatsWithExists = UserSignalWithVolumes & TradeStatsWithExists;
-export type UserAggrStatsWithExists = UserAggrStats & TradeStatsWithExists;
+export type UserSignalStats = UserSignalWithVolumes & TradeStats;
 
 // It is now expected that every value is rounded after each cumulative calculatuion
 export function calcStatistics(previousRobotStatistics: TradeStats, positions: PositionDataForStats[]): TradeStats {

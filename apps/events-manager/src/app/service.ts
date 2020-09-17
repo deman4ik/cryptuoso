@@ -1,7 +1,8 @@
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
-import { CloudEvent } from 'cloudevents';
-import { BASE_REDIS_PREFIX } from '../../../../libs/events/src/lib/catalog';
+import { CloudEvent } from "cloudevents";
+//import { BASE_REDIS_PREFIX } from "../../../../libs/events/src/lib/catalog";
 
+const BASE_REDIS_PREFIX = "cpz:events:";
 const DEAD_LETTER_TOPIC = "test-events-e2e-dead-letter";
 const TEST_TOPIC = "test_topic";
 
@@ -35,8 +36,14 @@ export default class EventsManager extends BaseService {
                 data: { foo: "bar" }
             }); */
 
-            const deadLetters = await this.redis.xread("COUNT", 100, "STREAMS", `${BASE_REDIS_PREFIX}${DEAD_LETTER_TOPIC}`, "0");
-            
+            const deadLetters = await this.redis.xread(
+                "COUNT",
+                100,
+                "STREAMS",
+                `${BASE_REDIS_PREFIX}${DEAD_LETTER_TOPIC}`,
+                "0"
+            );
+
             console.warn(JSON.stringify(deadLetters, null, 3));
         }, 5e3);
     }
@@ -45,7 +52,7 @@ export default class EventsManager extends BaseService {
         console.warn("Dead Letter");
         console.log(event);
     }
-    
+
     async _testHandler(event: CloudEvent) {
         console.log(event);
         throw new Error("Test error");

@@ -3,8 +3,7 @@ import {
     TradeStats,
     TradeStatsClass,
     isTradeStats,
-    PositionDataForStats,
-    TradeStatsWithExists
+    PositionDataForStats
 } from "@cryptuoso/trade-statistics";
 import dayjs from "@cryptuoso/dayjs";
 import { pg } from "@cryptuoso/postgres";
@@ -73,7 +72,7 @@ function makeJob(name: string, data: StatsCalcJob = {}) {
 }
 
 describe("getCalcFromAndInitStats function", () => {
-    const robotStatsWithLastPosDate = new TradeStatsClass() as TradeStatsWithExists;
+    const robotStatsWithLastPosDate = new TradeStatsClass();
 
     robotStatsWithLastPosDate.lastPositionExitDate = dayjs().toISOString();
 
@@ -106,7 +105,7 @@ describe("getCalcFromAndInitStats function", () => {
 
     describe("stats is wrong object, calcAll = null", () => {
         test("Should returns nulls", () => {
-            const wrongStats = {} as TradeStatsWithExists;
+            const wrongStats = {} as TradeStats;
             const { calcFrom, initStats } = getCalcFromAndInitStats(wrongStats, null);
 
             expect(calcFrom).toStrictEqual(null);
@@ -114,29 +113,9 @@ describe("getCalcFromAndInitStats function", () => {
         });
     });
 
-    describe("stats is wrong with `statsExists` property, calcAll = null", () => {
+    describe("stats is right, calcAll = true", () => {
         test("Should returns nulls", () => {
-            const wrongStats = {} as TradeStatsWithExists;
-            wrongStats.statsExists = "id";
-            const { calcFrom, initStats } = getCalcFromAndInitStats(wrongStats, null);
-
-            expect(calcFrom).toStrictEqual(null);
-            expect(initStats).toStrictEqual(null);
-        });
-    });
-
-    describe("stats is right w/o `statsExists` property, calcAll = false", () => {
-        test("Should returns nulls", () => {
-            const { calcFrom, initStats } = getCalcFromAndInitStats(robotStatsWithLastPosDate, false);
-
-            expect(calcFrom).toStrictEqual(null);
-            expect(initStats).toStrictEqual(null);
-        });
-    });
-
-    describe("stats is right with `statsExists` property, calcAll = true", () => {
-        test("Should returns nulls", () => {
-            const rightStats: TradeStatsWithExists = { ...robotStatsWithLastPosDate, statsExists: "id" };
+            const rightStats: TradeStats = { ...robotStatsWithLastPosDate };
             const { calcFrom, initStats } = getCalcFromAndInitStats(rightStats, true);
 
             expect(calcFrom).toStrictEqual(null);
@@ -144,9 +123,9 @@ describe("getCalcFromAndInitStats function", () => {
         });
     });
 
-    describe("stats is right with `statsExists` property, calcAll = false", () => {
+    describe("stats is right, calcAll = false", () => {
         test("Should returns right calcFrom date and initStats typeof TradeStats", () => {
-            const rightStats: TradeStatsWithExists = { ...robotStatsWithLastPosDate, statsExists: "id" };
+            const rightStats: TradeStats = { ...robotStatsWithLastPosDate };
             const { calcFrom, initStats } = getCalcFromAndInitStats(rightStats, false);
 
             expect(calcFrom).toStrictEqual(rightStats.lastPositionExitDate);

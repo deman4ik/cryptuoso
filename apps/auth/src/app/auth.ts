@@ -215,7 +215,7 @@ export class Auth {
 
     async refreshToken(params: { refreshToken: string }) {
         const user: User = await this.#db.getUserByToken(params);
-        
+
         if (!user)
             throw new ActionsHandlerError(
                 "Refresh token expired or user account is not found.",

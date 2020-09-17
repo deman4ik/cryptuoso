@@ -69,6 +69,11 @@ spec:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
                                 key: REDISCS
+                      - name: JOBS_CONCURRENCY
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: JOBS_CONCURRENCY
                   ports:
                       - containerPort: 3000
                         protocol: TCP
