@@ -9,6 +9,8 @@ import { BaseError } from "@cryptuoso/errors";
 import { EventsCatalog, EventHandler, BASE_REDIS_PREFIX } from "./catalog";
 import dayjs from "@cryptuoso/dayjs";
 
+export { BASE_REDIS_PREFIX } from "./catalog";
+
 export { CloudEventV1 as Event };
 export interface NewEvent<T> {
     type: string;
@@ -36,7 +38,7 @@ const BLOCK_TIMEOUT = 60000;
 const PENDING_INTERVAL = 15000;
 const PENDING_RETRY_RATE = 30;
 const PENDING_MAX_RETRIES = 3;
-const DEAD_LETTER_TOPIC = "dead-letter";
+export const DEAD_LETTER_TOPIC = "dead-letter";
 
 type StreamMsgVals = string[];
 type StreamMessage = [string, StreamMsgVals];
