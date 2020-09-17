@@ -1,10 +1,5 @@
 import Service, { getCalcFromAndInitStats } from "../app/service";
-import {
-    TradeStats,
-    TradeStatsClass,
-    isTradeStats,
-    PositionDataForStats
-} from "@cryptuoso/trade-statistics";
+import { TradeStats, TradeStatsClass, isTradeStats, PositionDataForStats } from "@cryptuoso/trade-statistics";
 import dayjs from "@cryptuoso/dayjs";
 import { pg } from "@cryptuoso/postgres";
 import { setProperty, getProperty } from "@cryptuoso/test-helpers";
