@@ -1,6 +1,6 @@
 import { chunkArrayIncrEnd, validate } from "@cryptuoso/helpers";
 import { ValidationSchema } from "fastest-validator";
-import { Candle, CandleProps } from "@cryptuoso/market";
+import { CandleProps, DBCandle } from "@cryptuoso/market";
 import { NewEvent } from "@cryptuoso/events";
 import { RobotWorkerEvents } from "@cryptuoso/robot-events";
 import tulip from "./tulip/create";
@@ -42,8 +42,8 @@ export class BaseIndicator {
     _robotSettings: {
         [key: string]: any;
     };
-    _candle: Candle;
-    _candles: Candle[];
+    _candle: DBCandle;
+    _candles: DBCandle[];
     _candlesProps: CandleProps;
     _indicators: {
         [key: string]: any;
@@ -120,7 +120,7 @@ export class BaseIndicator {
         return Promise.resolve();
     }
 
-    prepareCandles(candles: Candle[]) {
+    prepareCandles(candles: DBCandle[]) {
         const candlesProps: CandleProps = {
             open: [],
             high: [],
@@ -268,7 +268,7 @@ export class BaseIndicator {
     }
     */
 
-    _handleCandles(candle: Candle, candles: Candle[], candlesProps: CandleProps) {
+    _handleCandles(candle: DBCandle, candles: DBCandle[], candlesProps: CandleProps) {
         if (
             !candle ||
             !candles ||

@@ -6,12 +6,12 @@ import {
     IndicatorCode,
     IndicatorType
 } from "@cryptuoso/robot-indicators";
-import { ValidTimeframe, Candle, CandleProps } from "@cryptuoso/market";
+import { ValidTimeframe, CandleProps, DBCandle, RobotPositionStatus } from "@cryptuoso/market";
 import { RobotWorkerEvents } from "@cryptuoso/robot-events";
 import { NewEvent } from "@cryptuoso/events";
 import { CANDLES_RECENT_AMOUNT } from "@cryptuoso/helpers";
 import { BaseStrategy, RobotSettings, StrategyProps, StrategySettings } from "./BaseStrategy";
-import { RobotPositionState, RobotPositionStatus } from "./RobotPosition";
+import { RobotPositionState } from "./RobotPosition";
 
 export const enum RobotStatus {
     pending = "pending",
@@ -58,7 +58,7 @@ export interface RobotState extends RobotHead {
     strategySettings: StrategySettings;
     robotSettings: RobotSettings;
     tradeSettings?: RobotTradeSettings;
-    lastCandle?: Candle;
+    lastCandle?: DBCandle;
     state?: StrategyProps;
     hasAlerts?: boolean;
     indicators?: { [key: string]: IndicatorState };
@@ -88,15 +88,15 @@ export class Robot {
     _strategyName: string;
     _strategySettings: StrategySettings;
     _robotSettings: RobotSettings;
-    _lastCandle: Candle;
+    _lastCandle: DBCandle;
     _strategy: StrategyProps;
     _strategyInstance: BaseStrategy;
     _indicatorInstances: { [key: string]: BaseIndicator };
     _hasAlerts: boolean;
     _indicators: { [key: string]: IndicatorState };
     _baseIndicatorsCode: { [key: string]: IndicatorCode };
-    _candle: Candle;
-    _candles: Candle[];
+    _candle: DBCandle;
+    _candles: DBCandle[];
     _candlesProps: CandleProps;
     _status: RobotStatus;
     _startedAt: string;
@@ -175,6 +175,10 @@ export class Robot {
 
     get hasClosedPositions() {
         return this._postionsToSave.filter(({ status }) => status === RobotPositionStatus.closed).length > 0;
+    }
+
+    get closedPositions() {
+        return this._postionsToSave.filter(({ status }) => status === RobotPositionStatus.closed);
     }
 
     get alertEventsToSend() {
@@ -549,7 +553,7 @@ export class Robot {
         this.getStrategyState();
     }
 
-    handleHistoryCandles(candles: Candle[]) {
+    handleHistoryCandles(candles: DBCandle[]) {
         this._candles = candles;
     }
 
@@ -575,7 +579,7 @@ export class Robot {
         });
     }
 
-    handleCandle(candle: Candle) {
+    handleCandle(candle: DBCandle) {
         if (this._lastCandle && candle.id === this._lastCandle.id) {
             return {
                 success: false,
@@ -605,7 +609,7 @@ export class Robot {
         return { success: true };
     }
 
-    handleCurrentCandle(candle: Candle) {
+    handleCurrentCandle(candle: DBCandle) {
         this._candle = candle;
     }
 

@@ -2,8 +2,16 @@ import { ValidationSchema } from "fastest-validator";
 import dayjs from "@cryptuoso/dayjs";
 import { v4 as uuid } from "uuid";
 import { validate, sortAsc } from "@cryptuoso/helpers";
-import { RobotPosition, RobotPositionStatus, RobotPositionState } from "./RobotPosition";
-import { Candle, CandleProps, OrderType, TradeAction, ValidTimeframe, SignalInfo } from "@cryptuoso/market";
+import { RobotPosition, RobotPositionState } from "./RobotPosition";
+import {
+    CandleProps,
+    OrderType,
+    TradeAction,
+    ValidTimeframe,
+    SignalInfo,
+    DBCandle,
+    RobotPositionStatus
+} from "@cryptuoso/market";
 import { IndicatorState, IndicatorType } from "@cryptuoso/robot-indicators";
 import { NewEvent } from "@cryptuoso/events";
 import { RobotWorkerEvents, Signal } from "@cryptuoso/robot-events";
@@ -55,8 +63,8 @@ export class BaseStrategy {
     _positions: { [key: string]: RobotPosition };
     _parametersSchema: ValidationSchema;
     _backtest?: boolean;
-    _candle: Candle;
-    _candles: Candle[];
+    _candle: DBCandle;
+    _candles: DBCandle[];
     _candlesProps: CandleProps;
     _indicators: {
         [key: string]: IndicatorState;
@@ -202,23 +210,9 @@ export class BaseStrategy {
     }
     /** POSITIONS */
 
-    _positionsHandleCandle(candle: Candle) {
+    _positionsHandleCandle(candle: DBCandle) {
         if (Object.keys(this._positions).length > 0) {
             Object.keys(this._positions).forEach((key) => {
-                /*   if (
-          this._candlesProps &&
-          this._candlesProps.high &&
-          this._candlesProps.low &&
-          this._positions[key].isActive &&
-          (this._positions[key].highestHigh === null ||
-            this._positions[key].lowestLow === null)
-        ) {
-          this._positions[key]._initHighLow(
-            candle.timestamp,
-            this._candlesProps.high,
-            this._candlesProps.low
-          );
-        }*/
                 this._positions[key]._handleCandle(candle);
             });
         }
@@ -341,7 +335,7 @@ export class BaseStrategy {
         });
     }
 
-    _handleCandles(candle: Candle, candles: Candle[], candlesProps: CandleProps) {
+    _handleCandles(candle: DBCandle, candles: DBCandle[], candlesProps: CandleProps) {
         this._candle = candle;
         this._candles = candles;
         this._candlesProps = candlesProps;

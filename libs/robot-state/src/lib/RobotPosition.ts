@@ -1,31 +1,18 @@
 import { sortAsc, round } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
-import { TradeAction, OrderType, SignalType, AlertInfo, SignalInfo, Candle, ValidTimeframe } from "@cryptuoso/market";
-
-export const enum PositionDirection {
-    long = "long",
-    short = "short"
-}
-
-export interface PositionDataForStats {
-    id: string;
-    direction?: PositionDirection;
-    exitDate?: string;
-    profit?: number;
-    barsHeld?: number;
-}
-
-export const enum RobotPositionStatus {
-    new = "new",
-    open = "open",
-    closed = "closed"
-}
-
-export const enum RobotTradeStatus {
-    new = "new",
-    open = "open",
-    closed = "closed"
-}
+import {
+    TradeAction,
+    OrderType,
+    SignalType,
+    AlertInfo,
+    SignalInfo,
+    ValidTimeframe,
+    DBCandle,
+    PositionDirection,
+    RobotPositionStatus,
+    RobotTradeStatus,
+    BasePosition
+} from "@cryptuoso/market";
 
 interface RobotsPostionInternalState {
     [key: string]: any;
@@ -34,13 +21,9 @@ interface RobotsPostionInternalState {
     stop?: number;
 }
 
-export interface RobotPositionState {
-    id: string;
+export interface RobotPositionState extends BasePosition {
     robotId: string;
-    timeframe: ValidTimeframe;
     volume: number;
-    prefix: string;
-    code: string;
     parentId?: string;
     direction?: PositionDirection;
     status?: RobotPositionStatus;
@@ -97,7 +80,7 @@ export class RobotPosition {
     private _fee: number;
     private _backtest?: boolean;
     private _internalState: RobotsPostionInternalState;
-    private _candle?: Candle;
+    private _candle?: DBCandle;
     private _alertsToPublish: SignalInfo[];
     private _tradeToPublish: SignalInfo;
     _log = console.log;
@@ -262,24 +245,6 @@ export class RobotPosition {
         this._alerts = {};
     }
 
-    /*_initHighLow(timestamp: string, highs: number[], lows: number[]) {
-    if (
-      this._status === RobotPositionStatus.open &&
-      (!this.highestHigh || !this.lowestLow)
-    ) {
-      let barsHeld =
-        +round(
-          dayjs
-            .utc(timestamp)
-            .diff(dayjs.utc(this._entryCandleTimestamp), TimeUnit.minute) /
-            this._timeframe
-        ) + 1;
-
-      this._internalState.highestHigh = Math.max(...highs.slice(-barsHeld));
-      this._internalState.lowestLow = Math.min(...lows.slice(-barsHeld));
-    }
-  }*/
-
     _calcStats() {
         if (this._direction === PositionDirection.long) {
             this._profit = +round((this._exitPrice - this._entryPrice) * this._volume, 6);
@@ -291,7 +256,7 @@ export class RobotPosition {
         );
     }
 
-    _handleCandle(candle: Candle) {
+    _handleCandle(candle: DBCandle) {
         this._candle = candle;
         if (this._status === RobotPositionStatus.open) {
             this._internalState.highestHigh = Math.max(this._internalState.highestHigh || -Infinity, this._candle.high);

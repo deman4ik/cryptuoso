@@ -74,6 +74,10 @@ export const BacktesterRunnerSchema = {
                     type: "boolean",
                     default: false
                 },
+                saveAlerts: {
+                    type: "boolean",
+                    default: true
+                },
                 savePositions: {
                     type: "boolean",
                     default: true
@@ -155,6 +159,10 @@ export const BacktesterRunnerSchema = {
                 populateHistory: {
                     type: "boolean",
                     default: false
+                },
+                saveAlerts: {
+                    type: "boolean",
+                    default: true
                 },
                 savePositions: {
                     type: "boolean",
@@ -239,7 +247,8 @@ export interface BacktesterRunnerStartMany {
     dateFrom?: string;
     dateTo?: string;
     settings: BacktesterSettings;
-    strategySettings?: StrategySettings[]; //TODO settings generator
+    strategySettingsRange?: { [key: string]: any }; //TODO settings generator
+    strategySettings?: StrategySettings[];
     robotSettings?: RobotSettings;
 }
 

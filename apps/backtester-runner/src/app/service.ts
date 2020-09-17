@@ -52,7 +52,7 @@ export default class BacktesterRunnerService extends HTTPService {
                     schema: BacktesterRunnerSchema[BacktesterRunnerEvents.START]
                 },
                 [BacktesterRunnerEvents.START_MANY]: {
-                    handler: this.startMany.bind(this),
+                    handler: this.start.bind(this),
                     schema: BacktesterRunnerSchema[BacktesterRunnerEvents.START_MANY]
                 },
                 [BacktesterRunnerEvents.STOP]: {
@@ -81,6 +81,19 @@ export default class BacktesterRunnerService extends HTTPService {
         req: {
             body: {
                 input: BacktesterRunnerStart;
+            };
+        },
+        res: any
+    ) {
+        const result = await this.start(req.body.input);
+        res.send(result);
+        res.end();
+    }
+
+    async startManyHTTPHandler(
+        req: {
+            body: {
+                input: BacktesterRunnerStartMany;
             };
         },
         res: any
@@ -126,7 +139,7 @@ export default class BacktesterRunnerService extends HTTPService {
                  limit ${limit} `
         ));
 
-    async start(params: BacktesterRunnerStart) {
+    async start(params: BacktesterRunnerStart | BacktesterRunnerStartMany) {
         const id: string = params.id || uuid();
 
         try {
@@ -194,8 +207,22 @@ export default class BacktesterRunnerService extends HTTPService {
                 robotSettings = { ...robot.robotSettings };
             }
 
-            if (params.strategySettings) {
+            /*
+            if ("strategySettingsRange" in params) {
+                //TODO: generate strategySettings from range
+            }
+            */
+
+            const allStrategySettings: { [key: string]: StrategySettings } = {};
+            if (params.strategySettings && !Array.isArray(params.strategySettings)) {
                 strategySettings = { ...strategySettings, ...params.strategySettings };
+                allStrategySettings[params.robotId || id] = strategySettings;
+            }
+
+            if (params.strategySettings && Array.isArray(params.strategySettings)) {
+                params.strategySettings.forEach((settings) => {
+                    allStrategySettings[uuid()] = settings;
+                });
             }
 
             if (params.robotSettings) {
@@ -230,14 +257,12 @@ export default class BacktesterRunnerService extends HTTPService {
 
             const backtester = new Backtester({
                 id,
-                robotId: params.robotId,
+                robotId: params.robotId || id,
                 ...robotParams,
                 dateFrom: params.dateFrom,
                 dateTo: params.dateTo,
                 settings: params.settings,
-                strategySettings: {
-                    [id]: strategySettings
-                },
+                strategySettings: allStrategySettings,
                 robotSettings,
                 status: Status.queued
             });
@@ -253,28 +278,6 @@ export default class BacktesterRunnerService extends HTTPService {
                 type: BacktesterWorkerEvents.FAILED,
                 data: { id, error: error.message }
             });
-            throw error;
-        }
-    }
-
-    async startManyHTTPHandler(
-        req: {
-            body: {
-                input: BacktesterRunnerStartMany;
-            };
-        },
-        res: any
-    ) {
-        const result = await this.startMany(req.body.input);
-        res.send(result);
-        res.end();
-    }
-
-    async startMany(params: BacktesterRunnerStartMany) {
-        try {
-            //TODO
-        } catch (error) {
-            this.log.error(error);
             throw error;
         }
     }

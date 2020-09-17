@@ -10,13 +10,12 @@ import { IndicatorCode } from "@cryptuoso/robot-indicators";
 import { ValidTimeframe, Candle, DBCandle } from "@cryptuoso/market";
 import { sortAsc, sleep } from "@cryptuoso/helpers";
 import { makeChunksGenerator, pg, pgUtil, sql } from "@cryptuoso/postgres";
-import logger from "@cryptuoso/logger";
 
 export type BacktesterWorkerServiceConfig = BaseServiceConfig;
 
 export default class BacktesterWorkerService extends BaseService {
     abort: { [key: string]: boolean } = {};
-    defaultChunkSize = 2;
+    defaultChunkSize = 500;
     constructor(config?: BacktesterWorkerServiceConfig) {
         super(config);
         try {
@@ -180,6 +179,7 @@ export default class BacktesterWorkerService extends BaseService {
               AND type != 'previous'`;
             const candlesCount: number = +(await this.db.pg.oneFirst(sql`
                SELECT COUNT(*) FROM ${query}`));
+            backtester.init(candlesCount);
             await DataStream.from(
                 makeChunksGenerator(
                     this.db.pg,
@@ -188,10 +188,17 @@ export default class BacktesterWorkerService extends BaseService {
                 )
             )
                 .flatMap((i) => i)
-                .map(async (data: DBCandle) => {
-                    this.log.info(data);
+                .each(async (candle: DBCandle) => {
+                    await backtester.handleCandle(candle);
+                    backtester.incrementProgress();
                 })
                 .whenEnd();
+
+            Object.entries(backtester.robots).forEach(([id, robot]) => {
+                this.log.info("alerts", robot.data.alerts.length);
+                this.log.info("trades", robot.data.trades.length);
+                this.log.info("positions", Object.keys(robot.data.positions).length);
+            });
         } catch (err) {
             this.log.error(`Backtester #${backtester.id} - Failed`, err.message);
             throw err;
@@ -214,7 +221,8 @@ export default class BacktesterWorkerService extends BaseService {
                     settings: {
                         local: true,
                         populateHistory: false,
-                        savePositions: false,
+                        saveAlerts: false,
+                        savePositions: true,
                         saveLogs: false
                     },
                     strategySettings: {
@@ -230,7 +238,7 @@ export default class BacktesterWorkerService extends BaseService {
                         requiredHistoryMaxBars: 300
                     },
                     dateFrom: "2020-09-15T00:00:00.000Z",
-                    dateTo: "2020-09-15T00:15:00.000Z",
+                    dateTo: "2020-09-15T20:15:00.000Z",
                     status: Status.queued
                 }).state
             );
