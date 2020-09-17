@@ -1,3 +1,5 @@
+process.env.PGSC = "localhost:0";
+
 import Service from "../app/service";
 import { HTTPService } from "@cryptuoso/service";
 import { sql } from "slonik";
@@ -23,6 +25,11 @@ setProperty(HTTPService.prototype, "addOnStartHandler", mockAddOnStartHandler);
 setProperty(HTTPService.prototype, "addOnStopHandler", mockAddOnStopHandler);
 setProperty(HTTPService.prototype, "log", mockLog);
 
+/* jest.mock("slonik", () => ({
+    createTypeParserPreset: jest.fn(() => []),
+    createPool: jest.fn(),
+    sql: jest.fn()
+})); */
 jest.mock("@cryptuoso/service");
 jest.mock("bullmq");
 
@@ -137,10 +144,7 @@ describe("StatsCalcRunnerService methods", () => {
 
             await service.handleCalcUserSignalEvent({ userId, robotId, calcAll });
 
-            expect(mockQueueAdd).toBeCalledWith(
-                StatsCalcJobType.userSignal,
-                { calcAll, userId, robotId }
-            );
+            expect(mockQueueAdd).toBeCalledWith(StatsCalcJobType.userSignal, { calcAll, userId, robotId });
 
             expect(mockQueueJobExAsOpt).toBeCalledWith(
                 StatsCalcJobType.userSignalsAggr,

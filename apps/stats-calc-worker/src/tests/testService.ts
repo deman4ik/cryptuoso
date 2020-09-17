@@ -75,12 +75,9 @@ export async function testService(service: Service) {
         count
     )); */
 
-    results.push(await measureFunction(
-        "calcUserSignals",
-        service.calcUserSignals.bind(service),
-        [robotId, updateAll],
-        count
-    ));
+    results.push(
+        await measureFunction("calcUserSignals", service.calcUserSignals.bind(service), [robotId, updateAll], count)
+    );
 
     /* results.push(await measureFunction(
         "calcUserSignal",

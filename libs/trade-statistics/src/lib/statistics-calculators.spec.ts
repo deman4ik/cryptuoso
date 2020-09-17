@@ -3,9 +3,7 @@ import positions from "./testData/positionsForStats";
 import correctFinalResult from "./testData/correctResultAfterRefactor";
 import statsWithoutLastPos from "./testData/correctWithoutLastPos";
 import dayjs from "@cryptuoso/dayjs";
-import {
-    TradeStats, TradeStatsClass, PositionDataForStats, roundRobotStatVals, Statistics
-} from "./trade-statistics";
+import { TradeStats, TradeStatsClass, PositionDataForStats, roundRobotStatVals, Statistics } from "./trade-statistics";
 import { invalidStatistics, invalidPosition } from "./testData/invalidData";
 
 describe("statistics-calculator test", () => {
@@ -194,12 +192,12 @@ describe("Statistics functions test", () => {
         });
     });
 
-    describe("calculateAverageProfit test", () => {
+    describe("calculateAverageMark test", () => {
         it("Should calculate avgNetProfit, avgProfit, avgLoss", () => {
             const prevAvgNetProfit = prevStatisticsObject.avgNetProfit,
                 currNetProfit = currentStatisticsObject.netProfit,
                 currTradesCount = currentStatisticsObject.tradesCount;
-            const prevAvgProfit = prevStatisticsObject.avgProfit,
+            const prevAvgWinnersProfit = prevStatisticsObject.avgProfit,
                 currGrossProfit = currentStatisticsObject.grossProfit,
                 currTradesWinning = currentStatisticsObject.tradesWinning;
             const prevAvgLoss = prevStatisticsObject.avgLoss,
@@ -207,23 +205,40 @@ describe("Statistics functions test", () => {
                 currTradesLosing = currentStatisticsObject.tradesLosing;
 
             currentStatisticsObject.avgNetProfit = roundRobotStatVals(
-                sc.calculateAverageProfit(prevAvgNetProfit, currNetProfit, currTradesCount),
+                sc.calculateAverageMark(prevAvgNetProfit, currNetProfit, currTradesCount),
                 2
             );
             if (profit > 0)
-                currentStatisticsObject.avgProfit = roundRobotStatVals(
-                    sc.calculateAverageProfit(prevAvgProfit, currGrossProfit, currTradesWinning),
+                currentStatisticsObject.avgProfitWinners = roundRobotStatVals(
+                    sc.calculateAverageMark(prevAvgWinnersProfit, currGrossProfit, currTradesWinning),
                     2
                 );
             if (profit < 0)
                 currentStatisticsObject.avgLoss = roundRobotStatVals(
-                    sc.calculateAverageProfit(prevAvgLoss, currGrossLoss, currTradesLosing),
+                    sc.calculateAverageMark(prevAvgLoss, currGrossLoss, currTradesLosing),
                     2
                 );
 
             expect(currentStatisticsObject.avgNetProfit).toStrictEqual(referenceStatisticsObject.avgNetProfit);
-            expect(currentStatisticsObject.avgProfit).toStrictEqual(referenceStatisticsObject.avgProfit);
+            expect(currentStatisticsObject.avgProfitWinners).toStrictEqual(referenceStatisticsObject.avgProfitWinners);
             expect(currentStatisticsObject.avgLoss).toStrictEqual(referenceStatisticsObject.avgLoss);
+        });
+    });
+
+    describe("calculateAverageProfit test", () => {
+        it("Should calculate avgNetProfit, avgProfit, avgLoss", () => {
+            const currTradesCount = currentStatisticsObject.tradesCount;
+            const prevAvgProfit = prevStatisticsObject.avgProfit;
+            const currGrossProfit = currentStatisticsObject.grossProfit;
+            const currGrossLoss = currentStatisticsObject.grossLoss;
+
+            if (profit > 0)
+                currentStatisticsObject.avgProfit = roundRobotStatVals(
+                    sc.calculateAverageProfit(prevAvgProfit, currGrossProfit, currGrossLoss, currTradesCount),
+                    2
+                );
+
+            expect(currentStatisticsObject.avgProfit).toStrictEqual(referenceStatisticsObject.avgProfit);
         });
     });
 

@@ -88,7 +88,7 @@ export class Statistics {
     avgNetProfit = new RobotNumberValue(null, null, null);
     grossProfit = new RobotNumberValue(null, null, null);
     avgProfit = new RobotNumberValue(null, null, null);
-    //avgProfitWinners = new RobotNumberValue(null, null, null);
+    avgProfitWinners = new RobotNumberValue(null, null, null);
     grossLoss = new RobotNumberValue(null, null, null);
     avgLoss = new RobotNumberValue(null, null, null);
     maxConsecWins = new RobotNumberValue();
@@ -174,10 +174,7 @@ export type UserSignalStatsWithExists = UserSignalWithVolumes & TradeStatsWithEx
 export type UserAggrStatsWithExists = UserAggrStats & TradeStatsWithExists;
 
 // It is now expected that every value is rounded after each cumulative calculatuion
-export function calcStatistics(
-    previousRobotStatistics: TradeStats,
-    positions: PositionDataForStats[]
-): TradeStats {
+export function calcStatistics(previousRobotStatistics: TradeStats, positions: PositionDataForStats[]): TradeStats {
     if (!positions || positions.length < 1) return previousRobotStatistics;
 
     return new StatisticsCalculator(previousRobotStatistics, positions).getStats();

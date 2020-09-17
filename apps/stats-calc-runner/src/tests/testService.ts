@@ -8,41 +8,81 @@ export async function testService(service: Service) {
     const exchange = "kraken"; // "bitfinex"
     const asset = "BTC"; //
 
-    console.log("handleCalcUserSignalEvent", await service.handleCalcUserSignalEvent({
-        calcAll, userId, robotId
-    }));
+    console.log(
+        "handleCalcUserSignalEvent",
+        await service.handleCalcUserSignalEvent({
+            calcAll,
+            userId,
+            robotId
+        })
+    );
 
-    console.log("handleCalcUserSignalsEvent", await service.handleCalcUserSignalsEvent({
-        calcAll, userId
-    }));
+    console.log(
+        "handleCalcUserSignalsEvent",
+        await service.handleCalcUserSignalsEvent({
+            calcAll,
+            userId
+        })
+    );
 
-    console.log("handleStatsCalcRobotEvent", await service.handleStatsCalcRobotEvent({
-        calcAll, robotId
-    }));
+    console.log(
+        "handleStatsCalcRobotEvent",
+        await service.handleStatsCalcRobotEvent({
+            calcAll,
+            robotId
+        })
+    );
 
-    console.log("handleStatsCalcRobotsEvent", await service.handleStatsCalcRobotsEvent({
-        calcAll
-    }));
+    console.log(
+        "handleStatsCalcRobotsEvent",
+        await service.handleStatsCalcRobotsEvent({
+            calcAll
+        })
+    );
 
-    console.log("handleStatsCalcUserRobotEvent", await service.handleStatsCalcUserRobotEvent({
-        calcAll, userRobotId
-    }));
+    console.log(
+        "handleStatsCalcUserRobotEvent",
+        await service.handleStatsCalcUserRobotEvent({
+            calcAll,
+            userRobotId
+        })
+    );
 
-    console.log("handleStatsCalcUserRobotsEvent", await service.handleStatsCalcUserRobotsEvent({
-        calcAll, userId
-    }));
+    console.log(
+        "handleStatsCalcUserRobotsEvent",
+        await service.handleStatsCalcUserRobotsEvent({
+            calcAll,
+            userId
+        })
+    );
 
-    console.log("handleStatsCalcUserRobotsEvent", await service.handleStatsCalcUserRobotsEvent({
-        calcAll, userId, exchange
-    }));
+    console.log(
+        "handleStatsCalcUserRobotsEvent",
+        await service.handleStatsCalcUserRobotsEvent({
+            calcAll,
+            userId,
+            exchange
+        })
+    );
 
-    console.log("handleStatsCalcUserRobotsEvent", await service.handleStatsCalcUserRobotsEvent({
-        calcAll, userId, asset
-    }));
+    console.log(
+        "handleStatsCalcUserRobotsEvent",
+        await service.handleStatsCalcUserRobotsEvent({
+            calcAll,
+            userId,
+            asset
+        })
+    );
 
-    console.log("handleStatsCalcUserRobotsEvent", await service.handleStatsCalcUserRobotsEvent({
-        calcAll, userId, asset, exchange
-    }));
+    console.log(
+        "handleStatsCalcUserRobotsEvent",
+        await service.handleStatsCalcUserRobotsEvent({
+            calcAll,
+            userId,
+            asset,
+            exchange
+        })
+    );
 
     console.log(
         "handleRecalcAllRobotsEvent",

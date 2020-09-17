@@ -184,6 +184,12 @@ export class HTTPService extends BaseService {
             )
                 throw new ActionsHandlerError("Forbidden: Invalid role", null, "FORBIDDEN", 403);
 
+            await this.db.pg.query(this.db.sql`
+                UPDATE users
+                SET last_active_at = now()
+                WHERE id = ${user.id};
+            `);
+
             req.meta = { ...req.meta, user };
             return next();
         } catch (err) {

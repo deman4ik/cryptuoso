@@ -14,6 +14,7 @@ export const invalidStatistics: TradeStats = {
         localMax: null,
         avgNetProfit: null,
         grossProfit: null,
+        avgProfitWinners: null,
         avgProfit: null,
         grossLoss: null,
         avgLoss: null,

@@ -1,3 +1,5 @@
+process.env.PGSC = "localhost:0";
+
 import Service from "../app/service";
 import { StatsCalcJob } from "@cryptuoso/stats-calc-events";
 import { User, UserStatus, UserRoles } from "@cryptuoso/user-state";
@@ -13,6 +15,11 @@ const mockPG = {
     any: pg.any as jest.Mock
 };
 
+/* jest.mock("slonik", () => ({
+    createTypeParserPreset: jest.fn(() => []),
+    createPool: jest.fn(() => mockPG),
+    sql: jest.fn()
+})); */
 jest.mock("ioredis");
 jest.mock("@cryptuoso/logger");
 jest.mock("@cryptuoso/postgres");

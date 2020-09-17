@@ -230,9 +230,15 @@ export default class AuthService extends HTTPService {
             oldRefreshToken = req.headers["x-refresh-token"] as string;
         }
         if (!oldRefreshToken) throw new ActionsHandlerError("No refresh token", null, "FORBIDDEN", 403);
-        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.refreshToken({
+        const { accessToken, refreshToken, refreshTokenExpireAt, userId } = await this.auth.refreshToken({
             refreshToken: oldRefreshToken
         });
+
+        await this.db.pg.query(this.db.sql`
+            UPDATE users
+            SET last_active_at = now()
+            WHERE id = ${userId};
+        `);
 
         res.setHeader(
             "Set-Cookie",

@@ -56,12 +56,12 @@ describe("E2E test", () => {
     let redis: Redis.Redis;
 
     const clearEvents = async () => {
-        if(redis) {
+        if (redis) {
             for (const service of Object.values(SERVICES)) {
                 await redis.del(`${BASE_REDIS_PREFIX}${service}`);
             }
         }
-    }
+    };
 
     describe("Test Events workflow", () => {
         beforeAll((done) => {
@@ -86,7 +86,7 @@ describe("E2E test", () => {
         });
 
         afterAll(async (done) => {
-            if(redis) {
+            if (redis) {
                 await clearEvents();
                 await redis.quit();
             }
@@ -265,11 +265,9 @@ describe("E2E test", () => {
                             handler: testHandlerFaulty
                         }
                     });
-                    
                     await events.start();
                     await sleep(3000);
 
-                    
                     await events.emit({
                         type: SERVICES.faultyGroupLog,
                         data: {
@@ -277,7 +275,6 @@ describe("E2E test", () => {
                         }
                     });
                     await sleep(15000);
-                    
                     expect(testHandlerFaulty).toHaveBeenCalledTimes(2);
 
                     events.closeConnections();
@@ -319,7 +316,6 @@ describe("E2E test", () => {
                     const letters = await findDeadLetter(SERVICES.faultyGroupLog2);
 
                     expect(letters.length).toBe(1);
-                    
                     events.closeConnections();
                     done();
                 }
@@ -369,7 +365,6 @@ describe("E2E test", () => {
                     expect(testHandlerSumLog).toHaveBeenCalledTimes(1);
 
                     expect(testHandlerSumLog).toHaveBeenCalledAfter(testHandlerSum);
-                    
                     events.closeConnections();
                     done();
                 }
@@ -454,7 +449,6 @@ describe("E2E test", () => {
 
                     expect(deadLetters.length).toBe(1);
                     expect(testHandlerSubstract).not.toHaveBeenCalled();
-                    
                     events.closeConnections();
                     done();
                 }

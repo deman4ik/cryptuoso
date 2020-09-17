@@ -58,7 +58,9 @@
         "build:stats-calc-worker": "nx build stats-calc-worker --prod",
         "serve:stats-calc-worker": "nx serve stats-calc-worker",
         "build:stats-calc-runner": "nx build stats-calc-runner --prod",
-        "serve:stats-calc-runner": "nx serve stats-calc-runner"
+        "serve:stats-calc-runner": "nx serve stats-calc-runner",
+        "build:events-manager": "nx build events-manager --prod",
+        "serve:events-manager": "nx serve events-manager"
     },
     "private": true,
     "dependencies": {

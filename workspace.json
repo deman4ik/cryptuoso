@@ -1265,6 +1265,59 @@
                     }
                 }
             }
+        },
+        "events-manager": {
+            "root": "apps/events-manager",
+            "sourceRoot": "apps/events-manager/src",
+            "projectType": "application",
+            "prefix": "events-manager",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/events-manager",
+                        "main": "apps/events-manager/src/main.ts",
+                        "tsConfig": "apps/events-manager/tsconfig.app.json",
+                        "assets": ["apps/events-manager/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/events-manager/src/environments/environment.ts",
+                                    "with": "apps/events-manager/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "events-manager:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": ["apps/events-manager/tsconfig.app.json", "apps/events-manager/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!apps/events-manager/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/events-manager/jest.config.js",
+                        "tsConfig": "apps/events-manager/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
         }
     },
     "cli": {

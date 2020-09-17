@@ -132,13 +132,13 @@ export default class StatisticCalcRunnerService extends HTTPService {
             await handler(req.body.input);
 
             res.send({ success: true });
-        } catch(err) {
+        } catch (err) {
             res.send({ success: false, error: err.message });
         }
-        
+
         res.end();
     }
-    
+
     async eventsHandler(
         handler: {
             (params: StatsCalcJob): Promise<void>;
@@ -149,7 +149,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
             await handler(params);
 
             return { success: true };
-        } catch(err) {
+        } catch (err) {
             this.log.error(err);
             return { success: false, error: err.message };
         }
@@ -177,7 +177,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
 
     async handleCalcUserSignalEvent(params: { calcAll?: boolean; userId: string; robotId: string }) {
         const { calcAll, userId, robotId } = params;
-        
+
         const userSignal: {
             exchange: string;
             asset: string;
@@ -204,11 +204,11 @@ export default class StatisticCalcRunnerService extends HTTPService {
             exchange,
             asset
         );
-    };
+    }
 
     async handleCalcUserSignalsEvent(params: { calcAll?: boolean; userId: string }) {
         const { calcAll, userId } = params;
-        
+
         const userSignals: { robotId: string }[] = await this.db.pg.any(this.db.sql`
             SELECT robot_id
             FROM user_signals
@@ -272,7 +272,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
                     asset
                 });
         }
-    };
+    }
 
     async handleStatsCalcRobotEvent(
         params: {
@@ -282,7 +282,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
         needCalcCommonAggr = true
     ) {
         const { calcAll, robotId } = params;
-        
+
         this.log.info(`New ${StatsCalcRunnerEvents.ROBOT} event - ${robotId}`);
 
         const { exchange, asset }: { exchange: string; asset: string } = await this.db.pg.maybeOne(this.db.sql`
@@ -316,11 +316,11 @@ export default class StatisticCalcRunnerService extends HTTPService {
                 uAsset == asset ? uAsset : null
             );
         }
-    };
+    }
 
     async handleStatsCalcRobotsEvent(params: { calcAll?: boolean }) {
         const { calcAll } = params;
-        
+
         const startedRobots: {
             id: string;
         }[] = await this.db.pg.any(this.db.sql`
@@ -332,7 +332,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
         for (const { id: robotId } of startedRobots) {
             await this.handleStatsCalcRobotEvent({ calcAll, robotId });
         }
-    };
+    }
 
     async handleStatsCalcUserRobotEvent(
         params: {
@@ -342,7 +342,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
         needCalcCommonAggr = true
     ) {
         const { calcAll, userRobotId } = params;
-        
+
         this.log.info(`New ${StatsCalcRunnerEvents.USER_ROBOT} event - ${userRobotId}`);
         const { userId, exchange, asset } = await this.db.pg.maybeOne(this.db.sql`
             SELECT ur.user_id, r.exchange, r.asset
@@ -355,12 +355,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
         await this.queueJob(StatsCalcJobType.userRobot, { calcAll, userRobotId });
 
         if (needCalcCommonAggr) {
-            await this.queueJobWithExchangeAssetOption(
-                StatsCalcJobType.usersRobotsAggr,
-                { calcAll },
-                exchange,
-                asset
-            );
+            await this.queueJobWithExchangeAssetOption(StatsCalcJobType.usersRobotsAggr, { calcAll }, exchange, asset);
         }
 
         await this.queueJobWithExchangeAssetOption(
@@ -369,7 +364,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
             exchange,
             asset
         );
-    };
+    }
 
     async handleStatsCalcUserRobotsEvent(
         params: {
@@ -381,7 +376,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
         needCalcCommonAggr = true
     ) {
         const { calcAll, userId, exchange, asset } = params;
-        
+
         this.log.info(`New ${StatsCalcRunnerEvents.USER_ROBOTS} event - ${userId}, ${exchange}, ${asset}`);
 
         await this.queueJobWithExchangeAssetOption(
@@ -392,14 +387,9 @@ export default class StatisticCalcRunnerService extends HTTPService {
         );
 
         if (needCalcCommonAggr) {
-            await this.queueJobWithExchangeAssetOption(
-                StatsCalcJobType.usersRobotsAggr,
-                { calcAll },
-                exchange,
-                asset
-            );
+            await this.queueJobWithExchangeAssetOption(StatsCalcJobType.usersRobotsAggr, { calcAll }, exchange, asset);
         }
-    };
+    }
 
     async handleRecalcAllRobotsEvent(params: {
         exchange?: string;
@@ -408,7 +398,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
         strategy?: string;
     }) {
         const { exchange, asset, currency, strategy } = params;
-        
+
         const conditionExchange = !exchange ? this.db.sql`` : this.db.sql`AND r.exchange=${exchange}`;
         const conditionAsset = !asset ? this.db.sql`` : this.db.sql`AND r.asset=${asset}`;
         const conditionCurrency = !currency ? this.db.sql`` : this.db.sql`AND r.currency=${currency}`;
@@ -447,7 +437,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
         for (const { robotId, userId } of startedSignals) {
             await this.handleCalcUserSignalEvent({ robotId, userId, calcAll: true });
         }
-    };
+    }
 
     async handleRecalcAllUserSignalsEvent(params: {
         exchange?: string;
@@ -458,7 +448,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
         userId?: string;
     }) {
         const { exchange, asset, currency, strategy, robotId, userId } = params;
-        
+
         const conditionRobotId = !robotId ? this.db.sql`` : this.db.sql`AND us.robot_id=${robotId}`;
         const conditionUserId = !userId ? this.db.sql`` : this.db.sql`AND us.user_id=${userId}`;
         const conditionExchange = !exchange ? this.db.sql`` : this.db.sql`AND r.exchange=${exchange}`;
@@ -484,7 +474,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
         for (const { robotId, userId } of startedSignals) {
             await this.handleCalcUserSignalEvent({ robotId, userId, calcAll: true });
         }
-    };
+    }
 
     async handleRecalcAllUserRobotsEvent(params: {
         exchange?: string;
@@ -495,7 +485,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
         userId?: string;
     }) {
         const { exchange, asset, currency, strategy, robotId, userId } = params;
-        
+
         const conditionRobotId = !robotId ? this.db.sql`` : this.db.sql`AND ur.robot_id=${robotId}`;
         const conditionUserId = !userId ? this.db.sql`` : this.db.sql`AND ur.user_id=${userId}`;
         const conditionExchange = !exchange ? this.db.sql`` : this.db.sql`AND r.exchange=${exchange}`;
@@ -527,5 +517,5 @@ export default class StatisticCalcRunnerService extends HTTPService {
             exchange,
             asset
         );
-    };
+    }
 }

@@ -1,7 +1,9 @@
 import { expose } from "threads/worker";
 import {
     calcStatistics,
-    ExtendedStatsPosition, ExtendedStatsPositionWithVolume, SettingsVolume,
+    ExtendedStatsPosition,
+    ExtendedStatsPositionWithVolume,
+    SettingsVolume,
     TradeStats,
     //PositionDataForStats,
     PositionDirection
@@ -56,12 +58,10 @@ function prepareSignalByItsVolumes(positions: ExtendedStatsPosition[], volumes: 
 
 const statisticUtils = {
     calcStatistics(type: StatisticsType, prevStats: TradeStats, positions: any[], volumes?: SettingsVolume[]) {
-        if (type == StatisticsType.CalcByPositionsVolume)
-            positions = prepareSignalByPositionsVolume(positions);
+        if (type == StatisticsType.CalcByPositionsVolume) positions = prepareSignalByPositionsVolume(positions);
         else if (type == StatisticsType.CalcByProvidedVolumes)
             positions = prepareSignalByItsVolumes(positions, volumes);
-        else if(type != StatisticsType.Simple)
-            throw new Error("Unknow calculation type");
+        else if (type != StatisticsType.Simple) throw new Error("Unknow calculation type");
 
         return calcStatistics(prevStats, positions);
     }

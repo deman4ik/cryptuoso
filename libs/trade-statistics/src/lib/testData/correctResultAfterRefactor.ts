@@ -15,10 +15,11 @@ const result: TradeStats = {
         avgNetProfit: { all: 5.16, long: 6.04, short: 4.06 },
         grossProfit: { all: 4825.83, long: 2738.58, short: 2087.25 },
         grossLoss: { all: -3186.11, long: -1675.92, short: -1510.19 },
-        avgProfit: { all: 35.23, long: 36.03, short: 34.22 },
+        avgProfit: { all: 5.57, long: 6.44, short: 4.99 },
+        avgProfitWinners: { all: 35.23, long: 36.03, short: 34.22 },
         avgLoss: { all: -17.7, long: -16.93, short: -18.64 },
         profitFactor: { all: 1.51, long: 1.63, short: 1.38 },
-        payoffRatio: { all: 1.99, long: 2.13, short: 1.84 },
+        payoffRatio: { all: 0.31, long: 0.38, short: 0.27 },
         maxConsecWins: { all: 5, long: 9, short: 4 },
         currentWinSequence: { all: 0, long: 0, short: 0 },
         maxConsecLosses: { all: 11, long: 10, short: 8 },
@@ -31,7 +32,7 @@ const result: TradeStats = {
         recoveryFactor: { all: 2.31, long: 2.14, short: 1.75 },
         maxDrawdown: { all: -708.89, long: -496.79, short: -330.05 },
         rating: {
-            all: 1.9,
+            all: 1.23,
             long: 0,
             short: 0
         }

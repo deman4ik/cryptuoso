@@ -13,7 +13,7 @@ describe("'number' utils test", () => {
         describe("Negative values test", () => {
             it("Should round a negative decimal", () => {
                 expect(round(-1.2345, 2)).toBe(-1.23);
-                expect(round(-12.345, 2)).toBe(-12.34);
+                expect(round(-12.345, 2)).toBe(-12.35); // was -12.34
                 expect(round(-0.4)).toBe(0);
                 expect(round(-0.6)).toBe(-1);
             });

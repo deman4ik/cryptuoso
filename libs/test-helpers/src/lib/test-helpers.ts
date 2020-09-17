@@ -54,21 +54,27 @@ ajax.post = async (url: string, headers?: {}, body?: {}): Promise<MyResponse> =>
 };
 
 export async function makeServiceRequest({
-    actionName, userId, role,
+    actionName,
+    userId,
+    role,
     input = {},
     apiKey = process.env.API_KEY,
     port = +process.env.PORT || +process.env.NODE_PORT || 3000,
-    entryPoint = `http://localhost:${port}/actions`
+    entryPoint = `http://localhost:${port}/actions`,
+    headers
 }: {
-    actionName: string, userId?: string, role?: string,
-    input?: { [key: string]: any },
-    apiKey?: string,
-    port?: number,
-    entryPoint?: string
+    actionName: string;
+    userId?: string;
+    role?: string;
+    input?: { [key: string]: any };
+    apiKey?: string;
+    port?: number;
+    entryPoint?: string;
+    headers?: { [key: string]: any };
 }) {
     return await ajax.post(
         `${entryPoint}/${actionName}`,
-        { "x-api-key": apiKey },
+        { "x-api-key": apiKey, ...headers },
         {
             action: { name: actionName },
             input,

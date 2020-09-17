@@ -124,6 +124,9 @@
         "utils": {
             "tags": []
         },
+        "events-manager": {
+            "tags": []
+        },
         "user-signals-state": {
             "tags": []
         },

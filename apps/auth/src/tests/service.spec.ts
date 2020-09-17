@@ -859,7 +859,7 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => null);
                 mockPG.maybeOne.mockImplementationOnce(async () => ({
                     id: userId,
-                    roles: { allowedRoles: [UserRoles.user]}
+                    roles: { allowedRoles: [UserRoles.user] }
                 }));
 
                 const res = await ajax.post(
