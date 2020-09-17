@@ -39,7 +39,11 @@ export default class UtilsService extends HTTPService {
         if (robots) {
             const robotsList: {
                 id: string;
-                settings: RobotSettings;
+                settings: {
+                    strategyParameters: { [key: string]: any };
+                    volume: number;
+                    requiredHistoryMaxBars: number;
+                };
                 tradeSettings: RobotTradeSettings;
                 createdAt: string;
             }[] = await this.db.pg.many(sql`

@@ -70,7 +70,7 @@ export async function makeServiceRequest({
     apiKey?: string;
     port?: number;
     entryPoint?: string;
-    headers?: { [key: string]: any }; 
+    headers?: { [key: string]: any };
 }) {
     return await ajax.post(
         `${entryPoint}/${actionName}`,

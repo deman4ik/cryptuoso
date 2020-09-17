@@ -1,7 +1,7 @@
 import { ISO_DATE_REGEX, CANDLES_RECENT_AMOUNT } from "@cryptuoso/helpers";
 import { Timeframe, ValidTimeframe } from "@cryptuoso/market";
 import { Status, BacktesterSettings } from "@cryptuoso/backtester-state";
-import { RobotSettings } from "@cryptuoso/robot-state";
+import { RobotSettings, StrategySettings } from "@cryptuoso/robot-state";
 
 export const enum BacktesterRunnerEvents {
     START = "in-backtester-runner.start",
@@ -64,37 +64,39 @@ export const BacktesterRunnerSchema = {
         },
         settings: {
             type: "object",
-            optional: true,
             strict: true,
             props: {
                 local: {
                     type: "boolean",
-                    optional: true,
                     default: false
                 },
                 populateHistory: {
                     type: "boolean",
-                    optional: true,
                     default: false
+                },
+                saveAlerts: {
+                    type: "boolean",
+                    default: true
                 },
                 savePositions: {
                     type: "boolean",
-                    optional: true,
                     default: true
                 },
                 saveLogs: {
                     type: "boolean",
-                    optional: true,
                     default: false
                 }
             }
+        },
+        strategySettings: {
+            type: "object",
+            optional: true
         },
         robotSettings: {
             type: "object",
             optional: true,
             strict: true,
             props: {
-                strategyParameters: "object",
                 volume: { type: "number", integer: true },
                 requiredHistoryMaxBars: { type: "number", integer: true, default: CANDLES_RECENT_AMOUNT }
             }
@@ -148,39 +150,43 @@ export const BacktesterRunnerSchema = {
         },
         settings: {
             type: "object",
-            optional: true,
             strict: true,
             props: {
                 local: {
                     type: "boolean",
-                    optional: true,
                     default: false
                 },
                 populateHistory: {
                     type: "boolean",
-                    optional: true,
                     default: false
+                },
+                saveAlerts: {
+                    type: "boolean",
+                    default: true
                 },
                 savePositions: {
                     type: "boolean",
-                    optional: true,
                     default: true
                 },
                 saveLogs: {
                     type: "boolean",
-                    optional: true,
                     default: false
                 }
             }
         },
-        robotSettings: {
+        strategySettings: {
             type: "array",
+            items: {
+                type: "object"
+            }
+        },
+        robotSettings: {
+            type: "object",
             optional: true,
             items: {
                 type: "object",
                 strict: true,
                 props: {
-                    strategyParameters: "object",
                     volume: { type: "number", integer: true },
                     requiredHistoryMaxBars: { type: "number", integer: true, default: CANDLES_RECENT_AMOUNT }
                 }
@@ -223,7 +229,8 @@ export interface BacktesterRunnerStart {
     };
     dateFrom?: string;
     dateTo?: string;
-    settings?: BacktesterSettings;
+    settings: BacktesterSettings;
+    strategySettings?: StrategySettings;
     robotSettings?: RobotSettings;
 }
 
@@ -239,8 +246,10 @@ export interface BacktesterRunnerStartMany {
     };
     dateFrom?: string;
     dateTo?: string;
-    settings?: BacktesterSettings;
-    robotSettings?: RobotSettings[]; //TODO settings generator
+    settings: BacktesterSettings;
+    strategySettingsRange?: { [key: string]: any }; //TODO settings generator
+    strategySettings?: StrategySettings[];
+    robotSettings?: RobotSettings;
 }
 
 export interface BacktesterRunnerStop {

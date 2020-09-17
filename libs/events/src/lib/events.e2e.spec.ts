@@ -276,7 +276,6 @@ describe("E2E test", () => {
                         }
                     });
                     await sleep(15000);
-
                     expect(testHandlerFaulty).toHaveBeenCalledTimes(2);
 
                     events.closeConnections();
@@ -318,7 +317,6 @@ describe("E2E test", () => {
                     const letters = await findDeadLetter(SERVICES.faultyGroupLog2);
 
                     expect(letters.length).toBe(1);
-
                     events.closeConnections();
                     done();
                 }
@@ -368,7 +366,6 @@ describe("E2E test", () => {
                     expect(testHandlerSumLog).toHaveBeenCalledTimes(1);
 
                     expect(testHandlerSumLog).toHaveBeenCalledAfter(testHandlerSum);
-
                     events.closeConnections();
                     done();
                 }
@@ -453,7 +450,6 @@ describe("E2E test", () => {
 
                     expect(deadLetters.length).toBe(1);
                     expect(testHandlerSubstract).not.toHaveBeenCalled();
-
                     events.closeConnections();
                     done();
                 }
