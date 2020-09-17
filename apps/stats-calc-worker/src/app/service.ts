@@ -9,23 +9,20 @@ import { SqlSqlTokenType, QueryResultRowType } from "slonik";
 import {
     TradeStats,
     PositionDataForStats,
+    ExtendedStatsPosition,
     isTradeStats,
-    ExtendedStatsPositionWithDate,
-    ExtendedStatsPositionWithVolume,
-    SettingsVolume,
-    UserAggrStatsType,
-    TradeStatsWithExists,
-    TradeStatsWithExistsAndId,
-    UserSignalStatsWithExists
+    SettingsVolumes
 } from "@cryptuoso/trade-statistics";
+import { UserAggrStatsTypes } from "@cryptuoso/user-state";
+import { UserSignalStats } from "@cryptuoso/user-signals-state";
 import { StatsCalcJob, StatsCalcJobType } from "@cryptuoso/stats-calc-events";
 import dayjs from "@cryptuoso/dayjs";
 
-export function getCalcFromAndInitStats(stats?: TradeStatsWithExists, calcAll?: boolean) {
+export function getCalcFromAndInitStats(stats?: TradeStats, calcAll?: boolean) {
     let calcFrom: string = null;
     let initStats: TradeStats = null;
 
-    if (!calcAll && stats && stats.statsExists && isTradeStats(stats, false)) {
+    if (!calcAll && stats && isTradeStats(stats, false)) {
         initStats = {
             statistics: stats.statistics,
             lastPositionExitDate: stats.lastPositionExitDate,
@@ -37,6 +34,18 @@ export function getCalcFromAndInitStats(stats?: TradeStatsWithExists, calcAll?: 
     }
 
     return { calcFrom, initStats };
+}
+
+export interface ExtendedStatsPositionWithVolume extends ExtendedStatsPosition {
+    volume: number;
+}
+
+interface ExtendedStatsPositionWithDate extends ExtendedStatsPosition {
+    entryDate: string;
+}
+
+interface TradeStatsWithId extends TradeStats {
+    id: string;
 }
 
 type QueryType = SqlSqlTokenType<QueryResultRowType<any>>;
@@ -143,11 +152,11 @@ export default class StatisticCalcWorkerService extends BaseService {
             addFieldsValues?: QueryType;
         },
         stats: TradeStats,
-        prevStats?: TradeStatsWithExists
+        prevStats?: TradeStats
     ): Promise<void> {
         /* console.log(params);
         return; */
-        if (prevStats && prevStats.statsExists) {
+        if (prevStats && isTradeStats(prevStats, false)) {
             await this.db.pg.query(sql`
                 UPDATE ${params.table}
                 SET statistics = ${sql.json(stats.statistics)},
@@ -184,7 +193,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         type: any,
         prevStats: TradeStats,
         positions: any[],
-        volumes?: SettingsVolume[]
+        volumes?: SettingsVolumes
     ) => {
         return await this.pool.queue(async (utils: StatisticsUtils) =>
             utils.calcStatistics(type, prevStats, positions, volumes)
@@ -194,9 +203,8 @@ export default class StatisticCalcWorkerService extends BaseService {
     async calcRobot(robotId: string, calcAll = false) {
         if (!robotId) throw new Error("robotId must be non-empty string");
 
-        const prevTradeStats: TradeStatsWithExists = await this.db.pg.maybeOne(sql`
-            SELECT rs.robot_id as "stats_exists",
-                rs.*
+        const prevTradeStats: TradeStats = await this.db.pg.maybeOne(sql`
+            SELECT rs.*
             FROM robots r
             LEFT JOIN robot_stats rs
                 ON r.id = rs.robot_id
@@ -266,9 +274,8 @@ export default class StatisticCalcWorkerService extends BaseService {
     }
 
     async calcRobotsAggr(exchange?: string, asset?: string, calcAll = false) {
-        const prevRobotsAggrStats: TradeStatsWithExistsAndId = await this.db.pg.maybeOne(sql`
-            SELECT id as "stats_exists",
-                id,
+        const prevRobotsAggrStats: TradeStatsWithId = await this.db.pg.maybeOne(sql`
+            SELECT id,
                 statistics,
                 last_position_exit_date,
                 last_updated_at,
@@ -345,9 +352,8 @@ export default class StatisticCalcWorkerService extends BaseService {
     }
 
     async calcUsersRobotsAggr(exchange?: string, asset?: string, calcAll = false) {
-        const prevUsersRobotsAggrtats: TradeStatsWithExistsAndId = await this.db.pg.maybeOne(sql`
-            SELECT id as "stats_exists",
-                id,
+        const prevUsersRobotsAggrtats: TradeStatsWithId = await this.db.pg.maybeOne(sql`
+            SELECT id,
                 statistics,
                 last_position_exit_date,
                 last_updated_at,
@@ -415,9 +421,8 @@ export default class StatisticCalcWorkerService extends BaseService {
     async calcUserSignal(userId: string, robotId: string, calcAll = false) {
         if (!userId || !robotId) throw new Error("userId and robotId must be non-empty string");
 
-        const userSignal: UserSignalStatsWithExists = await this.db.pg.maybeOne(sql`
+        const userSignal: UserSignalStats = await this.db.pg.maybeOne(sql`
             SELECT us.id, us.subscribed_at, us.volume,
-                uss.user_signal_id as "stats_exists",
                 uss.statistics,
                 uss.last_position_exit_date,
                 uss.last_updated_at,
@@ -498,19 +503,19 @@ export default class StatisticCalcWorkerService extends BaseService {
 
     private async _calcUserSignalsBySingleQuery(params: {
         queryCommonPart: QueryType;
-        userSignals: UserSignalStatsWithExists[];
+        userSignals: UserSignalStats[];
         calcAll: boolean;
     }): Promise<{
         [key: string]: {
             newStats: TradeStats;
-            signal: UserSignalStatsWithExists;
+            signal: UserSignalStats;
         };
     }> {
         const { queryCommonPart, userSignals, calcAll } = params;
         const statsDict: {
             [key: string]: {
                 newStats: TradeStats;
-                signal: UserSignalStatsWithExists;
+                signal: UserSignalStats;
             };
         } = {};
 
@@ -541,13 +546,13 @@ export default class StatisticCalcWorkerService extends BaseService {
 
     private async _calcUserSignalsByChunks(params: {
         queryCommonPart: QueryType;
-        userSignals: UserSignalStatsWithExists[];
+        userSignals: UserSignalStats[];
         calcAll?: boolean;
         chunkSize?: number;
     }): Promise<{
         [key: string]: {
             newStats: TradeStats;
-            signal: UserSignalStatsWithExists;
+            signal: UserSignalStats;
         };
     }> {
         const { queryCommonPart, userSignals, calcAll, chunkSize } = params;
@@ -555,11 +560,11 @@ export default class StatisticCalcWorkerService extends BaseService {
         const statsDict: {
             [key: string]: {
                 newStats: TradeStats;
-                signal: UserSignalStatsWithExists;
+                signal: UserSignalStats;
             };
         } = {};
         let statsAcc: {
-            signal: UserSignalStatsWithExists;
+            signal: UserSignalStats;
             calcFrom: string;
             stats: TradeStats;
             updated: boolean;
@@ -619,9 +624,8 @@ export default class StatisticCalcWorkerService extends BaseService {
     async calcUserSignals(robotId: string, calcAll = false) {
         if (!robotId) throw new Error("robotId must be non-empty string");
 
-        const userSignals: UserSignalStatsWithExists[] = await this.db.pg.any(sql`
+        const userSignals: UserSignalStats[] = await this.db.pg.any(sql`
             SELECT us.id, us.subscribed_at,
-                uss.user_signal_id as "stats_exists",
                 uss.statistics,
                 uss.last_position_exit_date,
                 uss.last_updated_at,
@@ -721,9 +725,8 @@ export default class StatisticCalcWorkerService extends BaseService {
     async calcUserSignalsAggr(userId: string, exchange?: string, asset?: string, calcAll = false) {
         if (!userId) throw new Error("userId must be non-empty string");
 
-        const prevUserAggrStats: TradeStatsWithExistsAndId = await this.db.pg.maybeOne(sql`
-            SELECT id as "stats_exists",
-                id,
+        const prevUserAggrStats: TradeStatsWithId = await this.db.pg.maybeOne(sql`
+            SELECT id,
                 statistics,
                 last_position_exit_date,
                 last_updated_at,
@@ -731,7 +734,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 equity_avg
             FROM user_aggr_stats
             WHERE user_id = ${userId}
-                AND type = ${UserAggrStatsType.signal}
+                AND type = ${UserAggrStatsTypes.signal}
                 AND exchange ${!exchange ? sql`IS NULL` : sql`= ${exchange}`}
                 AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
         `);
@@ -798,7 +801,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 id: prevUserAggrStats?.id,
                 addFields: sql`user_id, exchange, asset, type`,
                 addFieldsValues: sql`${userId}, ${!exchange ? null : exchange}, ${!asset ? null : asset}, ${
-                    UserAggrStatsType.signal
+                    UserAggrStatsTypes.signal
                 }`
             },
             newStats,
@@ -811,9 +814,8 @@ export default class StatisticCalcWorkerService extends BaseService {
     async calcUserRobot(userRobotId: string, calcAll = false) {
         if (!userRobotId) throw new Error("userRobotId must be non-empty string");
 
-        const prevTradeStats: TradeStatsWithExists = await this.db.pg.maybeOne(sql`
-            SELECT urs.user_robot_id as "stats_exists",
-                urs.statistics,
+        const prevTradeStats: TradeStats = await this.db.pg.maybeOne(sql`
+            SELECT urs.statistics,
                 urs.last_position_exit_date,
                 urs.last_updated_at,
                 urs.equity,
@@ -878,9 +880,8 @@ export default class StatisticCalcWorkerService extends BaseService {
     async calcUserRobotsAggr(userId: string, exchange?: string, asset?: string, calcAll = false) {
         if (!userId) throw new Error("userId must be non-empty string");
 
-        const prevUserAggrStats: TradeStatsWithExistsAndId = await this.db.pg.maybeOne(sql`
-            SELECT id as "stats_exists",
-                id,
+        const prevUserAggrStats: TradeStatsWithId = await this.db.pg.maybeOne(sql`
+            SELECT id,
                 statistics,
                 last_position_exit_date,
                 last_updated_at,
@@ -888,7 +889,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 equity_avg
             FROM user_aggr_stats
             WHERE user_id = ${userId}
-                AND type = ${UserAggrStatsType.userRobot}
+                AND type = ${UserAggrStatsTypes.userRobot}
                 AND exchange ${!exchange ? sql`IS NULL` : sql`= ${exchange}`}
                 AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
         `);
@@ -940,7 +941,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 id: prevUserAggrStats?.id,
                 addFields: sql`user_id, exchange, asset, type`,
                 addFieldsValues: sql`${userId}, ${!exchange ? null : exchange}, ${!asset ? null : asset}, ${
-                    UserAggrStatsType.userRobot
+                    UserAggrStatsTypes.userRobot
                 }`
             },
             newStats,

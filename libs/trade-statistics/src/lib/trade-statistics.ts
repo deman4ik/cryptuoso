@@ -1,6 +1,12 @@
 import { round } from "@cryptuoso/helpers";
-import { UserSignals } from "@cryptuoso/user-state";
 import StatisticsCalculator from "./statistics-calculator";
+
+export interface SettingsVolume {
+    activeFrom: string;
+    volume: number;
+}
+
+export type SettingsVolumes = SettingsVolume[];
 
 export const enum PositionDirection {
     long = "long",
@@ -29,14 +35,6 @@ export interface ExtendedStatsPosition extends PositionDataForStats {
     exitPrice: number;
     entryPrice: number;
     fee: number;
-}
-
-export interface ExtendedStatsPositionWithVolume extends ExtendedStatsPosition {
-    volume: number;
-}
-
-export interface ExtendedStatsPositionWithDate extends ExtendedStatsPosition {
-    entryDate: string;
 }
 
 export interface RobotStatVals<T> {
@@ -121,8 +119,7 @@ export interface TradeStats {
     equityAvg: PerformanceVals;
 }
 
-export class TradeStatsClass {
-    [key: string]: any;
+export class TradeStatsClass implements TradeStats {
     statistics = new Statistics();
     lastPositionExitDate = "";
     lastUpdatedAt = "";
@@ -139,39 +136,6 @@ export function isTradeStats(object: any, checkPropsCount = true): object is Tra
     }
     return true;
 }
-
-export interface SettingsVolume {
-    activeFrom: string;
-    volume: number;
-}
-
-export interface UserSignalWithVolumes extends UserSignals {
-    volumes?: SettingsVolume[];
-}
-
-export enum UserAggrStatsType {
-    signal = "signal",
-    userRobot = "userRobot"
-}
-
-export interface UserAggrStats extends TradeStats {
-    id: string;
-    userId: string;
-    exchange?: string;
-    asset?: string;
-    type: UserAggrStatsType;
-}
-
-export interface TradeStatsWithExists extends TradeStats {
-    statsExists: any;
-}
-
-export interface TradeStatsWithExistsAndId extends TradeStatsWithExists {
-    id: string;
-}
-
-export type UserSignalStatsWithExists = UserSignalWithVolumes & TradeStatsWithExists;
-export type UserAggrStatsWithExists = UserAggrStats & TradeStatsWithExists;
 
 // It is now expected that every value is rounded after each cumulative calculatuion
 export function calcStatistics(previousRobotStatistics: TradeStats, positions: PositionDataForStats[]): TradeStats {

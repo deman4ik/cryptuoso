@@ -265,6 +265,7 @@ describe("E2E test", () => {
                             handler: testHandlerFaulty
                         }
                     });
+
                     await events.start();
                     await sleep(3000);
 
