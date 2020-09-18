@@ -1,6 +1,6 @@
-import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
+import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 //import { CloudEvent } from "cloudevents";
-import { BASE_REDIS_PREFIX, DEAD_LETTER_TOPIC, DeadLetter, Event } from "@cryptuoso/events";
+import { eventsManagementConfig, BASE_REDIS_PREFIX, DEAD_LETTER_TOPIC, DeadLetter, Event } from "@cryptuoso/events";
 //import { BASE_REDIS_PREFIX } from "../../../../libs/events/src/lib/catalog";
 
 //const BASE_REDIS_PREFIX = "cpz:events:";
@@ -9,6 +9,7 @@ const TEST_TOPIC = "test_topic";
 
 interface StoredDeadLetter {
     id: string;
+    eventId: string;
     topic: string;
     type: string;
     data: Event;
@@ -19,13 +20,13 @@ interface StoredDeadLetter {
     updatedAt: string;
 }
 
-export interface EventsManagerConfig extends BaseServiceConfig {
-    /** in milliseconds */
+export interface EventsManagerConfig extends HTTPServiceConfig {
+    /** in seconds */
     checkInterval: number;
 }
 
-export default class EventsManager extends BaseService {
-    private checkIntervalId: NodeJS.Timer;
+export default class EventsManager extends HTTPService {
+    /** in milliseconds */
     checkInterval: number;
 
     constructor(config?: EventsManagerConfig) {
@@ -38,29 +39,57 @@ export default class EventsManager extends BaseService {
     }
 
     async _onServiceStart() {
-        this.checkIntervalId = setInterval(
-            this._checkStoredDeadLetters.bind(this),
-            this.checkInterval
-        );
-
         this.events.subscribe({
             [`${DEAD_LETTER_TOPIC}.*`]: {
                 /* passFullEvent: true, */
-                handler: this._deadLetterHandler.bind(this)
+                handler: this._deadLettersHandler.bind(this)
             } /*  as any */,
             [TEST_TOPIC]: {
                 handler: this._testHandler.bind(this)
             }
         });
 
-        setTimeout(this._testSender.bind(this), 5e3);
+        // TODO: subscribe on route
+
+        this._update();
     }
 
     async _onServiceStop() {
-        if(this.checkIntervalId)
-            clearInterval(this.checkIntervalId);
+        
+    }
 
-        this.checkIntervalId = null;
+    async _deleteExpiresEvents(
+        stream: string,
+        cacheTime: number
+    ) {
+        const threshold = (Date.now() - cacheTime).toString();
+        let prevId = "-";
+
+        while(true) {
+            const ids = (await this.redis.xrange(
+                stream,
+                prevId, threshold,
+                "COUNT", 100
+            )).map((raw) => raw[0]);
+
+            const expiresIds = ids.filter((id) => id < threshold);
+
+            if(expiresIds.length == 0) break;
+        
+            await this.redis.xdel(stream, ...expiresIds);
+
+            if(expiresIds.length < ids.length) break;
+
+            prevId = ids[ids.length - 1]
+        }
+    }
+    
+    async _clearStreams() {
+        for(const { topics } of eventsManagementConfig) {
+            for(const topic of topics) {
+                await this._deleteExpiresEvents(topic.fullname, 1e3 * topic.cacheTime);
+            }
+        }
     }
 
     async _updateProcessedDeadLetters(ids: string[]) {
@@ -73,64 +102,113 @@ export default class EventsManager extends BaseService {
         `);
     }
 
-    async _checkStoredDeadLetters() {
+    async _checkStoredDeadLetters({
+        eventId, topic, type, resend
+    }: {
+        eventId?: string;
+        topic?: string;
+        type?: string;
+        resend?: boolean;
+    }) {
         this.log.info("DB Cheking");
+
+        const conditionEventId = eventId ? this.db.sql`AND event_id = ${eventId}` : this.db.sql``;
+        const conditionTopic = topic ? this.db.sql`AND topic = ${topic}` : this.db.sql``;
+        const conditionType = type ? this.db.sql`AND "type" = ${type}` : this.db.sql``;
+        const conditionResend = typeof resend == "boolean" ? this.db.sql`AND resend = ${resend}` : this.db.sql``;
 
         const deadLetters: StoredDeadLetter[] = await this.db.pg.any(this.db.sql`
             SELECT *
             FROM dead_letters
-            WHERE resend = true
-                AND processed = false;
+            WHERE processed = false
+                ${conditionEventId}
+                ${conditionTopic}
+                ${conditionType}
+                ${conditionResend};
         `);
         
         if(!deadLetters?.length) return;
 
-        // TODO: ReEmit events
+        // TODO: resolve problem of wrong event id
+
+        for(const event of deadLetters) {
+            await this.redis.xadd(
+                event.topic,
+                '*',
+                "id", event.id,
+                "type", event.type,
+                "timestamp", event.timestamp,
+                "event", JSON.stringify(event.data)
+            )
+        }
 
         await this._updateProcessedDeadLetters(deadLetters.map((dl) => dl.id));
+
+        //await this._testSender();
     }
 
-    async _storeDeadLetter(params: { id: string; topic: string; type: string; timestamp: string; data: string }) {
-        await this.db.pg.query(this.db.sql`
-            INSERT INTO dead_letters(
-                id, topic, "type", "timestamp", data
-            ) VALUES (
-                ${params.id},
-                ${params.topic},
-                ${params.type},
-                ${params.timestamp},
-                ${params.data}
-            )
-        `);
+    async _update() {
+        if(this.lightship.isServerShuttingDown()) return;
+
+        const startTime = Date.now();
+
+        try {
+            await this._checkStoredDeadLetters({ resend: true });
+
+            // TODO: think about possibility of deleting dead letters before handling
+
+            await this._clearStreams();
+        } catch(err) {
+            this.log.error(err);
+        }
+
+        
+        setTimeout(this._update.bind(this), this.checkInterval - (Date.now() - startTime));
     }
 
-    async _deadLetterHandler(deadLetter: DeadLetter) {
+    async _deadLettersHandler(deadLetter: DeadLetter) {
         console.warn("Dead Letter");
         console.log(deadLetter);
 
-        const data: {
-            msgId: string;
-            consumer: string;
-            idleSeconds: number;
-            retries: number;
-        }[] = deadLetter.data;
+        const msgIds: string[] = deadLetter.data.map((info: any) => info.msgId);
 
-        for (const { msgId } of data) {
+        const tuples: [string, string, string, string, string][] = [];
+
+        for (const msgId of msgIds) {
+            /* const [{ data }] = this.events._parseMessageResponse(
+                await this.redis.xrange(deadLetter.topic, msgId, msgId)
+            ); */
             const [[_, rawData]] = await this.redis.xrange(deadLetter.topic, msgId, msgId);
 
-            await this._storeDeadLetter({
-                topic: deadLetter.topic,
-                id: rawData[1],
-                type: rawData[3],
-                timestamp: rawData[5],
-                data: rawData[7]
-            });
+            tuples.push([
+                rawData[1],         // eventId
+                deadLetter.topic,   // topic
+                rawData[3],         // type
+                rawData[5],         // timestamp
+                rawData[7]          // event JSON
+            ]);
 
             /* await this.redis.xdel(
-                `${BASE_REDIS_PREFIX}${TEST_TOPIC}`,
-                "1600345288962-0"
+                `${BASE_REDIS_PREFIX}${DEAD_LETTER_TOPIC}`,
+                deadLetterMsgId
             ); */
         }
+
+        this.db.pg.query(this.db.sql`
+            INSERT INTO dead_letters(
+                event_id, topic, "type", "timestamp", data
+            )
+            SELECT * FROM ${this.db.sql.unnest(
+                tuples,
+                [
+                    "uuid",         // eventId
+                    "varchar",      // topic
+                    "varchar",      // type
+                    `timestamp`,    // timestamp
+                    "jsonb"         // event JSON
+                ]
+            )};
+        `);
     }
 
     async _testSender() {

@@ -9,8 +9,6 @@ import { BaseError } from "@cryptuoso/errors";
 import { EventsCatalog, EventHandler, BASE_REDIS_PREFIX } from "./catalog";
 import dayjs from "@cryptuoso/dayjs";
 
-export { BASE_REDIS_PREFIX } from "./catalog";
-
 export { CloudEventV1 as Event };
 export interface NewEvent<T> {
     type: string;
