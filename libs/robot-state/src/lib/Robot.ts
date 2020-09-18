@@ -10,63 +10,8 @@ import { ValidTimeframe, CandleProps, DBCandle, RobotPositionStatus } from "@cry
 import { RobotWorkerEvents } from "@cryptuoso/robot-events";
 import { NewEvent } from "@cryptuoso/events";
 import { CANDLES_RECENT_AMOUNT } from "@cryptuoso/helpers";
-import { BaseStrategy, RobotSettings, StrategyProps, StrategySettings } from "./BaseStrategy";
-import { RobotPositionState } from "./RobotPosition";
-
-export const enum RobotStatus {
-    pending = "pending",
-    starting = "starting",
-    stopping = "stopping",
-    started = "started",
-    stopped = "stopped",
-    paused = "paused",
-    failed = "failed"
-}
-
-export interface RobotTradeSettings {
-    orderTimeout: number;
-    slippage?: {
-        entry?: {
-            stepPercent: number;
-            count?: number;
-        };
-        exit?: {
-            stepPercent: number;
-            count?: number;
-        };
-    };
-    deviation?: {
-        entry?: number;
-        exit?: number;
-    };
-}
-
-export interface RobotHead {
-    id: string;
-    code?: string;
-    mod?: string;
-    name?: string;
-}
-
-export interface RobotState extends RobotHead {
-    exchange: string;
-    asset: string;
-    currency: string;
-    timeframe: ValidTimeframe;
-    available?: number;
-    strategyName: string;
-    strategySettings: StrategySettings;
-    robotSettings: RobotSettings;
-    tradeSettings?: RobotTradeSettings;
-    lastCandle?: DBCandle;
-    state?: StrategyProps;
-    hasAlerts?: boolean;
-    indicators?: { [key: string]: IndicatorState };
-    status?: RobotStatus;
-    startedAt?: string;
-    stoppedAt?: string;
-    backtest?: boolean;
-}
+import { BaseStrategy } from "./BaseStrategy";
+import { RobotPositionState, RobotSettings, RobotState, RobotStatus, StrategyProps, StrategySettings } from "./types";
 
 export interface StrategyCode {
     [key: string]: any;

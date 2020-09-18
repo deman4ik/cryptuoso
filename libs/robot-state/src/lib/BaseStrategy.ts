@@ -2,7 +2,7 @@ import { ValidationSchema } from "fastest-validator";
 import dayjs from "@cryptuoso/dayjs";
 import { v4 as uuid } from "uuid";
 import { validate, sortAsc } from "@cryptuoso/helpers";
-import { RobotPosition, RobotPositionState } from "./RobotPosition";
+import { RobotPosition } from "./RobotPosition";
 import {
     CandleProps,
     OrderType,
@@ -16,25 +16,7 @@ import { IndicatorState, IndicatorType } from "@cryptuoso/robot-indicators";
 import { NewEvent } from "@cryptuoso/events";
 import { RobotWorkerEvents, Signal } from "@cryptuoso/robot-events";
 import logger from "@cryptuoso/logger";
-
-export interface StrategySettings {
-    [key: string]: number | string;
-}
-
-export interface RobotSettings {
-    volume: number;
-    requiredHistoryMaxBars: number;
-}
-
-export interface StrategyProps {
-    initialized: boolean;
-    posLastNumb: { [key: string]: number };
-    positions: RobotPositionState[];
-    indicators: {
-        [key: string]: IndicatorState;
-    };
-    variables: { [key: string]: any };
-}
+import { RobotPositionState, RobotSettings, StrategyProps, StrategySettings } from "./types";
 
 export interface StrategyState extends StrategyProps {
     strategySettings: StrategySettings;

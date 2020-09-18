@@ -871,9 +871,9 @@
                 }
             }
         },
-        "trade-statistics": {
-            "root": "libs/trade-statistics",
-            "sourceRoot": "libs/trade-statistics/src",
+        "stats-calc": {
+            "root": "libs/stats-calc",
+            "sourceRoot": "libs/stats-calc/src",
             "projectType": "library",
             "schematics": {},
             "architect": {
@@ -881,17 +881,14 @@
                     "builder": "@nrwl/linter:lint",
                     "options": {
                         "linter": "eslint",
-                        "tsConfig": [
-                            "libs/trade-statistics/tsconfig.lib.json",
-                            "libs/trade-statistics/tsconfig.spec.json"
-                        ],
-                        "exclude": ["**/node_modules/**", "!libs/trade-statistics/**/*"]
+                        "tsConfig": ["libs/stats-calc/tsconfig.lib.json", "libs/stats-calc/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/stats-calc/**/*"]
                     }
                 },
                 "test": {
                     "builder": "@nrwl/jest:jest",
                     "options": {
-                        "jestConfig": "libs/trade-statistics/jest.config.js",
+                        "jestConfig": "libs/stats-calc/jest.config.js",
                         "passWithNoTests": true
                     }
                 }
@@ -1212,9 +1209,9 @@
                 }
             }
         },
-        "user-signals-state": {
-            "root": "libs/user-signals-state",
-            "sourceRoot": "libs/user-signals-state/src",
+        "user-signal-state": {
+            "root": "libs/user-signal-state",
+            "sourceRoot": "libs/user-signal-state/src",
             "projectType": "library",
             "schematics": {},
             "architect": {
@@ -1223,25 +1220,25 @@
                     "options": {
                         "linter": "eslint",
                         "tsConfig": [
-                            "libs/user-signals-state/tsconfig.lib.json",
-                            "libs/user-signals-state/tsconfig.spec.json"
+                            "libs/user-signal-state/tsconfig.lib.json",
+                            "libs/user-signal-state/tsconfig.spec.json"
                         ],
-                        "exclude": ["**/node_modules/**", "!libs/user-signals-state/**/*"]
+                        "exclude": ["**/node_modules/**", "!libs/user-signal-state/**/*"]
                     }
                 },
                 "test": {
                     "builder": "@nrwl/jest:jest",
                     "options": {
-                        "jestConfig": "libs/user-signals-state/jest.config.js",
-                        "tsConfig": "libs/user-signals-state/tsconfig.spec.json",
+                        "jestConfig": "libs/user-signal-state/jest.config.js",
+                        "tsConfig": "libs/user-signal-state/tsconfig.spec.json",
                         "passWithNoTests": true
                     }
                 }
             }
         },
-        "user-robots-state": {
-            "root": "libs/user-robots-state",
-            "sourceRoot": "libs/user-robots-state/src",
+        "user-robot-state": {
+            "root": "libs/user-robot-state",
+            "sourceRoot": "libs/user-robot-state/src",
             "projectType": "library",
             "schematics": {},
             "architect": {
@@ -1250,17 +1247,17 @@
                     "options": {
                         "linter": "eslint",
                         "tsConfig": [
-                            "libs/user-robots-state/tsconfig.lib.json",
-                            "libs/user-robots-state/tsconfig.spec.json"
+                            "libs/user-robot-state/tsconfig.lib.json",
+                            "libs/user-robot-state/tsconfig.spec.json"
                         ],
-                        "exclude": ["**/node_modules/**", "!libs/user-robots-state/**/*"]
+                        "exclude": ["**/node_modules/**", "!libs/user-robot-state/**/*"]
                     }
                 },
                 "test": {
                     "builder": "@nrwl/jest:jest",
                     "options": {
-                        "jestConfig": "libs/user-robots-state/jest.config.js",
-                        "tsConfig": "libs/user-robots-state/tsconfig.spec.json",
+                        "jestConfig": "libs/user-robot-state/jest.config.js",
+                        "tsConfig": "libs/user-robot-state/tsconfig.spec.json",
                         "passWithNoTests": true
                     }
                 }

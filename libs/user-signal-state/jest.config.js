@@ -1,5 +1,5 @@
 module.exports = {
-    name: "user-robots-state",
+    name: "user-signal-state",
     preset: "../../jest.config.js",
     globals: {
         "ts-jest": {
@@ -10,5 +10,5 @@ module.exports = {
         "^.+\\.[tj]sx?$": "ts-jest"
     },
     moduleFileExtensions: ["ts", "tsx", "js", "jsx", "html"],
-    coverageDirectory: "../../coverage/libs/user-robots-state"
+    coverageDirectory: "../../coverage/libs/user-signal-state"
 };

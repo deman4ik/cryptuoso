@@ -97,7 +97,7 @@
         "backtester-events": {
             "tags": []
         },
-        "trade-statistics": {
+        "stats-calc": {
             "tags": []
         },
         "auth": {
@@ -127,10 +127,10 @@
         "events-manager": {
             "tags": []
         },
-        "user-signals-state": {
+        "user-signal-state": {
             "tags": []
         },
-        "user-robots-state": {
+        "user-robot-state": {
             "tags": []
         }
     },

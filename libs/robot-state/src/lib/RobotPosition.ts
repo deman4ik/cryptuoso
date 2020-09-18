@@ -10,42 +10,9 @@ import {
     DBCandle,
     PositionDirection,
     RobotPositionStatus,
-    RobotTradeStatus,
-    BasePosition
+    RobotTradeStatus
 } from "@cryptuoso/market";
-
-interface RobotsPostionInternalState {
-    [key: string]: any;
-    highestHigh?: number;
-    lowestLow?: number;
-    stop?: number;
-}
-
-export interface RobotPositionState extends BasePosition {
-    robotId: string;
-    volume: number;
-    parentId?: string;
-    direction?: PositionDirection;
-    status?: RobotPositionStatus;
-    entryStatus?: RobotTradeStatus;
-    entryPrice?: number;
-    entryDate?: string;
-    entryOrderType?: OrderType;
-    entryAction?: TradeAction;
-    entryCandleTimestamp?: string;
-    exitStatus?: RobotTradeStatus;
-    exitPrice?: number;
-    exitDate?: string;
-    exitOrderType?: OrderType;
-    exitAction?: TradeAction;
-    exitCandleTimestamp?: string;
-    alerts?: { [key: string]: AlertInfo };
-    profit?: number;
-    barsHeld?: number;
-    fee?: number;
-    backtest?: boolean;
-    internalState?: RobotsPostionInternalState;
-}
+import { RobotPositionState, RobotPostionInternalState } from "./types";
 
 /**
  * Robot position
@@ -79,7 +46,7 @@ export class RobotPosition {
     private _barsHeld: number;
     private _fee: number;
     private _backtest?: boolean;
-    private _internalState: RobotsPostionInternalState;
+    private _internalState: RobotPostionInternalState;
     private _candle?: DBCandle;
     private _alertsToPublish: SignalInfo[];
     private _tradeToPublish: SignalInfo;

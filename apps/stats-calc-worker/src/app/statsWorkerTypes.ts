@@ -1,5 +1,5 @@
-import { TradeStats, PositionDataForStats, ExtendedStatsPosition, SettingsVolumes } from "@cryptuoso/trade-statistics";
-import { ExtendedStatsPositionWithVolume } from "./service";
+import { BasePosition } from "@cryptuoso/market";
+import { TradeStats } from "@cryptuoso/stats-calc";
 
 export enum StatisticsType {
     Simple = "simple",
@@ -7,22 +7,24 @@ export enum StatisticsType {
     CalcByProvidedVolumes = "calcByProvidedVolumes"
 }
 
+export interface Volume {
+    activeFrom: string;
+    volume: number;
+}
+
+export type Volumes = Volume[];
+
 export type CalcStatistics = {
-    (type: StatisticsType.Simple, prevStats: TradeStats, positions: PositionDataForStats[]):
-        | TradeStats
-        | Promise<TradeStats>;
-    (type: StatisticsType.CalcByPositionsVolume, prevStats: TradeStats, positions: ExtendedStatsPositionWithVolume[]):
+    (type: StatisticsType.Simple, prevStats: TradeStats, positions: BasePosition[]): TradeStats | Promise<TradeStats>;
+    (type: StatisticsType.CalcByPositionsVolume, prevStats: TradeStats, positions: BasePosition[]):
         | TradeStats
         | Promise<TradeStats>;
     /**
      * @param volumes - must be sorted in ascending order
      */
-    (
-        type: StatisticsType.CalcByProvidedVolumes,
-        prevStats: TradeStats,
-        positions: ExtendedStatsPosition[],
-        volumes: SettingsVolumes
-    ): TradeStats | Promise<TradeStats>;
+    (type: StatisticsType.CalcByProvidedVolumes, prevStats: TradeStats, positions: BasePosition[], volumes: Volumes):
+        | TradeStats
+        | Promise<TradeStats>;
 };
 
 export type StatisticsUtils = {

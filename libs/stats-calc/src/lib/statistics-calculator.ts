@@ -1,21 +1,19 @@
 import {
-    PositionDataForStats,
-    PositionDirection,
     Statistics,
     TradeStats,
     TradeStatsClass,
     isStatistics,
     isTradeStats,
-    isPositionDataForStats,
-    RobotNumberValue,
-    RobotStringValue,
+    StatsNumberValue,
+    StatsStringValue,
     PerformanceVals,
     roundRobotStatVals
-} from "./trade-statistics";
+} from "./stats-calc";
 import dayjs from "@cryptuoso/dayjs";
 import { round, chunkArray } from "@cryptuoso/helpers";
+import { BasePosition, PositionDirection } from "@cryptuoso/market";
 
-function initializeValues(stat: RobotNumberValue): RobotNumberValue {
+function initializeValues(stat: StatsNumberValue): StatsNumberValue {
     const values = { ...stat };
     for (const key in values) if (values[key] == null) values[key] = 0;
     return values;
@@ -62,12 +60,12 @@ function validateArguments(...args: any[]) {
 }
 
 export default class StatisticsCalculator {
-    private readonly positions: PositionDataForStats[];
+    private readonly positions: BasePosition[];
     //private prevStatistics: Statistics;
     //private currentStatistics: Statistics;
     private prevTradeStats: TradeStats;
     private currentTradeStats: TradeStats;
-    private newPosition: PositionDataForStats;
+    private newPosition: BasePosition;
     private dir: PositionDirection;
     private currentPositionIndex = 0;
 
@@ -85,10 +83,11 @@ export default class StatisticsCalculator {
         this.currentTradeStats.statistics = value;
     }
 
-    public constructor(prevTradeStats: TradeStats, positions: PositionDataForStats[]) {
+    public constructor(prevTradeStats: TradeStats, positions: BasePosition[]) {
         if (positions.length < 1) throw new Error("At least 1 position expected");
 
-        for (const pos of positions) if (!isPositionDataForStats(pos)) throw new Error("Invalid position provided");
+        //TODO: check with schema
+        //   for (const pos of positions) if (!isPositionDataForStats(pos)) throw new Error("Invalid position provided");
 
         if (prevTradeStats != null) {
             if (!isTradeStats(prevTradeStats)) {
@@ -469,7 +468,7 @@ export default class StatisticsCalculator {
     //#endregion
 
     //#region Public methods
-    public incrementTradesCount(tradesCount: RobotNumberValue): RobotNumberValue {
+    public incrementTradesCount(tradesCount: StatsNumberValue): StatsNumberValue {
         validateArguments(tradesCount.all, tradesCount[this.dir]);
 
         const newTradesCount = { ...tradesCount };
@@ -481,10 +480,10 @@ export default class StatisticsCalculator {
     }
 
     public calculateRate(
-        prevRate: RobotNumberValue,
-        currentTradesRated: RobotNumberValue,
-        currentTradesCount: RobotNumberValue
-    ): RobotNumberValue {
+        prevRate: StatsNumberValue,
+        currentTradesRated: StatsNumberValue,
+        currentTradesCount: StatsNumberValue
+    ): StatsNumberValue {
         validateArguments(
             currentTradesRated.all,
             currentTradesRated[this.dir],
@@ -501,11 +500,11 @@ export default class StatisticsCalculator {
     }
 
     public calculateAverageBarsHeld(
-        prevAvgBars: RobotNumberValue,
-        prevTradesCount: RobotNumberValue,
-        newTradesCount: RobotNumberValue,
+        prevAvgBars: StatsNumberValue,
+        prevTradesCount: StatsNumberValue,
+        newTradesCount: StatsNumberValue,
         newBars: number
-    ): RobotNumberValue {
+    ): StatsNumberValue {
         validateArguments(
             prevTradesCount.all,
             prevTradesCount[this.dir],
@@ -525,7 +524,7 @@ export default class StatisticsCalculator {
         return newAvgBars;
     }
 
-    public calculateProfit(prevProfit: RobotNumberValue, profit: number): RobotNumberValue {
+    public calculateProfit(prevProfit: StatsNumberValue, profit: number): StatsNumberValue {
         validateArguments(profit);
 
         const newProfit = { ...prevProfit };
@@ -537,11 +536,11 @@ export default class StatisticsCalculator {
     }
 
     public calculateAverageProfit(
-        prevAvgProfit: RobotNumberValue,
-        currentGrossProfit: RobotNumberValue,
-        currentGrossLoss: RobotNumberValue,
-        currentTradesCount: RobotNumberValue
-    ): RobotNumberValue {
+        prevAvgProfit: StatsNumberValue,
+        currentGrossProfit: StatsNumberValue,
+        currentGrossLoss: StatsNumberValue,
+        currentTradesCount: StatsNumberValue
+    ): StatsNumberValue {
         validateArguments(
             currentGrossProfit.all,
             currentGrossProfit[this.dir],
@@ -561,10 +560,10 @@ export default class StatisticsCalculator {
     }
 
     public calculateAverageMark(
-        prevAvgProfit: RobotNumberValue,
-        currentMark: RobotNumberValue,
-        currentTradesCount: RobotNumberValue
-    ): RobotNumberValue {
+        prevAvgProfit: StatsNumberValue,
+        currentMark: StatsNumberValue,
+        currentTradesCount: StatsNumberValue
+    ): StatsNumberValue {
         validateArguments(currentMark.all, currentMark[this.dir], currentTradesCount.all, currentTradesCount[this.dir]);
 
         const newAvgProfit = { ...prevAvgProfit };
@@ -575,17 +574,17 @@ export default class StatisticsCalculator {
         return newAvgProfit;
     }
 
-    public calculateRatio(profitStat: RobotNumberValue, lossStat: RobotNumberValue): RobotNumberValue {
+    public calculateRatio(profitStat: StatsNumberValue, lossStat: StatsNumberValue): StatsNumberValue {
         validateArguments(profitStat.all, profitStat[this.dir], lossStat.all, lossStat[this.dir]);
 
-        return new RobotNumberValue(
+        return new StatsNumberValue(
             Math.abs(divide(profitStat.all, lossStat.all)),
             Math.abs(divide(profitStat.long, lossStat.long)),
             Math.abs(divide(profitStat.short, lossStat.short))
         );
     }
 
-    public nullifySequence(prevSequence: RobotNumberValue): RobotNumberValue {
+    public nullifySequence(prevSequence: StatsNumberValue): StatsNumberValue {
         validateArguments(prevSequence.all, prevSequence[this.dir]);
 
         const newSequence = { ...prevSequence };
@@ -596,7 +595,7 @@ export default class StatisticsCalculator {
         return newSequence;
     }
 
-    public incrementSequence(prevSequence: RobotNumberValue): RobotNumberValue {
+    public incrementSequence(prevSequence: StatsNumberValue): StatsNumberValue {
         validateArguments(prevSequence.all, prevSequence[this.dir]);
 
         const newSequence = { ...prevSequence };
@@ -607,7 +606,7 @@ export default class StatisticsCalculator {
         return newSequence;
     }
 
-    public incrementMaxSequence(prevSequence: RobotNumberValue, maxSequence: RobotNumberValue): RobotNumberValue {
+    public incrementMaxSequence(prevSequence: StatsNumberValue, maxSequence: StatsNumberValue): StatsNumberValue {
         validateArguments(prevSequence.all, prevSequence[this.dir], maxSequence.all, maxSequence[this.dir]);
 
         const newMax = { ...maxSequence };
@@ -619,10 +618,10 @@ export default class StatisticsCalculator {
     }
 
     public calculateMaxDrawdown(
-        prevDrawdown: RobotNumberValue,
-        netProfit: RobotNumberValue,
-        localMax: RobotNumberValue
-    ): RobotNumberValue {
+        prevDrawdown: StatsNumberValue,
+        netProfit: StatsNumberValue,
+        localMax: StatsNumberValue
+    ): StatsNumberValue {
         validateArguments(netProfit.all, netProfit[this.dir], localMax.all, localMax[this.dir]);
 
         const currentDrawdownAll = netProfit.all - localMax.all;
@@ -636,7 +635,7 @@ export default class StatisticsCalculator {
         return newDrawdown;
     }
 
-    public calculateMaxDrawdownDate(prevDate: RobotStringValue, exitDate: string): RobotStringValue {
+    public calculateMaxDrawdownDate(prevDate: StatsStringValue, exitDate: string): StatsStringValue {
         validateArguments(exitDate);
 
         const newDate = { ...prevDate };
@@ -659,10 +658,10 @@ export default class StatisticsCalculator {
     }
 
     public calculateRecoveryFactor(
-        prevFactor: RobotNumberValue,
-        netProfit: RobotNumberValue,
-        maxDrawdown: RobotNumberValue
-    ): RobotNumberValue {
+        prevFactor: StatsNumberValue,
+        netProfit: StatsNumberValue,
+        maxDrawdown: StatsNumberValue
+    ): StatsNumberValue {
         validateArguments(netProfit.all, netProfit[this.dir], maxDrawdown.all, maxDrawdown[this.dir]);
 
         const newFactor = { ...prevFactor };
@@ -673,7 +672,7 @@ export default class StatisticsCalculator {
         return newFactor;
     }
 
-    public calculateLocalMax(prevMax: RobotNumberValue, netProfit: RobotNumberValue) {
+    public calculateLocalMax(prevMax: StatsNumberValue, netProfit: StatsNumberValue) {
         validateArguments(prevMax.all, prevMax[this.dir], netProfit);
 
         const newMax = { ...prevMax };
@@ -685,13 +684,13 @@ export default class StatisticsCalculator {
     }
 
     public calculateRating(
-        profitFactor: RobotNumberValue,
-        payoffRatio: RobotNumberValue,
-        recoveryFactor: RobotNumberValue,
+        profitFactor: StatsNumberValue,
+        payoffRatio: StatsNumberValue,
+        recoveryFactor: StatsNumberValue,
         profitFactorWeight = 0.35,
         recoveryFactorWeight = 0.25,
         payoffRatioWeight = 0.4
-    ): RobotNumberValue {
+    ): StatsNumberValue {
         validateArguments(profitFactor.all, payoffRatio.all, recoveryFactor.all);
 
         if (!isFinite(profitFactorWeight) || !isFinite(recoveryFactorWeight) || !isFinite(payoffRatioWeight))
@@ -700,7 +699,7 @@ export default class StatisticsCalculator {
         if (Math.abs(profitFactorWeight + recoveryFactorWeight + payoffRatioWeight - 1) > Number.EPSILON)
             throw new Error("Sum of weights must be equal to 1");
 
-        return new RobotNumberValue(
+        return new StatsNumberValue(
             profitFactorWeight * profitFactor.all +
                 payoffRatioWeight * payoffRatio.all +
                 recoveryFactorWeight * recoveryFactor.all

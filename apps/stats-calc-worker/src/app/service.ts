@@ -3,20 +3,21 @@ import { spawn, Pool, Worker as ThreadsWorker } from "threads";
 import { Worker, Job } from "bullmq";
 import os from "os";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
-import { StatisticsType, CalcStatistics, StatisticsUtils } from "./statsWorkerTypes";
+import { StatisticsType, CalcStatistics, StatisticsUtils, Volumes } from "./statsWorkerTypes";
 import { sql } from "@cryptuoso/postgres";
 import { SqlSqlTokenType, QueryResultRowType } from "slonik";
-import {
-    TradeStats,
-    PositionDataForStats,
-    ExtendedStatsPosition,
-    isTradeStats,
-    SettingsVolumes
-} from "@cryptuoso/trade-statistics";
+import { TradeStats, isTradeStats } from "@cryptuoso/stats-calc";
 import { UserAggrStatsTypes } from "@cryptuoso/user-state";
-import { UserSignalStats } from "@cryptuoso/user-signals-state";
 import { StatsCalcJob, StatsCalcJobType } from "@cryptuoso/stats-calc-events";
 import dayjs from "@cryptuoso/dayjs";
+import { BasePosition } from "@cryptuoso/market";
+
+type UserSignalStats = {
+    id: string;
+    subscribedAt: string;
+    volume: number;
+    volumes: Volumes;
+} & TradeStats; //TODO: Use user-signal-state types
 
 export function getCalcFromAndInitStats(stats?: TradeStats, calcAll?: boolean) {
     let calcFrom: string = null;
@@ -34,14 +35,6 @@ export function getCalcFromAndInitStats(stats?: TradeStats, calcAll?: boolean) {
     }
 
     return { calcFrom, initStats };
-}
-
-export interface ExtendedStatsPositionWithVolume extends ExtendedStatsPosition {
-    volume: number;
-}
-
-interface ExtendedStatsPositionWithDate extends ExtendedStatsPosition {
-    entryDate: string;
 }
 
 interface TradeStatsWithId extends TradeStats {
@@ -189,12 +182,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         }
     }
 
-    calcStatistics: CalcStatistics = async (
-        type: any,
-        prevStats: TradeStats,
-        positions: any[],
-        volumes?: SettingsVolumes
-    ) => {
+    calcStatistics: CalcStatistics = async (type: any, prevStats: TradeStats, positions: any[], volumes?: Volumes) => {
         return await this.pool.queue(async (utils: StatisticsUtils) =>
             utils.calcStatistics(type, prevStats, positions, volumes)
         );
@@ -253,7 +241,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
             )
         ).reduce(
-            async (prevStats: TradeStats, chunk: ExtendedStatsPositionWithVolume[]) =>
+            async (prevStats: TradeStats, chunk: BasePosition[]) =>
                 await this.calcStatistics(StatisticsType.CalcByPositionsVolume, prevStats, chunk),
             initStats
         );
@@ -331,7 +319,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
             )
         ).reduce(
-            async (prevStats: TradeStats, chunk: ExtendedStatsPositionWithVolume[]) =>
+            async (prevStats: TradeStats, chunk: BasePosition[]) =>
                 await this.calcStatistics(StatisticsType.CalcByPositionsVolume, prevStats, chunk),
             initStats
         );
@@ -398,7 +386,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
             )
         ).reduce(
-            async (prevStats: TradeStats, chunk: PositionDataForStats[]) =>
+            async (prevStats: TradeStats, chunk: BasePosition[]) =>
                 await this.calcStatistics(StatisticsType.Simple, prevStats, chunk),
             initStats
         );
@@ -481,7 +469,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
             )
         ).reduce(
-            async (prevStats: TradeStats, chunk: ExtendedStatsPositionWithVolume[]) =>
+            async (prevStats: TradeStats, chunk: BasePosition[]) =>
                 await this.calcStatistics(StatisticsType.CalcByPositionsVolume, prevStats, chunk),
             initStats
         );
@@ -519,14 +507,14 @@ export default class StatisticCalcWorkerService extends BaseService {
             };
         } = {};
 
-        const allPositions: ExtendedStatsPositionWithDate[] = await this.db.pg.any(sql`
+        const allPositions: BasePosition[] = await this.db.pg.any(sql`
                 ${queryCommonPart};
         `);
 
         for (const userSignal of userSignals) {
             const { calcFrom, initStats } = getCalcFromAndInitStats(userSignal, calcAll);
 
-            const positions: ExtendedStatsPositionWithDate[] = allPositions.filter(
+            const positions: BasePosition[] = allPositions.filter(
                 (pos) => userSignal.subscribedAt <= pos.entryDate && (!calcFrom || calcFrom <= pos.exitDate)
             );
 
@@ -576,7 +564,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         });
 
         statsAcc = await DataStream.from(this.makeChunksGenerator(queryCommonPart, chunkSize)).reduce(
-            async (signalsAcc: typeof statsAcc, chunk: ExtendedStatsPositionWithDate[]) => {
+            async (signalsAcc: typeof statsAcc, chunk: BasePosition[]) => {
                 const chunkMaxExitDate = chunk[chunk.length - 1].exitDate;
                 const chunkMaxEntryDate = dayjs
                     .utc(Math.max(...chunk.map((pos) => dayjs.utc(pos.entryDate).valueOf())))
@@ -789,7 +777,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
             )
         ).reduce(
-            async (prevStats: TradeStats, chunk: ExtendedStatsPositionWithVolume[]) =>
+            async (prevStats: TradeStats, chunk: BasePosition[]) =>
                 await this.calcStatistics(StatisticsType.CalcByPositionsVolume, prevStats, chunk),
             initStats
         );
@@ -859,7 +847,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
             )
         ).reduce(
-            async (prevStats: TradeStats, chunk: PositionDataForStats[]) =>
+            async (prevStats: TradeStats, chunk: BasePosition[]) =>
                 await this.calcStatistics(StatisticsType.Simple, prevStats, chunk),
             initStats
         );
@@ -929,7 +917,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
             )
         ).reduce(
-            async (prevStats: TradeStats, chunk: PositionDataForStats[]) =>
+            async (prevStats: TradeStats, chunk: BasePosition[]) =>
                 await this.calcStatistics(StatisticsType.Simple, prevStats, chunk),
             initStats
         );

@@ -3,8 +3,9 @@ import positions from "./testData/positionsForStats";
 import correctFinalResult from "./testData/correctResultAfterRefactor";
 import statsWithoutLastPos from "./testData/correctWithoutLastPos";
 //import dayjs from "@cryptuoso/dayjs";
-import { TradeStats, TradeStatsClass, PositionDataForStats, roundRobotStatVals, Statistics } from "./trade-statistics";
+import { TradeStats, TradeStatsClass, roundRobotStatVals, Statistics } from "./stats-calc";
 import { invalidStatistics, invalidPosition } from "./testData/invalidData";
+import { BasePosition } from "@cryptuoso/market";
 
 describe("statistics-calculator test", () => {
     const newPosition = positions[positions.length - 1];
@@ -56,7 +57,7 @@ describe("statistics-calculator test", () => {
             validObject.statistics.recoveryFactor = null;
             validObject.statistics.payoffRatio = null;
 
-            const validPosition: PositionDataForStats = positions[0];
+            const validPosition: BasePosition = positions[0];
             describe("Testing constructor with semi-valid statistics and valid position", () => {
                 it("Should not throw error", () => {
                     expect(() => {
@@ -95,7 +96,7 @@ describe("Statistics functions test", () => {
     const currentTradeStatsObject: TradeStats = JSON.parse(JSON.stringify(prevTradeStatsObject));
     const currentStatisticsObject: Statistics = currentTradeStatsObject.statistics;
 
-    const newPos: PositionDataForStats = positions[positions.length - 1],
+    const newPos: BasePosition = positions[positions.length - 1],
         profit = newPos.profit;
 
     const sc = new StatisticsCalculator(prevTradeStatsObject, [newPos]);

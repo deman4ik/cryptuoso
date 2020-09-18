@@ -1,19 +1,8 @@
 import { round } from "@cryptuoso/helpers";
+import { BasePosition } from "@cryptuoso/market";
 import StatisticsCalculator from "./statistics-calculator";
 
-export interface SettingsVolume {
-    activeFrom: string;
-    volume: number;
-}
-
-export type SettingsVolumes = SettingsVolume[];
-
-export const enum PositionDirection {
-    long = "long",
-    short = "short"
-}
-
-export class PositionDataForStats {
+/*export class PositionDataForStats {
     [index: string]: any;
     id = "";
     direction: PositionDirection = PositionDirection.short;
@@ -29,15 +18,9 @@ export function isPositionDataForStats(object: any): object is PositionDataForSt
         if (object[key] == null) return false;
     }
     return true;
-}
+}*/
 
-export interface ExtendedStatsPosition extends PositionDataForStats {
-    exitPrice: number;
-    entryPrice: number;
-    fee: number;
-}
-
-export interface RobotStatVals<T> {
+export interface StatsVals<T> {
     all: T;
     long: T;
     short: T;
@@ -46,12 +29,12 @@ export interface RobotStatVals<T> {
 export type PerformanceVals = { x: number; y: number }[];
 
 // Classes to eliminate manual object construction
-export class RobotNumberValue implements RobotStatVals<number> {
+export class StatsNumberValue implements StatsVals<number> {
     [index: string]: number;
     constructor(public all: number = 0, public long: number = 0, public short: number = 0) {}
 }
 
-export class RobotStringValue implements RobotStatVals<string> {
+export class StatsStringValue implements StatsVals<string> {
     [index: string]: string;
     constructor(public all: string = "", public long: string = "", public short: string = "") {}
 }
@@ -62,7 +45,7 @@ export function roundToNumberOrNull(num: number, decimals = 0): number {
     return round(num, decimals);
 }
 
-export function roundRobotStatVals(vals: RobotNumberValue, decimals = 0): RobotNumberValue {
+export function roundRobotStatVals(vals: StatsNumberValue, decimals = 0): StatsNumberValue {
     const result = { ...vals };
 
     for (const key in result) {
@@ -73,32 +56,32 @@ export function roundRobotStatVals(vals: RobotNumberValue, decimals = 0): RobotN
 }
 
 export class Statistics {
-    tradesCount = new RobotNumberValue();
-    tradesWinning = new RobotNumberValue();
-    tradesLosing = new RobotNumberValue();
-    winRate = new RobotNumberValue(null, null, null);
-    lossRate = new RobotNumberValue(null, null, null);
-    avgBarsHeld = new RobotNumberValue(null, null, null);
-    avgBarsHeldWinning = new RobotNumberValue(null, null, null);
-    avgBarsHeldLosing = new RobotNumberValue(null, null, null);
-    netProfit = new RobotNumberValue(null, null, null);
-    localMax = new RobotNumberValue();
-    avgNetProfit = new RobotNumberValue(null, null, null);
-    grossProfit = new RobotNumberValue(null, null, null);
-    avgProfit = new RobotNumberValue(null, null, null);
-    avgProfitWinners = new RobotNumberValue(null, null, null);
-    grossLoss = new RobotNumberValue(null, null, null);
-    avgLoss = new RobotNumberValue(null, null, null);
-    maxConsecWins = new RobotNumberValue();
-    maxConsecLosses = new RobotNumberValue();
-    currentWinSequence = new RobotNumberValue();
-    currentLossSequence = new RobotNumberValue();
-    maxDrawdown = new RobotNumberValue(null, null, null);
-    maxDrawdownDate = new RobotStringValue();
-    profitFactor? = new RobotNumberValue(null, null, null);
-    recoveryFactor? = new RobotNumberValue(null, null, null);
-    payoffRatio? = new RobotNumberValue(null, null, null);
-    rating? = new RobotNumberValue(null, null, null);
+    tradesCount = new StatsNumberValue();
+    tradesWinning = new StatsNumberValue();
+    tradesLosing = new StatsNumberValue();
+    winRate = new StatsNumberValue(null, null, null);
+    lossRate = new StatsNumberValue(null, null, null);
+    avgBarsHeld = new StatsNumberValue(null, null, null);
+    avgBarsHeldWinning = new StatsNumberValue(null, null, null);
+    avgBarsHeldLosing = new StatsNumberValue(null, null, null);
+    netProfit = new StatsNumberValue(null, null, null);
+    localMax = new StatsNumberValue();
+    avgNetProfit = new StatsNumberValue(null, null, null);
+    grossProfit = new StatsNumberValue(null, null, null);
+    avgProfit = new StatsNumberValue(null, null, null);
+    avgProfitWinners = new StatsNumberValue(null, null, null);
+    grossLoss = new StatsNumberValue(null, null, null);
+    avgLoss = new StatsNumberValue(null, null, null);
+    maxConsecWins = new StatsNumberValue();
+    maxConsecLosses = new StatsNumberValue();
+    currentWinSequence = new StatsNumberValue();
+    currentLossSequence = new StatsNumberValue();
+    maxDrawdown = new StatsNumberValue(null, null, null);
+    maxDrawdownDate = new StatsStringValue();
+    profitFactor? = new StatsNumberValue(null, null, null);
+    recoveryFactor? = new StatsNumberValue(null, null, null);
+    payoffRatio? = new StatsNumberValue(null, null, null);
+    rating? = new StatsNumberValue(null, null, null);
 }
 
 export function isStatistics(object: any): object is Statistics {
@@ -138,7 +121,7 @@ export function isTradeStats(object: any, checkPropsCount = true): object is Tra
 }
 
 // It is now expected that every value is rounded after each cumulative calculatuion
-export function calcStatistics(previousRobotStatistics: TradeStats, positions: PositionDataForStats[]): TradeStats {
+export function calcStatistics(previousRobotStatistics: TradeStats, positions: BasePosition[]): TradeStats {
     if (!positions || positions.length < 1) return previousRobotStatistics;
 
     return new StatisticsCalculator(previousRobotStatistics, positions).getStats();

@@ -1,5 +1,5 @@
 import Service, { getCalcFromAndInitStats } from "../app/service";
-import { TradeStats, TradeStatsClass, isTradeStats, PositionDataForStats } from "@cryptuoso/trade-statistics";
+import { TradeStats, TradeStatsClass, isTradeStats } from "@cryptuoso/stats-calc";
 import dayjs from "@cryptuoso/dayjs";
 import { pg } from "@cryptuoso/postgres";
 import { setProperty, getProperty } from "@cryptuoso/test-helpers";
@@ -7,6 +7,7 @@ import { StatsCalcJobType, StatsCalcJob } from "@cryptuoso/stats-calc-events";
 import { Job } from "bullmq";
 import { Pool } from "threads";
 import { StatisticsType } from "../app/statsWorkerTypes";
+import { BasePosition } from "@cryptuoso/market";
 
 const mockPG = {
     any: pg.any as jest.Mock,
@@ -468,7 +469,7 @@ describe("stats-calc-worker class", () => {
             test("Should call queue of Pool", async () => {
                 const pool = getProperty(service, "pool") as Pool<any>;
 
-                await service.calcStatistics(StatisticsType.Simple, {} as TradeStats, [] as PositionDataForStats[]);
+                await service.calcStatistics(StatisticsType.Simple, {} as TradeStats, [] as BasePosition[]);
 
                 expect(pool.queue).toHaveBeenCalledTimes(1);
             });

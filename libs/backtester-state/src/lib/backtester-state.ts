@@ -5,7 +5,7 @@ import { round, defaultValue } from "@cryptuoso/helpers";
 import logger from "@cryptuoso/logger";
 import { IndicatorCode } from "@cryptuoso/robot-indicators";
 import { v4 as uuid } from "uuid";
-import { calcStatistics, TradeStats } from "@cryptuoso/trade-statistics";
+import { calcStatistics, TradeStats } from "@cryptuoso/stats-calc";
 
 export const enum Status {
     queued = "queued",

@@ -1,4 +1,4 @@
-import { TradeStats } from "@cryptuoso/trade-statistics";
+import { TradeStats } from "@cryptuoso/stats-calc";
 
 export enum UserAggrStatsTypes {
     signal = "signal",
