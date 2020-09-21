@@ -138,7 +138,7 @@ export default class BacktesterWorkerService extends BaseService {
                 await this.run(job, backtester);
             } catch (err) {
                 backtester.fail(err.message);
-                this.log.warn(`Backtester #${backtester.id}`, err);
+                this.log.warn(`Backtester #${backtester.id}`, err.message);
             }
             backtester.finish(this.abort[backtester.id]);
             if (this.abort[backtester.id]) delete this.abort[backtester.id];
@@ -198,6 +198,7 @@ export default class BacktesterWorkerService extends BaseService {
                 this.log.info("alerts", robot.data.alerts.length);
                 this.log.info("trades", robot.data.trades.length);
                 this.log.info("positions", Object.keys(robot.data.positions).length);
+                this.log.info("stats", robot.data.stats);
             });
         } catch (err) {
             this.log.error(`Backtester #${backtester.id} - Failed`, err.message);

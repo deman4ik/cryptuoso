@@ -376,12 +376,12 @@ export class Backtester {
         }
     };
 
-    /* #calcStats = (id: string) => {
+    #calcStats = (id: string) => {
         const robot = this.robots[id];
         if (robot.instance.hasClosedPositions) {
             robot.data.stats = calcStatistics(robot.data.stats, robot.instance.closedPositions);
         }
-    };*/
+    };
 
     async handleCandle(candle: DBCandle) {
         Object.keys(this.#robots).forEach(async (id) => {
@@ -393,6 +393,7 @@ export class Backtester {
             this.#saveLogs(id);
             this.#saveAlertsAndTrades(id);
             this.#savePositions(id);
+            this.#calcStats(id);
 
             robot.instance.clearEvents();
             await robot.instance.calcIndicators();
@@ -402,6 +403,7 @@ export class Backtester {
             this.#saveLogs(id);
             this.#saveAlertsAndTrades(id);
             this.#savePositions(id);
+            this.#calcStats(id);
         });
     }
 
