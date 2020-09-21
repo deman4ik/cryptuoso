@@ -108,7 +108,6 @@ export interface RobotState {
     lastCandle?: DBCandle;
     state?: StrategyProps;
     hasAlerts?: boolean;
-    indicators?: { [key: string]: IndicatorState };
     status?: RobotStatus;
     startedAt?: string;
     stoppedAt?: string;

@@ -246,14 +246,6 @@ export default class BacktesterRunnerService extends HTTPService {
                 throw new Error(
                     `Not enough history candles! Required: ${robotSettings.requiredHistoryMaxBars} bars but loaded: ${historyCandlesCount} bars`
                 );
-            // Delete previous backtester state if exists
-            const existedBacktest: { id: string } = await this.db.pg.maybeOne(sql`
-             SELECT id FROM backtests WHERE id = ${id}
-             `);
-            if (existedBacktest) {
-                this.log.info(`Backtester #${id} - Found previous backtest. Deleting...`);
-                await this.db.pg.query(sql`DELETE FROM backtests WHERE id = ${id}`);
-            }
 
             const backtester = new Backtester({
                 id,

@@ -1,4 +1,11 @@
-import { RobotSettings, Robot, StrategyCode, StrategySettings, RobotPositionState } from "@cryptuoso/robot-state";
+import {
+    RobotSettings,
+    Robot,
+    StrategyCode,
+    StrategySettings,
+    RobotPositionState,
+    StrategyProps
+} from "@cryptuoso/robot-state";
 import { ValidTimeframe, Candle, SignalEvent, DBCandle } from "@cryptuoso/market";
 import dayjs from "@cryptuoso/dayjs";
 import { round, defaultValue } from "@cryptuoso/helpers";
@@ -42,7 +49,7 @@ export interface BacktesterState {
     status: Status;
     startedAt?: string;
     finishedAt?: string;
-    statistics?: BacktesterStats;
+    robotState?: StrategyProps;
     strategySettings?: {
         [key: string]: StrategySettings;
     };
@@ -90,7 +97,7 @@ export class Backtester {
     #status: Status;
     #startedAt?: string;
     #finishedAt?: string;
-    #statistics?: BacktesterStats;
+    #robotState?: StrategyProps;
     #strategySettings?: {
         [key: string]: StrategySettings;
     };
@@ -135,7 +142,7 @@ export class Backtester {
         this.#status = state.status;
         this.#startedAt = state.startedAt || null;
         this.#finishedAt = state.finishedAt || null;
-        this.#statistics = state.statistics;
+        this.#robotState = state.robotState || null;
         this.#error = state.error || null;
     }
 
@@ -160,7 +167,7 @@ export class Backtester {
             status: this.#status,
             startedAt: this.#startedAt,
             finishedAt: this.#finishedAt,
-            statistics: this.#statistics,
+            robotState: this.#robotState,
             error: this.#error
         };
     }
@@ -271,12 +278,8 @@ export class Backtester {
         return this.#settings;
     }
 
-    get statistics() {
-        return this.#statistics;
-    }
-
-    set statistics(statistics) {
-        this.#statistics = statistics;
+    get robotState() {
+        return this.#robotState;
     }
 
     get robotSettings() {
@@ -301,36 +304,46 @@ export class Backtester {
 
     initRobots(strategyCode: StrategyCode) {
         for (const [id, settings] of Object.entries(this.#strategySettings)) {
-            this.#robots[id] = {
-                instance: new Robot({
-                    id,
-                    exchange: this.#exchange,
-                    asset: this.#asset,
-                    currency: this.#currency,
-                    timeframe: this.#timeframe,
-                    strategyName: this.#strategyName,
-                    strategySettings: settings,
-                    robotSettings: this.#robotSettings,
-                    backtest: true
-                }),
-                data: {
-                    logs: [],
-                    alerts: [],
-                    trades: [],
-                    positions: {},
-                    stats: null
-                }
-            };
-            this.#robots[id].instance.setStrategy(strategyCode);
-            this.#robots[id].instance.initStrategy();
+            try {
+                this.#robots[id] = {
+                    instance: new Robot({
+                        id,
+                        exchange: this.#exchange,
+                        asset: this.#asset,
+                        currency: this.#currency,
+                        timeframe: this.#timeframe,
+                        strategyName: this.#strategyName,
+                        strategySettings: settings,
+                        robotSettings: this.#robotSettings,
+                        backtest: true
+                    }),
+                    data: {
+                        logs: [],
+                        alerts: [],
+                        trades: [],
+                        positions: {},
+                        stats: null
+                    }
+                };
+                this.#robots[id].instance.setStrategy(strategyCode);
+                this.#robots[id].instance.initStrategy();
+            } catch (err) {
+                logger.error(`Backtester ${this.#id} - Failed to init robot ${id}`, err);
+                throw err;
+            }
         }
     }
 
     initIndicators(indicatorsCode: { fileName: string; code: IndicatorCode }[]) {
         Object.keys(this.#robots).forEach((id) => {
-            this.#robots[id].instance.setBaseIndicatorsCode(indicatorsCode);
-            this.#robots[id].instance.setIndicators();
-            this.#robots[id].instance.initIndicators();
+            try {
+                this.#robots[id].instance.setBaseIndicatorsCode(indicatorsCode);
+                this.#robots[id].instance.setIndicators();
+                this.#robots[id].instance.initIndicators();
+            } catch (err) {
+                logger.error(`Backtester ${this.#id} - Failed to init robot's #${id} indicators`, err);
+                throw err;
+            }
         });
     }
 
@@ -432,6 +445,7 @@ export class Backtester {
             return;
         }
         if (this.isProcessed) {
+            this.#robotState = this.#robots[this.#robotId].instance.strategy;
             this.#status = Status.finished;
         }
     }
