@@ -1,6 +1,8 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 //import { CloudEvent } from "cloudevents";
 import { eventsManagementConfig, BASE_REDIS_PREFIX, DEAD_LETTER_TOPIC, DeadLetter, Event } from "@cryptuoso/events";
+import { UserRoles } from "@cryptuoso/user-state";
+import { JSONParse } from '@cryptuoso/helpers';
 //import { BASE_REDIS_PREFIX } from "../../../../libs/events/src/lib/catalog";
 
 //const BASE_REDIS_PREFIX = "cpz:events:";
@@ -20,19 +22,61 @@ interface StoredDeadLetter {
     updatedAt: string;
 }
 
+interface RedisGroupInfo {
+    name: string;
+    consumers: number;
+    pending: number;
+    "last-delivered-id": string;
+}
+
+interface RedisConsumerInfo {
+    name: string;
+    pending: number;
+    idle: number;
+}
+
 export interface EventsManagerConfig extends HTTPServiceConfig {
     /** in seconds */
     checkInterval: number;
+    clearingChunkSize: number;
 }
 
 export default class EventsManager extends HTTPService {
     /** in milliseconds */
     checkInterval: number;
+    clearingChunkSize: number;
 
     constructor(config?: EventsManagerConfig) {
         super(config);
 
         this.checkInterval = 1e3 * (config?.checkInterval || +process.env.CHECK_INTERVAL || 10);
+        this.clearingChunkSize = config?.clearingChunkSize || 100;
+
+        this.createRoutes({
+            resend: {
+                auth: true,
+                roles: [UserRoles.admin],
+                handler: this._resendHandler.bind(this),
+                inputSchema: {
+                    eventId: {
+                        type: "uuid",
+                        optional: true
+                    },
+                    topic: {
+                        type: "string",
+                        optional: true
+                    },
+                    type: {
+                        type: "string",
+                        optional: true
+                    },
+                    resend: {
+                        type: "boolean",
+                        optional: true
+                    }
+                }
+            }
+        });
 
         this.addOnStartHandler(this._onServiceStart);
         this.addOnStopHandler(this._onServiceStop);
@@ -40,6 +84,9 @@ export default class EventsManager extends HTTPService {
 
     async _onServiceStart() {
         this.events.subscribe({
+            ["errors.*.*"]: {
+                handler: this._errorsHandler.bind(this)
+            },
             [`${DEAD_LETTER_TOPIC}.*`]: {
                 /* passFullEvent: true, */
                 handler: this._deadLettersHandler.bind(this)
@@ -49,51 +96,121 @@ export default class EventsManager extends HTTPService {
             }
         });
 
-        // TODO: subscribe on route
+        //await this._testSender();
 
-        this._update();
+        this.update();
     }
 
-    async _onServiceStop() {
-        
-    }
+    async _onServiceStop() {}
 
-    async _deleteExpiresEvents(
-        stream: string,
-        cacheTime: number
+    async _resendHandler(
+        req: {
+            body: {
+                input: {
+                    eventId?: string;
+                    topic?: string;
+                    type?: string;
+                    resend?: boolean;
+                };
+            };
+        },
+        res: any
     ) {
-        const threshold = (Date.now() - cacheTime).toString();
+        try {
+            await this.checkStoredDeadLetters(req.body.input);
+            res.send({ success: true });
+        } catch (err) {
+            res.send({ success: false, error: err.message });
+        }
+
+        res.end();
+    }
+
+    async deleteExpiresEvents(stream: string, ttl: number) {
+        const threshold = (Date.now() - ttl).toString();
         let prevId = "-";
 
-        while(true) {
-            const ids = (await this.redis.xrange(
-                stream,
-                prevId, threshold,
-                "COUNT", 100
-            )).map((raw) => raw[0]);
+        while (true) {
+            const ids = (await this.redis.xrange(stream, prevId, threshold, "COUNT", this.clearingChunkSize)).map(
+                (raw) => raw[0]
+            );
 
             const expiresIds = ids.filter((id) => id < threshold);
 
-            if(expiresIds.length == 0) break;
-        
+            if (expiresIds.length == 0) break;
+
             await this.redis.xdel(stream, ...expiresIds);
 
-            if(expiresIds.length < ids.length) break;
+            if (expiresIds.length < ids.length) break;
 
-            prevId = ids[ids.length - 1]
+            prevId = ids[ids.length - 1];
         }
     }
-    
-    async _clearStreams() {
-        for(const { topics } of eventsManagementConfig) {
-            for(const topic of topics) {
-                await this._deleteExpiresEvents(topic.fullname, 1e3 * topic.cacheTime);
+
+     _parseInfoArray<T extends { [key: string]: any }>(groups: string[][]): T[] {
+        if (!(groups instanceof Array)) throw new Error("Argument must be array");
+
+        const result: T[] = [];
+
+        groups.forEach((group) => {
+            if (!(group instanceof Array)) throw new Error("All elements must be arrays of strings");
+
+            const parsed: { [key: string]: any } = {};
+
+            for (let i = 0; i < group.length; i += 2) {
+                parsed[group[i]] = JSONParse(group[i + 1]);
+            }
+
+            result.push(parsed as any);
+        });
+
+        return result;
+    }
+
+    async deleteOldConsumers(stream: string, ttl: number) {
+        const groups = this._parseInfoArray<RedisGroupInfo>(
+            await this.redis.xinfo("GROUPS", stream)
+        );
+        
+        for(const group of groups) {
+            if(!group.consumers) continue;
+
+            const consumers = this._parseInfoArray<RedisConsumerInfo>(
+                await this.redis.xinfo("CONSUMERS", stream, group.name)
+            );
+
+            if(!consumers?.length) continue;
+
+            const oldConsumers = consumers.filter((c) => c.pending == 0 && c.idle > ttl);
+
+            for(const consumer of oldConsumers) {
+                await this.redis.xgroup("DELCONSUMER", stream, group.name, consumer.name);
             }
         }
     }
 
+    async clearStreams() {
+        const streams = await this.redis.keys(`${BASE_REDIS_PREFIX}*`);
+        const { common, configs } = eventsManagementConfig;
+
+        for (const stream of streams) {
+
+            let config: typeof common;
+
+            if (stream in configs) config = configs[stream];
+            else {
+                config = (Object.entries(configs).find(
+                    ([name]) => name.slice(-1) == "*" && stream.startsWith(name.slice(0, -1))
+                ) || [null, common])[1];
+            }
+
+            await this.deleteExpiresEvents(stream, 1e3 * config.eventTTL);
+            await this.deleteOldConsumers(stream, 1e3 * config.consumerIdleTTL);
+        }
+    }
+
     async _updateProcessedDeadLetters(ids: string[]) {
-        if(!ids.length) return;
+        if (!ids.length) return;
 
         await this.db.pg.any(this.db.sql`
             UPDATE dead_letters
@@ -102,8 +219,11 @@ export default class EventsManager extends HTTPService {
         `);
     }
 
-    async _checkStoredDeadLetters({
-        eventId, topic, type, resend
+    async checkStoredDeadLetters({
+        eventId,
+        topic,
+        type,
+        resend
     }: {
         eventId?: string;
         topic?: string;
@@ -126,20 +246,24 @@ export default class EventsManager extends HTTPService {
                 ${conditionType}
                 ${conditionResend};
         `);
-        
-        if(!deadLetters?.length) return;
+
+        if (!deadLetters?.length) return;
 
         // TODO: resolve problem of wrong event id
 
-        for(const event of deadLetters) {
+        for (const event of deadLetters) {
             await this.redis.xadd(
                 event.topic,
-                '*',
-                "id", event.id,
-                "type", event.type,
-                "timestamp", event.timestamp,
-                "event", JSON.stringify(event.data)
-            )
+                "*",
+                "id",
+                event.id,
+                "type",
+                event.type,
+                "timestamp",
+                event.timestamp,
+                "event",
+                JSON.stringify(event.data)
+            );
         }
 
         await this._updateProcessedDeadLetters(deadLetters.map((dl) => dl.id));
@@ -147,23 +271,22 @@ export default class EventsManager extends HTTPService {
         //await this._testSender();
     }
 
-    async _update() {
-        if(this.lightship.isServerShuttingDown()) return;
+    async update() {
+        if (this.lightship.isServerShuttingDown()) return;
 
         const startTime = Date.now();
 
         try {
-            await this._checkStoredDeadLetters({ resend: true });
+            await this.checkStoredDeadLetters({ resend: true });
 
             // TODO: think about possibility of deleting dead letters before handling
 
-            await this._clearStreams();
-        } catch(err) {
+            await this.clearStreams();
+        } catch (err) {
             this.log.error(err);
         }
 
-        
-        setTimeout(this._update.bind(this), this.checkInterval - (Date.now() - startTime));
+        setTimeout(this.update.bind(this), this.checkInterval - (Date.now() - startTime));
     }
 
     async _deadLettersHandler(deadLetter: DeadLetter) {
@@ -181,33 +304,37 @@ export default class EventsManager extends HTTPService {
             const [[_, rawData]] = await this.redis.xrange(deadLetter.topic, msgId, msgId);
 
             tuples.push([
-                rawData[1],         // eventId
-                deadLetter.topic,   // topic
-                rawData[3],         // type
-                rawData[5],         // timestamp
-                rawData[7]          // event JSON
+                rawData[1], // eventId
+                deadLetter.topic, // topic
+                rawData[3], // type
+                rawData[5], // timestamp
+                rawData[7] // data (event JSON)
             ]);
-
-            /* await this.redis.xdel(
-                `${BASE_REDIS_PREFIX}${DEAD_LETTER_TOPIC}`,
-                deadLetterMsgId
-            ); */
         }
 
         this.db.pg.query(this.db.sql`
             INSERT INTO dead_letters(
                 event_id, topic, "type", "timestamp", data
             )
-            SELECT * FROM ${this.db.sql.unnest(
-                tuples,
-                [
-                    "uuid",         // eventId
-                    "varchar",      // topic
-                    "varchar",      // type
-                    `timestamp`,    // timestamp
-                    "jsonb"         // event JSON
-                ]
-            )};
+            SELECT * FROM ${this.db.sql.unnest(tuples, [
+                "uuid", // eventId
+                "varchar", // topic
+                "varchar", // type
+                `timestamp`, // timestamp
+                "jsonb" // data (event JSON)
+            ])};
+        `);
+    }
+
+    async _errorsHandler(event: { type: string; data: any; timestamp: string }) {
+        await this.db.pg.query(this.db.sql`
+            INSERT INTO error_events (
+                "type", data, "timestamp"
+            ) VALUES (
+                ${`${BASE_REDIS_PREFIX}${event.type}`},
+                ${this.db.sql.json(event.data)},
+                ${event.timestamp}
+            );
         `);
     }
 

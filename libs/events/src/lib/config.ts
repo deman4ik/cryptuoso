@@ -6,41 +6,40 @@ export { BASE_REDIS_PREFIX } from "./catalog";
 //export { DEAD_LETTER_TOPIC } from "./events";
 
 interface TopicConfig {
-    fullname: string;
     /** in seconds */
-    cacheTime: number;
+    eventTTL: number;
+    /** in seconds */
+    consumerIdleTTL: number;
 }
 
-interface ServiceConfig {
-    prefix: string;
-    topics: TopicConfig[];
+function makeTopicsConfigs(...args: any[]) {
+    let configs: { [key: string]: TopicConfig } = {};
+
+    for (let i = 0; i < args.length; i += 3) {
+        configs[`${BASE_REDIS_PREFIX}${args[i]}`] = {
+            eventTTL: args[i + 1],
+            consumerIdleTTL: args[i + 2]
+        };
+    }
+
+    return configs;
 }
 
-function makeTopicConfig(fullname: string, cacheTime: number): TopicConfig {
-    return { fullname, cacheTime };
+export const eventsManagementConfig: {
+    common: TopicConfig;
+    configs: { [key: string]: TopicConfig }
+} = {
+    common: {
+        eventTTL: 7 * 24 * 60 * 60,
+        consumerIdleTTL: 7 * 24 * 60 * 60
+    } as TopicConfig,
+    configs: {
+        ...makeTopicsConfigs(
+            DEAD_LETTER_TOPIC, 100, 200,
+            "errors", 100, 200
+        ),
+        ...makeTopicsConfigs(
+            `${CALC_STATS_PREFIX}.*`, 10, 20
+        )
+    }
 };
-
-function makeServiceConfig(prefix: string, topics: TopicConfig[]): ServiceConfig {
-    return { prefix, topics };
-}
-
-function makeServicesConfigs(sc: { [key: string]: TopicConfig[] }): ServiceConfig[] {
-    const config: ServiceConfig[] = [];
-
-    for(const [prefix, topics] of Object.entries(sc))
-        config.push(makeServiceConfig(prefix, topics));
-
-    return config;
-}
-
-export const eventsManagementConfig: ServiceConfig[] = makeServicesConfigs({
-    [`${BASE_REDIS_PREFIX}${DEAD_LETTER_TOPIC}`]: [
-        makeTopicConfig(`${BASE_REDIS_PREFIX}${DEAD_LETTER_TOPIC}`, 100)
-    ],
-    [CALC_STATS_PREFIX]: [
-        makeTopicConfig(StatsCalcRunnerEvents.USER_ROBOT, 10),
-        makeTopicConfig(StatsCalcRunnerEvents.USER_ROBOTS, 10),
-        makeTopicConfig(StatsCalcRunnerEvents.USER_SIGNAL, 10),
-        makeTopicConfig(StatsCalcRunnerEvents.USER_SIGNALS, 10)
-    ]
-});
