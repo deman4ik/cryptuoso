@@ -17,6 +17,7 @@ import {
     ImporterWorkerEvents
 } from "@cryptuoso/importer-events";
 import { ImporterUtils } from "./importerUtilsWorker";
+import { sql } from "@cryptuoso/postgres";
 
 export type ImporterWorkerServiceConfig = BaseServiceConfig;
 
@@ -288,11 +289,11 @@ export default class ImporterWorkerService extends BaseService {
 
                 const call = async (bail: (e: Error) => void) => {
                     try {
-                        await this.db.pg.query(this.db.sql`
-                insert into ${this.db.sql.identifier([`candles${timeframe}`])} 
+                        await this.db.pg.query(sql`
+                insert into ${sql.identifier([`candles${timeframe}`])} 
                 (exchange, asset, currency, open, high, low, close, volume, time, timestamp, type)
                 SELECT *
-                FROM ${this.db.sql.unnest(
+                FROM ${sql.unnest(
                     this.db.util.prepareUnnest(candles, [
                         "exchange",
                         "asset",
@@ -320,9 +321,7 @@ export default class ImporterWorkerService extends BaseService {
                         "varchar"
                     ]
                 )}
-                ON CONFLICT ON CONSTRAINT ${this.db.sql.identifier([
-                    `candles${timeframe}_time_exchange_asset_currency_key`
-                ])}
+                ON CONFLICT ON CONSTRAINT ${sql.identifier([`candles${timeframe}_time_exchange_asset_currency_key`])}
                 DO UPDATE SET open = excluded.open,
                 high = excluded.high,
                 low = excluded.low,

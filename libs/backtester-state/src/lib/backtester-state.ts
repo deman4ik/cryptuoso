@@ -19,7 +19,7 @@ export const enum Status {
 export interface BacktesterSettings {
     local?: boolean;
     populateHistory?: boolean;
-    saveAlerts?: boolean;
+    saveSignals?: boolean;
     savePositions?: boolean;
     saveLogs?: boolean;
 }
@@ -51,11 +51,11 @@ export interface BacktesterState {
     error?: string;
 }
 
-interface BacktesterSignals extends SignalEvent {
+export interface BacktesterSignals extends SignalEvent {
     backtestId: string;
 }
 
-interface BacktesterPositionState extends RobotPositionState {
+export interface BacktesterPositionState extends RobotPositionState {
     backtestId: string;
 }
 
@@ -110,7 +110,7 @@ export class Backtester {
         this.#settings = {
             local: defaultValue(state.settings.local, false),
             populateHistory: defaultValue(state.settings.populateHistory, false),
-            saveAlerts: defaultValue(state.settings.saveAlerts, true),
+            saveSignals: defaultValue(state.settings.saveSignals, true),
             savePositions: defaultValue(state.settings.savePositions, true),
             saveLogs: defaultValue(state.settings.saveLogs, false)
         };
@@ -342,13 +342,14 @@ export class Backtester {
         }
     };
 
-    #saveAlertsAndTrades = (id: string) => {
-        if (this.#settings.saveAlerts) {
+    #saveSignals = (id: string) => {
+        if (this.#settings.saveSignals) {
             const robot = this.#robots[id];
             robot.data.alerts = [
                 ...robot.data.alerts,
                 ...robot.instance.alertEventsToSend.map(({ data }) => ({
                     ...data,
+                    robotId: id,
                     backtestId: this.#id
                 }))
             ];
@@ -356,6 +357,7 @@ export class Backtester {
                 ...robot.data.trades,
                 ...robot.instance.tradeEventsToSend.map(({ data }) => ({
                     ...data,
+                    robotId: id,
                     backtestId: this.#id
                 }))
             ];
@@ -391,7 +393,7 @@ export class Backtester {
             robot.instance.checkAlerts();
 
             this.#saveLogs(id);
-            this.#saveAlertsAndTrades(id);
+            this.#saveSignals(id);
             this.#savePositions(id);
             this.#calcStats(id);
 
@@ -401,7 +403,7 @@ export class Backtester {
             robot.instance.finalize();
 
             this.#saveLogs(id);
-            this.#saveAlertsAndTrades(id);
+            this.#saveSignals(id);
             this.#savePositions(id);
             this.#calcStats(id);
         });

@@ -3,7 +3,13 @@ import { Worker, Job, QueueBase } from "bullmq";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import dayjs from "@cryptuoso/dayjs";
 import { BaseError } from "@cryptuoso/errors";
-import { BacktesterState, Backtester, Status } from "@cryptuoso/backtester-state";
+import {
+    BacktesterState,
+    Backtester,
+    Status,
+    BacktesterSignals,
+    BacktesterPositionState
+} from "@cryptuoso/backtester-state";
 import requireFromString from "require-from-string";
 import { StrategyCode } from "@cryptuoso/robot-state";
 import { IndicatorCode } from "@cryptuoso/robot-indicators";
@@ -168,6 +174,116 @@ export default class BacktesterWorkerService extends BaseService {
         }
     };
 
+    #saveSignals = async (signals: BacktesterSignals[]) => {
+        await this.db.pg.query(sql`
+        INSERT INTO backtest_signals
+        (backtest_id, robot_id, timestamp, type, 
+        action, order_type, price,
+        position_id, position_prefix, position_code, position_parent_id,
+        candle_timestamp)
+        SELECT * FROM
+        ${sql.unnest(
+            this.db.util.prepareUnnest(signals, [
+                "backtestId",
+                "robotId",
+                "timestamp",
+                "type",
+                "action",
+                "orderType",
+                "price",
+                "positionId",
+                "positionPrefix",
+                "positionCode",
+                "positionParentId",
+                "candleTimestamp"
+            ]),
+            [
+                "uuid",
+                "uuid",
+                "timestamp without time zone",
+                "varchar",
+                "varchar",
+                "varchar",
+                "numeric",
+                "uuid",
+                "varchar",
+                "varchar",
+                "uuid",
+                "timestamp without time zone"
+            ]
+        )}`);
+    };
+
+    #savePositions = async (positions: BacktesterPositionState[]) => {
+        await this.db.pg.query(sql`
+        INSERT INTO backtest_positions
+        (backtest_id, robot_id, prefix, code, parent_id,
+        direction, status, entry_status, entry_price, entry_date,
+        entry_order_type, entry_action, entry_candle_timestamp,
+        exit_status, exit_price, exit_date, exit_order_type,
+        exit_action, exit_candle_timestamp, alerts,
+        bars_held, internal_state)
+        SELECT * FROM 
+        ${sql.unnest(
+            this.db.util.prepareUnnest(
+                positions.map((pos) => ({
+                    ...pos,
+                    alerts: JSON.stringify(pos.alerts),
+                    internalState: JSON.stringify(pos.internalState)
+                })),
+                [
+                    "backtestId",
+                    "robotId",
+                    "prefix",
+                    "code",
+                    "parentId",
+                    "direction",
+                    "status",
+                    "entryStatus",
+                    "entryPrice",
+                    "entryDate",
+                    "entryOrderType",
+                    "entryAction",
+                    "entryCandleTimestamp",
+                    "exitStatus",
+                    "exitPrice",
+                    "exitDate",
+                    "exitOrderType",
+                    "exitAction",
+                    "exitCandleTimestamp",
+                    "alerts",
+                    "barsHeld",
+                    "internalState"
+                ]
+            ),
+            [
+                "uuid",
+                "uuid",
+                "varchar",
+                "varchar",
+                "uuid",
+                "varchar",
+                "varchar",
+                "varchar",
+                "numeric",
+                "timestamp without time zone",
+                "varchar",
+                "varchar",
+                "timestamp without time zone",
+                "varchar",
+                "numeric",
+                "timestamp without time zone",
+                "varchar",
+                "varchar",
+                "timestamp without time zone",
+                "jsonb",
+                "numeric",
+                "jsonb"
+            ]
+        )}
+        `);
+    };
+
     async run(job: Job<BacktesterState, BacktesterState>, backtester: Backtester): Promise<void> {
         try {
             const query = sql`${sql.identifier([`candles${backtester.timeframe}`])} 
@@ -194,12 +310,22 @@ export default class BacktesterWorkerService extends BaseService {
                 })
                 .whenEnd();
 
-            Object.entries(backtester.robots).forEach(([id, robot]) => {
-                this.log.info("alerts", robot.data.alerts.length);
-                this.log.info("trades", robot.data.trades.length);
+            for (const [id, robot] of Object.entries(backtester.robots)) {
+                if (backtester.settings.saveSignals) {
+                    await this.#saveSignals(
+                        [...robot.data.alerts, ...robot.data.trades].sort((a, b) =>
+                            sortAsc(a.candleTimestamp, b.candleTimestamp)
+                        )
+                    );
+                }
+
+                if (backtester.settings.savePositions) {
+                    await this.#savePositions(Object.values(robot.data.positions));
+                }
+
                 this.log.info("positions", Object.keys(robot.data.positions).length);
-                this.log.info("stats", robot.data.stats);
-            });
+                //this.log.info("stats", robot.data.stats);
+            }
         } catch (err) {
             this.log.error(`Backtester #${backtester.id} - Failed`, err.message);
             throw err;
@@ -222,7 +348,7 @@ export default class BacktesterWorkerService extends BaseService {
                     settings: {
                         local: true,
                         populateHistory: false,
-                        saveAlerts: false,
+                        saveSignals: false,
                         savePositions: true,
                         saveLogs: false
                     },
