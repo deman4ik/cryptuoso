@@ -3,10 +3,10 @@ import Redis from "ioredis";
 import RedLock from "redlock";
 import { Queue, QueueEvents, Worker, Job } from "bullmq";
 
-jest.setTimeout(30e3);
+jest.setTimeout(30000);
 
 describe("BullMQ failed events handling e2e test", () => {
-    const jobDelay = 1e3;
+    const jobDelay = 1000;
     const jobHandler = jest.fn(async (job: Job) => {
         await sleep(jobDelay);
         throw new Error(`Error while handle "${job.name}"`);
@@ -68,7 +68,7 @@ describe("BullMQ failed events handling e2e test", () => {
                 attempts
             });
 
-            await sleep(1e3 + attempts * jobDelay);
+            await sleep(1000 + attempts * jobDelay);
             
             expect(jobHandler).toHaveBeenCalledTimes(attempts);
             expect(firstFailHandler).toHaveBeenCalledTimes(1);
@@ -98,7 +98,7 @@ describe("BullMQ failed events handling e2e test", () => {
                 attempts
             });
 
-            await sleep(1e3 + attempts * jobDelay);
+            await sleep(1000 + attempts * jobDelay);
             
             expect(jobHandler).toHaveBeenCalledTimes(attempts);
             expect(failHandler).toHaveBeenCalledTimes(queueEventsArray.length);
@@ -122,7 +122,7 @@ describe("BullMQ failed events handling e2e test", () => {
                 const jobId: string = info.jobId;
 
                 try {
-                    const lock = await redlock.lock(`${NAME}:${jobId}`, 5e3);
+                    const lock = await redlock.lock(`${NAME}:${jobId}`, 5000);
                     const job = await getRandomRunner().getJob(info.jobId);
 
                     failedJobHandler(job);
@@ -139,7 +139,7 @@ describe("BullMQ failed events handling e2e test", () => {
                 attempts
             });
 
-            await sleep(1e3 + attempts * jobDelay);
+            await sleep(1000 + attempts * jobDelay);
             
             expect(jobHandler).toHaveBeenCalledTimes(attempts);
             expect(failHandler).toHaveBeenCalledTimes(queueEventsArray.length);
@@ -151,7 +151,7 @@ describe("BullMQ failed events handling e2e test", () => {
     describe("Test method unlock of old lock instance when new one lock the same resource", () => {
         test("Should to throw error during unlocking", async () => {
             const lockName = `lock:${Math.random()}`;
-            const lockTime = 5e3;
+            const lockTime = 5000;
             const lock1 = await redlock.lock(lockName, lockTime);
 
             await sleep(2 * lockTime);

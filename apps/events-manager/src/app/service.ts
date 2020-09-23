@@ -47,7 +47,7 @@ export default class EventsManager extends HTTPService {
     constructor(config?: EventsManagerConfig) {
         super(config);
 
-        this.checkInterval = 1e3 * (config?.checkInterval || +process.env.CHECK_INTERVAL || 10);
+        this.checkInterval = 1000 * (config?.checkInterval || +process.env.CHECK_INTERVAL || 10);
         this.clearingChunkSize = config?.clearingChunkSize || 100;
 
         this.events.subscribe({
@@ -203,8 +203,8 @@ export default class EventsManager extends HTTPService {
                 ) || [null, common])[1];
             }
 
-            await this.deleteExpiresEvents(stream, 1e3 * config.eventTTL);
-            await this.deleteOldConsumers(stream, 1e3 * config.consumerIdleTTL);
+            await this.deleteExpiresEvents(stream, 1000 * config.eventTTL);
+            await this.deleteOldConsumers(stream, 1000 * config.consumerIdleTTL);
         }
     }
 
@@ -239,7 +239,7 @@ export default class EventsManager extends HTTPService {
         if (!deadLetters?.length) return;
 
         for (const dl of deadLetters) {
-            const locker = this.makeLocker(`lock:${this.name}:re-emit.${dl.eventId}`, 3e3);
+            const locker = this.makeLocker(`lock:${this.name}:re-emit.${dl.eventId}`, 3000);
 
             try {
                 await locker.lock();
@@ -248,7 +248,7 @@ export default class EventsManager extends HTTPService {
                     time: dayjs.utc().toISOString()
                 });
                 
-                await this.db.pg.any(this.db.sql`
+                await this.db.pg.query(this.db.sql`
                     UPDATE dead_letters
                     SET processed = true
                     WHERE id = ${dl.id};

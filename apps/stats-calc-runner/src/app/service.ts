@@ -165,11 +165,11 @@ export default class StatisticCalcRunnerService extends HTTPService {
     async _queueFailHandler(args: { jobId: string; failedReason: string; prev?: string }) {
         const { jobId } = args;
         
-        const locker = await this.makeLocker(`lock:${this.name}:error.${jobId}`, 5e3);
+        const locker = await this.makeLocker(`lock:${this.name}:error.${jobId}`, 5000);
 
         try {
             await locker.lock();
-            
+
             const { name, data } = await this.queues.calcStatistics.getJob(jobId);
 
             await this.events.emit({
