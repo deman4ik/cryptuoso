@@ -34,12 +34,12 @@ export const eventsManagementConfig: {
         consumerIdleTTL: 7 * 24 * 60 * 60
     } as TopicConfig,
     configs: {
-        ...makeTopicsConfigs(
+        /* ...makeTopicsConfigs(
             DEAD_LETTER_TOPIC, 100, 200,
             "errors", 100, 200
-        ),
+        ), */
         ...makeTopicsConfigs(
-            `${CALC_STATS_PREFIX}.*`, 10, 20
+            `${CALC_STATS_PREFIX}.*`, 100, 2000
         )
     }
 };

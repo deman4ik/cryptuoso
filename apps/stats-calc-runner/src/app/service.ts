@@ -2,7 +2,7 @@ import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import { Queue, QueueEvents } from "bullmq";
 import RedLock from "redlock";
 import {
-    CALC_STATS_PREFIX,
+    STATS_CALC_PREFIX,
     StatsCalcJob,
     StatsCalcJobType,
     StatsCalcRunnerEvents,
@@ -10,7 +10,6 @@ import {
 } from "@cryptuoso/stats-calc-events";
 import { RobotStatus } from "@cryptuoso/robot-state";
 import { UserRoles } from "@cryptuoso/user-state";
-import dayjs from 'dayjs';
 
 export type StatisticCalcWorkerServiceConfig = HTTPServiceConfig;
 
@@ -22,6 +21,11 @@ export default class StatisticCalcRunnerService extends HTTPService {
     constructor(config?: StatisticCalcWorkerServiceConfig) {
         super(config);
         try {
+            this.locker = new RedLock([this.redis], {
+                driftFactor: 0.01,
+                retryCount: 0
+            });
+
             this.createRoutes({
                 calcUserSignal: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_SIGNAL],
@@ -120,11 +124,6 @@ export default class StatisticCalcRunnerService extends HTTPService {
         };
 
         this.queueEvents.calcStatistics.on("failed", this._queueFailHandler.bind(this));
-
-        this.locker = new RedLock([this.redis], {
-            driftFactor: 0.01,
-            retryCount: 0
-        });
     }
 
     async _onStopService() {
@@ -175,17 +174,13 @@ export default class StatisticCalcRunnerService extends HTTPService {
         const { jobId } = args;
 
         try {
-            await this.locker.lock(`lock:${CALC_STATS_PREFIX}.${jobId}`, 5e3);
+            await this.locker.lock(`lock:${this.name}:error.${jobId}`, 5e3);
 
-            const { name, data, timestamp } = await this.queues.calcStatistics.getJob(jobId);
+            const { name, data } = await this.queues.calcStatistics.getJob(jobId);
 
             await this.events.emit({
-                type: `errors.${CALC_STATS_PREFIX}.${name}`,
-                data: {
-                    type: `${CALC_STATS_PREFIX}-worker.${name}`,
-                    data,
-                    timestamp: dayjs(timestamp).toISOString()
-                }
+                type: `errors.${STATS_CALC_PREFIX}.${name}`,
+                data
             });
 
             // await sleep(...);

@@ -4,7 +4,7 @@ import { ValidationSchema } from "fastest-validator";
 import { v4 as uuid } from "uuid";
 import logger, { Logger } from "@cryptuoso/logger";
 import { JSONParse, round, sleep } from "@cryptuoso/helpers";
-import { CloudEvent as Event, CloudEventV1 } from "cloudevents";
+import { CloudEvent, CloudEvent as Event, CloudEventV1 } from "cloudevents";
 import { BaseError } from "@cryptuoso/errors";
 import { EventsCatalog, EventHandler, BASE_REDIS_PREFIX } from "./catalog";
 import dayjs from "@cryptuoso/dayjs";
@@ -364,6 +364,9 @@ export class Events {
                             const [event]: Event[] = Object.values(
                                 this._parseEvents(this._parseMessageResponse(result))
                             );
+                            
+                            if(!event) continue;
+
                             try {
                                 this.log.debug(
                                     `Handling pending "${topic}" group "${group}" event #${msgId} (${event.id})...`
@@ -401,7 +404,7 @@ export class Events {
                                         topic,
                                         group,
                                         type: event.type,
-                                        data,
+                                        data: event,
                                         error: error.message
                                     };
                                     await this.emitDeadLetter(letter);
@@ -464,6 +467,7 @@ export class Events {
                 data,
                 subject
             });
+            
             const args = [
                 "id",
                 cloudEvent.id,
@@ -481,11 +485,35 @@ export class Events {
         }
     }
 
+    async emitRaw(topic: string, event: CloudEventV1) {
+        try {
+            const cloudEvent = new Event(event);
+
+            console.log(event.id, cloudEvent.id);
+            
+            const args = [
+                "id",
+                cloudEvent.id,
+                "type",
+                cloudEvent.type,
+                "timestamp",
+                dayjs.utc(cloudEvent.time).toISOString(),
+                "event",
+                JSON.stringify(cloudEvent.toJSON())
+            ];
+            await this.#redis.xadd(topic, "*", ...args);
+            this.log.debug(`Emited Raw Event ${cloudEvent.type}`);
+        } catch (error) {
+            this.log.error("Failed to emit event", error, event);
+        }
+    }
+
     subscribe(events: {
         [key: string]: {
             group?: string;
             unbalanced?: boolean;
             handler: (event: Event) => Promise<void>;
+            passFullEvent?: boolean;
             schema?: ValidationSchema;
         };
     }): void {

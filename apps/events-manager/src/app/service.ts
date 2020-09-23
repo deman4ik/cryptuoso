@@ -1,12 +1,11 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
-//import { CloudEvent } from "cloudevents";
 import { eventsManagementConfig, BASE_REDIS_PREFIX, DEAD_LETTER_TOPIC, DeadLetter, Event } from "@cryptuoso/events";
 import { UserRoles } from "@cryptuoso/user-state";
 import { JSONParse } from '@cryptuoso/helpers';
-//import { BASE_REDIS_PREFIX } from "../../../../libs/events/src/lib/catalog";
+import RedLock from "redlock";
+import dayjs from 'dayjs';
+import { CloudEvent } from 'cloudevents';
 
-//const BASE_REDIS_PREFIX = "cpz:events:";
-//const DEAD_LETTER_TOPIC = "test-events-e2e-dead-letter";
 const TEST_TOPIC = "test_topic";
 
 interface StoredDeadLetter {
@@ -37,20 +36,40 @@ interface RedisConsumerInfo {
 
 export interface EventsManagerConfig extends HTTPServiceConfig {
     /** in seconds */
-    checkInterval: number;
-    clearingChunkSize: number;
+    checkInterval?: number;
+    clearingChunkSize?: number;
 }
 
 export default class EventsManager extends HTTPService {
     /** in milliseconds */
     checkInterval: number;
     clearingChunkSize: number;
+    locker: RedLock;
 
     constructor(config?: EventsManagerConfig) {
         super(config);
 
+        this.locker = new RedLock([this.redis], {
+            retryCount: 0,
+            retryJitter: 0.01
+        });
+
         this.checkInterval = 1e3 * (config?.checkInterval || +process.env.CHECK_INTERVAL || 10);
         this.clearingChunkSize = config?.clearingChunkSize || 100;
+
+        this.events.subscribe({
+            ["errors.*.*"]: {
+                passFullEvent: true,
+                handler: this._errorsHandler.bind(this)
+            },
+            [`${DEAD_LETTER_TOPIC}.*`]: {
+                //passFullEvent: true,
+                handler: this._deadLettersHandler.bind(this)
+            },
+            [TEST_TOPIC]: {
+                handler: this._testHandler.bind(this)
+            }
+        });
 
         this.createRoutes({
             resend: {
@@ -83,19 +102,6 @@ export default class EventsManager extends HTTPService {
     }
 
     async _onServiceStart() {
-        this.events.subscribe({
-            ["errors.*.*"]: {
-                handler: this._errorsHandler.bind(this)
-            },
-            [`${DEAD_LETTER_TOPIC}.*`]: {
-                /* passFullEvent: true, */
-                handler: this._deadLettersHandler.bind(this)
-            } /*  as any */,
-            [TEST_TOPIC]: {
-                handler: this._testHandler.bind(this)
-            }
-        });
-
         //await this._testSender();
 
         this.update();
@@ -249,26 +255,20 @@ export default class EventsManager extends HTTPService {
 
         if (!deadLetters?.length) return;
 
-        // TODO: resolve problem of wrong event id
+        const processedDeadLetterIds: string[] = [];
 
-        for (const event of deadLetters) {
-            await this.redis.xadd(
-                event.topic,
-                "*",
-                "id",
-                event.id,
-                "type",
-                event.type,
-                "timestamp",
-                event.timestamp,
-                "event",
-                JSON.stringify(event.data)
-            );
+        for (const dl of deadLetters) {
+            try {
+                await this.locker.lock(`lock:${this.name}:re-emit.${dl.eventId}`, 30e3);
+                await this.events.emitRaw(dl.topic, {
+                    ...dl.data,
+                    time: dayjs.utc().toISOString()
+                });
+                processedDeadLetterIds.push(dl.id);
+            } catch(err) {}
         }
 
-        await this._updateProcessedDeadLetters(deadLetters.map((dl) => dl.id));
-
-        //await this._testSender();
+        await this._updateProcessedDeadLetters(processedDeadLetterIds);
     }
 
     async update() {
@@ -290,50 +290,31 @@ export default class EventsManager extends HTTPService {
     }
 
     async _deadLettersHandler(deadLetter: DeadLetter) {
-        console.warn("Dead Letter");
-        console.log(deadLetter);
-
-        const msgIds: string[] = deadLetter.data.map((info: any) => info.msgId);
-
-        const tuples: [string, string, string, string, string][] = [];
-
-        for (const msgId of msgIds) {
-            /* const [{ data }] = this.events._parseMessageResponse(
-                await this.redis.xrange(deadLetter.topic, msgId, msgId)
-            ); */
-            const [[_, rawData]] = await this.redis.xrange(deadLetter.topic, msgId, msgId);
-
-            tuples.push([
-                rawData[1], // eventId
-                deadLetter.topic, // topic
-                rawData[3], // type
-                rawData[5], // timestamp
-                rawData[7] // data (event JSON)
-            ]);
-        }
-
+        const event: Event = deadLetter.data;
+        
         this.db.pg.query(this.db.sql`
             INSERT INTO dead_letters(
                 event_id, topic, "type", "timestamp", data
-            )
-            SELECT * FROM ${this.db.sql.unnest(tuples, [
-                "uuid", // eventId
-                "varchar", // topic
-                "varchar", // type
-                `timestamp`, // timestamp
-                "jsonb" // data (event JSON)
-            ])};
+            ) VALUES (
+                ${event.id},
+                ${deadLetter.topic},
+                ${deadLetter.type},
+                ${dayjs.utc(event.time).toISOString()},
+                ${this.db.sql.json(event)}
+            );
         `);
     }
 
-    async _errorsHandler(event: { type: string; data: any; timestamp: string }) {
+    async _errorsHandler(event: CloudEvent) {
         await this.db.pg.query(this.db.sql`
             INSERT INTO error_events (
-                "type", data, "timestamp"
+                event_id, topic, "type", data, "timestamp"
             ) VALUES (
-                ${`${BASE_REDIS_PREFIX}${event.type}`},
-                ${this.db.sql.json(event.data)},
-                ${event.timestamp}
+                ${event.id},
+                ${event.type.replace("com.cryptuoso.", BASE_REDIS_PREFIX)},
+                ${event.type},
+                ${this.db.sql.json(event.toJSON())},
+                ${dayjs.utc(event.time).toISOString()}
             );
         `);
     }
