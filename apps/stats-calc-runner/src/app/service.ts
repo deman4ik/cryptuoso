@@ -1,6 +1,5 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import { Queue, QueueEvents } from "bullmq";
-import RedLock from "redlock";
 import {
     STATS_CALC_PREFIX,
     StatsCalcJob,
@@ -16,16 +15,10 @@ export type StatisticCalcWorkerServiceConfig = HTTPServiceConfig;
 export default class StatisticCalcRunnerService extends HTTPService {
     queues: { [key: string]: Queue<any> };
     queueEvents: { [key: string]: QueueEvents };
-    locker: RedLock;
 
     constructor(config?: StatisticCalcWorkerServiceConfig) {
         super(config);
         try {
-            this.locker = new RedLock([this.redis], {
-                driftFactor: 0.01,
-                retryCount: 0
-            });
-
             this.createRoutes({
                 calcUserSignal: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_SIGNAL],
@@ -129,7 +122,6 @@ export default class StatisticCalcRunnerService extends HTTPService {
     async _onStopService() {
         await this.queues?.calcStatistics?.close();
         await this.queueEvents?.calcStatistics?.close();
-        //await this.locker?.quit();
     }
 
     async _HTTPHandler(
@@ -172,21 +164,23 @@ export default class StatisticCalcRunnerService extends HTTPService {
 
     async _queueFailHandler(args: { jobId: string; failedReason: string; prev?: string }) {
         const { jobId } = args;
+        
+        const locker = await this.makeLocker(`lock:${this.name}:error.${jobId}`, 5e3);
 
         try {
-            await this.locker.lock(`lock:${this.name}:error.${jobId}`, 5e3);
-
+            await locker.lock();
+            
             const { name, data } = await this.queues.calcStatistics.getJob(jobId);
 
             await this.events.emit({
                 type: `errors.${STATS_CALC_PREFIX}.${name}`,
                 data
             });
-
-            // await sleep(...);
-            // await lock.unlock();
+            
+            await locker.unlock();
         } catch (err) {
             this.log.error(err);
+            await locker.unlock();
         }
     }
 

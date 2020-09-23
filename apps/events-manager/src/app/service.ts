@@ -1,8 +1,7 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import { eventsManagementConfig, BASE_REDIS_PREFIX, DEAD_LETTER_TOPIC, DeadLetter, Event } from "@cryptuoso/events";
 import { UserRoles } from "@cryptuoso/user-state";
-import { JSONParse } from '@cryptuoso/helpers';
-import RedLock from "redlock";
+import { JSONParse, sleep } from '@cryptuoso/helpers';
 import dayjs from 'dayjs';
 import { CloudEvent } from 'cloudevents';
 
@@ -44,15 +43,9 @@ export default class EventsManager extends HTTPService {
     /** in milliseconds */
     checkInterval: number;
     clearingChunkSize: number;
-    locker: RedLock;
 
     constructor(config?: EventsManagerConfig) {
         super(config);
-
-        this.locker = new RedLock([this.redis], {
-            retryCount: 0,
-            retryJitter: 0.01
-        });
 
         this.checkInterval = 1e3 * (config?.checkInterval || +process.env.CHECK_INTERVAL || 10);
         this.clearingChunkSize = config?.clearingChunkSize || 100;
@@ -215,16 +208,6 @@ export default class EventsManager extends HTTPService {
         }
     }
 
-    async _updateProcessedDeadLetters(ids: string[]) {
-        if (!ids.length) return;
-
-        await this.db.pg.any(this.db.sql`
-            UPDATE dead_letters
-            SET processed = true
-            WHERE id IN (${this.db.sql.join(ids, this.db.sql`, `)});
-        `);
-    }
-
     async checkStoredDeadLetters({
         eventId,
         topic,
@@ -255,20 +238,27 @@ export default class EventsManager extends HTTPService {
 
         if (!deadLetters?.length) return;
 
-        const processedDeadLetterIds: string[] = [];
-
         for (const dl of deadLetters) {
+            const locker = this.makeLocker(`lock:${this.name}:re-emit.${dl.eventId}`, 3e3);
+
             try {
-                await this.locker.lock(`lock:${this.name}:re-emit.${dl.eventId}`, 30e3);
+                await locker.lock();
                 await this.events.emitRaw(dl.topic, {
                     ...dl.data,
                     time: dayjs.utc().toISOString()
                 });
-                processedDeadLetterIds.push(dl.id);
-            } catch(err) {}
+                
+                await this.db.pg.any(this.db.sql`
+                    UPDATE dead_letters
+                    SET processed = true
+                    WHERE id = ${dl.id};
+                `);
+                await locker.unlock();
+            } catch(err) {
+                this.log.error(err);
+                await locker.unlock();
+            }
         }
-
-        await this._updateProcessedDeadLetters(processedDeadLetterIds);
     }
 
     async update() {

@@ -3,7 +3,7 @@ import Redis from "ioredis";
 import RedLock from "redlock";
 import { Queue, QueueEvents, Worker, Job } from "bullmq";
 
-jest.setTimeout(3e4);
+jest.setTimeout(30e3);
 
 describe("BullMQ failed events handling e2e test", () => {
     const jobDelay = 1e3;
@@ -42,10 +42,10 @@ describe("BullMQ failed events handling e2e test", () => {
     };
 
     const redlock = new RedLock([new Redis(REDISCS)], {
-        //driftFactor: 0.01,
+        driftFactor: 0.01,
         retryCount: 0
     });
-
+    
     describe("Check count of calls `firstFailHandler` when every calls of `jobHandler` throwing error", () => {
         test("`firstFailHandler` must be called 1 time", async () => {
             const testName = "1st";
@@ -74,7 +74,7 @@ describe("BullMQ failed events handling e2e test", () => {
             expect(firstFailHandler).toHaveBeenCalledTimes(1);
         });
     });
-
+    
     describe("Check count of calls `failedJobHandler` when > 1 `QueueEvents` instances exists", () => {
         test(`Should call \`failedJobHandler\` ${queueEventsArray.length} times`, async () => {
             const testName = "1st";
@@ -105,7 +105,7 @@ describe("BullMQ failed events handling e2e test", () => {
             expect(failedJobHandler).toHaveBeenCalledTimes(queueEventsArray.length);
         });
     });
-
+    
     describe("Check count of calls `failedJobHandler` when using `redlock` and > 1 `QueueEvents` instances exists", () => {
         test("Should call `failedJobHandler` 1 time", async () => {
             const testName = "2nd";
@@ -145,6 +145,21 @@ describe("BullMQ failed events handling e2e test", () => {
             expect(failHandler).toHaveBeenCalledTimes(queueEventsArray.length);
             expect(lockingErrorsCount).toBe(queueEventsArray.length - 1);
             expect(failedJobHandler).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe("Test method unlock of old lock instance when new one lock the same resource", () => {
+        test("Should to throw error during unlocking", async () => {
+            const lockName = `lock:${Math.random()}`;
+            const lockTime = 5e3;
+            const lock1 = await redlock.lock(lockName, lockTime);
+
+            await sleep(2 * lockTime);
+
+            const lock2 = await redlock.lock(lockName, lockTime);
+
+            await expect(lock1.unlock()).rejects.toThrow();
+            await expect(lock2.unlock()).resolves.not.toThrow();
         });
     });
 });

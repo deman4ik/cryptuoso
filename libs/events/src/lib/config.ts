@@ -1,45 +1,39 @@
-import { CALC_STATS_PREFIX, StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
+import { STATS_CALC_PREFIX, StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
 import { BASE_REDIS_PREFIX } from "./catalog";
 import { DEAD_LETTER_TOPIC } from "./events";
 
 export { BASE_REDIS_PREFIX } from "./catalog";
-//export { DEAD_LETTER_TOPIC } from "./events";
 
-interface TopicConfig {
-    /** in seconds */
-    eventTTL: number;
-    /** in seconds */
-    consumerIdleTTL: number;
+class TopicConfig {
+    constructor(
+        public eventTTL: number = 7 * 24 * 60 * 60,
+        public consumerIdleTTL: number = 7 * 24 * 60 * 60
+    ) {}
 }
 
-function makeTopicsConfigs(...args: any[]) {
-    let configs: { [key: string]: TopicConfig } = {};
+interface TopicConfigs {
+    [key: string]: TopicConfig
+}
 
-    for (let i = 0; i < args.length; i += 3) {
-        configs[`${BASE_REDIS_PREFIX}${args[i]}`] = {
-            eventTTL: args[i + 1],
-            consumerIdleTTL: args[i + 2]
-        };
-    }
+function modifyConfigEventsNames(configs: TopicConfigs) {
+    const modified: TopicConfigs = {};
 
-    return configs;
+    for(const [event, config] of Object.entries(configs))
+        modified[`${BASE_REDIS_PREFIX}${event}`] = config;
+
+    return modified;
 }
 
 export const eventsManagementConfig: {
     common: TopicConfig;
-    configs: { [key: string]: TopicConfig }
+    configs: TopicConfigs;
 } = {
-    common: {
-        eventTTL: 7 * 24 * 60 * 60,
-        consumerIdleTTL: 7 * 24 * 60 * 60
-    } as TopicConfig,
+    common: new TopicConfig(),
     configs: {
-        /* ...makeTopicsConfigs(
-            DEAD_LETTER_TOPIC, 100, 200,
-            "errors", 100, 200
-        ), */
-        ...makeTopicsConfigs(
-            `${CALC_STATS_PREFIX}.*`, 100, 2000
-        )
+        ...modifyConfigEventsNames({
+            [DEAD_LETTER_TOPIC]: new TopicConfig(100, 200),
+            "errors": new TopicConfig(100, 200),
+            [`${STATS_CALC_PREFIX}.*`]: new TopicConfig(100, 2000)
+        })
     }
 };
