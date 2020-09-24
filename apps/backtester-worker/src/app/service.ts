@@ -53,7 +53,7 @@ export default class BacktesterWorkerService extends BaseService {
         let strategyCode: StrategyCode;
         if (local) {
             this.log.debug(`Loading local strategy ${strategyName}`);
-            strategyCode = require(`../../../../strategies/${strategyName}`);
+            strategyCode = await import(`../../../../strategies/${strategyName}`);
         } else {
             this.log.debug(`Loading remote strategy ${strategyName}`);
             const { file }: { file: string } = await this.db.pg.one(
@@ -70,7 +70,7 @@ export default class BacktesterWorkerService extends BaseService {
             fileNames.map(async (fileName) => {
                 let code: IndicatorCode;
                 if (local) {
-                    code = require(`../../../../indicators/${fileName}`);
+                    code = await import(`../../../../indicators/${fileName}`);
                 } else {
                     const { file }: { file: string } = await this.db.pg.one(
                         sql`select file from indicators where id = ${fileName}`
