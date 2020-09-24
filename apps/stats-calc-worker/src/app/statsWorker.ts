@@ -1,17 +1,10 @@
 import { expose } from "threads/worker";
-import {
-    calcStatistics,
-    ExtendedStatsPosition,
-    SettingsVolumes,
-    TradeStats,
-    //PositionDataForStats,
-    PositionDirection
-} from "@cryptuoso/trade-statistics";
+import { calcStatistics, TradeStats } from "@cryptuoso/stats-calc";
 import { round } from "@cryptuoso/helpers";
-import { ExtendedStatsPositionWithVolume } from "./service";
-import { StatisticsType } from "./statsWorkerTypes";
+import { StatisticsType, Volumes } from "./statsWorkerTypes";
+import { BasePosition, PositionDirection } from "@cryptuoso/market";
 
-const getVolume = (pos: ExtendedStatsPosition, volumes: SettingsVolumes) =>
+const getVolume = (pos: BasePosition, volumes: Volumes) =>
     (volumes.find((el) => pos.entryDate >= el.activeFrom) || { volume: null }).volume;
 
 /* function prepareRobot(positions: PositionDataForStats[]) {
@@ -21,7 +14,7 @@ const getVolume = (pos: ExtendedStatsPosition, volumes: SettingsVolumes) =>
     }));
 } */
 
-function prepareSignalByPositionsVolume(positions: ExtendedStatsPositionWithVolume[]) {
+function prepareSignalByPositionsVolume(positions: BasePosition[]) {
     return positions.map((pos) => {
         let profit = 0;
         if (pos.direction === PositionDirection.long) {
@@ -38,7 +31,7 @@ function prepareSignalByPositionsVolume(positions: ExtendedStatsPositionWithVolu
     });
 }
 
-function prepareSignalByItsVolumes(positions: ExtendedStatsPosition[], volumes: SettingsVolumes) {
+function prepareSignalByItsVolumes(positions: BasePosition[], volumes: Volumes) {
     return positions.map((pos) => {
         const signalVolume = getVolume(pos, volumes);
         let profit = 0;
@@ -57,7 +50,7 @@ function prepareSignalByItsVolumes(positions: ExtendedStatsPosition[], volumes: 
 }
 
 const statisticUtils = {
-    calcStatistics(type: StatisticsType, prevStats: TradeStats, positions: any[], volumes?: SettingsVolumes) {
+    calcStatistics(type: StatisticsType, prevStats: TradeStats, positions: any[], volumes?: Volumes) {
         if (type == StatisticsType.CalcByPositionsVolume) positions = prepareSignalByPositionsVolume(positions);
         else if (type == StatisticsType.CalcByProvidedVolumes)
             positions = prepareSignalByItsVolumes(positions, volumes);

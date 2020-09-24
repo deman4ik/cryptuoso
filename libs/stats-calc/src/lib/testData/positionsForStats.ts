@@ -1,6 +1,6 @@
-import { PositionDirection, PositionDataForStats } from "../trade-statistics";
+import { BasePosition, PositionDirection } from "@cryptuoso/market";
 
-const positions: PositionDataForStats[] = [
+const positions: BasePosition[] = [
     {
         id: "71a0941a-1b74-437d-a22d-c97a4b649cf5",
         direction: PositionDirection.long,

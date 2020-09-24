@@ -19,10 +19,10 @@ export const enum RobotTradeStatus {
 }
 
 export interface BasePosition {
-    id: string;
-    timeframe: ValidTimeframe;
-    prefix: string;
-    code: string;
+    id?: string;
+    timeframe?: ValidTimeframe;
+    prefix?: string;
+    code?: string;
     parentId?: string;
     direction?: PositionDirection;
     status?: RobotPositionStatus;
@@ -40,4 +40,6 @@ export interface BasePosition {
     exitCandleTimestamp?: string;
     profit?: number;
     barsHeld?: number;
+    fee?: number;
+    volume?: number;
 }

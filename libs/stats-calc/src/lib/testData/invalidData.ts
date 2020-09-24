@@ -1,4 +1,5 @@
-import { TradeStats, PositionDataForStats } from "../trade-statistics";
+import { BasePosition } from "@cryptuoso/market";
+import { TradeStats } from "../stats-calc";
 
 export const invalidStatistics: TradeStats = {
     statistics: {
@@ -34,7 +35,7 @@ export const invalidStatistics: TradeStats = {
     equityAvg: null
 };
 
-export const invalidPosition: PositionDataForStats = {
+export const invalidPosition: BasePosition = {
     id: null,
     direction: null,
     exitDate: null,
