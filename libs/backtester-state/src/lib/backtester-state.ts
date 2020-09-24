@@ -19,7 +19,7 @@ export const enum Status {
 export interface BacktesterSettings {
     local?: boolean;
     populateHistory?: boolean;
-    saveAlerts?: boolean;
+    saveSignals?: boolean;
     savePositions?: boolean;
     saveLogs?: boolean;
 }
@@ -42,7 +42,7 @@ export interface BacktesterState {
     status: Status;
     startedAt?: string;
     finishedAt?: string;
-    statistics?: TradeStats;
+    statistics?: BacktesterStats;
     strategySettings?: {
         [key: string]: StrategySettings;
     };
@@ -51,12 +51,24 @@ export interface BacktesterState {
     error?: string;
 }
 
-interface BacktesterSignals extends SignalEvent {
+export interface BacktesterSignals extends SignalEvent {
     backtestId: string;
 }
 
-interface BacktesterPositionState extends RobotPositionState {
+export interface BacktesterPositionState extends RobotPositionState {
     backtestId: string;
+}
+
+export interface BacktesterLogs {
+    [key: string]: any;
+    candle: DBCandle;
+    robotId: string;
+    backtestId: string;
+}
+
+export interface BacktesterStats extends TradeStats {
+    backtestId: string;
+    robotId: string;
 }
 
 export class Backtester {
@@ -78,7 +90,7 @@ export class Backtester {
     #status: Status;
     #startedAt?: string;
     #finishedAt?: string;
-    #statistics?: TradeStats;
+    #statistics?: BacktesterStats;
     #strategySettings?: {
         [key: string]: StrategySettings;
     };
@@ -87,11 +99,11 @@ export class Backtester {
         [key: string]: {
             instance: Robot;
             data: {
-                logs: { id: string; backtestId: string; data: any }[];
+                logs: BacktesterLogs[];
                 alerts: BacktesterSignals[];
                 trades: BacktesterSignals[];
                 positions: { [key: string]: BacktesterPositionState };
-                stats: TradeStats;
+                stats: BacktesterStats;
             };
         };
     } = {};
@@ -110,7 +122,7 @@ export class Backtester {
         this.#settings = {
             local: defaultValue(state.settings.local, false),
             populateHistory: defaultValue(state.settings.populateHistory, false),
-            saveAlerts: defaultValue(state.settings.saveAlerts, true),
+            saveSignals: defaultValue(state.settings.saveSignals, true),
             savePositions: defaultValue(state.settings.savePositions, true),
             saveLogs: defaultValue(state.settings.saveLogs, false)
         };
@@ -333,22 +345,22 @@ export class Backtester {
             const robot = this.#robots[id];
             robot.data.logs = [
                 ...robot.data.logs,
-                ...robot.instance.logEventsToSend.map((log) => ({
-                    id: uuid(),
-                    backtestId: this.#id,
-                    data: log.data
+                ...robot.instance.logEventsToSend.map(({ data }) => ({
+                    ...data,
+                    backtestId: this.#id
                 }))
             ];
         }
     };
 
-    #saveAlertsAndTrades = (id: string) => {
-        if (this.#settings.saveAlerts) {
+    #saveSignals = (id: string) => {
+        if (this.#settings.saveSignals) {
             const robot = this.#robots[id];
             robot.data.alerts = [
                 ...robot.data.alerts,
                 ...robot.instance.alertEventsToSend.map(({ data }) => ({
                     ...data,
+                    robotId: id,
                     backtestId: this.#id
                 }))
             ];
@@ -356,6 +368,7 @@ export class Backtester {
                 ...robot.data.trades,
                 ...robot.instance.tradeEventsToSend.map(({ data }) => ({
                     ...data,
+                    robotId: id,
                     backtestId: this.#id
                 }))
             ];
@@ -376,12 +389,16 @@ export class Backtester {
         }
     };
 
-    /* #calcStats = (id: string) => {
+    #calcStats = (id: string) => {
         const robot = this.robots[id];
         if (robot.instance.hasClosedPositions) {
-            robot.data.stats = calcStatistics(robot.data.stats, robot.instance.closedPositions);
+            robot.data.stats = {
+                ...calcStatistics(robot.data.stats, robot.instance.closedPositions),
+                robotId: id,
+                backtestId: this.#id
+            };
         }
-    };*/
+    };
 
     async handleCandle(candle: DBCandle) {
         Object.keys(this.#robots).forEach(async (id) => {
@@ -391,8 +408,9 @@ export class Backtester {
             robot.instance.checkAlerts();
 
             this.#saveLogs(id);
-            this.#saveAlertsAndTrades(id);
+            this.#saveSignals(id);
             this.#savePositions(id);
+            this.#calcStats(id);
 
             robot.instance.clearEvents();
             await robot.instance.calcIndicators();
@@ -400,8 +418,9 @@ export class Backtester {
             robot.instance.finalize();
 
             this.#saveLogs(id);
-            this.#saveAlertsAndTrades(id);
+            this.#saveSignals(id);
             this.#savePositions(id);
+            this.#calcStats(id);
         });
     }
 
