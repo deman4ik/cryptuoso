@@ -37,7 +37,7 @@ describe("Test 'Backtester' Class", () => {
                 settings: {
                     local: false,
                     populateHistory: false,
-                    saveAlerts: true,
+                    saveSignals: true,
                     savePositions: true,
                     saveLogs: false
                 },
