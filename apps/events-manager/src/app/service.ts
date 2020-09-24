@@ -48,7 +48,7 @@ export default class EventsManager extends HTTPService {
     /** in milliseconds */
     checkInterval: number;
     clearingChunkSize: number;
-    #isUpdateStarted: boolean;
+    #isClearingStarted: boolean;
 
     constructor(config?: EventsManagerConfig) {
         super(config);
@@ -77,6 +77,10 @@ export default class EventsManager extends HTTPService {
                         type: "uuid",
                         optional: true
                     },
+                    eventIds: {
+                        type: "array",
+                        items: "uuid"
+                    },
                     topic: {
                         type: "string",
                         optional: true
@@ -98,7 +102,7 @@ export default class EventsManager extends HTTPService {
     }
 
     async _onServiceStart() {
-        this.update();
+        this.clearStreamsTick();
     }
 
     //async _onServiceStop() {}
@@ -106,7 +110,7 @@ export default class EventsManager extends HTTPService {
     #deadLettersHandler = async (deadLetter: DeadLetter) => {
         const event: Event = deadLetter.data;
 
-        this.db.pg.query(this.db.sql`
+        await this.db.pg.query(this.db.sql`
             INSERT INTO dead_letters(
                 event_id, topic, "type", "timestamp", data
             ) VALUES (
@@ -117,6 +121,8 @@ export default class EventsManager extends HTTPService {
                 ${this.db.sql.json(event)}
             );
         `);
+
+        this.log.info(`Dead letter event: #${event.id} ${event.type} saved`);
     };
 
     #errorHandler = async (event: CloudEvent) => {
@@ -131,6 +137,8 @@ export default class EventsManager extends HTTPService {
                 ${dayjs.utc(event.time).toISOString()}
             );
         `);
+
+        this.log.info(`Error event: #${event.id} ${event.type} saved`);
     };
 
     async _resendHandler(
@@ -158,11 +166,13 @@ export default class EventsManager extends HTTPService {
 
     async checkStoredDeadLetters({
         eventId,
+        eventIds,
         topic,
         type,
         resend
     }: {
         eventId?: string;
+        eventIds?: string[];
         topic?: string;
         type?: string;
         resend?: boolean;
@@ -170,6 +180,9 @@ export default class EventsManager extends HTTPService {
         if (!eventId && !topic && !type && typeof resend != "boolean") throw new Error("Few arguments provided");
 
         const conditionEventId = eventId ? this.db.sql`AND event_id = ${eventId}` : this.db.sql``;
+        const conditionEventIds = eventIds?.length ?
+                this.db.sql`AND event_id IN (${this.db.sql.array(eventIds, this.db.sql`uuid`)})` :
+                this.db.sql``;
         const conditionTopic = topic ? this.db.sql`AND topic = ${topic}` : this.db.sql``;
         const conditionType = type ? this.db.sql`AND "type" = ${type}` : this.db.sql``;
         const conditionResend = typeof resend == "boolean" ? this.db.sql`AND resend = ${resend}` : this.db.sql``;
@@ -179,6 +192,7 @@ export default class EventsManager extends HTTPService {
             FROM dead_letters
             WHERE processed = false
                 ${conditionEventId}
+                ${conditionEventIds}
                 ${conditionTopic}
                 ${conditionType}
                 ${conditionResend};
@@ -196,6 +210,8 @@ export default class EventsManager extends HTTPService {
                     time: dayjs.utc().toISOString()
                 });
 
+                this.log.info(`Dead letter event: #${dl.eventId} ${dl.type} resend`);
+
                 await this.db.pg.query(this.db.sql`
                     UPDATE dead_letters
                     SET processed = true
@@ -209,15 +225,15 @@ export default class EventsManager extends HTTPService {
         }
     }
 
-    async update(ingroneStarted = false) {
-        if (!ingroneStarted && this.#isUpdateStarted) return;
+    async clearStreamsTick(ignoreStartedClearing = false) {
+        if (!ignoreStartedClearing && this.#isClearingStarted) return;
 
         if (this.lightship.isServerShuttingDown()) {
-            this.#isUpdateStarted = false;
+            this.#isClearingStarted = false;
             return;
         }
 
-        this.#isUpdateStarted = true;
+        this.#isClearingStarted = true;
 
         const startTime = Date.now();
 
@@ -231,7 +247,7 @@ export default class EventsManager extends HTTPService {
             this.log.error(err);
         }
 
-        setTimeout(this.update.bind(this), this.checkInterval - (Date.now() - startTime), true);
+        setTimeout(this.clearStreamsTick.bind(this), this.checkInterval - (Date.now() - startTime), true);
     }
 
     async clearStreams() {
@@ -248,19 +264,31 @@ export default class EventsManager extends HTTPService {
                 ) || [null, common])[1];
             }
 
-            await this.deleteExpiresEvents(stream, config.eventTTL);
+            await this.deleteExpiredEvents(stream, config.eventTTL);
             await this.deleteOldConsumers(stream, config.consumerIdleTTL);
         }
     }
 
-    async deleteExpiresEvents(stream: string, ttl: number) {
-        const threshold = (Date.now() - ttl).toString();
+    /**
+     * Removes outdated events by using dependency of Redis-Streams note id from creation time
+     * 
+     * @param stream stream full name
+     * @param ttl stream event time to live
+     * 
+     * @description
+     * It gets stream notes by chunks from oldest one to the last outdated
+     * ( command: `XRANGE ${stream} - ${lastUnsuitableId} COUNT ${chunkSize}` ).
+     * And then deletes by single command all notes whose id includes in current chunk
+     * ( command: `XDEL ${stream} ${ids[0]} ${ids[1]} ...` ).
+     */
+    async deleteExpiredEvents(stream: string, ttl: number) {
+        const lastUnsuitableId = (Date.now() - ttl - 1).toString();
         let prevId = "-";
 
         // eslint-disable-next-line no-constant-condition
         while (true) {
             const expiresIds = (
-                await this.redis.xrange(stream, prevId, threshold, "COUNT", this.clearingChunkSize)
+                await this.redis.xrange(stream, prevId, lastUnsuitableId, "COUNT", this.clearingChunkSize)
             ).map((raw) => raw[0]);
 
             if (expiresIds.length == 0) break;
@@ -273,6 +301,17 @@ export default class EventsManager extends HTTPService {
         }
     }
 
+    /**
+     * Removes old consumers by using `XINFO` Redis command
+     * 
+     * @param stream stream full name
+     * @param ttl time to live of idle stream consumer
+     * 
+     * @description
+     * It gets info about stream groups, then gets info about consumers of group which has them.
+     * And then deletes consumers who has no pending messages and has idle time great than `ttl` value
+     * ( command: `XGROUP DELCONSUMER ${stream} ${group} ${consumer}` ).
+     */
     async deleteOldConsumers(stream: string, ttl: number) {
         const groups = this._parseRedisInfoArray<RedisGroupInfo>(await this.redis.xinfo("GROUPS", stream));
 
