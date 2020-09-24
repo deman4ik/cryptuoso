@@ -42,7 +42,7 @@ export interface BacktesterState {
     status: Status;
     startedAt?: string;
     finishedAt?: string;
-    statistics?: TradeStats;
+    statistics?: BacktesterStats;
     strategySettings?: {
         [key: string]: StrategySettings;
     };
@@ -57,6 +57,18 @@ export interface BacktesterSignals extends SignalEvent {
 
 export interface BacktesterPositionState extends RobotPositionState {
     backtestId: string;
+}
+
+export interface BacktesterLogs {
+    [key: string]: any;
+    candle: DBCandle;
+    robotId: string;
+    backtestId: string;
+}
+
+export interface BacktesterStats extends TradeStats {
+    backtestId: string;
+    robotId: string;
 }
 
 export class Backtester {
@@ -78,7 +90,7 @@ export class Backtester {
     #status: Status;
     #startedAt?: string;
     #finishedAt?: string;
-    #statistics?: TradeStats;
+    #statistics?: BacktesterStats;
     #strategySettings?: {
         [key: string]: StrategySettings;
     };
@@ -87,11 +99,11 @@ export class Backtester {
         [key: string]: {
             instance: Robot;
             data: {
-                logs: { id: string; backtestId: string; data: any }[];
+                logs: BacktesterLogs[];
                 alerts: BacktesterSignals[];
                 trades: BacktesterSignals[];
                 positions: { [key: string]: BacktesterPositionState };
-                stats: TradeStats;
+                stats: BacktesterStats;
             };
         };
     } = {};
@@ -333,10 +345,9 @@ export class Backtester {
             const robot = this.#robots[id];
             robot.data.logs = [
                 ...robot.data.logs,
-                ...robot.instance.logEventsToSend.map((log) => ({
-                    id: uuid(),
-                    backtestId: this.#id,
-                    data: log.data
+                ...robot.instance.logEventsToSend.map(({ data }) => ({
+                    ...data,
+                    backtestId: this.#id
                 }))
             ];
         }
@@ -381,7 +392,11 @@ export class Backtester {
     #calcStats = (id: string) => {
         const robot = this.robots[id];
         if (robot.instance.hasClosedPositions) {
-            robot.data.stats = calcStatistics(robot.data.stats, robot.instance.closedPositions);
+            robot.data.stats = {
+                ...calcStatistics(robot.data.stats, robot.instance.closedPositions),
+                robotId: id,
+                backtestId: this.#id
+            };
         }
     };
 

@@ -8,13 +8,15 @@ import {
     Backtester,
     Status,
     BacktesterSignals,
-    BacktesterPositionState
+    BacktesterPositionState,
+    BacktesterLogs,
+    BacktesterStats
 } from "@cryptuoso/backtester-state";
 import requireFromString from "require-from-string";
 import { StrategyCode } from "@cryptuoso/robot-state";
 import { IndicatorCode } from "@cryptuoso/robot-indicators";
 import { ValidTimeframe, Candle, DBCandle } from "@cryptuoso/market";
-import { sortAsc, sleep } from "@cryptuoso/helpers";
+import { sortAsc, sleep, chunkArray } from "@cryptuoso/helpers";
 import { makeChunksGenerator, pg, pgUtil, sql } from "@cryptuoso/postgres";
 
 export type BacktesterWorkerServiceConfig = BaseServiceConfig;
@@ -22,6 +24,7 @@ export type BacktesterWorkerServiceConfig = BaseServiceConfig;
 export default class BacktesterWorkerService extends BaseService {
     abort: { [key: string]: boolean } = {};
     defaultChunkSize = 500;
+    defaultImportChunkSize: 1000;
     constructor(config?: BacktesterWorkerServiceConfig) {
         super(config);
         try {
@@ -175,7 +178,9 @@ export default class BacktesterWorkerService extends BaseService {
     };
 
     #saveSignals = async (signals: BacktesterSignals[]) => {
-        await this.db.pg.query(sql`
+        const chunks = chunkArray(signals, this.defaultImportChunkSize);
+        for (const chunk of chunks) {
+            await this.db.pg.query(sql`
         INSERT INTO backtest_signals
         (backtest_id, robot_id, timestamp, type, 
         action, order_type, price,
@@ -183,7 +188,7 @@ export default class BacktesterWorkerService extends BaseService {
         candle_timestamp)
         SELECT * FROM
         ${sql.unnest(
-            this.db.util.prepareUnnest(signals, [
+            this.db.util.prepareUnnest(chunk, [
                 "backtestId",
                 "robotId",
                 "timestamp",
@@ -212,10 +217,13 @@ export default class BacktesterWorkerService extends BaseService {
                 "timestamp without time zone"
             ]
         )}`);
+        }
     };
 
     #savePositions = async (positions: BacktesterPositionState[]) => {
-        await this.db.pg.query(sql`
+        const chunks = chunkArray(positions, this.defaultImportChunkSize);
+        for (const chunk of chunks) {
+            await this.db.pg.query(sql`
         INSERT INTO backtest_positions
         (backtest_id, robot_id, prefix, code, parent_id,
         direction, status, entry_status, entry_price, entry_date,
@@ -226,7 +234,7 @@ export default class BacktesterWorkerService extends BaseService {
         SELECT * FROM 
         ${sql.unnest(
             this.db.util.prepareUnnest(
-                positions.map((pos) => ({
+                chunk.map((pos) => ({
                     ...pos,
                     alerts: JSON.stringify(pos.alerts),
                     internalState: JSON.stringify(pos.internalState)
@@ -282,6 +290,52 @@ export default class BacktesterWorkerService extends BaseService {
             ]
         )}
         `);
+        }
+    };
+
+    #saveLogs = async (logs: BacktesterLogs[]) => {
+        const chunks = chunkArray(
+            logs.map((log) => ({
+                backtestId: log.backtestId,
+                robotId: log.robotId,
+                candleTimestamp: log.candle.timestamp,
+                data: JSON.stringify(log)
+            })),
+            this.defaultImportChunkSize
+        );
+        for (const chunk of chunks) {
+            await this.db.pg.query(sql`
+            INSERT INTO backtest_logs
+            (backtest_id, robot_id, candle_timestamp, data)
+            SELECT * FROM
+            ${sql.unnest(this.db.util.prepareUnnest(chunk, ["backtestId", "robotId", "candleTimestamp", "data"]), [
+                "uuid",
+                "uuid",
+                "timestamp without time zone",
+                "jsonb"
+            ])}
+            `);
+        }
+    };
+
+    #saveStats = async ({
+        backtestId,
+        robotId,
+        statistics,
+        equity,
+        equityAvg,
+        lastPositionExitDate,
+        lastUpdatedAt
+    }: BacktesterStats) => {
+        await this.db.pg.query(sql`
+        INSERT INTO backtest_stats 
+        (backtest_id, robot_id, 
+        statistics, equity, equity_avg, 
+        last_position_exit_date, last_updated_at) VALUES (
+            ${backtestId}, ${robotId}, ${sql.json(statistics)}, ${sql.json(equity)}, ${sql.json(equityAvg)},
+            ${lastPositionExitDate},${lastUpdatedAt}
+        )
+        `);
     };
 
     async run(job: Job<BacktesterState, BacktesterState>, backtester: Backtester): Promise<void> {
@@ -323,6 +377,11 @@ export default class BacktesterWorkerService extends BaseService {
                     await this.#savePositions(Object.values(robot.data.positions));
                 }
 
+                if (backtester.settings.saveLogs) {
+                    await this.#saveLogs(robot.data.logs);
+                }
+
+                await this.#saveStats(robot.data.stats);
                 this.log.info("positions", Object.keys(robot.data.positions).length);
                 //this.log.info("stats", robot.data.stats);
             }
