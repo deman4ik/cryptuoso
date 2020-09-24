@@ -223,26 +223,28 @@ export class ExwatcherBaseService extends BaseService {
     }
 
     async watch(): Promise<void> {
-        this.activeSubscriptions.map(async ({ asset, currency }: Exwatcher) => {
-            const symbol = this.getSymbol(asset, currency);
-            if (this.exchange === "binance_futures") {
-                await Promise.all(
-                    Timeframe.validArray.map(async (timeframe) => {
-                        try {
-                            await this.connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
-                        } catch (e) {
-                            this.log.warn(symbol, timeframe, e);
-                        }
-                    })
-                );
-            } else {
-                try {
-                    await this.connector.watchTrades(symbol);
-                } catch (e) {
-                    this.log.warn(symbol, e);
+        await Promise.all(
+            this.activeSubscriptions.map(async ({ asset, currency }: Exwatcher) => {
+                const symbol = this.getSymbol(asset, currency);
+                if (this.exchange === "binance_futures") {
+                    await Promise.all(
+                        Timeframe.validArray.map(async (timeframe) => {
+                            try {
+                                await this.connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
+                            } catch (e) {
+                                this.log.warn(symbol, timeframe, e);
+                            }
+                        })
+                    );
+                } else {
+                    try {
+                        await this.connector.watchTrades(symbol);
+                    } catch (e) {
+                        this.log.warn(symbol, e);
+                    }
                 }
-            }
-        });
+            })
+        );
     }
 
     async resubscribe() {
