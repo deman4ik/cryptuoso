@@ -4,7 +4,7 @@ import { ValidationSchema } from "fastest-validator";
 import { v4 as uuid } from "uuid";
 import logger, { Logger } from "@cryptuoso/logger";
 import { JSONParse, round, sleep } from "@cryptuoso/helpers";
-import { CloudEvent, CloudEvent as Event, CloudEventV1 } from "cloudevents";
+import { CloudEvent as Event, CloudEventV1 } from "cloudevents";
 import { BaseError } from "@cryptuoso/errors";
 import { EventsCatalog, EventHandler, BASE_REDIS_PREFIX } from "./catalog";
 import dayjs from "@cryptuoso/dayjs";
@@ -37,6 +37,7 @@ const PENDING_INTERVAL = 15000;
 const PENDING_RETRY_RATE = 30;
 const PENDING_MAX_RETRIES = 3;
 export const DEAD_LETTER_TOPIC = "dead-letter";
+export const ERRORS_TOPIC = "errors";
 
 type StreamMsgVals = string[];
 type StreamMessage = [string, StreamMsgVals];
@@ -364,8 +365,8 @@ export class Events {
                             const [event]: Event[] = Object.values(
                                 this._parseEvents(this._parseMessageResponse(result))
                             );
-                            
-                            if(!event) continue;
+
+                            if (!event) continue;
 
                             try {
                                 this.log.debug(
@@ -467,7 +468,7 @@ export class Events {
                 data,
                 subject
             });
-            
+
             const args = [
                 "id",
                 cloudEvent.id,
@@ -490,7 +491,7 @@ export class Events {
             const cloudEvent = new Event(event);
 
             console.log(event.id, cloudEvent.id);
-            
+
             const args = [
                 "id",
                 cloudEvent.id,

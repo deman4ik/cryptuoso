@@ -1,4 +1,4 @@
-import { sleep } from '@cryptuoso/helpers';
+import { sleep } from "@cryptuoso/helpers";
 import Redis from "ioredis";
 import RedLock from "redlock";
 import { Queue, QueueEvents, Worker, Job } from "bullmq";
@@ -21,11 +21,11 @@ describe("BullMQ failed events handling e2e test", () => {
 
     const queueEventsArray: QueueEvents[] = [];
 
-    for(let i=0; i<2; ++i) {
+    for (let i = 0; i < 2; ++i) {
         workers.push(new Worker(NAME, jobHandler, { connection: new Redis(REDISCS) }));
     }
 
-    for(let i=0; i<3; ++i) {
+    for (let i = 0; i < 3; ++i) {
         connections[i] = new Redis(REDISCS);
         runners[i] = new Queue(NAME, { connection: connections[i] });
 
@@ -45,7 +45,7 @@ describe("BullMQ failed events handling e2e test", () => {
         driftFactor: 0.01,
         retryCount: 0
     });
-    
+
     describe("Check count of calls `firstFailHandler` when every calls of `jobHandler` throwing error", () => {
         test("`firstFailHandler` must be called 1 time", async () => {
             const testName = "1st";
@@ -55,11 +55,11 @@ describe("BullMQ failed events handling e2e test", () => {
             jobHandler.mockClear();
 
             const firstFailHandler = jest.fn();
-    
+
             const queueEvents = new QueueEvents(NAME, {
                 connection: new Redis(REDISCS)
             });
-        
+
             queueEvents.on("failed", firstFailHandler);
 
             await getRandomRunner().add(testName, testData, {
@@ -69,12 +69,12 @@ describe("BullMQ failed events handling e2e test", () => {
             });
 
             await sleep(1000 + attempts * jobDelay);
-            
+
             expect(jobHandler).toHaveBeenCalledTimes(attempts);
             expect(firstFailHandler).toHaveBeenCalledTimes(1);
         });
     });
-    
+
     describe("Check count of calls `failedJobHandler` when > 1 `QueueEvents` instances exists", () => {
         test(`Should call \`failedJobHandler\` ${queueEventsArray.length} times`, async () => {
             const testName = "1st";
@@ -99,13 +99,13 @@ describe("BullMQ failed events handling e2e test", () => {
             });
 
             await sleep(1000 + attempts * jobDelay);
-            
+
             expect(jobHandler).toHaveBeenCalledTimes(attempts);
             expect(failHandler).toHaveBeenCalledTimes(queueEventsArray.length);
             expect(failedJobHandler).toHaveBeenCalledTimes(queueEventsArray.length);
         });
     });
-    
+
     describe("Check count of calls `failedJobHandler` when using `redlock` and > 1 `QueueEvents` instances exists", () => {
         test("Should call `failedJobHandler` 1 time", async () => {
             const testName = "2nd";
@@ -128,7 +128,7 @@ describe("BullMQ failed events handling e2e test", () => {
                     failedJobHandler(job);
 
                     await lock.unlock();
-                } catch(err) {
+                } catch (err) {
                     ++lockingErrorsCount;
                 }
             });
@@ -140,7 +140,7 @@ describe("BullMQ failed events handling e2e test", () => {
             });
 
             await sleep(1000 + attempts * jobDelay);
-            
+
             expect(jobHandler).toHaveBeenCalledTimes(attempts);
             expect(failHandler).toHaveBeenCalledTimes(queueEventsArray.length);
             expect(lockingErrorsCount).toBe(queueEventsArray.length - 1);

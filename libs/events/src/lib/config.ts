@@ -1,25 +1,29 @@
-import { STATS_CALC_PREFIX, StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
+import { STATS_CALC_PREFIX /*, StatsCalcRunnerEvents */ } from "@cryptuoso/stats-calc-events";
 import { BASE_REDIS_PREFIX } from "./catalog";
-import { DEAD_LETTER_TOPIC } from "./events";
+import { DEAD_LETTER_TOPIC, ERRORS_TOPIC } from "./events";
 
 export { BASE_REDIS_PREFIX } from "./catalog";
 
+const SECOND = 1000;
+const MINUTE = 60 * SECOND;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+const WEEK = 7 * DAY;
+
 class TopicConfig {
-    constructor(
-        public eventTTL: number = 7 * 24 * 60 * 60,
-        public consumerIdleTTL: number = 7 * 24 * 60 * 60
-    ) {}
+    constructor(public eventTTL: number = WEEK, public consumerIdleTTL: number = WEEK) {}
 }
 
 interface TopicConfigs {
-    [key: string]: TopicConfig
+    [key: string]: TopicConfig;
 }
 
 function modifyConfigEventsNames(configs: TopicConfigs) {
     const modified: TopicConfigs = {};
 
-    for(const [event, config] of Object.entries(configs))
-        modified[`${BASE_REDIS_PREFIX}${event}`] = config;
+    for (const [stream, config] of Object.entries(configs)) {
+        modified[`${BASE_REDIS_PREFIX}${stream}`] = config;
+    }
 
     return modified;
 }
@@ -31,9 +35,9 @@ export const eventsManagementConfig: {
     common: new TopicConfig(),
     configs: {
         ...modifyConfigEventsNames({
-            [DEAD_LETTER_TOPIC]: new TopicConfig(100, 200),
-            "errors": new TopicConfig(100, 200),
-            [`${STATS_CALC_PREFIX}.*`]: new TopicConfig(100, 2000)
+            [DEAD_LETTER_TOPIC]: new TopicConfig(MINUTE, 2 * MINUTE),
+            [ERRORS_TOPIC]: new TopicConfig(MINUTE, MINUTE),
+            [`${STATS_CALC_PREFIX}.*`]: new TopicConfig(5 * MINUTE, 10 * MINUTE)
         })
     }
 };

@@ -164,7 +164,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
 
     async _queueFailHandler(args: { jobId: string; failedReason: string; prev?: string }) {
         const { jobId } = args;
-        
+
         const locker = await this.makeLocker(`lock:${this.name}:error.${jobId}`, 5000);
 
         try {
@@ -176,7 +176,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
                 type: `errors.${STATS_CALC_PREFIX}.${name}`,
                 data
             });
-            
+
             await locker.unlock();
         } catch (err) {
             this.log.error(err);

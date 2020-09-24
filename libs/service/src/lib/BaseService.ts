@@ -4,7 +4,7 @@ import RedLock from "redlock";
 import logger, { Logger } from "@cryptuoso/logger";
 import { sql, pg, pgUtil } from "@cryptuoso/postgres";
 import { Events, EventsConfig } from "@cryptuoso/events";
-import { sleep } from '@cryptuoso/helpers';
+import { sleep } from "@cryptuoso/helpers";
 
 export interface BaseServiceConfig {
     name?: string;
@@ -43,10 +43,7 @@ export class BaseService {
                 process.env.REDISCS //,{enableReadyCheck: false}
             );
 
-            this.#redLock = new RedLock(
-                [this.#redisConnection],
-                { retryCount: 0, driftFactor: 0.01 }
-            );
+            this.#redLock = new RedLock([this.#redisConnection], { retryCount: 0, driftFactor: 0.01 });
 
             this.#events = new Events(this.#redisConnection, this.#lightship, config?.eventsConfig);
         } catch (err) {
@@ -142,11 +139,11 @@ export class BaseService {
         const checkForUnlock = async () => {
             await sleep(sleepTime);
             try {
-                while(!ended) {
+                while (!ended) {
                     lock = await lock.extend(ttl);
                     await sleep(sleepTime);
                 }
-            } catch(err) {
+            } catch (err) {
                 this.log.error(`Failed to extend lock (${resource})`, err);
             }
         };
@@ -155,7 +152,7 @@ export class BaseService {
             lock: async () => {
                 try {
                     lock = await this.#redLock.lock(resource, ttl);
-                } catch(err) {
+                } catch (err) {
                     this.log.error(`Failed to lock (${resource})`, err);
                     throw err;
                 }
@@ -163,17 +160,17 @@ export class BaseService {
             },
             unlock: async () => {
                 ended = true;
-                
-                if(lock) {
+
+                if (lock) {
                     try {
                         await lock.unlock();
-                    } catch(err) {
+                    } catch (err) {
                         this.log.error(`Failed to unlock (${resource})`, err);
                     }
                 }
             }
         };
-    }
+    };
 
     get makeLocker() {
         return this.#makeLocker;
