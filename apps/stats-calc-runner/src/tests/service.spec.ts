@@ -1,10 +1,13 @@
-process.env.PGSC = "localhost:0";
-
 import Service from "../app/service";
 import { HTTPService } from "@cryptuoso/service";
-import { sql } from "slonik";
+import { sql, pg } from "@cryptuoso/postgres";
 import { setProperty } from "@cryptuoso/test-helpers";
 import { StatsCalcJobType } from "@cryptuoso/stats-calc-events";
+
+const mockPG = {
+    maybeOne: pg.maybeOne as jest.Mock,
+    any: pg.any as jest.Mock
+};
 
 const mockLog = {
     info: jest.fn(),
@@ -23,22 +26,22 @@ setProperty(HTTPService.prototype, "createRoutes", mockCreateRoutes);
 setProperty(HTTPService.prototype, "events", mockEvents);
 setProperty(HTTPService.prototype, "addOnStartHandler", mockAddOnStartHandler);
 setProperty(HTTPService.prototype, "addOnStopHandler", mockAddOnStopHandler);
+
 setProperty(HTTPService.prototype, "log", mockLog);
 
-/* jest.mock("slonik", () => ({
+jest.mock("slonik", () => ({
     createTypeParserPreset: jest.fn(() => []),
-    createPool: jest.fn(),
+    createPool: jest.fn(() => ({
+        maybeOne: jest.fn(),
+        any: jest.fn()
+    })),
     sql: jest.fn()
-})); */
+}));
 jest.mock("@cryptuoso/service");
 jest.mock("bullmq");
 
 describe("StatsCalcRunnerService methods", () => {
     const service = new Service();
-    const mockPG = {
-        maybeOne: jest.fn(),
-        any: jest.fn()
-    };
 
     setProperty(service, "db", {
         sql,

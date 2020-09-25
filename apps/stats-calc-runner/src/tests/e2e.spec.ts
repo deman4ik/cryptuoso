@@ -1,5 +1,3 @@
-process.env.PGSC = "localhost:0";
-
 import Service from "../app/service";
 import { StatsCalcJob } from "@cryptuoso/stats-calc-events";
 import { User, UserStatus, UserRoles } from "@cryptuoso/user-state";
@@ -15,14 +13,18 @@ const mockPG = {
     any: pg.any as jest.Mock
 };
 
-/* jest.mock("slonik", () => ({
+jest.mock("slonik", () => ({
     createTypeParserPreset: jest.fn(() => []),
-    createPool: jest.fn(() => mockPG),
+    createPool: jest.fn(() => ({
+        maybeOne: jest.fn(),
+        any: jest.fn(),
+        query: jest.fn()
+    })),
     sql: jest.fn()
-})); */
+}));
 jest.mock("ioredis");
 jest.mock("@cryptuoso/logger");
-jest.mock("@cryptuoso/postgres");
+//jest.mock("@cryptuoso/postgres");
 jest.mock("@cryptuoso/events");
 
 const routes: {
@@ -193,7 +195,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
             });
         });
     });
-
+    
     describe("Testing requests w/o x-hasura-role", () => {
         test("Should answer with error (code 400)", async () => {
             for (const [route, schema] of Object.entries(routes)) {
@@ -211,7 +213,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
             }
         });
     });
-
+    
     describe("Testing requests with wrong DB user roles and right input", () => {
         test("Should answer with errors (code 403)", async () => {
             for (const [route, schema] of Object.entries(routes)) {
@@ -231,7 +233,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
             }
         });
     });
-
+    
     describe("Testing requests with right meta but with optional input only", () => {
         test("Should answer with errors (code 400)", async () => {
             for (const [route, schema] of Object.entries(routes)) {
@@ -270,7 +272,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
             }
         });
     });
-
+    
     describe("Testing right requests (full input set)", () => {
         test("Should call handlers and answers w/o errors (code 200)", async () => {
             for (const [route, schema] of Object.entries(routes)) {

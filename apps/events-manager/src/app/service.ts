@@ -131,8 +131,8 @@ export default class EventsManager extends HTTPService {
         const queueKey = this.name;
 
         await this.queueScheduler.close();
-        await this.queues[queueKey].close();
-        await this.workers[queueKey].close();
+        await this.queues[queueKey]?.close();
+        await this.workers[queueKey]?.close();
     }
 
     #deadLettersHandler = async (deadLetter: DeadLetter) => {

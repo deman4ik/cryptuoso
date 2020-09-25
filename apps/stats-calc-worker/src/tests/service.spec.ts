@@ -49,7 +49,7 @@ jest.mock("@cryptuoso/service", () => {
 });
 
 jest.mock("threads", () => ({
-    Pool: jest.fn(() => ({
+    Pool: jest.fn(() => ({ 
         queue: jest.fn(),
         terminate: jest.fn()
     })),
@@ -58,7 +58,7 @@ jest.mock("threads", () => ({
 jest.mock("bullmq");
 jest.mock("lightship");
 jest.mock("ioredis");
-//jest.mock("@cryptuoso/logger");
+//jest.mock("@cryptuoso/logger"); 
 jest.mock("@cryptuoso/postgres");
 jest.mock("@cryptuoso/events");
 jest.mock("@cryptuoso/mail");
