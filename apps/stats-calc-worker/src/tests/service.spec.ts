@@ -20,6 +20,19 @@ const mockExit = jest.fn();
 
 setProperty(process, "exit", mockExit);
 
+jest.mock("slonik", () => ({
+    createTypeParserPreset: jest.fn(() => []),
+    createPool: jest.fn(() => {
+        return {
+            maybeOne: jest.fn(),
+            any: jest.fn(),
+            oneFirst: jest.fn(),
+            query: jest.fn()
+        };
+    }),
+    sql: jest.fn()
+}));
+
 jest.mock("@cryptuoso/service", () => {
     return {
         BaseService: class BaseService {
@@ -49,7 +62,7 @@ jest.mock("@cryptuoso/service", () => {
 });
 
 jest.mock("threads", () => ({
-    Pool: jest.fn(() => ({ 
+    Pool: jest.fn(() => ({
         queue: jest.fn(),
         terminate: jest.fn()
     })),
@@ -58,7 +71,7 @@ jest.mock("threads", () => ({
 jest.mock("bullmq");
 jest.mock("lightship");
 jest.mock("ioredis");
-//jest.mock("@cryptuoso/logger"); 
+//jest.mock("@cryptuoso/logger");
 jest.mock("@cryptuoso/postgres");
 jest.mock("@cryptuoso/events");
 jest.mock("@cryptuoso/mail");

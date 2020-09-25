@@ -15,11 +15,13 @@ const mockPG = {
 
 jest.mock("slonik", () => ({
     createTypeParserPreset: jest.fn(() => []),
-    createPool: jest.fn(() => ({
-        maybeOne: jest.fn(),
-        any: jest.fn(),
-        query: jest.fn()
-    })),
+    createPool: jest.fn(() => {
+        return {
+            maybeOne: jest.fn(),
+            any: jest.fn(),
+            query: jest.fn()
+        };
+    }),
     sql: jest.fn()
 }));
 jest.mock("ioredis");
@@ -195,7 +197,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
             });
         });
     });
-    
+
     describe("Testing requests w/o x-hasura-role", () => {
         test("Should answer with error (code 400)", async () => {
             for (const [route, schema] of Object.entries(routes)) {
@@ -207,13 +209,14 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
                             responseStatus: 400
                         });
                     } catch (err) {
+                        console.error(err);
                         throw new Error(`Wrong answer from route "${route}"`);
                     }
                 }
             }
         });
     });
-    
+
     describe("Testing requests with wrong DB user roles and right input", () => {
         test("Should answer with errors (code 403)", async () => {
             for (const [route, schema] of Object.entries(routes)) {
@@ -233,7 +236,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
             }
         });
     });
-    
+
     describe("Testing requests with right meta but with optional input only", () => {
         test("Should answer with errors (code 400)", async () => {
             for (const [route, schema] of Object.entries(routes)) {
@@ -247,6 +250,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
                             responseStatus: 400
                         });
                     } catch (err) {
+                        console.error(err);
                         throw new Error(`Wrong answer from route "${route}"`);
                     }
                 }
@@ -267,12 +271,13 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
                         responseStatus: 200
                     });
                 } catch (err) {
+                    console.error(err);
                     throw new Error(`Wrong answer from route "${route}"`);
                 }
             }
         });
     });
-    
+
     describe("Testing right requests (full input set)", () => {
         test("Should call handlers and answers w/o errors (code 200)", async () => {
             for (const [route, schema] of Object.entries(routes)) {
@@ -286,6 +291,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
                         responseStatus: 200
                     });
                 } catch (err) {
+                    console.error(err);
                     throw new Error(`Wrong answer from route "${route}"`);
                 }
             }
