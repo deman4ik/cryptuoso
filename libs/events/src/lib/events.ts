@@ -490,8 +490,6 @@ export class Events {
         try {
             const cloudEvent = new Event(event);
 
-            console.log(event.id, cloudEvent.id);
-
             const args = [
                 "id",
                 cloudEvent.id,

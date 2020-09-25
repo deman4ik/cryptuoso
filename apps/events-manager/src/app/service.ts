@@ -11,6 +11,7 @@ import { UserRoles } from "@cryptuoso/user-state";
 import { JSONParse } from "@cryptuoso/helpers";
 import dayjs from "dayjs";
 import { CloudEvent } from "cloudevents";
+import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
 interface StoredDeadLetter {
     id: string;
@@ -38,6 +39,10 @@ interface RedisConsumerInfo {
     idle: number;
 }
 
+enum JobTypes {
+    clearStreams = "clearStreams"
+}
+
 export interface EventsManagerConfig extends HTTPServiceConfig {
     /** in seconds */
     checkInterval?: number;
@@ -48,7 +53,10 @@ export default class EventsManager extends HTTPService {
     /** in milliseconds */
     checkInterval: number;
     clearingChunkSize: number;
-    #isClearingStarted: boolean;
+    
+    queueScheduler: QueueScheduler;
+    queues: { [key: string]: Queue };
+    workers: { [key: string]: Worker };
 
     constructor(config?: EventsManagerConfig) {
         super(config);
@@ -98,14 +106,34 @@ export default class EventsManager extends HTTPService {
         });
 
         this.addOnStartHandler(this._onServiceStart);
-        //this.addOnStopHandler(this._onServiceStop);
+        this.addOnStopHandler(this._onServiceStop);
     }
 
     async _onServiceStart() {
-        this.clearStreamsTick();
+        const queueKey = this.name;
+
+        this.queueScheduler = new QueueScheduler(queueKey, { connection: this.redis });
+        this.queues = {
+            [queueKey]: new Queue(queueKey, { connection: this.redis })
+        };
+        this.workers = {
+            [queueKey]: new Worker(queueKey, this.processJob.bind(this))
+        };
+
+        await this.queues[queueKey].add(JobTypes.clearStreams, null, {
+            repeat: {
+                every: this.checkInterval
+            }
+        });
     }
 
-    //async _onServiceStop() {}
+    async _onServiceStop() {
+        const queueKey = this.name;
+
+        await this.queueScheduler.close();
+        await this.queues[queueKey].close();
+        await this.workers[queueKey].close();
+    }
 
     #deadLettersHandler = async (deadLetter: DeadLetter) => {
         const event: Event = deadLetter.data;
@@ -115,7 +143,7 @@ export default class EventsManager extends HTTPService {
                 event_id, topic, "type", "timestamp", data
             ) VALUES (
                 ${event.id},
-                ${deadLetter.topic},
+                ${deadLetter.topic.replace(BASE_REDIS_PREFIX, "")},
                 ${deadLetter.type},
                 ${dayjs.utc(event.time).toISOString()},
                 ${this.db.sql.json(event)}
@@ -131,7 +159,7 @@ export default class EventsManager extends HTTPService {
                 event_id, topic, "type", data, "timestamp"
             ) VALUES (
                 ${event.id},
-                ${event.type.replace("com.cryptuoso.", BASE_REDIS_PREFIX)},
+                ${event.type.replace("com.cryptuoso.", "")},
                 ${event.type},
                 ${this.db.sql.json(event.toJSON())},
                 ${dayjs.utc(event.time).toISOString()}
@@ -205,9 +233,9 @@ export default class EventsManager extends HTTPService {
 
             try {
                 await locker.lock();
-                await this.events.emitRaw(dl.topic, {
+                await this.events.emitRaw(`${BASE_REDIS_PREFIX}${dl.topic}`, {
                     ...dl.data,
-                    time: dayjs.utc().toISOString()
+                    time: new Date()
                 });
 
                 this.log.info(`Dead letter event: #${dl.eventId} ${dl.type} resend`);
@@ -224,30 +252,24 @@ export default class EventsManager extends HTTPService {
             }
         }
     }
-
-    async clearStreamsTick(ignoreStartedClearing = false) {
-        if (!ignoreStartedClearing && this.#isClearingStarted) return;
-
-        if (this.lightship.isServerShuttingDown()) {
-            this.#isClearingStarted = false;
-            return;
-        }
-
-        this.#isClearingStarted = true;
-
-        const startTime = Date.now();
-
+    
+    async processJob(job: Job) {
         try {
+            if (this.lightship.isServerShuttingDown())
+                throw new Error("Server is shutting down");
+    
             //await this.checkStoredDeadLetters({ resend: true });
 
             // TODO: think about possibility of deleting dead letters before handling
 
-            await this.clearStreams();
+            if(job.name === JobTypes.clearStreams)
+                await this.clearStreams();
+            else
+                throw new Error(`Unknown job name ${job.name}`);
         } catch (err) {
-            this.log.error(err);
+            this.log.error("Failed to process job", job, err);
+            throw err;
         }
-
-        setTimeout(this.clearStreamsTick.bind(this), this.checkInterval - (Date.now() - startTime), true);
     }
 
     async clearStreams() {
