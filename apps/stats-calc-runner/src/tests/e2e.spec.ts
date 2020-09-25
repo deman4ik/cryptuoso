@@ -1,3 +1,5 @@
+process.env.API_KEY = "TEST_KEY";
+
 import Service from "../app/service";
 import { StatsCalcJob } from "@cryptuoso/stats-calc-events";
 import { User, UserStatus, UserRoles } from "@cryptuoso/user-state";
@@ -192,7 +194,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
                 try {
                     expect(`/actions/${route}` in _routes).toBeTruthy();
                 } catch (err) {
-                    throw new Error(`Route "${route}" (at "/actions/") must be initialized`);
+                    throw new Error(`Route "${route}" (at "/actions/") must be initialized: ${err}`);
                 }
             });
         });
@@ -209,8 +211,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
                             responseStatus: 400
                         });
                     } catch (err) {
-                        console.error(err);
-                        throw new Error(`Wrong answer from route "${route}"`);
+                        throw new Error(`Wrong answer from route "${route}": ${err}`);
                     }
                 }
             }
@@ -230,7 +231,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
                             responseStatus: 403
                         });
                     } catch (err) {
-                        throw new Error(`Wrong answer from route "${route}"`);
+                        throw new Error(`Wrong answer from route "${route}": ${err}`);
                     }
                 }
             }
@@ -250,8 +251,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
                             responseStatus: 400
                         });
                     } catch (err) {
-                        console.error(err);
-                        throw new Error(`Wrong answer from route "${route}"`);
+                        throw new Error(`Wrong answer from route "${route}": ${err}`);
                     }
                 }
             }
@@ -271,8 +271,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
                         responseStatus: 200
                     });
                 } catch (err) {
-                    console.error(err);
-                    throw new Error(`Wrong answer from route "${route}"`);
+                    throw new Error(`Wrong answer from route "${route}": ${err}`);
                 }
             }
         });
@@ -291,8 +290,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
                         responseStatus: 200
                     });
                 } catch (err) {
-                    console.error(err);
-                    throw new Error(`Wrong answer from route "${route}"`);
+                    throw new Error(`Wrong answer from route "${route}": ${err}`);
                 }
             }
         });
