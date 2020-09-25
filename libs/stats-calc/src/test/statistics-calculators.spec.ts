@@ -1,9 +1,9 @@
-import StatisticsCalculator from "./statistics-calculator";
+import StatisticsCalculator from "../lib/statistics-calculator";
 import positions from "./testData/positionsForStats";
 import correctFinalResult from "./testData/correctResultAfterRefactor";
 import statsWithoutLastPos from "./testData/correctWithoutLastPos";
 //import dayjs from "@cryptuoso/dayjs";
-import { TradeStats, TradeStatsClass, roundRobotStatVals, Statistics } from "./stats-calc";
+import { TradeStats, TradeStatsClass, roundRobotStatVals, Statistics, StatsNumberValue } from "../lib/types";
 import { invalidStatistics, invalidPosition } from "./testData/invalidData";
 import { BasePosition } from "@cryptuoso/market";
 
@@ -413,27 +413,6 @@ describe("Statistics functions test", () => {
                     sc.calculateRating(profitFactor, payoffRatio, recoveryFactor, 0.1, 0.1, 0.1);
                 }).toThrowError();
             });
-        });
-    });
-});
-
-describe("Data validation test", () => {
-    const pos = positions[0],
-        validObject = new Statistics();
-    const statsCalculator = new StatisticsCalculator(null, [pos]);
-
-    describe("Calling calculateRating before all statistics are calculated", () => {
-        it("Should throw error", () => {
-            expect(() => {
-                statsCalculator.calculateRating(
-                    validObject.profitFactor,
-                    validObject.payoffRatio,
-                    validObject.recoveryFactor,
-                    0.2,
-                    0.3,
-                    0.5
-                );
-            }).toThrowError();
         });
     });
 });
