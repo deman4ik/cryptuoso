@@ -1,6 +1,6 @@
 import Validator, { ValidationSchema, ValidationError } from "fastest-validator";
 import { BasePosition, PositionDirection } from "@cryptuoso/market";
-import { Statistics } from './stats-calc';
+import { Statistics } from "./stats-calc";
 
 const validator = new Validator();
 

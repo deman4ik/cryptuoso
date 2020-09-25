@@ -53,7 +53,7 @@ export default class EventsManager extends HTTPService {
     /** in milliseconds */
     checkInterval: number;
     clearingChunkSize: number;
-    
+
     queueScheduler: QueueScheduler;
     queues: { [key: string]: Queue };
     workers: { [key: string]: Worker };
@@ -208,9 +208,9 @@ export default class EventsManager extends HTTPService {
         if (!eventId && !topic && !type && typeof resend != "boolean") throw new Error("Few arguments provided");
 
         const conditionEventId = eventId ? this.db.sql`AND event_id = ${eventId}` : this.db.sql``;
-        const conditionEventIds = eventIds?.length ?
-                this.db.sql`AND event_id IN (${this.db.sql.array(eventIds, this.db.sql`uuid`)})` :
-                this.db.sql``;
+        const conditionEventIds = eventIds?.length
+            ? this.db.sql`AND event_id IN (${this.db.sql.array(eventIds, this.db.sql`uuid`)})`
+            : this.db.sql``;
         const conditionTopic = topic ? this.db.sql`AND topic = ${topic}` : this.db.sql``;
         const conditionType = type ? this.db.sql`AND "type" = ${type}` : this.db.sql``;
         const conditionResend = typeof resend == "boolean" ? this.db.sql`AND resend = ${resend}` : this.db.sql``;
@@ -252,20 +252,17 @@ export default class EventsManager extends HTTPService {
             }
         }
     }
-    
+
     async processJob(job: Job) {
         try {
-            if (this.lightship.isServerShuttingDown())
-                throw new Error("Server is shutting down");
-    
+            if (this.lightship.isServerShuttingDown()) throw new Error("Server is shutting down");
+
             //await this.checkStoredDeadLetters({ resend: true });
 
             // TODO: think about possibility of deleting dead letters before handling
 
-            if(job.name === JobTypes.clearStreams)
-                await this.clearStreams();
-            else
-                throw new Error(`Unknown job name ${job.name}`);
+            if (job.name === JobTypes.clearStreams) await this.clearStreams();
+            else throw new Error(`Unknown job name ${job.name}`);
         } catch (err) {
             this.log.error("Failed to process job", job, err);
             throw err;
@@ -293,10 +290,10 @@ export default class EventsManager extends HTTPService {
 
     /**
      * Removes outdated events by using dependency of Redis-Streams note id from creation time
-     * 
+     *
      * @param stream stream full name
      * @param ttl stream event time to live
-     * 
+     *
      * @description
      * It gets stream notes by chunks from oldest one to the last outdated
      * ( command: `XRANGE ${stream} - ${lastUnsuitableId} COUNT ${chunkSize}` ).
@@ -325,10 +322,10 @@ export default class EventsManager extends HTTPService {
 
     /**
      * Removes old consumers by using `XINFO` Redis command
-     * 
+     *
      * @param stream stream full name
      * @param ttl time to live of idle stream consumer
-     * 
+     *
      * @description
      * It gets info about stream groups, then gets info about consumers of group which has them.
      * And then deletes consumers who has no pending messages and has idle time great than `ttl` value
