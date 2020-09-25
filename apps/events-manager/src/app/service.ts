@@ -205,7 +205,8 @@ export default class EventsManager extends HTTPService {
         type?: string;
         resend?: boolean;
     }) {
-        if (!eventId && !topic && !type && typeof resend != "boolean") throw new Error("Few arguments provided");
+        if (!eventId && !eventIds?.length && !topic && !type && typeof resend != "boolean")
+            throw new Error("Few arguments provided");
 
         const conditionEventId = eventId ? this.db.sql`AND event_id = ${eventId}` : this.db.sql``;
         const conditionEventIds = eventIds?.length
