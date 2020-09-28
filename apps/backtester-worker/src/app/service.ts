@@ -24,7 +24,7 @@ export type BacktesterWorkerServiceConfig = BaseServiceConfig;
 export default class BacktesterWorkerService extends BaseService {
     abort: { [key: string]: boolean } = {};
     defaultChunkSize = 500;
-    defaultImportChunkSize: 1000;
+    defaultImportChunkSize = 1000;
     constructor(config?: BacktesterWorkerServiceConfig) {
         super(config);
         try {
@@ -113,6 +113,14 @@ export default class BacktesterWorkerService extends BaseService {
             backtester.start();
             this.log.info(`Backtester #${backtester.id} - Starting`);
             try {
+                // Delete previous backtester state if exists
+                const existedBacktest: { id: string } = await this.db.pg.maybeOne(sql`
+            SELECT id FROM backtests WHERE id = ${backtester.id}
+            `);
+                if (existedBacktest) {
+                    this.log.info(`Backtester #${backtester.id} - Found previous backtest. Deleting...`);
+                    await this.db.pg.query(sql`DELETE FROM backtests WHERE id = ${backtester.id}`);
+                }
                 // Load strategy and indicators code, init strategy and indicators
                 const strategyCode = await this.#loadStrategyCode(backtester.strategyName, backtester.settings.local);
                 backtester.initRobots(strategyCode);
@@ -143,6 +151,8 @@ export default class BacktesterWorkerService extends BaseService {
                     );
                 this.log.info(`Backtester #${backtester.id} - History from ${historyCandles[0].timestamp}`);
                 backtester.handleHistoryCandles(historyCandles);
+
+                await this.#saveState(backtester.state);
                 // Run backtest and save results
                 await this.run(job, backtester);
             } catch (err) {
@@ -150,9 +160,11 @@ export default class BacktesterWorkerService extends BaseService {
                 this.log.warn(`Backtester #${backtester.id}`, err.message);
             }
             backtester.finish(this.abort[backtester.id]);
+            await this.#saveState(backtester.state);
             if (this.abort[backtester.id]) delete this.abort[backtester.id];
+
             this.log.info(`Backtester #${backtester.id} is ${backtester.status}!`);
-            job.update(backtester.state);
+            //  job.update(backtester.state);
             if (backtester.isFailed) {
                 /*await this.events.emit<BacktesterWorkerFailed>({
                     type: BacktesterWorkerEvents.FAILED,
@@ -177,10 +189,54 @@ export default class BacktesterWorkerService extends BaseService {
         }
     };
 
+    #saveState = async (state: BacktesterState) => {
+        this.log.info(`Backtester #${state.id} - Saving state`);
+        await this.db.pg.query(sql`
+        INSERT INTO backtests
+        (id, robot_id, exchange, asset, currency, 
+        timeframe, strategy_name,
+        date_from, date_to, settings, 
+        total_bars, processed_bars, left_bars, completed_percent, 
+        status, started_at, finished_at, error, robot_state ) 
+        VALUES (
+            ${state.id}, ${state.robotId}, ${state.exchange}, ${state.asset}, ${state.currency}, 
+            ${state.timeframe}, ${state.strategyName},
+            ${state.dateFrom}, ${state.dateTo}, ${sql.json(state.settings)}, 
+            ${state.totalBars}, ${state.processedBars}, ${state.leftBars},${state.completedPercent}, 
+            ${state.status}, ${state.startedAt}, ${state.finishedAt}, ${state.error}, ${sql.json(
+            state.robotState || {}
+        )}
+        )
+        ON CONFLICT ON CONSTRAINT backtests_pkey
+        DO UPDATE SET robot_id = ${state.robotId},
+        asset = ${state.asset},
+        currency = ${state.currency},
+        timeframe = ${state.timeframe},
+        strategy_name = ${state.strategyName},
+        date_from = ${state.dateFrom},
+        date_to = ${state.dateTo},
+        settings = ${sql.json(state.settings)},
+        total_bars = ${state.totalBars},
+        processed_bars = ${state.processedBars},
+        left_bars = ${state.leftBars},
+        completed_percent = ${state.completedPercent},
+        status = ${state.status},
+        started_at = ${state.startedAt},
+        finished_at = ${state.finishedAt},
+        error = ${state.error},
+        robot_state = ${sql.json(state.robotState || {})};
+        `);
+    };
+
     #saveSignals = async (signals: BacktesterSignals[]) => {
-        const chunks = chunkArray(signals, this.defaultImportChunkSize);
-        for (const chunk of chunks) {
-            await this.db.pg.query(sql`
+        if (signals && Array.isArray(signals) && signals.length > 0) {
+            this.log.info(
+                `Backtester #${signals[0].backtestId} - Saving robot's #${signals[0].robotId} ${signals.length} signals`
+            );
+            //  this.log.debug(signals);
+            const chunks = chunkArray(signals, this.defaultImportChunkSize);
+            for (const chunk of chunks) {
+                await this.db.pg.query(sql`
         INSERT INTO backtest_signals
         (backtest_id, robot_id, timestamp, type, 
         action, order_type, price,
@@ -205,7 +261,7 @@ export default class BacktesterWorkerService extends BaseService {
             [
                 "uuid",
                 "uuid",
-                "timestamp without time zone",
+                "timestamp",
                 "varchar",
                 "varchar",
                 "varchar",
@@ -214,23 +270,37 @@ export default class BacktesterWorkerService extends BaseService {
                 "varchar",
                 "varchar",
                 "uuid",
-                "timestamp without time zone"
+                "timestamp"
             ]
         )}`);
+            }
         }
     };
 
     #savePositions = async (positions: BacktesterPositionState[]) => {
-        const chunks = chunkArray(positions, this.defaultImportChunkSize);
-        for (const chunk of chunks) {
-            await this.db.pg.query(sql`
+        try {
+            if (positions && Array.isArray(positions) && positions.length > 0) {
+                this.log.info(
+                    `Backtester #${positions[0].backtestId} - Saving robot's #${positions[0].robotId} ${positions.length} positions`
+                );
+                const chunks = chunkArray(positions, this.defaultImportChunkSize);
+                for (const chunk of chunks) {
+                    await this.db.pg.query(sql`
         INSERT INTO backtest_positions
         (backtest_id, robot_id, prefix, code, parent_id,
-        direction, status, entry_status, entry_price, entry_date,
-        entry_order_type, entry_action, entry_candle_timestamp,
-        exit_status, exit_price, exit_date, exit_order_type,
-        exit_action, exit_candle_timestamp, alerts,
-        bars_held, internal_state)
+        direction, status, entry_status, entry_price, 
+        entry_date,
+        entry_order_type, entry_action, 
+        entry_candle_timestamp,
+        exit_status, exit_price,
+        exit_date, 
+        exit_order_type,
+        exit_action, 
+        exit_candle_timestamp,
+         alerts,
+        bars_held,
+         internal_state
+        )
         SELECT * FROM 
         ${sql.unnest(
             this.db.util.prepareUnnest(
@@ -274,22 +344,27 @@ export default class BacktesterWorkerService extends BaseService {
                 "varchar",
                 "varchar",
                 "numeric",
-                "timestamp without time zone",
+                "timestamp",
                 "varchar",
                 "varchar",
-                "timestamp without time zone",
+                "timestamp",
                 "varchar",
                 "numeric",
-                "timestamp without time zone",
+                "timestamp",
                 "varchar",
                 "varchar",
-                "timestamp without time zone",
+                "timestamp",
                 "jsonb",
                 "numeric",
                 "jsonb"
             ]
         )}
         `);
+                }
+            }
+        } catch (err) {
+            this.log.error(`Failed to save positions`, err);
+            throw err;
         }
     };
 
@@ -311,23 +386,19 @@ export default class BacktesterWorkerService extends BaseService {
             ${sql.unnest(this.db.util.prepareUnnest(chunk, ["backtestId", "robotId", "candleTimestamp", "data"]), [
                 "uuid",
                 "uuid",
-                "timestamp without time zone",
+                "timestamp",
                 "jsonb"
             ])}
             `);
         }
     };
 
-    #saveStats = async ({
-        backtestId,
-        robotId,
-        statistics,
-        equity,
-        equityAvg,
-        lastPositionExitDate,
-        lastUpdatedAt
-    }: BacktesterStats) => {
-        await this.db.pg.query(sql`
+    #saveStats = async (stats: BacktesterStats) => {
+        if (stats) {
+            const { backtestId, robotId, statistics, equity, equityAvg, lastPositionExitDate, lastUpdatedAt } = stats;
+
+            this.log.info(`Backtester #${backtestId} - Saving robot's #${robotId} stats`);
+            await this.db.pg.query(sql`
         INSERT INTO backtest_stats 
         (backtest_id, robot_id, 
         statistics, equity, equity_avg, 
@@ -336,6 +407,7 @@ export default class BacktesterWorkerService extends BaseService {
             ${lastPositionExitDate},${lastUpdatedAt}
         )
         `);
+        }
     };
 
     async run(job: Job<BacktesterState, BacktesterState>, backtester: Backtester): Promise<void> {
@@ -355,7 +427,8 @@ export default class BacktesterWorkerService extends BaseService {
                     this.db.pg,
                     sql`SELECT * FROM ${query} ORDER BY time`,
                     candlesCount > this.defaultChunkSize ? this.defaultChunkSize : candlesCount
-                )
+                ),
+                { maxParallel: 1 }
             )
                 .flatMap((i) => i)
                 .each(async (candle: DBCandle) => {
@@ -387,6 +460,7 @@ export default class BacktesterWorkerService extends BaseService {
             }
         } catch (err) {
             this.log.error(`Backtester #${backtester.id} - Failed`, err.message);
+            console.error(err);
             throw err;
         }
     }
@@ -397,8 +471,8 @@ export default class BacktesterWorkerService extends BaseService {
                 new QueueBase("test"),
                 "test",
                 new Backtester({
-                    id: "test",
-                    robotId: "test",
+                    id: "e38a47c7-1bdd-4a7f-ad89-c4dffffccc6d",
+                    robotId: "e38a47c7-1bdd-4a7f-ad89-c4dffffccc6d",
                     exchange: "binance_futures",
                     asset: "BTC",
                     currency: "USDT",
@@ -407,12 +481,12 @@ export default class BacktesterWorkerService extends BaseService {
                     settings: {
                         local: true,
                         populateHistory: false,
-                        saveSignals: false,
+                        saveSignals: true,
                         savePositions: true,
-                        saveLogs: false
+                        saveLogs: true
                     },
                     strategySettings: {
-                        ["test"]: {
+                        ["e38a47c7-1bdd-4a7f-ad89-c4dffffccc6d"]: {
                             adxHigh: 30,
                             lookback: 10,
                             adxPeriod: 25,
@@ -423,8 +497,8 @@ export default class BacktesterWorkerService extends BaseService {
                         volume: 0.002,
                         requiredHistoryMaxBars: 300
                     },
-                    dateFrom: "2020-09-15T00:00:00.000Z",
-                    dateTo: "2020-09-15T20:15:00.000Z",
+                    dateFrom: "2020-09-27T00:00:00.000Z",
+                    dateTo: "2020-09-27T03:15:00.000Z",
                     status: Status.queued
                 }).state
             );
