@@ -1,4 +1,4 @@
-import { isPositionForStats, isPositionsForStats } from "../lib/types";
+import { isPositionForStats, isPositionsForStats } from "../lib/statistics-calculator";
 import positions from "./testData/positionsForStats";
 
 describe("Test schemes", () => {

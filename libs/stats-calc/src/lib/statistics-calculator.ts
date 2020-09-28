@@ -1,17 +1,14 @@
-import {
-    Statistics,
-    TradeStats,
-    TradeStatsClass,
-    isTradeStats,
-    StatsNumberValue,
-    StatsStringValue,
-    PerformanceVals,
-    roundRobotStatVals,
-    isPositionsForStats
-} from "./types";
+import { Statistics, TradeStats, TradeStatsClass, StatsNumberValue, StatsStringValue, PerformanceVals } from "./types";
 import dayjs from "@cryptuoso/dayjs";
 import { round, chunkArray } from "@cryptuoso/helpers";
 import { BasePosition, PositionDirection } from "@cryptuoso/market";
+import {
+    makeValidateFunc,
+    PositionForStatsSchema,
+    PositionsForStatsSchema,
+    StatisticsSchema,
+    TradeStatsSchema
+} from "./schemes";
 
 function initializeValues(stat: StatsNumberValue): StatsNumberValue {
     const values = { ...stat };
@@ -24,6 +21,30 @@ function divide(a: number, b: number) {
     if (!a || !b || b === 0) return null;
     return a / b;
 }
+
+export function roundToNumberOrNull(num: number, decimals = 0): number {
+    if (!isFinite(num) || (!num && num != 0)) return null;
+
+    return round(num, decimals);
+}
+
+export function roundRobotStatVals(vals: StatsNumberValue, decimals = 0): StatsNumberValue {
+    const result = { ...vals };
+
+    for (const key in result) {
+        result[key] = roundToNumberOrNull(result[key], decimals);
+    }
+
+    return result;
+}
+
+export const isPositionForStats = makeValidateFunc<BasePosition>(PositionForStatsSchema);
+
+export const isPositionsForStats = makeValidateFunc<BasePosition[]>(PositionsForStatsSchema);
+
+export const isStatistics = makeValidateFunc<Statistics>(StatisticsSchema);
+
+export const isTradeStats = makeValidateFunc<TradeStats>(TradeStatsSchema);
 
 // ignores integers
 function roundStatisticsValues(statistics: Statistics): Statistics {

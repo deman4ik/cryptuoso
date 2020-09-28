@@ -1,13 +1,3 @@
-import {
-    makeValidateFunc,
-    PositionForStatsSchema,
-    PositionsForStatsSchema,
-    StatisticsSchema,
-    TradeStatsSchema
-} from "./schemes";
-import { BasePosition, PositionDirection } from "@cryptuoso/market";
-import { round } from "@cryptuoso/helpers";
-
 export interface StatsVals<T> {
     all: T;
     long: T;
@@ -25,22 +15,6 @@ export class StatsNumberValue implements StatsVals<number> {
 export class StatsStringValue implements StatsVals<string> {
     [index: string]: string;
     constructor(public all: string = "", public long: string = "", public short: string = "") {}
-}
-
-export function roundToNumberOrNull(num: number, decimals = 0): number {
-    if (!isFinite(num) || (!num && num != 0)) return null;
-
-    return round(num, decimals);
-}
-
-export function roundRobotStatVals(vals: StatsNumberValue, decimals = 0): StatsNumberValue {
-    const result = { ...vals };
-
-    for (const key in result) {
-        result[key] = roundToNumberOrNull(result[key], decimals);
-    }
-
-    return result;
 }
 
 export interface Statistics {
@@ -116,11 +90,3 @@ export class TradeStatsClass implements TradeStats {
     equity: PerformanceVals = [];
     equityAvg: PerformanceVals = [];
 }
-
-export const isPositionForStats = makeValidateFunc<BasePosition>(PositionForStatsSchema);
-
-export const isPositionsForStats = makeValidateFunc<BasePosition[]>(PositionsForStatsSchema);
-
-export const isStatistics = makeValidateFunc<Statistics>(StatisticsSchema);
-
-export const isTradeStats = makeValidateFunc<TradeStats>(TradeStatsSchema);

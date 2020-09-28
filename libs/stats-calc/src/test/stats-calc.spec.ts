@@ -2,7 +2,7 @@ import MockDate from "mockdate";
 import dayjs from "@cryptuoso/dayjs";
 import { calcStatistics } from "../lib/stats-calc";
 import positions from "./testData/positionsForStats";
-import correctResult from "./testData/correctResultAfterRefactor";
+import correctResult from "./testData/correctResult";
 
 describe("Test 'tradeStatistics' utils", () => {
     beforeAll(() => {
@@ -18,7 +18,7 @@ describe("Test 'tradeStatistics' utils", () => {
             const result = calcStatistics(null, positions);
 
             correctResult.lastUpdatedAt = dayjs.utc().toISOString();
-
+            console.log(result.equityAvg);
             expect(result).toStrictEqual(correctResult);
         });
     });
