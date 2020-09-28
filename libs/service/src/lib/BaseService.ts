@@ -131,8 +131,20 @@ export class BaseService {
         }
     };
 
-    #makeLocker = (resource: string, ttl: number) => {
+    #makeLocker: {
+        (resource: null, ttl: number): {
+            lock: (resource: string) => Promise<void>;
+            unlock: () => Promise<void>;
+        };
+        (resource: string, ttl: number): {
+            lock: () => Promise<void>;
+            unlock: () => Promise<void>;
+        };
+    } = (resource: string, ttl: number) => {
+        if (!resource && resource !== null) throw new Error(`"resource" argument must be non-empty string or null`);
+
         const sleepTime = Math.trunc(0.9 * ttl);
+        let lockName: string = resource;
         let ended = false;
         let lock: RedLock.Lock;
 
@@ -144,16 +156,21 @@ export class BaseService {
                     await sleep(sleepTime);
                 }
             } catch (err) {
-                this.log.error(`Failed to extend lock (${resource})`, err);
+                this.log.error(`Failed to extend lock (${lockName})`, err);
             }
         };
 
         return {
-            lock: async () => {
+            lock: async (resource?: string) => {
                 try {
-                    lock = await this.#redLock.lock(resource, ttl);
+                    if (!lockName) {
+                        if(!resource) throw new Error(`"resource" argument must be non-empty string`);
+                        lockName = resource;
+                    }
+
+                    lock = await this.#redLock.lock(lockName, ttl);
                 } catch (err) {
-                    this.log.error(`Failed to lock (${resource})`, err);
+                    this.log.error(`Failed to lock (${lockName})`/* , err */);
                     throw err;
                 }
                 checkForUnlock();
@@ -165,7 +182,7 @@ export class BaseService {
                     try {
                         await lock.unlock();
                     } catch (err) {
-                        this.log.error(`Failed to unlock (${resource})`, err);
+                        this.log.error(`Failed to unlock (${name})`, err);
                     }
                 }
             }
