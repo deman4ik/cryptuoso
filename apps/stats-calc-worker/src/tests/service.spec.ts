@@ -20,6 +20,19 @@ const mockExit = jest.fn();
 
 setProperty(process, "exit", mockExit);
 
+jest.mock("slonik", () => ({
+    createTypeParserPreset: jest.fn(() => []),
+    createPool: jest.fn(() => {
+        return {
+            maybeOne: jest.fn(),
+            any: jest.fn(),
+            oneFirst: jest.fn(),
+            query: jest.fn()
+        };
+    }),
+    sql: jest.fn()
+}));
+
 jest.mock("@cryptuoso/service", () => {
     return {
         BaseService: class BaseService {

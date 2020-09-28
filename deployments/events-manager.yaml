@@ -69,6 +69,11 @@ spec:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
                                 key: REDISCS
+                      - name: CHECK_INTERVAL
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: CHECK_INTERVAL
                   ports:
                       - containerPort: 3000
                         protocol: TCP

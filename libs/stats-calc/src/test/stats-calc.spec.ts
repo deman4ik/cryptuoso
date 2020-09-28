@@ -1,6 +1,6 @@
 import MockDate from "mockdate";
 import dayjs from "@cryptuoso/dayjs";
-import { calcStatistics } from "./stats-calc";
+import { calcStatistics } from "../lib/stats-calc";
 import positions from "./testData/positionsForStats";
 import correctResult from "./testData/correctResultAfterRefactor";
 

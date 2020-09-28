@@ -1,7 +1,7 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
-import { Queue } from "bullmq";
-//import { v4 as uuid } from "uuid";
+import { Queue, QueueEvents } from "bullmq";
 import {
+    STATS_CALC_PREFIX,
     StatsCalcJob,
     StatsCalcJobType,
     StatsCalcRunnerEvents,
@@ -14,6 +14,7 @@ export type StatisticCalcWorkerServiceConfig = HTTPServiceConfig;
 
 export default class StatisticCalcRunnerService extends HTTPService {
     queues: { [key: string]: Queue<any> };
+    queueEvents: { [key: string]: QueueEvents };
 
     constructor(config?: StatisticCalcWorkerServiceConfig) {
         super(config);
@@ -23,101 +24,107 @@ export default class StatisticCalcRunnerService extends HTTPService {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_SIGNAL],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: this.HTTPHandler.bind(this, this.handleCalcUserSignalEvent.bind(this))
+                    handler: this._HTTPHandler.bind(this, this.handleCalcUserSignalEvent.bind(this))
                 },
                 calcUserSignals: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_SIGNALS],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: this.HTTPHandler.bind(this, this.handleCalcUserSignalsEvent.bind(this))
+                    handler: this._HTTPHandler.bind(this, this.handleCalcUserSignalsEvent.bind(this))
                 },
                 calcRobot: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.ROBOT],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: this.HTTPHandler.bind(this, this.handleStatsCalcRobotEvent.bind(this))
+                    handler: this._HTTPHandler.bind(this, this.handleStatsCalcRobotEvent.bind(this))
                 },
                 calcRobots: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.ROBOTS],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: this.HTTPHandler.bind(this, this.handleStatsCalcRobotsEvent.bind(this))
+                    handler: this._HTTPHandler.bind(this, this.handleStatsCalcRobotsEvent.bind(this))
                 },
                 calcUserRobot: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_ROBOT],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: this.HTTPHandler.bind(this, this.handleStatsCalcUserRobotEvent.bind(this))
+                    handler: this._HTTPHandler.bind(this, this.handleStatsCalcUserRobotEvent.bind(this))
                 },
                 calcUserRobots: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_ROBOTS],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: this.HTTPHandler.bind(this, this.handleStatsCalcUserRobotsEvent.bind(this))
+                    handler: this._HTTPHandler.bind(this, this.handleStatsCalcUserRobotsEvent.bind(this))
                 },
                 recalcAllRobots: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.RECALC_ALL_ROBOTS],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: this.HTTPHandler.bind(this, this.handleRecalcAllRobotsEvent.bind(this))
+                    handler: this._HTTPHandler.bind(this, this.handleRecalcAllRobotsEvent.bind(this))
                 },
                 recalcAllUserSignals: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.RECALC_ALL_USER_SIGNALS],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: this.HTTPHandler.bind(this, this.handleRecalcAllUserSignalsEvent.bind(this))
+                    handler: this._HTTPHandler.bind(this, this.handleRecalcAllUserSignalsEvent.bind(this))
                 },
                 recalcAllUserRobots: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.RECALC_ALL_USER_ROBOTS],
                     auth: true,
                     roles: [UserRoles.admin],
-                    handler: this.HTTPHandler.bind(this, this.handleRecalcAllUserRobotsEvent.bind(this))
+                    handler: this._HTTPHandler.bind(this, this.handleRecalcAllUserRobotsEvent.bind(this))
                 }
             });
             this.events.subscribe({
                 [StatsCalcRunnerEvents.USER_SIGNAL]: {
                     schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_SIGNAL],
-                    handler: this.eventsHandler.bind(this, this.handleCalcUserSignalEvent.bind(this))
+                    handler: this._eventsHandler.bind(this, this.handleCalcUserSignalEvent.bind(this))
                 },
                 [StatsCalcRunnerEvents.USER_SIGNALS]: {
                     schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_SIGNALS],
-                    handler: this.eventsHandler.bind(this, this.handleCalcUserSignalsEvent.bind(this))
+                    handler: this._eventsHandler.bind(this, this.handleCalcUserSignalsEvent.bind(this))
                 },
                 [StatsCalcRunnerEvents.ROBOT]: {
                     schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.ROBOT],
-                    handler: this.eventsHandler.bind(this, this.handleStatsCalcRobotEvent.bind(this))
+                    handler: this._eventsHandler.bind(this, this.handleStatsCalcRobotEvent.bind(this))
                 },
                 [StatsCalcRunnerEvents.ROBOTS]: {
                     schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.ROBOTS],
-                    handler: this.eventsHandler.bind(this, this.handleStatsCalcRobotsEvent.bind(this))
+                    handler: this._eventsHandler.bind(this, this.handleStatsCalcRobotsEvent.bind(this))
                 },
                 [StatsCalcRunnerEvents.USER_ROBOT]: {
                     schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_ROBOT],
-                    handler: this.eventsHandler.bind(this, this.handleStatsCalcUserRobotEvent.bind(this))
+                    handler: this._eventsHandler.bind(this, this.handleStatsCalcUserRobotEvent.bind(this))
                 },
                 [StatsCalcRunnerEvents.USER_ROBOTS]: {
                     schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_ROBOTS],
-                    handler: this.eventsHandler.bind(this, this.handleStatsCalcUserRobotsEvent.bind(this))
+                    handler: this._eventsHandler.bind(this, this.handleStatsCalcUserRobotsEvent.bind(this))
                 }
             });
-            this.addOnStartHandler(this.onStartService);
-            this.addOnStopHandler(this.onStopService);
+            this.addOnStartHandler(this._onStartService);
+            this.addOnStopHandler(this._onStopService);
         } catch (err) {
             this.log.error(err, "While consctructing StatisticCalcRunnerService");
         }
     }
 
-    async onStartService() {
+    async _onStartService() {
         this.queues = {
             calcStatistics: new Queue("calcStatistics", { connection: this.redis })
         };
+        this.queueEvents = {
+            calcStatistics: new QueueEvents("calcStatistics", { connection: this.redis })
+        };
+
+        this.queueEvents.calcStatistics.on("failed", this._queueFailHandler.bind(this));
     }
 
-    async onStopService() {
-        await this.queues.calcStatistics?.close();
+    async _onStopService() {
+        await this.queues?.calcStatistics?.close();
+        await this.queueEvents?.calcStatistics?.close();
     }
 
-    async HTTPHandler(
+    async _HTTPHandler(
         handler: {
             (params: StatsCalcJob): Promise<void>;
         },
@@ -139,7 +146,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
         res.end();
     }
 
-    async eventsHandler(
+    async _eventsHandler(
         handler: {
             (params: StatsCalcJob): Promise<void>;
         },
@@ -155,11 +162,34 @@ export default class StatisticCalcRunnerService extends HTTPService {
         }
     }
 
+    async _queueFailHandler(args: { jobId: string; failedReason: string; prev?: string }) {
+        const { jobId } = args;
+
+        const locker = await this.makeLocker(`lock:${this.name}:error.${jobId}`, 5000);
+
+        try {
+            await locker.lock();
+
+            const { name, data } = await this.queues.calcStatistics.getJob(jobId);
+
+            await this.events.emit({
+                type: `errors.${STATS_CALC_PREFIX}.${name}`,
+                data
+            });
+
+            await locker.unlock();
+        } catch (err) {
+            this.log.error(err);
+            await locker.unlock();
+        }
+    }
+
     async queueJob(type: StatsCalcJobType, job: StatsCalcJob) {
         await this.queues.calcStatistics.add(type, job, {
-            //jobId: uuid(),
             removeOnComplete: true,
-            removeOnFail: true
+            removeOnFail: 100,
+            attempts: 3,
+            backoff: { type: "exponential", delay: 10000 }
         });
     }
 

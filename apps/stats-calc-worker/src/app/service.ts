@@ -23,7 +23,7 @@ export function getCalcFromAndInitStats(stats?: TradeStats, calcAll?: boolean) {
     let calcFrom: string = null;
     let initStats: TradeStats = null;
 
-    if (!calcAll && stats && isTradeStats(stats, false)) {
+    if (!calcAll && stats && isTradeStats(stats)) {
         initStats = {
             statistics: stats.statistics,
             lastPositionExitDate: stats.lastPositionExitDate,
@@ -149,7 +149,7 @@ export default class StatisticCalcWorkerService extends BaseService {
     ): Promise<void> {
         /* console.log(params);
         return; */
-        if (prevStats && isTradeStats(prevStats, false)) {
+        if (prevStats && isTradeStats(prevStats)) {
             await this.db.pg.query(sql`
                 UPDATE ${params.table}
                 SET statistics = ${sql.json(stats.statistics)},

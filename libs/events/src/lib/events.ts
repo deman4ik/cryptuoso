@@ -36,7 +36,8 @@ const BLOCK_TIMEOUT = 60000;
 const PENDING_INTERVAL = 15000;
 const PENDING_RETRY_RATE = 30;
 const PENDING_MAX_RETRIES = 3;
-const DEAD_LETTER_TOPIC = "dead-letter";
+export const DEAD_LETTER_TOPIC = "dead-letter";
+export const ERRORS_TOPIC = "errors";
 
 type StreamMsgVals = string[];
 type StreamMessage = [string, StreamMsgVals];
@@ -364,6 +365,9 @@ export class Events {
                             const [event]: Event[] = Object.values(
                                 this._parseEvents(this._parseMessageResponse(result))
                             );
+
+                            if (!event) continue;
+
                             try {
                                 this.log.debug(
                                     `Handling pending "${topic}" group "${group}" event #${msgId} (${event.id})...`
@@ -401,7 +405,7 @@ export class Events {
                                         topic,
                                         group,
                                         type: event.type,
-                                        data,
+                                        data: event,
                                         error: error.message
                                     };
                                     await this.emitDeadLetter(letter);
@@ -464,6 +468,7 @@ export class Events {
                 data,
                 subject
             });
+
             const args = [
                 "id",
                 cloudEvent.id,
@@ -481,11 +486,33 @@ export class Events {
         }
     }
 
+    async emitRaw(topic: string, event: CloudEventV1) {
+        try {
+            const cloudEvent = new Event(event);
+
+            const args = [
+                "id",
+                cloudEvent.id,
+                "type",
+                cloudEvent.type,
+                "timestamp",
+                dayjs.utc(cloudEvent.time).toISOString(),
+                "event",
+                JSON.stringify(cloudEvent.toJSON())
+            ];
+            await this.#redis.xadd(topic, "*", ...args);
+            this.log.debug(`Emited Raw Event ${cloudEvent.type}`);
+        } catch (error) {
+            this.log.error("Failed to emit event", error, event);
+        }
+    }
+
     subscribe(events: {
         [key: string]: {
             group?: string;
             unbalanced?: boolean;
             handler: (event: Event) => Promise<void>;
+            passFullEvent?: boolean;
             schema?: ValidationSchema;
         };
     }): void {

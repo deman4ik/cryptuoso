@@ -7,14 +7,14 @@ import { BasePosition, PositionDirection } from "@cryptuoso/market";
 const getVolume = (pos: BasePosition, volumes: Volumes) =>
     (volumes.find((el) => pos.entryDate >= el.activeFrom) || { volume: null }).volume;
 
-/* function prepareRobot(positions: PositionDataForStats[]) {
+/* function calcSimpleProfit(positions: PositionDataForStats[]) {
     return positions.map((pos) => ({
         ...pos,
         profit: pos.fee && +pos.fee > 0 ? +round(pos.profit - pos.profit * pos.fee, 6) : pos.profit
     }));
 } */
 
-function prepareSignalByPositionsVolume(positions: BasePosition[]) {
+function calcProfitByPositionsVolume(positions: BasePosition[]) {
     return positions.map((pos) => {
         let profit = 0;
         if (pos.direction === PositionDirection.long) {
@@ -31,7 +31,7 @@ function prepareSignalByPositionsVolume(positions: BasePosition[]) {
     });
 }
 
-function prepareSignalByItsVolumes(positions: BasePosition[], volumes: Volumes) {
+function calcProfitByProvidedVolumes(positions: BasePosition[], volumes: Volumes) {
     return positions.map((pos) => {
         const signalVolume = getVolume(pos, volumes);
         let profit = 0;
@@ -51,9 +51,9 @@ function prepareSignalByItsVolumes(positions: BasePosition[], volumes: Volumes) 
 
 const statisticUtils = {
     calcStatistics(type: StatisticsType, prevStats: TradeStats, positions: any[], volumes?: Volumes) {
-        if (type == StatisticsType.CalcByPositionsVolume) positions = prepareSignalByPositionsVolume(positions);
+        if (type == StatisticsType.CalcByPositionsVolume) positions = calcProfitByPositionsVolume(positions);
         else if (type == StatisticsType.CalcByProvidedVolumes)
-            positions = prepareSignalByItsVolumes(positions, volumes);
+            positions = calcProfitByProvidedVolumes(positions, volumes);
         else if (type != StatisticsType.Simple) throw new Error("Unknow calculation type");
 
         return calcStatistics(prevStats, positions);

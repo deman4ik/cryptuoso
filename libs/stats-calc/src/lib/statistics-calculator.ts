@@ -2,13 +2,13 @@ import {
     Statistics,
     TradeStats,
     TradeStatsClass,
-    isStatistics,
     isTradeStats,
     StatsNumberValue,
     StatsStringValue,
     PerformanceVals,
-    roundRobotStatVals
-} from "./stats-calc";
+    roundRobotStatVals,
+    isPositionsForStats
+} from "./types";
 import dayjs from "@cryptuoso/dayjs";
 import { round, chunkArray } from "@cryptuoso/helpers";
 import { BasePosition, PositionDirection } from "@cryptuoso/market";
@@ -86,17 +86,11 @@ export default class StatisticsCalculator {
     public constructor(prevTradeStats: TradeStats, positions: BasePosition[]) {
         if (positions.length < 1) throw new Error("At least 1 position expected");
 
-        //TODO: check with schema
-        //   for (const pos of positions) if (!isPositionDataForStats(pos)) throw new Error("Invalid position provided");
+        if (!isPositionsForStats(positions)) throw new Error("Invalid positions provided");
 
         if (prevTradeStats != null) {
             if (!isTradeStats(prevTradeStats)) {
                 throw new Error("Invalid robotStatistics object provided"); // calculations are allowed if null or valid obj is provided
-            }
-
-            if (!isStatistics(prevTradeStats.statistics)) {
-                console.log(prevTradeStats.statistics);
-                throw new Error("Invalid robotStats.statistics object provided"); // calculations are allowed if null or valid obj is provided
             }
         }
 

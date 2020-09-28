@@ -1,43 +1,43 @@
-import { TradeStats } from "../stats-calc";
+import { TradeStats } from "../../lib/types";
 
 const result: TradeStats = {
     statistics: {
-        tradesCount: { all: 318, long: 176, short: 142 },
+        tradesCount: { all: 317, long: 176, short: 141 },
         tradesWinning: { all: 137, long: 76, short: 61 },
-        tradesLosing: { all: 180, long: 99, short: 81 },
+        tradesLosing: { all: 179, long: 99, short: 80 },
         winRate: { all: 43, long: 43, short: 43 },
-        lossRate: { all: 57, long: 56, short: 57 },
-        avgBarsHeld: { all: 4.28, long: 4.41, short: 4.14 },
+        lossRate: { all: 56, long: 56, short: 57 },
+        avgBarsHeld: { all: 4.29, long: 4.41, short: 4.16 },
         avgBarsHeldWinning: { all: 6.37, long: 6.68, short: 6.02 },
-        avgBarsHeldLosing: { all: 2.72, long: 2.68, short: 2.73 },
-        netProfit: { all: 1639.72, long: 1062.66, short: 577.06 },
+        avgBarsHeldLosing: { all: 2.73, long: 2.68, short: 2.75 },
+        netProfit: { all: 1766.79, long: 1062.66, short: 704.13 },
         localMax: { all: 2348.6099999999997, long: 1559.45, short: 907.11 },
-        avgNetProfit: { all: 5.16, long: 6.04, short: 4.06 },
+        avgNetProfit: { all: 5.57, long: 6.04, short: 4.99 },
         grossProfit: { all: 4825.83, long: 2738.58, short: 2087.25 },
-        grossLoss: { all: -3186.11, long: -1675.92, short: -1510.19 },
+        grossLoss: { all: -3059.04, long: -1675.92, short: -1383.12 },
         avgProfit: { all: 5.57, long: 6.44, short: 4.99 },
         avgProfitWinners: { all: 35.23, long: 36.03, short: 34.22 },
-        avgLoss: { all: -17.7, long: -16.93, short: -18.64 },
-        profitFactor: { all: 1.51, long: 1.63, short: 1.38 },
-        payoffRatio: { all: 0.31, long: 0.38, short: 0.27 },
+        avgLoss: { all: -17.09, long: -16.93, short: -17.29 },
+        profitFactor: { all: 1.58, long: 1.63, short: 1.51 },
+        payoffRatio: { all: 2.06, long: 2.13, short: 1.98 },
         maxConsecWins: { all: 5, long: 9, short: 4 },
-        currentWinSequence: { all: 0, long: 0, short: 0 },
+        currentWinSequence: { all: 2, long: 0, short: 2 },
         maxConsecLosses: { all: 11, long: 10, short: 8 },
-        currentLossSequence: { all: 1, long: 3, short: 1 },
+        currentLossSequence: { all: 0, long: 3, short: 0 },
         maxDrawdownDate: {
-            all: "2020-03-13T13:35:28.812",
+            all: "2020-03-12T16:00:10.443",
             long: "2020-03-08T00:20:34.604",
-            short: "2020-03-13T13:35:28.812"
+            short: "2020-03-12T16:00:10.443"
         },
-        recoveryFactor: { all: 2.31, long: 2.14, short: 1.75 },
-        maxDrawdown: { all: -708.89, long: -496.79, short: -330.05 },
+        maxDrawdown: { all: -581.82, long: -496.79, short: -202.98 },
+        recoveryFactor: { all: 3.04, long: 2.14, short: 3.47 },
         rating: {
-            all: 1.23,
+            all: 1.9,
             long: 0,
             short: 0
         }
     },
-    lastPositionExitDate: "2020-03-13T13:35:28.812",
+    lastPositionExitDate: "2020-03-12T16:00:10.443",
     lastUpdatedAt: "2019-01-01T13:17:00.000Z",
     equity: [
         { x: 1492012800000, y: -0.5 },
@@ -356,8 +356,7 @@ const result: TradeStats = {
         { x: 1583510414016, y: 1709.15 },
         { x: 1583626834604, y: 1677.25 },
         { x: 1583774316087, y: 1749.34 },
-        { x: 1584028810443, y: 1766.79 },
-        { x: 1584106528812, y: 1639.72 }
+        { x: 1584028810443, y: 1766.79 }
     ],
     equityAvg: [
         { x: 1493913600000, y: 22.06 },
@@ -412,7 +411,7 @@ const result: TradeStats = {
         { x: 1581665667162, y: 1895.19 },
         { x: 1582502410034, y: 1783.1 },
         { x: 1583200822831, y: 1728.66 },
-        { x: 1584106528812, y: 1639.72 }
+        { x: 1584028810443, y: 1766.79 }
     ]
 };
 

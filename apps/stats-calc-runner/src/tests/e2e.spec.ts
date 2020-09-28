@@ -1,4 +1,4 @@
-process.env.PGSC = "localhost:0";
+process.env.API_KEY = "TEST_KEY";
 
 import Service from "../app/service";
 import { StatsCalcJob } from "@cryptuoso/stats-calc-events";
@@ -15,14 +15,20 @@ const mockPG = {
     any: pg.any as jest.Mock
 };
 
-/* jest.mock("slonik", () => ({
+jest.mock("slonik", () => ({
     createTypeParserPreset: jest.fn(() => []),
-    createPool: jest.fn(() => mockPG),
+    createPool: jest.fn(() => {
+        return {
+            maybeOne: jest.fn(),
+            any: jest.fn(),
+            query: jest.fn()
+        };
+    }),
     sql: jest.fn()
-})); */
+}));
 jest.mock("ioredis");
 jest.mock("@cryptuoso/logger");
-jest.mock("@cryptuoso/postgres");
+//jest.mock("@cryptuoso/postgres");
 jest.mock("@cryptuoso/events");
 
 const routes: {
@@ -188,7 +194,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
                 try {
                     expect(`/actions/${route}` in _routes).toBeTruthy();
                 } catch (err) {
-                    throw new Error(`Route "${route}" (at "/actions/") must be initialized`);
+                    throw new Error(`Route "${route}" (at "/actions/") must be initialized: ${err}`);
                 }
             });
         });
@@ -205,7 +211,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
                             responseStatus: 400
                         });
                     } catch (err) {
-                        throw new Error(`Wrong answer from route "${route}"`);
+                        throw new Error(`Wrong answer from route "${route}": ${err}`);
                     }
                 }
             }
@@ -225,7 +231,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
                             responseStatus: 403
                         });
                     } catch (err) {
-                        throw new Error(`Wrong answer from route "${route}"`);
+                        throw new Error(`Wrong answer from route "${route}": ${err}`);
                     }
                 }
             }
@@ -245,7 +251,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
                             responseStatus: 400
                         });
                     } catch (err) {
-                        throw new Error(`Wrong answer from route "${route}"`);
+                        throw new Error(`Wrong answer from route "${route}": ${err}`);
                     }
                 }
             }
@@ -265,7 +271,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
                         responseStatus: 200
                     });
                 } catch (err) {
-                    throw new Error(`Wrong answer from route "${route}"`);
+                    throw new Error(`Wrong answer from route "${route}": ${err}`);
                 }
             }
         });
@@ -284,7 +290,7 @@ describe("E2E testing of StatisticCalcRunnerService class", () => {
                         responseStatus: 200
                     });
                 } catch (err) {
-                    throw new Error(`Wrong answer from route "${route}"`);
+                    throw new Error(`Wrong answer from route "${route}": ${err}`);
                 }
             }
         });
