@@ -6,8 +6,8 @@ import { setProperty, getProperty } from "@cryptuoso/test-helpers";
 import { StatsCalcJobType, StatsCalcJob } from "@cryptuoso/stats-calc-events";
 import { Job } from "bullmq";
 import { Pool } from "threads";
-import { StatisticsType } from "../app/statsWorkerTypes";
 import { BasePosition } from "@cryptuoso/market";
+import { v4 as uuid } from "uuid";
 
 const mockPG = {
     any: pg.any as jest.Mock,
@@ -49,6 +49,15 @@ jest.mock("@cryptuoso/service", () => {
                 pg: mockPG
             };
 
+            makeLocker() {
+                return {
+                    // eslint-disable-next-line @typescript-eslint/no-empty-function
+                    lock: async () => {},
+                    // eslint-disable-next-line @typescript-eslint/no-empty-function
+                    unlock: async () => {}
+                };
+            }
+
             async startService() {
                 if (this.#onStartHandler) await this.#onStartHandler();
             }
@@ -72,7 +81,7 @@ jest.mock("bullmq");
 jest.mock("lightship");
 jest.mock("ioredis");
 //jest.mock("@cryptuoso/logger");
-jest.mock("@cryptuoso/postgres");
+//jest.mock("@cryptuoso/postgres");
 jest.mock("@cryptuoso/events");
 jest.mock("@cryptuoso/mail");
 
@@ -150,51 +159,24 @@ describe("getCalcFromAndInitStats function", () => {
     });
 });
 
-function getParams(func: { (...args: any[]): any }) {
-    let str = func.toString();
-
-    str = str
-        .replace(/\/\*[\s\S]*?\*\//g, "")
-        .replace(/\/\/(.)*/g, "")
-        .replace(/{[\s\S]*}/, "")
-        .replace(/=>/g, "")
-        .trim();
-
-    const start = str.indexOf("(") + 1;
-    const end = str.length - 1;
-
-    const result = str.substring(start, end).split(", ");
-
-    const params: string[] = [];
-
-    result.forEach((element) => {
-        element = element.replace(/=[\s\S]*/g, "").trim();
-
-        if (element.length > 0) params.push(element);
-    });
-
-    return params;
-}
-
 async function combineArgs(
-    args: any[],
-    argsNames: string[],
-    minArgsCount: number,
-    callback: { (currentArgs: any[], currentArgsNames: string[]): any },
-    provideAll = false,
-    defaultValue: any = null
+    args: { [key: string]: any },
+    callback: { (currentArgs: typeof args, currentArgsNames: string[]): any },
+    provideAll = false
 ) {
-    let cnt = minArgsCount ** 2;
+    const argsNames = Object.keys(args);
+
+    let cnt = argsNames.length ** 2;
 
     if (!provideAll) --cnt;
 
     for (let i = 0; i < cnt; ++i) {
-        const currentArgs = new Array(args.length).fill(defaultValue);
+        const currentArgs: typeof args = {};
         const currentArgsNames = [];
 
-        for (let j = 0; j < minArgsCount; ++j) {
+        for (let j = 0; j < argsNames.length; ++j) {
             if ((i >> j) % 2) {
-                currentArgs[j] = args[j];
+                currentArgs[argsNames[j]] = args[argsNames[j]];
                 currentArgsNames.push(argsNames[j]);
             }
         }
@@ -205,14 +187,16 @@ async function combineArgs(
 
 function testStatsCalcMethod({
     methodName,
-    minArgsCount,
-    args,
+    jobType,
+    baseArgs,
+    addArgs,
     needCheckStatsExisting = true,
     isStatsSingle = true
 }: {
     methodName: string;
-    minArgsCount: number;
-    args: any[];
+    jobType: StatsCalcJobType;
+    baseArgs: { [key: string]: any };
+    addArgs?: { [key: string]: any };
     needCheckStatsExisting?: boolean;
     isStatsSingle?: boolean;
 }) {
@@ -224,17 +208,12 @@ function testStatsCalcMethod({
         setProperty(service, "upsertStats", mockUpsertStats);
 
         let func: { (...args: any[]): Promise<boolean> } = getProperty(service, methodName);
-        const argsNames = getParams(func);
         func = func.bind(service);
-
-        const minArgsOtherNulls = new Array(args.length).fill(null);
-
-        for (let i = 0; i < minArgsCount; ++i) minArgsOtherNulls[i] = args[i];
 
         describe("With combine nulls arguments", () => {
             test("Should to throw errors", async () => {
-                await combineArgs(args, argsNames, minArgsCount, async (currentArgs, currentArgsNames) => {
-                    await expect(func(...currentArgs))
+                await combineArgs(baseArgs, async (currentArgs, currentArgsNames) => {
+                    await expect(service.process(makeJob(jobType, currentArgs)))
                         .rejects.toThrowError()
                         .catch(() => {
                             throw new Error(`${currentArgsNames.join(", ")} args with nulls provided`);
@@ -243,35 +222,68 @@ function testStatsCalcMethod({
             });
         });
 
-        if (needCheckStatsExisting) {
-            describe(`${argsNames.slice(0, minArgsCount).join(", ")} provided but is wrong`, () => {
-                test("Should to throw error", async () => {
-                    if (isStatsSingle) mockPG.maybeOne.mockImplementation(async () => null);
-                    else mockPG.any.mockImplementation(async () => []);
-                    await expect(func(...minArgsOtherNulls)).rejects.toThrowError();
+        describe("Base args provided", () => {
+            test("Should call need method", async () => {
+                const service2 = new Service();
+
+                const routes = getProperty(service2, "routes");
+
+                routes[jobType].handler = jest.fn();
+
+                await service2.process(makeJob(jobType, baseArgs));
+
+                expect(routes[jobType].handler).toHaveBeenCalled();
+            });
+        });
+
+        if (addArgs) {
+            describe("Base and addidional args provided", () => {
+                test("Should call need method", async () => {
+                    const service2 = new Service();
+
+                    const routes = getProperty(service2, "routes");
+
+                    routes[jobType].handler = jest.fn();
+
+                    await service2.process(makeJob(jobType, { ...baseArgs, ...addArgs }));
+
+                    expect(routes[jobType].handler).toHaveBeenCalled();
                 });
             });
         }
 
-        describe(`${argsNames.slice(0, minArgsCount).join(", ")} provided but positions not exists`, () => {
+        if (needCheckStatsExisting) {
+            describe(`Base args} provided but is wrong`, () => {
+                test("Should to throw error", async () => {
+                    if (isStatsSingle) mockPG.maybeOne.mockImplementation(async () => null);
+                    else mockPG.any.mockImplementation(async () => []);
+
+                    await expect(func(baseArgs)).rejects.toThrowError();
+                });
+            });
+        }
+
+        describe(`Base args provided but positions not exists`, () => {
             test("Should to throw error", async () => {
                 if (isStatsSingle) mockPG.maybeOne.mockImplementation(async () => ({}));
                 else mockPG.any.mockImplementationOnce(async () => [{}]);
+
                 mockPG.oneFirst.mockImplementation(async () => 0);
-                await expect(func(...minArgsOtherNulls)).resolves.toStrictEqual(false);
+                await expect(func(baseArgs)).resolves.toStrictEqual(false);
             });
         });
 
-        describe(`${argsNames.slice(0, minArgsCount).join(", ")} provided and positions exists`, () => {
+        describe(`Base args provided and positions exists`, () => {
             test("Should to call upsertStats", async () => {
                 if (isStatsSingle) mockPG.maybeOne.mockImplementation(async () => ({}));
                 else mockPG.any.mockImplementationOnce(async () => [{}]);
+
                 mockPG.oneFirst.mockImplementation(async () => service.defaultChunkSize);
                 mockPG.any.mockImplementation(async () => [{}]);
 
                 mockUpsertStats.mockClear();
 
-                await func(...minArgsOtherNulls);
+                await func(baseArgs);
 
                 expect(service.calcStatistics).toHaveBeenCalled();
                 expect(mockUpsertStats).toHaveBeenCalledTimes(1);
@@ -287,90 +299,6 @@ describe("stats-calc-worker class", () => {
 
             expect(service.addOnStartHandler).toHaveBeenCalledTimes(1);
             expect(service.addOnStopHandler).toHaveBeenCalledTimes(1);
-        });
-    });
-
-    describe("process method", () => {
-        const service = new Service();
-
-        describe("On robot job", () => {
-            test("Should call calcRobot method 1 time", async () => {
-                service.calcRobot = jest.fn();
-
-                await service.process(makeJob(StatsCalcJobType.robot));
-
-                expect(service.calcRobot).toHaveBeenCalledTimes(1);
-            });
-        });
-
-        describe("On robotsAggr job", () => {
-            test("Should call calcRobotsAggr method 1 time", async () => {
-                service.calcRobotsAggr = jest.fn();
-
-                await service.process(makeJob(StatsCalcJobType.robotsAggr));
-
-                expect(service.calcRobotsAggr).toHaveBeenCalledTimes(1);
-            });
-        });
-
-        describe("On usersRobotsAggr job", () => {
-            test("Should call calcUsersRobotsAggr method 1 time", async () => {
-                service.calcUsersRobotsAggr = jest.fn();
-
-                await service.process(makeJob(StatsCalcJobType.usersRobotsAggr));
-
-                expect(service.calcUsersRobotsAggr).toHaveBeenCalledTimes(1);
-            });
-        });
-
-        describe("On userRobot job", () => {
-            test("Should call calcUserRobot method 1 time", async () => {
-                service.calcUserRobot = jest.fn();
-
-                await service.process(makeJob(StatsCalcJobType.userRobot));
-
-                expect(service.calcUserRobot).toHaveBeenCalledTimes(1);
-            });
-        });
-
-        describe("On userSignal job", () => {
-            test("Should call calcUserSignal method 1 time", async () => {
-                service.calcUserSignal = jest.fn();
-
-                await service.process(makeJob(StatsCalcJobType.userSignal));
-
-                expect(service.calcUserSignal).toHaveBeenCalledTimes(1);
-            });
-        });
-
-        describe("On userSignals job", () => {
-            test("Should call calcUserSignals method 1 time", async () => {
-                service.calcUserSignals = jest.fn();
-
-                await service.process(makeJob(StatsCalcJobType.userSignals));
-
-                expect(service.calcUserSignals).toHaveBeenCalledTimes(1);
-            });
-        });
-
-        describe("On userSignalsAggr job", () => {
-            test("Should call calcUserSignalsAggr method 1 time", async () => {
-                service.calcUserSignalsAggr = jest.fn();
-
-                await service.process(makeJob(StatsCalcJobType.userSignalsAggr));
-
-                expect(service.calcUserSignalsAggr).toHaveBeenCalledTimes(1);
-            });
-        });
-
-        describe("On userRobotAggr job", () => {
-            test("Should call calcUserRobotsAggr method 1 time", async () => {
-                service.calcUserRobotsAggr = jest.fn();
-
-                await service.process(makeJob(StatsCalcJobType.userRobotAggr));
-
-                expect(service.calcUserRobotsAggr).toHaveBeenCalledTimes(1);
-            });
         });
     });
 
@@ -482,7 +410,7 @@ describe("stats-calc-worker class", () => {
             test("Should call queue of Pool", async () => {
                 const pool = getProperty(service, "pool") as Pool<any>;
 
-                await service.calcStatistics(StatisticsType.Simple, {} as TradeStats, [] as BasePosition[]);
+                await service.calcStatistics({} as TradeStats, [] as BasePosition[]);
 
                 expect(pool.queue).toHaveBeenCalledTimes(1);
             });
@@ -491,57 +419,61 @@ describe("stats-calc-worker class", () => {
 
     testStatsCalcMethod({
         methodName: "calcRobot",
-        minArgsCount: 1,
-        args: ["robot-id"]
+        jobType: StatsCalcJobType.robot,
+        baseArgs: { robotId: uuid() }
     });
 
     testStatsCalcMethod({
         methodName: "calcRobotsAggr",
-        minArgsCount: 0,
-        args: ["exchange", "asset"],
+        jobType: StatsCalcJobType.robotsAggr,
+        baseArgs: {},
+        addArgs: { exchange: "exchange", asset: "asset" },
         needCheckStatsExisting: false,
         isStatsSingle: false
     });
 
     testStatsCalcMethod({
         methodName: "calcUsersRobotsAggr",
-        minArgsCount: 0,
-        args: ["exchange", "asset"],
+        jobType: StatsCalcJobType.usersRobotsAggr,
+        baseArgs: {},
+        addArgs: { exchange: "exchange", asset: "asset" },
         needCheckStatsExisting: false,
         isStatsSingle: false
     });
 
     testStatsCalcMethod({
         methodName: "calcUserSignal",
-        minArgsCount: 2,
-        args: ["user-id", "robot-id"]
+        jobType: StatsCalcJobType.userSignal,
+        baseArgs: { userId: uuid(), robotId: uuid() }
     });
 
     testStatsCalcMethod({
         methodName: "calcUserSignals",
-        minArgsCount: 1,
-        args: ["robot-id"],
+        jobType: StatsCalcJobType.userSignals,
+        baseArgs: { robotId: uuid() },
         needCheckStatsExisting: false,
         isStatsSingle: false
     });
 
     testStatsCalcMethod({
         methodName: "calcUserSignalsAggr",
-        minArgsCount: 1,
-        args: ["user-id", "exchange", "asset"],
+        jobType: StatsCalcJobType.userSignalsAggr,
+        baseArgs: { userId: uuid() },
+        addArgs: { exchange: "exchange", asset: "asset" },
         needCheckStatsExisting: false
     });
 
     testStatsCalcMethod({
         methodName: "calcUserRobot",
-        minArgsCount: 1,
-        args: ["user-robot-id"]
+        jobType: StatsCalcJobType.userRobot,
+        baseArgs: { userRobotId: uuid() }
     });
 
     testStatsCalcMethod({
         methodName: "calcUserRobotsAggr",
-        minArgsCount: 1,
-        args: ["user-id", "exchange", "asset"],
+        jobType: StatsCalcJobType.userRobotAggr,
+        baseArgs: { userId: uuid() },
+        addArgs: { exchange: "exchange", asset: "asset" },
         needCheckStatsExisting: false
     });
 });
