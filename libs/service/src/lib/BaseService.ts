@@ -182,7 +182,7 @@ export class BaseService {
                     try {
                         await lock.unlock();
                     } catch (err) {
-                        this.log.error(`Failed to unlock (${name})`, err);
+                        this.log.error(`Failed to unlock (${lockName})`, err);
                     }
                 }
             }
