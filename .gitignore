@@ -43,5 +43,7 @@ Thumbs.db
 .env
 .env.compose
 
-/strategies
-/indicators
+strategies/*.js
+!strategies/.gitkeep 
+indicators/*.js
+!indicators/.gitkeep 

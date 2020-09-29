@@ -11,7 +11,10 @@ export function makeValidateFunc<T>(schema: ValidationSchema) {
 
 export const PositionForStatsSchema: ValidationSchema = {
     $$root: true,
+<<<<<<< HEAD
     $$strict: true,
+=======
+>>>>>>> dev
     type: "object",
     props: {
         id: "uuid",
@@ -127,7 +130,10 @@ const PerformanceValsInnerSchema: ValidationSchema = {
 
 export const TradeStatsSchema: ValidationSchema = {
     $$root: true,
+<<<<<<< HEAD
     $$strict: true,
+=======
+>>>>>>> dev
     type: "object",
     props: {
         statistics: StatisticsSchema,

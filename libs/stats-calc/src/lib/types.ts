@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import {
     makeValidateFunc,
     PositionForStatsSchema,
@@ -8,6 +9,8 @@ import {
 import { BasePosition, PositionDirection } from "@cryptuoso/market";
 import { round } from "@cryptuoso/helpers";
 
+=======
+>>>>>>> dev
 export interface StatsVals<T> {
     all: T;
     long: T;
@@ -27,6 +30,7 @@ export class StatsStringValue implements StatsVals<string> {
     constructor(public all: string = "", public long: string = "", public short: string = "") {}
 }
 
+<<<<<<< HEAD
 export function roundToNumberOrNull(num: number, decimals = 0): number {
     if (!isFinite(num) || (!num && num != 0)) return null;
 
@@ -43,6 +47,8 @@ export function roundRobotStatVals(vals: StatsNumberValue, decimals = 0): StatsN
     return result;
 }
 
+=======
+>>>>>>> dev
 export interface Statistics {
     tradesCount: StatsNumberValue;
     tradesWinning: StatsNumberValue;
@@ -116,6 +122,7 @@ export class TradeStatsClass implements TradeStats {
     equity: PerformanceVals = [];
     equityAvg: PerformanceVals = [];
 }
+<<<<<<< HEAD
 
 export const isPositionForStats = makeValidateFunc<BasePosition>(PositionForStatsSchema);
 
@@ -124,3 +131,5 @@ export const isPositionsForStats = makeValidateFunc<BasePosition[]>(PositionsFor
 export const isStatistics = makeValidateFunc<Statistics>(StatisticsSchema);
 
 export const isTradeStats = makeValidateFunc<TradeStats>(TradeStatsSchema);
+=======
+>>>>>>> dev

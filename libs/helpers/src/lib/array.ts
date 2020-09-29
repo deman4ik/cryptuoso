@@ -23,8 +23,10 @@ export function arraysDiff<T>(first: T[], second: T[]): T[] {
 export function chunkArray<T>(array: T[], chunkSize: number): T[][] {
     const arrayToChunk = [...array];
     const results = [];
-    while (arrayToChunk.length) {
-        results.push(arrayToChunk.splice(0, chunkSize));
+    let index = 0;
+    while (index < arrayToChunk.length) {
+        results.push(arrayToChunk.slice(index, chunkSize + index));
+        index += chunkSize;
     }
     return results;
 }

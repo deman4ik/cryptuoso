@@ -1,17 +1,12 @@
 import dayjs from "@cryptuoso/dayjs";
-import {
-    BaseIndicator,
-    TulipIndicator,
-    IndicatorState,
-    IndicatorCode,
-    IndicatorType
-} from "@cryptuoso/robot-indicators";
+import { BaseIndicator, TulipIndicator, IndicatorCode, IndicatorType } from "@cryptuoso/robot-indicators";
 import { ValidTimeframe, CandleProps, DBCandle, RobotPositionStatus } from "@cryptuoso/market";
 import { RobotWorkerEvents } from "@cryptuoso/robot-events";
 import { NewEvent } from "@cryptuoso/events";
-import { CANDLES_RECENT_AMOUNT } from "@cryptuoso/helpers";
+import { CANDLES_RECENT_AMOUNT, sortAsc } from "@cryptuoso/helpers";
 import { BaseStrategy } from "./BaseStrategy";
 import { RobotPositionState, RobotSettings, RobotState, RobotStatus, StrategyProps, StrategySettings } from "./types";
+import logger from "@cryptuoso/logger";
 
 export interface StrategyCode {
     [key: string]: any;
@@ -34,11 +29,10 @@ export class Robot {
     _strategySettings: StrategySettings;
     _robotSettings: RobotSettings;
     _lastCandle: DBCandle;
-    _strategy: StrategyProps;
+    _state: StrategyProps;
     _strategyInstance: BaseStrategy;
     _indicatorInstances: { [key: string]: BaseIndicator };
     _hasAlerts: boolean;
-    _indicators: { [key: string]: IndicatorState };
     _baseIndicatorsCode: { [key: string]: IndicatorCode };
     _candle: DBCandle;
     _candles: DBCandle[];
@@ -82,7 +76,7 @@ export class Robot {
         /* Последняя свеча */
         this._lastCandle = state.lastCandle;
         /* Состояне стратегии */
-        this._strategy = state.state || {
+        this._state = state.state || {
             variables: {},
             positions: [],
             posLastNumb: {},
@@ -91,8 +85,7 @@ export class Robot {
         };
         /* Действия для проверки */
         this._hasAlerts = state.hasAlerts || false;
-        /* Состояние индикаторов */
-        this._indicators = state.indicators || {};
+
         this._baseIndicatorsCode = {};
         /* Текущая свеча */
         this._candle = null;
@@ -160,7 +153,7 @@ export class Robot {
 
     clear() {
         this._lastCandle = null;
-        this._strategy = {
+        this._state = {
             variables: {},
             positions: [],
             posLastNumb: {},
@@ -168,8 +161,6 @@ export class Robot {
             initialized: false
         };
         this._hasAlerts = false;
-        this._indicators = {};
-        this._statistics = {};
     }
 
     start() {
@@ -250,10 +241,6 @@ export class Robot {
         return this._robotSettings;
     }
 
-    get statistics() {
-        return this._statistics;
-    }
-
     get equity() {
         return this._equity;
     }
@@ -263,11 +250,11 @@ export class Robot {
     }
 
     get hasBaseIndicators() {
-        return Object.values(this._indicators).filter(({ type }) => type === IndicatorType.base);
+        return Object.values(this._state.indicators).filter(({ type }) => type === IndicatorType.base);
     }
 
     get baseIndicatorsFileNames() {
-        return Object.values(this._indicators)
+        return Object.values(this._state.indicators)
             .filter(({ type }) => type === IndicatorType.base)
             .map(({ fileName }) => fileName);
     }
@@ -287,7 +274,7 @@ export class Robot {
                 throw new Error("Not implemented");
             }
         },
-        strategyState: StrategyProps = this._strategy
+        strategyState: StrategyProps = this._state
     ) {
         let strategyCode: { [key: string]: any } = {};
         if (strategyCodeParam) strategyCode = strategyCodeParam;
@@ -320,10 +307,6 @@ export class Robot {
         });
     }
 
-    set indicatorsState(indicatorsState: IndicatorState) {
-        this._indicators = indicatorsState;
-    }
-
     /**
      *  Загрузка индикаторов
      *
@@ -331,9 +314,9 @@ export class Robot {
      */
     setIndicators() {
         // Идем по всем свойствам в объекте индикаторов
-        Object.keys(this._indicators).forEach((key) => {
+        Object.keys(this._state.indicators).forEach((key) => {
             // Считываем индикатор по ключу
-            const indicator = this._indicators[key];
+            const indicator = this._state.indicators[key];
             // В зависимости от типа индикатора
             switch (indicator.type) {
                 case IndicatorType.base: {
@@ -436,7 +419,7 @@ export class Robot {
             this._strategyInstance.init();
             this._strategyInstance.initialized = true;
             // Считываем настройки индикаторов
-            this._indicators = this._strategyInstance.indicators;
+            this._state.indicators = this._strategyInstance.indicators;
         }
         this.getStrategyState();
     }
@@ -447,7 +430,7 @@ export class Robot {
      * @memberof Adviser
      */
     initIndicators() {
-        Object.keys(this._indicators).forEach((key) => {
+        Object.keys(this._state.indicators).forEach((key) => {
             if (!this._indicatorInstances[key].initialized) {
                 this._indicatorInstances[key]._checkParameters();
                 this._indicatorInstances[key].init();
@@ -464,7 +447,7 @@ export class Robot {
      */
     async calcIndicators() {
         await Promise.all(
-            Object.keys(this._indicators).map(async (key) => {
+            Object.keys(this._state.indicators).map(async (key) => {
                 this._indicatorInstances[key]._eventsToSend = [];
                 this._indicatorInstances[key]._handleCandles(this._candle, this._candles, this._candlesProps);
                 await this._indicatorInstances[key].calc();
@@ -481,7 +464,7 @@ export class Robot {
     runStrategy() {
         // Передать свечу и значения индикаторов в инстанс стратегии
         this._strategyInstance._handleCandles(this._candle, this._candles, this._candlesProps);
-        this._strategyInstance._handleIndicators(this._indicators);
+        this._strategyInstance._handleIndicators(this._state.indicators);
         // Очищаем предыдущие  задачи у позиций
         this._strategyInstance._clearAlerts();
         // Запустить проверку стратегии
@@ -525,14 +508,15 @@ export class Robot {
     }
 
     handleCandle(candle: DBCandle) {
-        if (this._lastCandle && candle.id === this._lastCandle.id) {
+        logger.info(`Robot ${this._id} - New candle ${candle.timestamp}`);
+        if (this._lastCandle && candle.time === this._lastCandle.time) {
             return {
                 success: false,
-                error: `Robot #${this._id} candle already processed`
+                error: `Robot #${this._id} candle ${candle.timestamp} already processed`
             };
         }
-        if (this._candles.filter(({ time }) => time === candle.time).length === 0) {
-            this._candles = [...this._candles, candle];
+        if (!this._candles.find(({ time }) => time === candle.time)) {
+            this._candles = [...this._candles, candle].sort((a, b) => sortAsc(a.time, b.time));
         }
         this._candles = this._candles.slice(-this._robotSettings.requiredHistoryMaxBars);
         this._candle = candle;
@@ -576,16 +560,16 @@ export class Robot {
      * @memberof Adviser
      */
     getIndicatorsState() {
-        Object.keys(this._indicators).forEach((ind) => {
+        Object.keys(this._state.indicators).forEach((ind) => {
             this._eventsToSend = [...this._eventsToSend, ...this._indicatorInstances[ind]._eventsToSend];
-            this._indicators[ind].initialized = this._indicatorInstances[ind].initialized;
-            this._indicators[ind].parameters = this._indicatorInstances[ind].parameters;
+            this._state.indicators[ind].initialized = this._indicatorInstances[ind].initialized;
+            this._state.indicators[ind].parameters = this._indicatorInstances[ind].parameters;
             // Все свойства инстанса стратегии
             Object.keys(this._indicatorInstances[ind])
                 .filter((key) => !key.startsWith("_")) // публичные (не начинаются с "_")
                 .forEach((key) => {
                     if (typeof this._indicatorInstances[ind][key] !== "function")
-                        this._indicators[ind].variables[key] = this._indicatorInstances[ind][key]; // сохраняем каждое свойство
+                        this._state.indicators[ind].variables[key] = this._indicatorInstances[ind][key]; // сохраняем каждое свойство
                 });
         });
     }
@@ -598,20 +582,20 @@ export class Robot {
     getStrategyState() {
         this._eventsToSend = [...this._eventsToSend, ...this._strategyInstance._eventsToSend];
         this._postionsToSave = this._strategyInstance._positionsToSave;
-        this._strategy.initialized = this._strategyInstance.initialized;
-        this._strategy.positions = this._strategyInstance.validPositions;
-        this._strategy.posLastNumb = this._strategyInstance.posLastNumb;
+        this._state.initialized = this._strategyInstance.initialized;
+        this._state.positions = this._strategyInstance.validPositions;
+        this._state.posLastNumb = this._strategyInstance.posLastNumb;
         this._hasAlerts = this._strategyInstance.hasAlerts;
         // Все свойства инстанса стратегии
         Object.keys(this._strategyInstance)
             .filter((key) => !key.startsWith("_")) // публичные (не начинаются с "_")
             .forEach((key) => {
                 if (typeof this._strategyInstance[key] !== "function")
-                    this._strategy.variables[key] = this._strategyInstance[key]; // сохраняем каждое свойство
+                    this._state.variables[key] = this._strategyInstance[key]; // сохраняем каждое свойство
             });
     }
 
-    get state(): RobotState {
+    get robotState(): RobotState {
         return {
             id: this._id,
             code: this._code,
@@ -630,8 +614,7 @@ export class Robot {
             status: this._status,
             startedAt: this._startedAt,
             stoppedAt: this._stoppedAt,
-            indicators: this._indicators,
-            state: this._strategy
+            state: this._state
         };
     }
 
@@ -646,11 +629,7 @@ export class Robot {
         };
     }
 
-    get strategy() {
-        return this._strategy;
-    }
-
-    get indicators() {
-        return this._indicators;
+    get state() {
+        return this._state;
     }
 }

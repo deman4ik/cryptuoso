@@ -182,7 +182,7 @@ export class BaseStrategy {
             asset: this._asset,
             currency: this._currency,
             timeframe: this._timeframe,
-            timestamp: dayjs.utc().toISOString()
+            timestamp: this._backtest ? signal.candleTimestamp : dayjs.utc().toISOString()
         };
 
         this._eventsToSend.push({

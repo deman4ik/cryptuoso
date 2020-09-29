@@ -1,30 +1,23 @@
-import StatisticsCalculator from "../lib/statistics-calculator";
+import StatisticsCalculator, { roundRobotStatVals } from "../lib/statistics-calculator";
 import positions from "./testData/positionsForStats";
-import correctFinalResult from "./testData/correctResultAfterRefactor";
+import correctFinalResult from "./testData/correctResult";
 import statsWithoutLastPos from "./testData/correctWithoutLastPos";
 //import dayjs from "@cryptuoso/dayjs";
-import { TradeStats, TradeStatsClass, roundRobotStatVals, Statistics, StatsNumberValue } from "../lib/types";
+import { TradeStats, TradeStatsClass, Statistics } from "../lib/types";
 import { invalidStatistics, invalidPosition } from "./testData/invalidData";
 import { BasePosition } from "@cryptuoso/market";
 
 describe("statistics-calculator test", () => {
     const newPosition = positions[positions.length - 1];
-    /* const prevStatisticsObject = statsWithoutLastPos.statistics;
-    const correctFinalStatistics = correctFinalResult.statistics; */
+
     describe("Testing StatisticsCalculator with valid input", () => {
         describe("Resulting object values test", () => {
             const statsCalculator = new StatisticsCalculator(statsWithoutLastPos, [newPosition]);
             const calculatedStats = statsCalculator.getStats();
-            //correctFinalResult.lastUpdatedAt = dayjs.utc().toISOString(); // might not match desired value
             correctFinalResult.lastUpdatedAt = calculatedStats.lastPositionExitDate;
 
             for (const prop in calculatedStats) {
                 it(`Should be equal to  ${prop} of reference object`, () => {
-                    /* if (prop == "lastUpdatedAt")
-                        expect((calculatedStats[prop] as string).slice(0, 22)).toStrictEqual(
-                            (correctFinalResult[prop] as string).slice(0, 22)
-                        );
-                    else expect((calculatedStats as any)[prop]).toStrictEqual((correctFinalResult as any)[prop]); */
                     if (prop != "lastUpdatedAt") {
                         expect((calculatedStats as any)[prop]).toStrictEqual((correctFinalResult as any)[prop]);
                     }

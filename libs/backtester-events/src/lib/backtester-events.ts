@@ -74,7 +74,7 @@ export const BacktesterRunnerSchema = {
                     type: "boolean",
                     default: false
                 },
-                saveAlerts: {
+                saveSignals: {
                     type: "boolean",
                     default: true
                 },
@@ -160,7 +160,7 @@ export const BacktesterRunnerSchema = {
                     type: "boolean",
                     default: false
                 },
-                saveAlerts: {
+                saveSignals: {
                     type: "boolean",
                     default: true
                 },
