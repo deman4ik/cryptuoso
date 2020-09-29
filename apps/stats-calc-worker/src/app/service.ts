@@ -210,7 +210,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     .join(",");
                 console.log(paramsKeyPart);
                 await locker.lock(`lock:${this.name}:${type}(${paramsKeyPart})`);
-            } catch(err) {
+            } catch (err) {
                 //this.log.info(`Can't create lock for job ${job.id}`);
                 return;
             }
@@ -276,7 +276,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         return await this.pool.queue(async (utils: StatisticsUtils) => utils.calcStatistics(prevStats, positions));
     }
 
-    async calcRobot({ robotId, calcAll = false }: { robotId: string, calcAll?: boolean }) {
+    async calcRobot({ robotId, calcAll = false }: { robotId: string; calcAll?: boolean }) {
         const prevTradeStats: TradeStats = await this.db.pg.maybeOne(sql`
             SELECT rs.*
             FROM robots r
@@ -342,9 +342,9 @@ export default class StatisticCalcWorkerService extends BaseService {
         asset = null,
         calcAll = false
     }: {
-        exchange?: string,
-        asset?: string,
-        calcAll?: boolean
+        exchange?: string;
+        asset?: string;
+        calcAll?: boolean;
     }) {
         const prevRobotsAggrStats: TradeStatsWithId = await this.db.pg.maybeOne(sql`
             SELECT id,
@@ -418,9 +418,9 @@ export default class StatisticCalcWorkerService extends BaseService {
         asset = null,
         calcAll = false
     }: {
-        exchange?: string,
-        asset?: string,
-        calcAll?: boolean
+        exchange?: string;
+        asset?: string;
+        calcAll?: boolean;
     }) {
         const prevUsersRobotsAggrtats: TradeStatsWithId = await this.db.pg.maybeOne(sql`
             SELECT id,
@@ -489,79 +489,72 @@ export default class StatisticCalcWorkerService extends BaseService {
 
     private async _calcDownloadedUserSignal(userSignal: UserSignalStats, calcAll = false) {
         const locker = this.makeLocker(
-            `lock:${this.name}:user_signal(${userSignal.userId}, ${userSignal.robotId})`,
+            `lock:${this.name}:_innerUserSignal(${userSignal.userId}, ${userSignal.robotId})`,
             5000
         );
 
         try {
             await locker.lock();
+
+            const { calcFrom, initStats } = getCalcFromAndInitStats(userSignal, calcAll);
+
+            const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
+            const querySelectPart = sql`
+                SELECT id, direction, exit_date, profit, bars_held
+            `;
+            const queryFromAndConditionPart = sql`
+                FROM v_user_signal_positions
+                WHERE user_id = ${userSignal.userId}
+                    AND robot_id = ${userSignal.robotId}
+                    AND status = 'closed'
+                    AND entry_date >= ${userSignal.subscribedAt}
+                    ${conditionExitDate}
+            `;
+            const queryCommonPart = sql`
+                ${querySelectPart}
+                ${queryFromAndConditionPart}
+                ORDER BY exit_date
+            `;
+
+            const positionsCount: number = +(await this.db.pg.oneFirst(sql`
+                SELECT COUNT(*)
+                ${queryFromAndConditionPart};
+            `));
+
+            if (positionsCount == 0) return false;
+
+            const newStats = await DataStream.from(
+                this.makeChunksGenerator(
+                    queryCommonPart,
+                    positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
+                )
+            ).reduce(
+                async (prevStats: TradeStats, chunk: BasePosition[]) => await this.calcStatistics(prevStats, chunk),
+                initStats
+            );
+
+            await this.upsertStats(
+                {
+                    table: sql`user_signal_stats`,
+                    fieldId: sql`user_signal_id`,
+                    id: userSignal.id,
+                    addFields: sql`user_signal_id`,
+                    addFieldsValues: sql`${userSignal.id}`
+                },
+                newStats,
+                userSignal
+            );
+
+            await locker.unlock();
+
+            return true;
         } catch (err) {
-            return false;
+            await locker.unlock();
+            throw err;
         }
-
-        const { calcFrom, initStats } = getCalcFromAndInitStats(userSignal, calcAll);
-
-        const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
-        const querySelectPart = sql`
-            SELECT id, direction, exit_date, profit, bars_held
-        `;
-        const queryFromAndConditionPart = sql`
-            FROM v_user_signal_positions
-            WHERE user_id = ${userSignal.userId}
-                AND robot_id = ${userSignal.robotId}
-                AND status = 'closed'
-                AND entry_date >= ${userSignal.subscribedAt}
-                ${conditionExitDate}
-        `;
-        const queryCommonPart = sql`
-            ${querySelectPart}
-            ${queryFromAndConditionPart}
-            ORDER BY exit_date
-        `;
-
-        const positionsCount: number = +(await this.db.pg.oneFirst(sql`
-            SELECT COUNT(*)
-            ${queryFromAndConditionPart};
-        `));
-
-        if (positionsCount == 0) return false;
-
-        const newStats = await DataStream.from(
-            this.makeChunksGenerator(
-                queryCommonPart,
-                positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
-            )
-        ).reduce(
-            async (prevStats: TradeStats, chunk: BasePosition[]) => await this.calcStatistics(prevStats, chunk),
-            initStats
-        );
-
-        await this.upsertStats(
-            {
-                table: sql`user_signal_stats`,
-                fieldId: sql`user_signal_id`,
-                id: userSignal.id,
-                addFields: sql`user_signal_id`,
-                addFieldsValues: sql`${userSignal.id}`
-            },
-            newStats,
-            userSignal
-        );
-
-        await locker.unlock();
-
-        return true;
     }
 
-    async calcUserSignal({
-        userId,
-        robotId,
-        calcAll = false
-    }: {
-        userId: string,
-        robotId: string,
-        calcAll?: boolean
-    }) {
+    async calcUserSignal({ userId, robotId, calcAll = false }: { userId: string; robotId: string; calcAll?: boolean }) {
         const userSignal: UserSignalStats = await this.db.pg.maybeOne(sql`
             SELECT us.id, us.user_id, us.robot_id, us.subscribed_at,
                 uss.statistics,
@@ -581,13 +574,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         return await this._calcDownloadedUserSignal(userSignal, calcAll);
     }
 
-    async calcUserSignals({
-        robotId,
-        calcAll = false
-    }: {
-        robotId: string,
-        calcAll?: boolean
-    }) {
+    async calcUserSignals({ robotId, calcAll = false }: { robotId: string; calcAll?: boolean }) {
         const userSignals: UserSignalStats[] = await this.db.pg.any(sql`
             SELECT us.id, us.user_id, us.robot_id, us.subscribed_at,
                 uss.statistics,
@@ -616,12 +603,11 @@ export default class StatisticCalcWorkerService extends BaseService {
         asset = null,
         calcAll = false
     }: {
-        userId: string,
-        exchange?: string,
-        asset?: string,
-        calcAll?: boolean
+        userId: string;
+        exchange?: string;
+        asset?: string;
+        calcAll?: boolean;
     }) {
-
         const prevUserAggrStats: TradeStatsWithId = await this.db.pg.maybeOne(sql`
             SELECT id,
                 statistics,
@@ -697,13 +683,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         return true;
     }
 
-    async calcUserRobot({
-        userRobotId,
-        calcAll = false
-    }: {
-        userRobotId: string,
-        calcAll?: boolean
-    }) {
+    async calcUserRobot({ userRobotId, calcAll = false }: { userRobotId: string; calcAll?: boolean }) {
         const prevTradeStats: TradeStats = await this.db.pg.maybeOne(sql`
             SELECT urs.statistics,
                 urs.last_position_exit_date,
@@ -772,10 +752,10 @@ export default class StatisticCalcWorkerService extends BaseService {
         asset = null,
         calcAll = false
     }: {
-        userId: string,
-        exchange?: string,
-        asset?: string,
-        calcAll?: boolean
+        userId: string;
+        exchange?: string;
+        asset?: string;
+        calcAll?: boolean;
     }) {
         const prevUserAggrStats: TradeStatsWithId = await this.db.pg.maybeOne(sql`
             SELECT id,
