@@ -22,74 +22,73 @@ export async function testService(service: Service) {
         await service.db.pg.query(service.db.sql`SELECT pg_cancel_backend(${backendProcessId})`);
     }, 3000); */
 
-    results.push(await measureFunction(
-        "calcRobot",
-        service.calcRobot.bind(service),
-        ["f1893b3c-8768-40d7-a3c0-a438f994f6f8", updateAll],
-        count
-    ));
-
-    results.push(await measureFunction(
-        "calcRobot",
-        service.calcRobot.bind(service),
-        [robotId, updateAll],
-        count
-    ));
-
     results.push(
-        await measureFunction("calcRobotsAggr", service.calcRobotsAggr.bind(service), ["binance_futures"], count)
+        await measureFunction(
+            "calcRobot",
+            service.calcRobot.bind(service),
+            [{ robotId: "f1893b3c-8768-40d7-a3c0-a438f994f6f8", updateAll }],
+            count
+        )
     );
 
-    results.push(await measureFunction(
-        "calcUsersRobotsAggr",
-        service.calcUsersRobotsAggr.bind(service),
-        [],
-        count
-    ));
-
-    results.push(await measureFunction(
-        "calcUserSignalsAggr",
-        service.calcUserSignalsAggr.bind(service),
-        [userId, null, null, updateAll],
-        count
-    ));
-
-    results.push(await measureFunction(
-        "calcUserRobotsAggr",
-        service.calcUserRobotsAggr.bind(service),
-        [userId, 'kraken', 'BTC', updateAll],
-        count
-    ));
-
-    results.push(await measureFunction(
-        "calcUserRobot",
-        service.calcUserRobot.bind(service),
-        [userRobotId, updateAll],
-        count
-    ));
-
-    results.push(await measureFunction(
-        "calcUserSignalsAggr",
-        service.calcUserSignalsAggr.bind(service),
-        [userId, null, null, updateAll],
-        count
-    ));
+    results.push(await measureFunction("calcRobot", service.calcRobot.bind(service), [{ robotId, updateAll }], count));
 
     results.push(
-        await measureFunction("calcUserSignals", service.calcUserSignals.bind(service), [robotId, updateAll], count)
+        await measureFunction(
+            "calcRobotsAggr",
+            service.calcRobotsAggr.bind(service),
+            [{ exchange: "binance_futures" }],
+            count
+        )
     );
 
-    results.push(await measureFunction(
-        "calcUserSignal",
-        service.calcUserSignal.bind(service),
-        ["8a671981-2b11-4ae5-bc3f-1a63befdba72", robotId, updateAll],
-        count
-    ));
+    results.push(
+        await measureFunction("calcUsersRobotsAggr", service.calcUsersRobotsAggr.bind(service), [{ updateAll }], count)
+    );
 
-    //await service.printUsers();
-    //await service.printUserAggrStats("userRobot");
-    //await service.printUserSignals();
-    //await service.printRobots();
+    results.push(
+        await measureFunction(
+            "calcUserSignalsAggr",
+            service.calcUserSignalsAggr.bind(service),
+            [{ userId, updateAll }],
+            count
+        )
+    );
+
+    results.push(
+        await measureFunction(
+            "calcUserRobotsAggr",
+            service.calcUserRobotsAggr.bind(service),
+            [{ userId, exchange: "kraken", asset: "BTC", updateAll }],
+            count
+        )
+    );
+
+    results.push(
+        await measureFunction("calcUserRobot", service.calcUserRobot.bind(service), [{ userRobotId, updateAll }], count)
+    );
+
+    results.push(
+        await measureFunction(
+            "calcUserSignalsAggr",
+            service.calcUserSignalsAggr.bind(service),
+            [{ userId, updateAll }],
+            count
+        )
+    );
+
+    results.push(
+        await measureFunction("calcUserSignals", service.calcUserSignals.bind(service), [{ robotId, updateAll }], count)
+    );
+
+    results.push(
+        await measureFunction(
+            "calcUserSignal",
+            service.calcUserSignal.bind(service),
+            [{ userId: "8a671981-2b11-4ae5-bc3f-1a63befdba72", robotId, updateAll }],
+            count
+        )
+    );
 
     console.log(results);
     //console.log(JSON.stringify(results));

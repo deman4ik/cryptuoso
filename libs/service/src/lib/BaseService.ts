@@ -43,7 +43,10 @@ export class BaseService {
                 process.env.REDISCS //,{enableReadyCheck: false}
             );
 
-            this.#redLock = new RedLock([this.#redisConnection], { retryCount: 0, driftFactor: 0.01 });
+            this.#redLock = new RedLock([this.#redisConnection], {
+                retryCount: 0,
+                driftFactor: 0.01
+            });
 
             this.#events = new Events(this.#redisConnection, this.#lightship, config?.eventsConfig);
         } catch (err) {
@@ -164,13 +167,13 @@ export class BaseService {
             lock: async (resource?: string) => {
                 try {
                     if (!lockName) {
-                        if(!resource) throw new Error(`"resource" argument must be non-empty string`);
+                        if (!resource) throw new Error(`"resource" argument must be non-empty string`);
                         lockName = resource;
                     }
 
                     lock = await this.#redLock.lock(lockName, ttl);
                 } catch (err) {
-                    this.log.error(`Failed to lock (${lockName})`/* , err */);
+                    this.log.error(`Failed to lock (${lockName})` /* , err */);
                     throw err;
                 }
                 checkForUnlock();

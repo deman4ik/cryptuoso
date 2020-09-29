@@ -185,7 +185,7 @@ export default class StatisticCalcWorkerService extends BaseService {
 
     async process(job: Job<StatsCalcJob>) {
         const type = job.name as StatsCalcJobType;
-        let params = job.data as StatsCalcJob;
+        const params = job.data as StatsCalcJob;
 
         this.log.info(`Starting job ${job.id}`);
 
@@ -208,7 +208,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     .sort()
                     .map((prop: keyof StatsCalcJob) => params[prop])
                     .join(",");
-                console.log(paramsKeyPart);
+                //console.log(paramsKeyPart);
                 await locker.lock(`lock:${this.name}:${type}(${paramsKeyPart})`);
             } catch (err) {
                 //this.log.info(`Can't create lock for job ${job.id}`);
@@ -239,7 +239,7 @@ export default class StatisticCalcWorkerService extends BaseService {
     ): Promise<void> {
         /* console.log(params);
         return; */
-        if (prevStats && prevStats.statistics) {
+        if (prevStats && isTradeStats(prevStats)) {
             await this.db.pg.query(sql`
                 UPDATE ${params.table}
                 SET statistics = ${sql.json(stats.statistics)},
@@ -550,7 +550,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             return true;
         } catch (err) {
             await locker.unlock();
-            throw err;
+            return false;
         }
     }
 
@@ -590,11 +590,13 @@ export default class StatisticCalcWorkerService extends BaseService {
 
         if (userSignals.length == 0) return false; // throw new Error(`Signals doesn't exists (robotId: ${robotId})`);
 
+        let res = false;
+
         for (const signal of userSignals) {
-            await this._calcDownloadedUserSignal(signal, calcAll);
+            res = res || (await this._calcDownloadedUserSignal(signal, calcAll));
         }
 
-        return true;
+        return res;
     }
 
     async calcUserSignalsAggr({
@@ -737,7 +739,9 @@ export default class StatisticCalcWorkerService extends BaseService {
             {
                 table: sql`user_robot_stats`,
                 fieldId: sql`user_robot_id`,
-                id: userRobotId
+                id: userRobotId,
+                addFields: sql`user_robot_id`,
+                addFieldsValues: sql`${userRobotId}`
             },
             newStats,
             prevTradeStats
