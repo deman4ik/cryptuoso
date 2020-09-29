@@ -7,6 +7,7 @@ import { ActionsHandlerError } from "@cryptuoso/errors";
 import { sql } from "@cryptuoso/postgres";
 import { v4 as uuid } from "uuid";
 import dayjs from "@cryptuoso/dayjs";
+import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
 
 interface SomeObject<T = any> {
     [key: string]: T;
@@ -69,13 +70,13 @@ export default class UserProfileService extends HTTPService {
                     },
                     handler: this._httpHandler.bind(this, this.userSignalEdit.bind(this))
                 },
-                userSignalUnsusbcribe: {
+                userSignalUnsubscribe: {
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     inputSchema: {
                         robotId: "uuid"
                     },
-                    handler: this._httpHandler.bind(this, this.userSignalUnsusbcribe.bind(this))
+                    handler: this._httpHandler.bind(this, this.userSignalUnsubscribe.bind(this))
                 }
             });
         } catch (err) {
@@ -264,7 +265,7 @@ export default class UserProfileService extends HTTPService {
         `);
     }
 
-    async userSignalUnsusbcribe(user: UserExtended, { robotId }: { robotId: string }) {
+    async userSignalUnsubscribe(user: UserExtended, { robotId }: { robotId: string }) {
         const userSignal: UserSignalState = await this.db.pg.maybeOne(sql`
             SELECT id
             FROM user_signals
@@ -279,5 +280,14 @@ export default class UserProfileService extends HTTPService {
             FROM user_signals
             WHERE id = ${userSignal.id};
         `);
+
+        // TODO: think about other way to update this user signals aggr. statistics
+        await this.events.emit({
+            type: StatsCalcRunnerEvents.USER_SIGNALS,
+            data: {
+                userId: user.id,
+                calcAll: true
+            }
+        });
     }
 }
