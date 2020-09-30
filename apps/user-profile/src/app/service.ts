@@ -13,7 +13,7 @@ interface SomeObject<T = any> {
     [key: string]: T;
 }
 
-export interface UserProfileServiceConfig extends HTTPServiceConfig {}
+export type UserProfileServiceConfig = HTTPServiceConfig;
 
 export default class UserProfileService extends HTTPService {
     constructor(config?: UserProfileServiceConfig) {
@@ -165,7 +165,9 @@ export default class UserProfileService extends HTTPService {
 
         const { exchange, asset, currency, available } = robot;
 
-        const isSignalExists = 0 < +(await this.db.pg.oneFirst(sql`
+        const isSignalExists =
+            0 <
+            +(await this.db.pg.oneFirst(sql`
             SELECT COUNT(*)
             FROM user_signals
             WHERE user_id = ${user.id}
@@ -176,15 +178,15 @@ export default class UserProfileService extends HTTPService {
 
         if (available < user.access) throw new ActionsHandlerError("Robot unavailable.", { robotId }, "FORBIDDEN", 403);
 
-        const marketLimits: Market["limits"] = await this.db.pg.maybeOneFirst(sql`
+        const marketLimits: Market["limits"] = (await this.db.pg.maybeOneFirst(sql`
             SELECT limits
             FROM markets
             WHERE exchange = ${exchange}
                 AND asset = ${asset}
                 AND currency = ${currency};
-        `) as any;
+        `)) as any;
 
-        if(!marketLimits?.amount) throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
+        if (!marketLimits?.amount) throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
 
         const { amount } = marketLimits;
 
@@ -252,16 +254,16 @@ export default class UserProfileService extends HTTPService {
         if (userSignalSettings?.volume === volume)
             throw new ActionsHandlerError("This volume value is already set.", null, "FORBIDDEN", 403);
 
-        const marketLimits: Market["limits"] = await this.db.pg.maybeOneFirst(sql`
+        const marketLimits: Market["limits"] = (await this.db.pg.maybeOneFirst(sql`
             SELECT m.limits
             FROM robots r, markets m
             WHERE r.id = ${robotId}
                 AND m.exchange = r.exchange
                 AND m.asset = r.asset
                 AND m.currency = r.currency;
-        `) as any;
+        `)) as any;
 
-        if(!marketLimits?.amount) throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
+        if (!marketLimits?.amount) throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
 
         const { amount } = marketLimits;
 
@@ -288,7 +290,7 @@ export default class UserProfileService extends HTTPService {
             SET volume = ${volume}
             WHERE id = ${userSignal.id};
         `);
-        
+
         await this.db.pg.query(sql`
             INSERT INTO user_signal_settings(
                 user_signal_id, user_signal_settings, active_from

@@ -6,7 +6,8 @@ import Validator, { ValidationSchema, ValidationError } from "fastest-validator"
 import { BaseService, BaseServiceConfig } from "./BaseService";
 import { ActionsHandlerError } from "@cryptuoso/errors";
 import { User, UserRoles, UserStatus } from "@cryptuoso/user-state";
-import { JSONParse, getAccessValue } from "@cryptuoso/helpers";
+import { JSONParse } from "@cryptuoso/helpers";
+import { getAccessValue } from "./helpers";
 
 //TODO: req/res typings
 
@@ -148,8 +149,7 @@ export class HTTPService extends BaseService {
 
             //TODO: check user in DB and cache in Redis
             const userId = req.body.session_variables["x-hasura-user-id"];
-            if (!userId)
-                throw new ActionsHandlerError("Invalid session variables", null, "UNAUTHORIZED", 401);
+            if (!userId) throw new ActionsHandlerError("Invalid session variables", null, "UNAUTHORIZED", 401);
 
             const cachedUserKey = `cpz:users:${userId}`;
             let user: UserExtended;
@@ -173,8 +173,7 @@ export class HTTPService extends BaseService {
                     WHERE id = ${userId};
                 `);
 
-                if (!user)
-                    throw new ActionsHandlerError("User account is not found", null, "NOT_FOUND", 404);
+                if (!user) throw new ActionsHandlerError("User account is not found", null, "NOT_FOUND", 404);
 
                 user.access = getAccessValue(user);
 

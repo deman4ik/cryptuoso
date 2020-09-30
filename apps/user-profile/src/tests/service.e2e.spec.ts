@@ -4,11 +4,11 @@ console.log(process.env.API_KEY, process.env.PGSC);
 
 import Service from "../app/service";
 import { getProperty, makeServiceRequest } from "@cryptuoso/test-helpers";
-import { User, UserRoles } from '@cryptuoso/user-state';
+import { User, UserRoles } from "@cryptuoso/user-state";
 import { round, sleep } from "@cryptuoso/helpers";
-import { Events } from '@cryptuoso/events';
-import { StatsCalcRunnerEvents } from '@cryptuoso/stats-calc-events';
-import { UserSignalState } from '@cryptuoso/user-signal-state';
+import { Events } from "@cryptuoso/events";
+import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
+import { UserSignalState } from "@cryptuoso/user-signal-state";
 
 jest.setTimeout(30000);
 
@@ -21,7 +21,7 @@ describe("", () => {
     const volume = round(Math.random(), 3);
 
     let user: User;
-    
+
     const getUserSignal = async (): Promise<UserSignalState> => {
         return await service.db.pg.maybeOne(service.db.sql`
             SELECT *
@@ -29,24 +29,24 @@ describe("", () => {
             WHERE user_id = ${userId}
                 AND robot_id = ${robotId};
         `);
-    }
-    
+    };
+
     const getLastUserSignalSettings = async (): Promise<{ volume: number }> => {
-        return await service.db.pg.maybeOneFirst(service.db.sql`
+        return (await service.db.pg.maybeOneFirst(service.db.sql`
             SELECT uss.signal_settings
             FROM user_signals us, v_user_signal_settings uss
             WHERE us.user_id = ${userId}
                 AND us.robot_id = ${robotId}
                 AND uss.user_signal_id = us.id;
-        `) as any;
-    }
+        `)) as any;
+    };
 
     beforeAll(async (done) => {
         await service.startService();
 
         const signal = await getUserSignal();
 
-        if(signal) {
+        if (signal) {
             console.warn(`Signal already exists: user - ${userId}, robot - ${robotId}`);
             process.exit(1);
         }
@@ -57,7 +57,7 @@ describe("", () => {
             WHERE id = ${userId};
         `);
 
-        if(!user) {
+        if (!user) {
             console.warn(`User doesn't exists: ${userId}`);
             process.exit(1);
         }
@@ -81,7 +81,7 @@ describe("", () => {
             //console.log(res);
 
             expect(res.parsedBody.result).toBe("OK");
-            
+
             expect((await getUserSignal()).volume).toBe(volume);
             expect((await getLastUserSignalSettings()).volume).toBe(volume);
         });

@@ -1,18 +1,18 @@
 import { ValidTimeframe } from "./timeframe";
 
 export interface MinMax {
-  min: number;
-  max: number | undefined;
+    min: number;
+    max: number | undefined;
 }
 
 export interface Market {
-  exchange: string;
-  asset: string;
-  currency: string;
-  precision: { base: number; quote: number; amount: number; price: number };
-  limits: { amount: MinMax; price: MinMax; cost?: MinMax };
-  averageFee: number;
-  loadFrom: string;
+    exchange: string;
+    asset: string;
+    currency: string;
+    precision: { base: number; quote: number; amount: number; price: number };
+    limits: { amount: MinMax; price: MinMax; cost?: MinMax };
+    averageFee: number;
+    loadFrom: string;
 }
 
 export const enum CandleType {

@@ -1,5 +1,4 @@
 export * from "./lib/array";
-export * from "./lib/auth";
 export * from "./lib/const";
 export * from "./lib/misc";
 export * from "./lib/number";
