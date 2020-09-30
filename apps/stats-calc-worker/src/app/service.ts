@@ -239,7 +239,7 @@ export default class StatisticCalcWorkerService extends BaseService {
     ): Promise<void> {
         /* console.log(params);
         return; */
-        if (prevStats && isTradeStats(prevStats)) {
+        if (params.id && prevStats && isTradeStats(prevStats)) {
             await this.db.pg.query(sql`
                 UPDATE ${params.table}
                 SET statistics = ${sql.json(stats.statistics)},
@@ -358,6 +358,25 @@ export default class StatisticCalcWorkerService extends BaseService {
                 AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
         `);
 
+        if(prevRobotsAggrStats) {
+            const countOfRobots = +(await this.db.pg.oneFirst(sql`
+                SELECT COUNT(*)
+                FROM robots
+                WHERE ${!exchange ? sql`` : sql`exchange = ${exchange}`}
+                    ${!asset ? sql`` : sql`AND asset = ${asset}`};
+            `));
+
+            if(countOfRobots === 0) {
+                await this.db.pg.query(sql`
+                    DELETE
+                    FROM robot_aggr_stats
+                    WHERE id = ${prevRobotsAggrStats.id};
+                `);
+
+                return;
+            }
+        }
+
         const { calcFrom, initStats } = getCalcFromAndInitStats(prevRobotsAggrStats, calcAll);
 
         const conditionExchange = !exchange ? sql`` : sql`AND r.exchange = ${exchange}`;
@@ -422,7 +441,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         asset?: string;
         calcAll?: boolean;
     }) {
-        const prevUsersRobotsAggrtats: TradeStatsWithId = await this.db.pg.maybeOne(sql`
+        const prevUsersRobotsAggrStats: TradeStatsWithId = await this.db.pg.maybeOne(sql`
             SELECT id,
                 statistics,
                 last_position_exit_date,
@@ -434,7 +453,28 @@ export default class StatisticCalcWorkerService extends BaseService {
                 AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
         `);
 
-        const { calcFrom, initStats } = getCalcFromAndInitStats(prevUsersRobotsAggrtats, calcAll);
+        if(prevUsersRobotsAggrStats) {
+            const countOfUsersRobots = +(await this.db.pg.oneFirst(sql`
+                SELECT COUNT(*)
+                FROM user_robots ur,
+                    robots r,
+                WHERE r.id = ur.robot_id
+                    ${!exchange ? sql`` : sql`AND r.exchange = ${exchange}`}
+                    ${!asset ? sql`` : sql`AND r.asset = ${asset}`};
+            `));
+
+            if(countOfUsersRobots === 0) {
+                await this.db.pg.query(sql`
+                    DELETE
+                    FROM user_robot_aggr_stats
+                    WHERE id = ${prevUsersRobotsAggrStats.id};
+                `);
+
+                return;
+            }
+        }
+
+        const { calcFrom, initStats } = getCalcFromAndInitStats(prevUsersRobotsAggrStats, calcAll);
 
         const conditionExchange = !exchange ? sql`` : sql`AND exchange = ${exchange}`;
         const conditionAsset = !asset ? sql`` : sql`AND asset = ${asset}`;
@@ -476,12 +516,12 @@ export default class StatisticCalcWorkerService extends BaseService {
             {
                 table: sql`user_robot_aggr_stats`,
                 fieldId: sql`id`,
-                id: prevUsersRobotsAggrtats?.id,
+                id: prevUsersRobotsAggrStats?.id,
                 addFields: sql`exchange, asset`,
                 addFieldsValues: sql`${exchange}, ${asset}`
             },
             newStats,
-            prevUsersRobotsAggrtats
+            prevUsersRobotsAggrStats
         );
 
         return true;
@@ -623,6 +663,28 @@ export default class StatisticCalcWorkerService extends BaseService {
                 AND exchange ${!exchange ? sql`IS NULL` : sql`= ${exchange}`}
                 AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
         `);
+
+        if(prevUserAggrStats) {
+            const countOfSignals = +(await this.db.pg.oneFirst(sql`
+                SELECT COUNT(*)
+                FROM user_signals us,
+                    robots r,
+                WHERE us.user_id = ${userId}
+                    AND r.id = us.robot_id
+                    ${!exchange ? sql`` : sql`AND r.exchange = ${exchange}`}
+                    ${!asset ? sql`` : sql`AND r.asset = ${asset}`};
+            `));
+
+            if(countOfSignals === 0) {
+                await this.db.pg.query(sql`
+                    DELETE
+                    FROM user_aggr_stats
+                    WHERE id = ${prevUserAggrStats.id};
+                `);
+
+                return;
+            }
+        }
 
         const { calcFrom, initStats } = getCalcFromAndInitStats(prevUserAggrStats, calcAll);
 
@@ -775,8 +837,30 @@ export default class StatisticCalcWorkerService extends BaseService {
                 AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
         `);
 
-        const { calcFrom, initStats } = getCalcFromAndInitStats(prevUserAggrStats, calcAll);
+        if(prevUserAggrStats) {
+            const countOfUserRobots = +(await this.db.pg.oneFirst(sql`
+                SELECT COUNT(*)
+                FROM user_robots ur,
+                    robots r,
+                WHERE us.user_id = ${userId}
+                    AND r.id = ur.robot_id
+                    ${!exchange ? sql`` : sql`AND r.exchange = ${exchange}`}
+                    ${!asset ? sql`` : sql`AND r.asset = ${asset}`};
+            `));
 
+            if(countOfUserRobots === 0) {
+                await this.db.pg.query(sql`
+                    DELETE
+                    FROM user_aggr_stats
+                    WHERE id = ${prevUserAggrStats.id};
+                `);
+
+                return;
+            }
+        }
+
+        const { calcFrom, initStats } = getCalcFromAndInitStats(prevUserAggrStats, calcAll);
+        
         const conditionExchange = !exchange ? sql`` : sql`AND exchange = ${exchange}`;
         const conditionAsset = !asset ? sql`` : sql`AND asset = ${asset}`;
         const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
