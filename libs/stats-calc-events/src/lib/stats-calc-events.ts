@@ -9,10 +9,20 @@ export const enum StatsCalcRunnerEvents {
     USER_ROBOTS = `stats-calc.user-robots`, // `in-stats-calc-runner.user-robots`
     RECALC_ALL_ROBOTS = `stats-calc.recalc-all-robots`,
     RECALC_ALL_USER_SIGNALS = `stats-calc.recalc-all-user-signals`,
-    RECALC_ALL_USER_ROBOTS = `stats-calc.recalc-all-user-robots`
+    RECALC_ALL_USER_ROBOTS = `stats-calc.recalc-all-user-robots`,
+
+    USER_SIGNAL_DELETED = `stats-calc.user-signal-deleted`
 }
 
 export const StatsCalcRunnerSchema = {
+    [StatsCalcRunnerEvents.USER_SIGNAL_DELETED]: {
+        userId: {
+            type: "uuid"
+        },
+        robotId: {
+            type: "uuid"
+        }
+    },
     [StatsCalcRunnerEvents.USER_SIGNAL]: {
         calcAll: {
             type: "boolean",

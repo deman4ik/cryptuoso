@@ -321,10 +321,10 @@ export default class UserProfileService extends HTTPService {
         // TODO: think about other way to update this user signals aggr. statistics
         // (+ deleting unusable statistics)
         await this.events.emit({
-            type: StatsCalcRunnerEvents.USER_SIGNALS,
+            type: StatsCalcRunnerEvents.USER_SIGNAL_DELETED,
             data: {
                 userId: user.id,
-                calcAll: true
+                robotId
             }
         });
     }
