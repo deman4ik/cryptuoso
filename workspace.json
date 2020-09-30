@@ -1316,6 +1316,59 @@
                 }
             }
         },
+        "user-profile": {
+            "root": "apps/user-profile",
+            "sourceRoot": "apps/user-profile/src",
+            "projectType": "application",
+            "prefix": "user-profile",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/user-profile",
+                        "main": "apps/user-profile/src/main.ts",
+                        "tsConfig": "apps/user-profile/tsconfig.app.json",
+                        "assets": ["apps/user-profile/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/user-profile/src/environments/environment.ts",
+                                    "with": "apps/user-profile/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "user-profile:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": ["apps/user-profile/tsconfig.app.json", "apps/user-profile/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!apps/user-profile/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/user-profile/jest.config.js",
+                        "tsConfig": "apps/user-profile/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
         "robot-settings": {
             "root": "libs/robot-settings",
             "sourceRoot": "libs/robot-settings/src",

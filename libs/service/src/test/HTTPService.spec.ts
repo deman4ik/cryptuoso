@@ -131,7 +131,7 @@ describe("Test 'BaseService' class", () => {
 
                         expect(res.status).toStrictEqual(403);
                         expect(res.parsedBody).toStrictEqual(
-                            new ActionsHandlerError("Forbidden: Invalid API Key", null, "FORBIDDEN", 403).response
+                            new ActionsHandlerError("Invalid API Key", null, "FORBIDDEN", 403).response
                         );
                     });
                 });
@@ -142,7 +142,7 @@ describe("Test 'BaseService' class", () => {
 
                         expect(res.status).toStrictEqual(403);
                         expect(res.parsedBody).toStrictEqual(
-                            new ActionsHandlerError("Forbidden: Invalid API Key", null, "FORBIDDEN", 403).response
+                            new ActionsHandlerError("Invalid API Key", null, "FORBIDDEN", 403).response
                         );
                     });
                 });
@@ -378,7 +378,7 @@ describe("Test 'BaseService' class", () => {
                     test("Should return error response", async () => {
                         const rightResponse = { success: true };
                         const errorResponse = new ActionsHandlerError(
-                            "Unauthorized: Invalid session variables",
+                            "Invalid session variables",
                             null,
                             "UNAUTHORIZED",
                             401
@@ -410,10 +410,10 @@ describe("Test 'BaseService' class", () => {
                         const userId = "user-id";
                         const routeRole = "route-role";
                         const errorResponse = new ActionsHandlerError(
-                            "Unauthorized: Invalid session variables",
+                            "User account is not found",
                             null,
-                            "UNAUTHORIZED",
-                            401
+                            "NOT_FOUND",
+                            404
                         ).response;
 
                         createServiceRoute(httpService, routeName, rightResponse, [routeRole], true);
@@ -441,8 +441,7 @@ describe("Test 'BaseService' class", () => {
                         const rightResponse = { success: true };
                         const userId = "user-id";
                         const userRole = "user-role";
-                        const errorResponse = new ActionsHandlerError("Forbidden: User blocked", null, "FORBIDDEN", 403)
-                            .response;
+                        const errorResponse = new ActionsHandlerError("User blocked", null, "FORBIDDEN", 403).response;
 
                         createServiceRoute(httpService, routeName, rightResponse, [userRole], true);
                         mockRedis.get.mockImplementation(async () =>
@@ -476,8 +475,7 @@ describe("Test 'BaseService' class", () => {
                         const userId = "user-id";
                         const userRole = "user-role";
                         const routeRole = "route-role";
-                        const errorResponse = new ActionsHandlerError("Forbidden: Invalid role", null, "FORBIDDEN", 403)
-                            .response;
+                        const errorResponse = new ActionsHandlerError("Invalid role", null, "FORBIDDEN", 403).response;
 
                         createServiceRoute(httpService, routeName, rightResponse, [routeRole], true);
                         mockRedis.get.mockImplementation(async () =>
@@ -509,8 +507,7 @@ describe("Test 'BaseService' class", () => {
                         const rightResponse = { success: true };
                         const userId = "user-id";
                         const routeRole = "route-role";
-                        const errorResponse = new ActionsHandlerError("Forbidden: Invalid role", null, "FORBIDDEN", 403)
-                            .response;
+                        const errorResponse = new ActionsHandlerError("Invalid role", null, "FORBIDDEN", 403).response;
 
                         createServiceRoute(httpService, routeName, rightResponse, [routeRole], true);
                         mockRedis.get.mockImplementation(async () =>
@@ -542,8 +539,7 @@ describe("Test 'BaseService' class", () => {
                         const rightResponse = { success: true };
                         const userId = "user-id";
                         const routeRole = "route-role";
-                        const errorResponse = new ActionsHandlerError("Forbidden: Invalid role", null, "FORBIDDEN", 403)
-                            .response;
+                        const errorResponse = new ActionsHandlerError("Invalid role", null, "FORBIDDEN", 403).response;
 
                         createServiceRoute(httpService, routeName, rightResponse, [routeRole], false);
                         mockRedis.get.mockClear();

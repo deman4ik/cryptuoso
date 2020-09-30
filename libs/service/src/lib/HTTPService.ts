@@ -7,6 +7,7 @@ import { BaseService, BaseServiceConfig } from "./BaseService";
 import { ActionsHandlerError } from "@cryptuoso/errors";
 import { User, UserRoles, UserStatus } from "@cryptuoso/user-state";
 import { JSONParse } from "@cryptuoso/helpers";
+import { getAccessValue } from "./helpers";
 
 //TODO: req/res typings
 
@@ -22,11 +23,15 @@ export interface ActionPayload {
     };
 }
 
-export type RequestExtended<P extends Protocol> = Request<P> & {
+export interface UserExtended extends User {
+    access: number;
+}
+
+export type RequestExtended<P extends Protocol = any> = Request<P> & {
     body?: ActionPayload;
     meta?: {
         [key: string]: any;
-        user: User;
+        user: UserExtended;
     };
 };
 
@@ -105,7 +110,7 @@ export class HTTPService extends BaseService {
 
     private _checkApiKey(req: Request<Protocol>, res: Response<Protocol>, next: (err?: Error) => void) {
         if (!req.headers["x-api-key"] || req.headers["x-api-key"] !== process.env.API_KEY) {
-            throw new ActionsHandlerError("Forbidden: Invalid API Key", null, "FORBIDDEN", 403);
+            throw new ActionsHandlerError("Invalid API Key", null, "FORBIDDEN", 403);
         }
         return next();
     }
@@ -117,7 +122,7 @@ export class HTTPService extends BaseService {
 
         if (validationErrors === true) {
             if (!route.auth && route.roles.length > 0 && !route.roles.includes(body.session_variables["x-hasura-role"]))
-                throw new ActionsHandlerError("Forbidden: Invalid role", null, "FORBIDDEN", 403);
+                throw new ActionsHandlerError("Invalid role", null, "FORBIDDEN", 403);
             req.body = body;
             return next();
         } else
@@ -136,7 +141,7 @@ export class HTTPService extends BaseService {
                     const role = req.body.session_variables["x-hasura-role"];
 
                     if (!this._routes[req.url].roles.includes(role))
-                        throw new ActionsHandlerError("Forbidden: Invalid role", null, "FORBIDDEN", 403);
+                        throw new ActionsHandlerError("Invalid role", null, "FORBIDDEN", 403);
                 }
 
                 return next();
@@ -144,11 +149,10 @@ export class HTTPService extends BaseService {
 
             //TODO: check user in DB and cache in Redis
             const userId = req.body.session_variables["x-hasura-user-id"];
-            if (!userId)
-                throw new ActionsHandlerError("Unauthorized: Invalid session variables", null, "UNAUTHORIZED", 401);
+            if (!userId) throw new ActionsHandlerError("Invalid session variables", null, "UNAUTHORIZED", 401);
 
             const cachedUserKey = `cpz:users:${userId}`;
-            let user: User;
+            let user: UserExtended;
 
             const cachedUserJSON = await this.redis.get(cachedUserKey);
 
@@ -164,25 +168,26 @@ export class HTTPService extends BaseService {
 
             if (!user) {
                 user = await this.db.pg.maybeOne(this.db.sql`
-                    SELECT id, status, name, email, telegram_id, telegram_username, roles
+                    SELECT *
                     FROM users
                     WHERE id = ${userId};
                 `);
 
-                if (!user)
-                    throw new ActionsHandlerError("Unauthorized: Invalid session variables", null, "UNAUTHORIZED", 401);
+                if (!user) throw new ActionsHandlerError("User account is not found", null, "NOT_FOUND", 404);
+
+                user.access = getAccessValue(user);
 
                 await this.redis.setex(cachedUserKey, 60, JSON.stringify(user));
             }
 
             if (user.status == UserStatus.blocked)
-                throw new ActionsHandlerError("Forbidden: User blocked", null, "FORBIDDEN", 403);
+                throw new ActionsHandlerError("User blocked", null, "FORBIDDEN", 403);
 
             if (
                 this._routes[req.url].roles.length > 0 &&
                 !user.roles?.allowedRoles?.some((userRole) => this._routes[req.url].roles.includes(userRole))
             )
-                throw new ActionsHandlerError("Forbidden: Invalid role", null, "FORBIDDEN", 403);
+                throw new ActionsHandlerError("Invalid role", null, "FORBIDDEN", 403);
 
             await this.db.pg.query(this.db.sql`
                 UPDATE users

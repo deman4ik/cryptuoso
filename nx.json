@@ -133,6 +133,9 @@
         "user-robot-state": {
             "tags": []
         },
+        "user-profile": {
+            "tags": []
+        },
         "robot-settings": {
             "tags": []
         }

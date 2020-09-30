@@ -6,6 +6,7 @@ export interface UserSignalState {
     userId: string;
     subscribedAt: string;
     settings: UserSignalSettings;
+    volume: number;
     stats?: TradeStats;
 }
 
