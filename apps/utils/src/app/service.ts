@@ -1,6 +1,6 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
-import { RobotSettings, RobotTradeSettings } from "@cryptuoso/robot-state";
 import { sql } from "@cryptuoso/postgres";
+import { RobotVolumeType, RobotSettingsAssetStatic } from "@cryptuoso/robot-settings";
 
 export type UtilsServiceConfig = HTTPServiceConfig;
 
@@ -44,18 +44,17 @@ export default class UtilsService extends HTTPService {
                     volume: number;
                     requiredHistoryMaxBars: number;
                 };
-                tradeSettings: RobotTradeSettings;
                 createdAt: string;
             }[] = await this.db.pg.many(sql`
             SELECT id, settings, trade_settings, created_at
             FROM robots;`);
 
-            for (const { id, settings, tradeSettings, createdAt } of robotsList) {
+            for (const { id, settings, createdAt } of robotsList) {
                 const strategySettings = settings.strategyParameters;
 
-                const robotSettings = {
-                    volume: settings.volume,
-                    requiredHistoryMaxBars: settings.requiredHistoryMaxBars
+                const robotSettings: RobotSettingsAssetStatic = {
+                    volumeType: RobotVolumeType.assetStatic,
+                    volume: settings.volume
                 };
 
                 await this.db.pg.query(sql`
@@ -63,18 +62,15 @@ export default class UtilsService extends HTTPService {
                     (robot_id, 
                     strategy_settings, 
                     robot_settings, 
-                    trade_settings, 
                     active_from) 
                     VALUES 
                     (${id},
                     ${sql.json(strategySettings)},
                     ${sql.json(robotSettings)},
-                    ${sql.json(tradeSettings)},
                     ${createdAt})
                     ON CONFLICT ON CONSTRAINT robot_settings_robot_id_active_from_key
                     DO UPDATE SET strategy_settings = excluded.strategy_settings,
-                                  robot_settings = excluded.robot_settings,
-                                  trade_settings = excluded.trade_settings;`);
+                                  robot_settings = excluded.robot_settings;`);
             }
         }
 
@@ -88,6 +84,10 @@ export default class UtilsService extends HTTPService {
             FROM user_signals;`);
 
             for (const { id, volume, subscribedAt } of userSignalsList) {
+                const userSignalSettings: RobotSettingsAssetStatic = {
+                    volumeType: RobotVolumeType.assetStatic,
+                    volume
+                };
                 await this.db.pg.query(sql`
                     INSERT INTO user_signal_settings 
                     (user_signal_id, 
@@ -95,7 +95,7 @@ export default class UtilsService extends HTTPService {
                     active_from) 
                     VALUES 
                     (${id},
-                    ${sql.json({ volume })},
+                    ${sql.json(userSignalSettings)},
                     ${subscribedAt})
                     ON CONFLICT ON CONSTRAINT user_signal_settings_user_signal_id_active_from_key
                     DO UPDATE SET signal_settings = excluded.signal_settings;`);
@@ -107,13 +107,12 @@ export default class UtilsService extends HTTPService {
                 id: string;
                 settings: { [key: string]: any };
                 createdAt: string;
-                tradeSettings: RobotTradeSettings;
             }[] = await this.db.pg.many(sql`
             SELECT ur.id, ur.settings, ur.created_at, r.trade_settings
             FROM user_robots ur, robots r
             WHERE ur.robot_id = r.id;`);
 
-            for (const { id, settings, tradeSettings, createdAt } of userRobotsList) {
+            for (const { id, settings, createdAt } of userRobotsList) {
                 await this.db.pg.query(sql`
                     INSERT INTO user_robot_settings 
                     (user_robot_id, 
@@ -123,11 +122,9 @@ export default class UtilsService extends HTTPService {
                     VALUES 
                     (${id},
                     ${sql.json(settings)},
-                    ${sql.json(tradeSettings)},
                     ${createdAt})
                     ON CONFLICT ON CONSTRAINT user_robot_settings_user_robot_id_active_from_key
-                    DO UPDATE SET user_robot_settings = excluded.user_robot_settings,
-                    trade_settings = excluded.trade_settings;`);
+                    DO UPDATE SET user_robot_settings = excluded.user_robot_settings;`);
             }
         }
 

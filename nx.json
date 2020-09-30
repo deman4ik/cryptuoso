@@ -1,148 +1,146 @@
 {
-  "npmScope": "cryptuoso",
-  "implicitDependencies": {
-    "workspace.json": "*",
-    "package.json": {
-      "dependencies": "*",
-      "devDependencies": "*"
+    "npmScope": "cryptuoso",
+    "implicitDependencies": {
+        "workspace.json": "*",
+        "package.json": {
+            "dependencies": "*",
+            "devDependencies": "*"
+        },
+        ".eslintrc": "*",
+        "nx.json": "*",
+        "tsconfig.base.json": "*"
     },
-    ".eslintrc": "*",
-    "nx.json": "*",
-    "tsconfig.base.json": "*"
-  },
-  "tasksRunnerOptions": {
-    "default": {
-      "runner": "@nrwl/workspace/tasks-runners/default",
-      "options": {
-        "cacheableOperations": [
-          "build",
-          "lint",
-          "test",
-          "e2e"
-        ]
-      }
+    "tasksRunnerOptions": {
+        "default": {
+            "runner": "@nrwl/workspace/tasks-runners/default",
+            "options": {
+                "cacheableOperations": ["build", "lint", "test", "e2e"]
+            }
+        }
+    },
+    "projects": {
+        "dayjs": {
+            "tags": []
+        },
+        "logger": {
+            "tags": []
+        },
+        "errors": {
+            "tags": []
+        },
+        "helpers": {
+            "tags": []
+        },
+        "ccxt-public": {
+            "tags": []
+        },
+        "service": {
+            "tags": []
+        },
+        "importer-runner": {
+            "tags": []
+        },
+        "importer-state": {
+            "tags": []
+        },
+        "postgres": {
+            "tags": []
+        },
+        "events": {
+            "tags": []
+        },
+        "importer-events": {
+            "tags": []
+        },
+        "importer-worker": {
+            "tags": []
+        },
+        "exwatcher-runner": {
+            "tags": []
+        },
+        "exwatcher-bitfinex": {
+            "tags": []
+        },
+        "exwatcher-kraken": {
+            "tags": []
+        },
+        "exwatcher-binance": {
+            "tags": []
+        },
+        "exwatcher-base": {
+            "tags": []
+        },
+        "market": {
+            "tags": []
+        },
+        "exwatcher-events": {
+            "tags": []
+        },
+        "backtester-runner": {
+            "tags": []
+        },
+        "backtester-worker": {
+            "tags": []
+        },
+        "backtester-state": {
+            "tags": []
+        },
+        "robot-state": {
+            "tags": []
+        },
+        "robot-indicators": {
+            "tags": []
+        },
+        "robot-events": {
+            "tags": []
+        },
+        "backtester-events": {
+            "tags": []
+        },
+        "stats-calc": {
+            "tags": []
+        },
+        "auth": {
+            "tags": []
+        },
+        "user-state": {
+            "tags": []
+        },
+        "mail": {
+            "tags": []
+        },
+        "stats-calc-worker": {
+            "tags": []
+        },
+        "stats-calc-runner": {
+            "tags": []
+        },
+        "stats-calc-events": {
+            "tags": []
+        },
+        "test-helpers": {
+            "tags": []
+        },
+        "utils": {
+            "tags": []
+        },
+        "events-manager": {
+            "tags": []
+        },
+        "user-signal-state": {
+            "tags": []
+        },
+        "user-robot-state": {
+            "tags": []
+        },
+        "user-profile": {
+            "tags": []
+        },
+        "robot-settings": {
+            "tags": []
+        }
+    },
+    "affected": {
+        "defaultBase": "master"
     }
-  },
-  "projects": {
-    "dayjs": {
-      "tags": []
-    },
-    "logger": {
-      "tags": []
-    },
-    "errors": {
-      "tags": []
-    },
-    "helpers": {
-      "tags": []
-    },
-    "ccxt-public": {
-      "tags": []
-    },
-    "service": {
-      "tags": []
-    },
-    "importer-runner": {
-      "tags": []
-    },
-    "importer-state": {
-      "tags": []
-    },
-    "postgres": {
-      "tags": []
-    },
-    "events": {
-      "tags": []
-    },
-    "importer-events": {
-      "tags": []
-    },
-    "importer-worker": {
-      "tags": []
-    },
-    "exwatcher-runner": {
-      "tags": []
-    },
-    "exwatcher-bitfinex": {
-      "tags": []
-    },
-    "exwatcher-kraken": {
-      "tags": []
-    },
-    "exwatcher-binance": {
-      "tags": []
-    },
-    "exwatcher-base": {
-      "tags": []
-    },
-    "market": {
-      "tags": []
-    },
-    "exwatcher-events": {
-      "tags": []
-    },
-    "backtester-runner": {
-      "tags": []
-    },
-    "backtester-worker": {
-      "tags": []
-    },
-    "backtester-state": {
-      "tags": []
-    },
-    "robot-state": {
-      "tags": []
-    },
-    "robot-indicators": {
-      "tags": []
-    },
-    "robot-events": {
-      "tags": []
-    },
-    "backtester-events": {
-      "tags": []
-    },
-    "stats-calc": {
-      "tags": []
-    },
-    "auth": {
-      "tags": []
-    },
-    "user-state": {
-      "tags": []
-    },
-    "mail": {
-      "tags": []
-    },
-    "stats-calc-worker": {
-      "tags": []
-    },
-    "stats-calc-runner": {
-      "tags": []
-    },
-    "stats-calc-events": {
-      "tags": []
-    },
-    "test-helpers": {
-      "tags": []
-    },
-    "utils": {
-      "tags": []
-    },
-    "events-manager": {
-      "tags": []
-    },
-    "user-signal-state": {
-      "tags": []
-    },
-    "user-robot-state": {
-      "tags": []
-    },
-    "user-profile": {
-      "tags": []
-    }
-  },
-  "affected": {
-    "defaultBase": "master"
-  }
 }

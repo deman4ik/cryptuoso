@@ -5,8 +5,9 @@ import { RobotWorkerEvents } from "@cryptuoso/robot-events";
 import { NewEvent } from "@cryptuoso/events";
 import { CANDLES_RECENT_AMOUNT, sortAsc } from "@cryptuoso/helpers";
 import { BaseStrategy } from "./BaseStrategy";
-import { RobotPositionState, RobotSettings, RobotState, RobotStatus, StrategyProps, StrategySettings } from "./types";
+import { RobotPositionState, RobotState, RobotStatus, StrategyProps, StrategySettings } from "./types";
 import logger from "@cryptuoso/logger";
+import { RobotSettings } from "@cryptuoso/robot-settings";
 
 export interface StrategyCode {
     [key: string]: any;
@@ -66,9 +67,9 @@ export class Robot {
         this._strategyName = state.strategyName;
 
         /* Настройки */
-        this._robotSettings = {
-            requiredHistoryMaxBars: state.robotSettings.requiredHistoryMaxBars || CANDLES_RECENT_AMOUNT,
-            volume: state.robotSettings.volume || 1
+        this._strategySettings = {
+            ...state.strategySettings,
+            requiredHistoryMaxBars: state.strategySettings.requiredHistoryMaxBars || CANDLES_RECENT_AMOUNT
         };
 
         this._strategySettings = state.strategySettings || {};
@@ -218,7 +219,7 @@ export class Robot {
     }
 
     get requiredHistoryMaxBars() {
-        return this._robotSettings.requiredHistoryMaxBars;
+        return this._strategySettings.requiredHistoryMaxBars;
     }
 
     get id() {
@@ -292,7 +293,6 @@ export class Robot {
         this._strategyInstance = new BaseStrategy({
             initialized: strategyState.initialized,
             strategySettings: this._strategySettings,
-            robotSettings: this._robotSettings,
             exchange: this._exchange,
             asset: this._asset,
             currency: this._currency,
@@ -518,7 +518,7 @@ export class Robot {
         if (!this._candles.find(({ time }) => time === candle.time)) {
             this._candles = [...this._candles, candle].sort((a, b) => sortAsc(a.time, b.time));
         }
-        this._candles = this._candles.slice(-this._robotSettings.requiredHistoryMaxBars);
+        this._candles = this._candles.slice(-this.requiredHistoryMaxBars);
         this._candle = candle;
         if (!this._lastCandle && this._candles.length > 1) this._lastCandle = this._candles[this._candles.length - 2];
         this._prepareCandles();
@@ -551,7 +551,6 @@ export class Robot {
 
     finalize() {
         this._lastCandle = this._candle;
-        // TODO: Send Candles.Handled Event
     }
 
     /**

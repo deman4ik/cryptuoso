@@ -42,7 +42,8 @@
             "@cryptuoso/stats-calc-events": ["libs/stats-calc-events/src/index.ts"],
             "@cryptuoso/test-helpers": ["libs/test-helpers/src/index.ts"],
             "@cryptuoso/user-signal-state": ["libs/user-signal-state/src/index.ts"],
-            "@cryptuoso/user-robot-state": ["libs/user-robot-state/src/index.ts"]
+            "@cryptuoso/user-robot-state": ["libs/user-robot-state/src/index.ts"],
+            "@cryptuoso/robot-settings": ["libs/robot-settings/src/index.ts"]
         }
     },
     "exclude": ["node_modules", "tmp"]

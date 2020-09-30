@@ -15,9 +15,10 @@ import {
     BacktesterWorkerCancel,
     BacktesterWorkerFailed
 } from "@cryptuoso/backtester-events";
-import { RobotSettings, RobotState, StrategySettings } from "@cryptuoso/robot-state";
+import { RobotState, StrategySettings } from "@cryptuoso/robot-state";
 import { Backtester, BacktesterState, Status } from "@cryptuoso/backtester-state";
 import { sql } from "@cryptuoso/postgres";
+import { RobotSettings } from "@cryptuoso/robot-settings";
 
 export type BacktesterRunnerServiceConfig = HTTPServiceConfig;
 
@@ -236,15 +237,15 @@ export default class BacktesterRunnerService extends HTTPService {
                 robotParams.currency,
                 robotParams.timeframe,
                 params.dateFrom,
-                robotSettings.requiredHistoryMaxBars
+                strategySettings.requiredHistoryMaxBars
             );
-            if (historyCandlesCount < robotSettings.requiredHistoryMaxBars)
+            if (historyCandlesCount < strategySettings.requiredHistoryMaxBars)
                 this.log.warn(
-                    `Backtester #${id} - Not enough history candles! Required: ${robotSettings.requiredHistoryMaxBars} bars but loaded: ${historyCandlesCount} bars`
+                    `Backtester #${id} - Not enough history candles! Required: ${strategySettings.requiredHistoryMaxBars} bars but loaded: ${historyCandlesCount} bars`
                 );
-            if (robotSettings.requiredHistoryMaxBars > 0 && historyCandlesCount === 0)
+            if (strategySettings.requiredHistoryMaxBars > 0 && historyCandlesCount === 0)
                 throw new Error(
-                    `Not enough history candles! Required: ${robotSettings.requiredHistoryMaxBars} bars but loaded: ${historyCandlesCount} bars`
+                    `Not enough history candles! Required: ${strategySettings.requiredHistoryMaxBars} bars but loaded: ${historyCandlesCount} bars`
                 );
 
             const backtester = new Backtester({
