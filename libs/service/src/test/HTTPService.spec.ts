@@ -441,8 +441,7 @@ describe("Test 'BaseService' class", () => {
                         const rightResponse = { success: true };
                         const userId = "user-id";
                         const userRole = "user-role";
-                        const errorResponse = new ActionsHandlerError("User blocked", null, "FORBIDDEN", 403)
-                            .response;
+                        const errorResponse = new ActionsHandlerError("User blocked", null, "FORBIDDEN", 403).response;
 
                         createServiceRoute(httpService, routeName, rightResponse, [userRole], true);
                         mockRedis.get.mockImplementation(async () =>
@@ -476,8 +475,7 @@ describe("Test 'BaseService' class", () => {
                         const userId = "user-id";
                         const userRole = "user-role";
                         const routeRole = "route-role";
-                        const errorResponse = new ActionsHandlerError("Invalid role", null, "FORBIDDEN", 403)
-                            .response;
+                        const errorResponse = new ActionsHandlerError("Invalid role", null, "FORBIDDEN", 403).response;
 
                         createServiceRoute(httpService, routeName, rightResponse, [routeRole], true);
                         mockRedis.get.mockImplementation(async () =>
@@ -509,8 +507,7 @@ describe("Test 'BaseService' class", () => {
                         const rightResponse = { success: true };
                         const userId = "user-id";
                         const routeRole = "route-role";
-                        const errorResponse = new ActionsHandlerError("Invalid role", null, "FORBIDDEN", 403)
-                            .response;
+                        const errorResponse = new ActionsHandlerError("Invalid role", null, "FORBIDDEN", 403).response;
 
                         createServiceRoute(httpService, routeName, rightResponse, [routeRole], true);
                         mockRedis.get.mockImplementation(async () =>
@@ -542,8 +539,7 @@ describe("Test 'BaseService' class", () => {
                         const rightResponse = { success: true };
                         const userId = "user-id";
                         const routeRole = "route-role";
-                        const errorResponse = new ActionsHandlerError("Invalid role", null, "FORBIDDEN", 403)
-                            .response;
+                        const errorResponse = new ActionsHandlerError("Invalid role", null, "FORBIDDEN", 403).response;
 
                         createServiceRoute(httpService, routeName, rightResponse, [routeRole], false);
                         mockRedis.get.mockClear();
