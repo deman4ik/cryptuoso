@@ -12,10 +12,6 @@ const config: BacktesterState = {
     dateFrom: dayjs.utc("2017-01-01 00:00").toISOString(),
     dateTo: dayjs.utc("2017-01-30 00:00").toISOString(),
     settings: {},
-    robotSettings: {
-        volume: 1,
-        requiredHistoryMaxBars: 300
-    },
     status: Status.queued
 };
 
@@ -31,7 +27,6 @@ describe("Test 'Backtester' Class", () => {
                 currency: "USD",
                 timeframe: 1440,
                 strategyName: "parabolic",
-                strategySettings: undefined,
                 dateFrom: "2017-01-01T00:00:00.000Z",
                 dateTo: "2017-01-30T00:00:00.000Z",
                 settings: {
@@ -41,10 +36,8 @@ describe("Test 'Backtester' Class", () => {
                     savePositions: true,
                     saveLogs: false
                 },
-                robotSettings: {
-                    requiredHistoryMaxBars: 300,
-                    volume: 1
-                },
+                strategySettings: undefined,
+                robotSettings: undefined,
                 totalBars: 0,
                 processedBars: 0,
                 leftBars: 0,
@@ -52,7 +45,7 @@ describe("Test 'Backtester' Class", () => {
                 status: "queued",
                 startedAt: null,
                 finishedAt: null,
-                statistics: undefined,
+                robotState: null,
                 error: null
             });
         });

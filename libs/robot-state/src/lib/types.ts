@@ -9,6 +9,7 @@ import {
     TradeAction,
     ValidTimeframe
 } from "@cryptuoso/market";
+import { RobotSettings } from "@cryptuoso/robot-settings";
 import { IndicatorState } from "@cryptuoso/robot-indicators";
 
 export const enum RobotStatus {
@@ -21,31 +22,9 @@ export const enum RobotStatus {
     failed = "failed"
 }
 
-export interface RobotTradeSettings {
-    orderTimeout: number;
-    slippage?: {
-        entry?: {
-            stepPercent: number;
-            count?: number;
-        };
-        exit?: {
-            stepPercent: number;
-            count?: number;
-        };
-    };
-    deviation?: {
-        entry?: number;
-        exit?: number;
-    };
-}
-
 export interface StrategySettings {
     [key: string]: number | string;
-}
-
-export interface RobotSettings {
-    volume: number;
-    requiredHistoryMaxBars: number;
+    requiredHistoryMaxBars?: number;
 }
 
 export interface StrategyProps {
@@ -104,7 +83,6 @@ export interface RobotState {
     strategyName: string;
     strategySettings: StrategySettings;
     robotSettings: RobotSettings;
-    tradeSettings?: RobotTradeSettings;
     lastCandle?: DBCandle;
     state?: StrategyProps;
     hasAlerts?: boolean;

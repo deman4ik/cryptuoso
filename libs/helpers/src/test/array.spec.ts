@@ -78,7 +78,7 @@ describe("array utils test", () => {
                 expect(chunkNumberToArray(40, 10)).toStrictEqual([10, 10, 10, 10]);
                 expect(chunkNumberToArray(45, 25)).toStrictEqual([25, 20]);
                 expect(chunkNumberToArray(15.5, 3)).toStrictEqual([3, 3, 3, 3, 3, 1]);
-                expect(chunkNumberToArray(16, 3.9)).toStrictEqual([3, 3, 3, 3, 3, 1]);
+                expect(chunkNumberToArray(16, 3.9)).toStrictEqual([3, 4, 4, 4, 1]);
             });
         });
     });

@@ -1,11 +1,4 @@
-import {
-    RobotSettings,
-    Robot,
-    StrategyCode,
-    StrategySettings,
-    RobotPositionState,
-    StrategyProps
-} from "@cryptuoso/robot-state";
+import { Robot, StrategyCode, StrategySettings, RobotPositionState, StrategyProps } from "@cryptuoso/robot-state";
 import { ValidTimeframe, Candle, SignalEvent, DBCandle } from "@cryptuoso/market";
 import dayjs from "@cryptuoso/dayjs";
 import { round, defaultValue } from "@cryptuoso/helpers";
@@ -13,6 +6,7 @@ import logger from "@cryptuoso/logger";
 import { IndicatorCode } from "@cryptuoso/robot-indicators";
 import { v4 as uuid } from "uuid";
 import { calcStatistics, TradeStats } from "@cryptuoso/stats-calc";
+import { RobotSettings } from "@cryptuoso/robot-settings";
 
 export const enum Status {
     queued = "queued",

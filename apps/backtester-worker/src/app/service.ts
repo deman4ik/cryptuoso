@@ -18,6 +18,7 @@ import { IndicatorCode } from "@cryptuoso/robot-indicators";
 import { ValidTimeframe, Candle, DBCandle } from "@cryptuoso/market";
 import { sortAsc, sleep, chunkArray } from "@cryptuoso/helpers";
 import { makeChunksGenerator, pg, pgUtil, sql } from "@cryptuoso/postgres";
+import { RobotVolumeType } from "@cryptuoso/robot-settings";
 
 export type BacktesterWorkerServiceConfig = BaseServiceConfig;
 
@@ -435,6 +436,10 @@ export default class BacktesterWorkerService extends BaseService {
                     await backtester.handleCandle(candle);
                     backtester.incrementProgress();
                 })
+                .catch((err: Error) => {
+                    this.log.error(`Backtester #${backtester.id} - Error`, err.message);
+                    throw new BaseError(err.message, err);
+                })
                 .whenEnd();
 
             for (const [id, robot] of Object.entries(backtester.robots)) {
@@ -459,8 +464,7 @@ export default class BacktesterWorkerService extends BaseService {
                 //this.log.info("stats", robot.data.stats);
             }
         } catch (err) {
-            this.log.error(`Backtester #${backtester.id} - Failed`, err.message);
-            console.error(err);
+            this.log.error(`Backtester #${backtester.id} - Failed`, err);
             throw err;
         }
     }
@@ -490,12 +494,13 @@ export default class BacktesterWorkerService extends BaseService {
                             adxHigh: 30,
                             lookback: 10,
                             adxPeriod: 25,
-                            trailBars: 1
+                            trailBars: 1,
+                            requiredHistoryMaxBars: 300
                         }
                     },
                     robotSettings: {
-                        volume: 0.002,
-                        requiredHistoryMaxBars: 300
+                        volumeType: RobotVolumeType.assetStatic,
+                        volume: 0.002
                     },
                     dateFrom: "2020-09-27T00:00:00.000Z",
                     dateTo: "2020-09-27T03:15:00.000Z",

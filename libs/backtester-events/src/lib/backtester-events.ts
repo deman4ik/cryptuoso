@@ -1,7 +1,8 @@
 import { ISO_DATE_REGEX, CANDLES_RECENT_AMOUNT } from "@cryptuoso/helpers";
 import { Timeframe, ValidTimeframe } from "@cryptuoso/market";
 import { Status, BacktesterSettings } from "@cryptuoso/backtester-state";
-import { RobotSettings, StrategySettings } from "@cryptuoso/robot-state";
+import { StrategySettings } from "@cryptuoso/robot-state";
+import { RobotSettings } from "@cryptuoso/robot-settings";
 
 export const enum BacktesterRunnerEvents {
     START = "in-backtester-runner.start",

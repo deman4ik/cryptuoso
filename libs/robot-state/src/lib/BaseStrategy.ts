@@ -16,11 +16,10 @@ import { IndicatorState, IndicatorType } from "@cryptuoso/robot-indicators";
 import { NewEvent } from "@cryptuoso/events";
 import { RobotWorkerEvents, Signal } from "@cryptuoso/robot-events";
 import logger from "@cryptuoso/logger";
-import { RobotPositionState, RobotSettings, StrategyProps, StrategySettings } from "./types";
+import { RobotPositionState, StrategyProps, StrategySettings } from "./types";
 
 export interface StrategyState extends StrategyProps {
     strategySettings: StrategySettings;
-    robotSettings: RobotSettings;
     exchange: string;
     asset: string;
     currency: string;
@@ -34,8 +33,7 @@ export interface StrategyState extends StrategyProps {
 export class BaseStrategy {
     [key: string]: any;
     _initialized: boolean;
-    _strategySettings: { [key: string]: number | string };
-    _robotSettings: RobotSettings;
+    _strategySettings: StrategySettings;
     _exchange: string;
     _asset: string;
     _currency: string;
@@ -60,7 +58,6 @@ export class BaseStrategy {
     constructor(state: StrategyState) {
         this._initialized = state.initialized || false; // стратегия инициализирована
         this._strategySettings = state.strategySettings || {};
-        this._robotSettings = state.robotSettings;
         this._exchange = state.exchange;
         this._asset = state.asset;
         this._currency = state.currency;

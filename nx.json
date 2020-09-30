@@ -132,6 +132,9 @@
         },
         "user-robot-state": {
             "tags": []
+        },
+        "robot-settings": {
+            "tags": []
         }
     },
     "affected": {
