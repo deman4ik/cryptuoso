@@ -373,7 +373,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     WHERE id = ${prevRobotsAggrStats.id};
                 `);
 
-                return;
+                return false;
             }
         }
 
@@ -470,7 +470,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     WHERE id = ${prevUsersRobotsAggrStats.id};
                 `);
 
-                return;
+                return false;
             }
         }
 
@@ -682,7 +682,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     WHERE id = ${prevUserAggrStats.id};
                 `);
 
-                return;
+                return false;
             }
         }
 
@@ -855,7 +855,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     WHERE id = ${prevUserAggrStats.id};
                 `);
 
-                return;
+                return false;
             }
         }
 
