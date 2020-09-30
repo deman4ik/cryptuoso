@@ -1,14 +1,12 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
-//import { spawn, Pool, Worker as ThreadsWorker } from "threads";
 import { Request, Response, Protocol } from "restana";
-import Cookie from "cookie";
+import Cookie, { CookieSerializeOptions } from "cookie";
 import { User, UserStatus, UserRoles } from "@cryptuoso/user-state";
 import { DBFunctions } from "./types";
 import { Auth } from "./auth";
 import { sql } from "slonik";
 import dayjs from "@cryptuoso/dayjs";
 import { ActionsHandlerError } from "@cryptuoso/errors";
-//import { BcryptUtils } from "./bcryptWorker";
 
 interface HttpRequest extends Request<Protocol.HTTP> {
     body: any;
@@ -34,21 +32,11 @@ export default class AuthService extends HTTPService {
         confirmChangeUserEmail: this._dbConfirmChangeUserEmail.bind(this),
         activateUser: this._dbActivateUser.bind(this)
     };
-    /*bcrypt: Bcrypt = {
-        compare: this._bcryptCompare.bind(this),
-        hash: this._bcryptHash.bind(this)
-    };
-     pool: Pool<any>;*/
 
     constructor(config?: AuthServiceConfig) {
         super(config);
         try {
-            this.auth = new Auth(
-                this.dbFunctions //this.bcrypt
-            );
-            /*
-          this.addOnStartHandler(this.onStartService);
-            this.addOnStopHandler(this.onStopService);*/
+            this.auth = new Auth(this.dbFunctions);
             this.createRoutes({
                 login: {
                     handler: this.login.bind(this),
@@ -148,29 +136,22 @@ export default class AuthService extends HTTPService {
         }
     }
 
-    /* async onStartService(): Promise<void> {
-        this.pool = Pool(() => spawn<BcryptUtils>(new ThreadsWorker("./bcryptWorker")), {
-            name: "bcrypt-utils"
-        });
+    _makeCookieProps(expires: string | number): CookieSerializeOptions {
+        return {
+            expires: new Date(expires),
+            httpOnly: true,
+            sameSite: this.isDev ? "none" : "lax",
+            domain: this.isDev ? undefined : ".cryptuoso.com",
+            secure: this.isDev ? false : true
+        };
     }
-
-    async onStopService(): Promise<void> {
-        await this.pool.terminate();
-    }*/
-
     async login(req: HttpRequest, res: HttpResponse) {
         try {
             const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.login(req.body.input);
 
             res.setHeader(
                 "Set-Cookie",
-                Cookie.serialize("refresh_token", refreshToken, {
-                    expires: new Date(refreshTokenExpireAt),
-                    httpOnly: true,
-                    sameSite: "lax",
-                    domain: ".cryptuoso.com",
-                    secure: true
-                })
+                Cookie.serialize("refresh_token", refreshToken, this._makeCookieProps(refreshTokenExpireAt))
             );
             res.send({
                 accessToken
@@ -187,13 +168,7 @@ export default class AuthService extends HTTPService {
 
         res.setHeader(
             "Set-Cookie",
-            Cookie.serialize("refresh_token", refreshToken, {
-                expires: new Date(refreshTokenExpireAt),
-                httpOnly: true,
-                sameSite: "lax",
-                domain: ".cryptuoso.com",
-                secure: true
-            })
+            Cookie.serialize("refresh_token", refreshToken, this._makeCookieProps(refreshTokenExpireAt))
         );
         res.send({
             accessToken
@@ -202,16 +177,7 @@ export default class AuthService extends HTTPService {
     }
 
     async logout(req: HttpRequest, res: HttpResponse) {
-        res.setHeader(
-            "Set-Cookie",
-            Cookie.serialize("refresh_token", "", {
-                expires: new Date(0),
-                httpOnly: true,
-                sameSite: "lax",
-                domain: ".cryptuoso.com",
-                secure: true
-            })
-        );
+        res.setHeader("Set-Cookie", Cookie.serialize("refresh_token", "", this._makeCookieProps(0)));
         res.send({ result: "OK" });
         res.end();
     }
@@ -242,13 +208,7 @@ export default class AuthService extends HTTPService {
 
         res.setHeader(
             "Set-Cookie",
-            Cookie.serialize("refresh_token", refreshToken, {
-                expires: new Date(refreshTokenExpireAt),
-                httpOnly: true,
-                sameSite: "lax",
-                domain: ".cryptuoso.com",
-                secure: true
-            })
+            Cookie.serialize("refresh_token", refreshToken, this._makeCookieProps(refreshTokenExpireAt))
         );
         res.send({
             accessToken,
@@ -263,13 +223,7 @@ export default class AuthService extends HTTPService {
 
         res.setHeader(
             "Set-Cookie",
-            Cookie.serialize("refresh_token", refreshToken, {
-                expires: new Date(refreshTokenExpireAt),
-                httpOnly: true,
-                sameSite: "lax",
-                domain: ".cryptuoso.com",
-                secure: true
-            })
+            Cookie.serialize("refresh_token", refreshToken, this._makeCookieProps(refreshTokenExpireAt))
         );
         res.send({
             accessToken
@@ -290,13 +244,7 @@ export default class AuthService extends HTTPService {
 
         res.setHeader(
             "Set-Cookie",
-            Cookie.serialize("refresh_token", refreshToken, {
-                expires: new Date(refreshTokenExpireAt),
-                httpOnly: true,
-                sameSite: "lax",
-                domain: ".cryptuoso.com",
-                secure: true
-            })
+            Cookie.serialize("refresh_token", refreshToken, this._makeCookieProps(refreshTokenExpireAt))
         );
         res.send({
             accessToken
@@ -305,7 +253,7 @@ export default class AuthService extends HTTPService {
     }
 
     async changeEmail(req: HttpRequest, res: HttpResponse) {
-        /* const response =  */ await this.auth.changeEmail({
+        await this.auth.changeEmail({
             userId: req.body.session_variables["x-hasura-user-id"],
             email: req.body.input.email
         });
@@ -321,13 +269,7 @@ export default class AuthService extends HTTPService {
 
         res.setHeader(
             "Set-Cookie",
-            Cookie.serialize("refresh_token", refreshToken, {
-                expires: new Date(refreshTokenExpireAt),
-                httpOnly: true,
-                sameSite: "lax",
-                domain: ".cryptuoso.com",
-                secure: true
-            })
+            Cookie.serialize("refresh_token", refreshToken, this._makeCookieProps(refreshTokenExpireAt))
         );
         res.send({
             accessToken
@@ -528,13 +470,4 @@ export default class AuthService extends HTTPService {
             WHERE id = ${userId};
         `);
     }
-    /*
-    private async _bcryptCompare(data: any, encrypted: string): Promise<boolean> {
-        return this.pool.queue(async (utils: BcryptUtils) => utils.compare(data, encrypted));
-    }
-
-    private async _bcryptHash(data: any, saltOrRounds: string | number): Promise<string> {
-        return this.pool.queue(async (utils: BcryptUtils) => utils.hash(data, saltOrRounds));
-    }
-    */
 }

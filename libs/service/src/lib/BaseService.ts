@@ -207,4 +207,8 @@ export class BaseService {
     get lightship() {
         return this.#lightship;
     }
+
+    get isDev() {
+        return this.#name.includes("-dev");
+    }
 }
