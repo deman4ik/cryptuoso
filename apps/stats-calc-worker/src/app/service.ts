@@ -358,7 +358,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
         `);
 
-        if(prevRobotsAggrStats) {
+        if (prevRobotsAggrStats) {
             const countOfRobots = +(await this.db.pg.oneFirst(sql`
                 SELECT COUNT(*)
                 FROM robots
@@ -366,7 +366,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     ${!asset ? sql`` : sql`AND asset = ${asset}`};
             `));
 
-            if(countOfRobots === 0) {
+            if (countOfRobots === 0) {
                 await this.db.pg.query(sql`
                     DELETE
                     FROM robot_aggr_stats
@@ -453,7 +453,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
         `);
 
-        if(prevUsersRobotsAggrStats) {
+        if (prevUsersRobotsAggrStats) {
             const countOfUsersRobots = +(await this.db.pg.oneFirst(sql`
                 SELECT COUNT(*)
                 FROM user_robots ur,
@@ -463,7 +463,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     ${!asset ? sql`` : sql`AND r.asset = ${asset}`};
             `));
 
-            if(countOfUsersRobots === 0) {
+            if (countOfUsersRobots === 0) {
                 await this.db.pg.query(sql`
                     DELETE
                     FROM user_robot_aggr_stats
@@ -664,7 +664,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
         `);
 
-        if(prevUserAggrStats) {
+        if (prevUserAggrStats) {
             const countOfSignals = +(await this.db.pg.oneFirst(sql`
                 SELECT COUNT(*)
                 FROM user_signals us,
@@ -675,7 +675,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     ${!asset ? sql`` : sql`AND r.asset = ${asset}`};
             `));
 
-            if(countOfSignals === 0) {
+            if (countOfSignals === 0) {
                 await this.db.pg.query(sql`
                     DELETE
                     FROM user_aggr_stats
@@ -837,7 +837,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
         `);
 
-        if(prevUserAggrStats) {
+        if (prevUserAggrStats) {
             const countOfUserRobots = +(await this.db.pg.oneFirst(sql`
                 SELECT COUNT(*)
                 FROM user_robots ur,
@@ -848,7 +848,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     ${!asset ? sql`` : sql`AND r.asset = ${asset}`};
             `));
 
-            if(countOfUserRobots === 0) {
+            if (countOfUserRobots === 0) {
                 await this.db.pg.query(sql`
                     DELETE
                     FROM user_aggr_stats
@@ -860,7 +860,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         }
 
         const { calcFrom, initStats } = getCalcFromAndInitStats(prevUserAggrStats, calcAll);
-        
+
         const conditionExchange = !exchange ? sql`` : sql`AND exchange = ${exchange}`;
         const conditionAsset = !asset ? sql`` : sql`AND asset = ${asset}`;
         const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
