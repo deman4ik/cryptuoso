@@ -165,62 +165,66 @@ export default class UserProfileService extends HTTPService {
 
         const { exchange, asset, currency, available } = robot;
 
-        const isSignalExists = new Boolean(
-            +(await this.db.pg.oneFirst(sql`
+        const isSignalExists = 0 < +(await this.db.pg.oneFirst(sql`
             SELECT COUNT(*)
             FROM user_signals
             WHERE user_id = ${user.id}
                 AND robot_id = ${robotId};
-        `))
-        );
+        `));
 
         if (isSignalExists) return;
 
-        if (available < user.access) throw new ActionsHandlerError("Robot unavailable", { robotId }, "FORBIDDEN", 403);
+        if (available < user.access) throw new ActionsHandlerError("Robot unavailable.", { robotId }, "FORBIDDEN", 403);
 
-        const market: Market = await this.db.pg.maybeOne(sql`
-            SELECT *
+        const marketLimits: Market["limits"] = await this.db.pg.maybeOneFirst(sql`
+            SELECT limits
             FROM markets
-            WHERE exchange ${exchange ? sql`= ${exchange}` : sql`IS NULL`}
-                AND asset ${asset ? sql`= ${asset}` : sql`IS NULL`}
-                AND currency ${currency ? sql`= ${currency}` : sql`IS NULL`};
-        `);
+            WHERE exchange = ${exchange}
+                AND asset = ${asset}
+                AND currency = ${currency};
+        `) as any;
 
-        if (volume < market.limits.amount.min)
+        if(!marketLimits?.amount) throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
+
+        const { amount } = marketLimits;
+
+        if (volume < amount.min)
             throw new ActionsHandlerError(
-                `Wrong volume! Value must be more than ${market.limits.amount.min}`,
+                `Wrong volume! Value must be at least ${amount.min}.`,
                 null,
                 "FORBIDDEN",
                 403
             );
 
-        if (volume > market.limits.amount.max)
+        if (volume > amount.max)
             throw new ActionsHandlerError(
-                `Wrong volume! Value must be less than ${market.limits.amount.max}`,
+                `Wrong volume! Value must be not greater than ${amount.max}.`,
                 null,
                 "FORBIDDEN",
                 403
             );
 
         const userSignalId = uuid();
+        const subscribedAt = dayjs.utc().toISOString();
 
         await this.db.pg.query(sql`
-            INSERT INTO user_signals(
-                id, robot_id, user_id, volume, subscribed_at
-            ) VALUES (
-                ${userSignalId},
-                ${robotId},
-                ${user.id},
-                ${volume},
-                ${dayjs.utc().toISOString()}
-            );
-
+        INSERT INTO user_signals(
+            id, robot_id, user_id, volume, subscribed_at
+        ) VALUES (
+            ${userSignalId},
+            ${robotId},
+            ${user.id},
+            ${volume},
+            ${subscribedAt}
+        );
+    `);
+        await this.db.pg.query(sql`
             INSERT INTO user_signal_settings(
-                user_signal_id, volume, active_from
+                user_signal_id, user_signal_settings, active_from
             ) VALUES (
                 ${userSignalId},
                 ${sql.json({ volume })},
-                ${dayjs.utc().toISOString()}
+                ${subscribedAt}
             );
         `);
 
@@ -248,15 +252,46 @@ export default class UserProfileService extends HTTPService {
         if (userSignalSettings?.volume === volume)
             throw new ActionsHandlerError("This volume value is already set.", null, "FORBIDDEN", 403);
 
+        const marketLimits: Market["limits"] = await this.db.pg.maybeOneFirst(sql`
+            SELECT m.limits
+            FROM robots r, markets m
+            WHERE r.id = ${robotId}
+                AND m.exchange = r.exchange
+                AND m.asset = r.asset
+                AND m.currency = r.currency;
+        `) as any;
+
+        if(!marketLimits?.amount) throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
+
+        const { amount } = marketLimits;
+
+        if (volume < amount.min)
+            throw new ActionsHandlerError(
+                `Wrong volume! Value must be at least ${amount.min}.`,
+                null,
+                "FORBIDDEN",
+                403
+            );
+
+        if (volume > amount.max)
+            throw new ActionsHandlerError(
+                `Wrong volume! Value must be not greater than ${amount.max}.`,
+                null,
+                "FORBIDDEN",
+                403
+            );
+
         const newUserSignalSettings = { ...userSignalSettings, volume };
 
         await this.db.pg.query(sql`
             UPDATE user_signals
             SET volume = ${volume}
             WHERE id = ${userSignal.id};
-
+        `);
+        
+        await this.db.pg.query(sql`
             INSERT INTO user_signal_settings(
-                user_signal_id, volume, active_from
+                user_signal_id, user_signal_settings, active_from
             ) VALUES (
                 ${userSignal.id},
                 ${sql.json(newUserSignalSettings)},
@@ -282,6 +317,7 @@ export default class UserProfileService extends HTTPService {
         `);
 
         // TODO: think about other way to update this user signals aggr. statistics
+        // (+ deleting unusable statistics)
         await this.events.emit({
             type: StatsCalcRunnerEvents.USER_SIGNALS,
             data: {
