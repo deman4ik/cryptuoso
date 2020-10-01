@@ -27,7 +27,7 @@ export interface Market {
     asset: string;
     currency: string;
     precision: { base: number; quote: number; amount: number; price: number };
-    limits: { amount: MinMax; price: MinMax; cost?: MinMax };
+    limits: { amount: MinMax; amountCurrency: MinMax; price: MinMax; cost?: MinMax };
     averageFee: number;
     loadFrom: string;
 }
@@ -107,12 +107,20 @@ export class PublicConnector {
                 );
                 if (firstCandle) loadFrom = dayjs.utc(firstCandle.timestamp).add(1, "day").startOf("day").toISOString();
             }
+            const currentPrice = await this.getCurrentPrice(exchange, asset, currency);
+
             return {
                 exchange,
                 asset,
                 currency,
                 loadFrom,
-                limits: response.limits,
+                limits: {
+                    ...response.limits,
+                    amountCurrency: {
+                        min: currentPrice?.price * response.limits?.amount.min,
+                        max: currentPrice?.price * response.limits?.amount.max
+                    }
+                },
                 precision: response.precision,
                 averageFee: response.taker
             };

@@ -39,7 +39,7 @@ interface RedisConsumerInfo {
     idle: number;
 }
 
-enum JobTypes {
+const enum JobTypes {
     clearStreams = "clearStreams"
 }
 

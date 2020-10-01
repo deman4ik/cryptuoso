@@ -9,15 +9,19 @@ import {
 } from "@cryptuoso/exwatcher-events";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { sql } from "slonik";
-import cron from "node-cron";
+import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
 export type ExwatcherRunnerServiceConfig = HTTPServiceConfig;
 
+const enum JobTypes {
+    updateMarkets = "updateMarkets"
+}
+
 export default class ExwatcherRunnerService extends HTTPService {
     connector: PublicConnector;
-    cronUpdateMarkets: cron.ScheduledTask = cron.schedule("0 0 */12 * * *", this.updateMarkets.bind(this), {
-        scheduled: false
-    });
+    queueScheduler: QueueScheduler;
+    queues: { [key: string]: Queue };
+    workers: { [key: string]: Worker };
     constructor(config?: ExwatcherRunnerServiceConfig) {
         super(config);
         this.connector = new PublicConnector();
@@ -45,6 +49,11 @@ export default class ExwatcherRunnerService extends HTTPService {
                 auth: true,
                 roles: ["manager", "admin"],
                 handler: this.addMarket
+            },
+            updateMarkets: {
+                auth: true,
+                roles: ["manager", "admin"],
+                handler: this.updateMarketsHTTPHandler
             }
         });
         this.addOnStartHandler(this.onStartService);
@@ -52,12 +61,32 @@ export default class ExwatcherRunnerService extends HTTPService {
     }
 
     async onStartService() {
-        this.cronUpdateMarkets.start();
+        const queueKey = this.name;
+
+        this.queueScheduler = new QueueScheduler(queueKey, { connection: this.redis });
+        this.queues = {
+            [queueKey]: new Queue(queueKey, { connection: this.redis })
+        };
+        this.workers = {
+            [queueKey]: new Worker(queueKey, this.updateMarkets.bind(this))
+        };
+
+        await this.queues[queueKey].add(JobTypes.updateMarkets, null, {
+            repeat: {
+                cron: "0 0 */12 * * *"
+            },
+            attempts: 3,
+            backoff: { type: "exponential", delay: 60000 }
+        });
     }
 
     async onStopService() {
         try {
-            this.cronUpdateMarkets.stop();
+            const queueKey = this.name;
+
+            await this.queueScheduler.close();
+            await this.queues[queueKey]?.close();
+            await this.workers[queueKey]?.close();
         } catch (e) {
             this.log.error(e);
         }
@@ -165,16 +194,23 @@ export default class ExwatcherRunnerService extends HTTPService {
         }
     }
 
+    async updateMarketsHTTPHandler(req: any, res: any) {
+        await this.updateMarkets();
+        res.send({ result: "OK" });
+        res.end();
+    }
+
     async updateMarkets() {
         try {
             const markets: { exchange: string; asset: string; currency: string }[] = await this.db.pg.any(
-                sql`SELECT exchange, asset, currency FROM markets where available > 5;`
+                sql`SELECT exchange, asset, currency FROM markets where available >= 5;`
             );
             this.log.info(
                 `Updating ${markets
                     .map(({ exchange, asset, currency }) => `${exchange}.${asset}.${currency}`)
                     .join(", ")} markets`
             );
+            const errors: { exchange: string; asset: string; currency: string; error: string }[] = [];
             for (const market of markets) {
                 try {
                     await this.updateMarket(market);
@@ -183,10 +219,21 @@ export default class ExwatcherRunnerService extends HTTPService {
                         `Failed to update market ${market.exchange}.${market.asset}.${market.currency}`,
                         error
                     );
+                    errors.push({ ...market, error: error.message });
                 }
+            }
+            if (errors.length > 0) {
+                await this.events.emit({
+                    type: `errors.${this.name}.updateMarkets`,
+                    data: {
+                        errors
+                    }
+                });
+                throw new Error(`Failed to update ${errors.length} markets of ${markets}`);
             }
         } catch (error) {
             this.log.error("Failed to update markets", error);
+            throw error;
         }
     }
 
