@@ -111,7 +111,7 @@ describe("", () => {
             const eventHandler = jest.fn();
 
             events.subscribe({
-                [StatsCalcRunnerEvents.USER_SIGNALS]: {
+                [StatsCalcRunnerEvents.USER_SIGNAL_DELETED]: {
                     handler: eventHandler
                 }
             });
@@ -131,7 +131,7 @@ describe("", () => {
             await sleep(3000);
 
             expect(res.parsedBody.result).toBe("OK");
-            expect(eventHandler).toBeCalledWith({ userId, calcAll: true });
+            expect(eventHandler).toBeCalledWith({ userId, robotId });
             expect(await getUserSignal()).toBeNull();
             expect(await getLastUserSignalSettings()).toBeNull();
         });
