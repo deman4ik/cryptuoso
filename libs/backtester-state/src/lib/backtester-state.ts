@@ -4,7 +4,6 @@ import dayjs from "@cryptuoso/dayjs";
 import { round, defaultValue } from "@cryptuoso/helpers";
 import logger from "@cryptuoso/logger";
 import { IndicatorCode } from "@cryptuoso/robot-indicators";
-import { v4 as uuid } from "uuid";
 import { calcStatistics, TradeStats } from "@cryptuoso/stats-calc";
 import { RobotSettings } from "@cryptuoso/robot-settings";
 

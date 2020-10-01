@@ -1,5 +1,5 @@
-import { HTTPService, HTTPServiceConfig, RequestExtended, UserExtended } from "@cryptuoso/service";
-import { /* User,  */ UserRoles } from "@cryptuoso/user-state";
+import { HTTPService, HTTPServiceConfig, RequestExtended } from "@cryptuoso/service";
+import { /* User,  */ User, UserRoles } from "@cryptuoso/user-state";
 import { UserSignalState /* , UserSignalSettings */ } from "@cryptuoso/user-signal-state";
 import { RobotState } from "@cryptuoso/robot-state";
 import { Market } from "@cryptuoso/market";
@@ -85,7 +85,7 @@ export default class UserProfileService extends HTTPService {
     }
 
     async _httpHandler(
-        handler: (user: UserExtended, params: SomeObject) => Promise<SomeObject>,
+        handler: (user: User, params: SomeObject) => Promise<SomeObject>,
         req: RequestExtended,
         res: any
     ) {
@@ -96,7 +96,7 @@ export default class UserProfileService extends HTTPService {
     }
 
     async setNotificationSettings(
-        user: UserExtended,
+        user: User,
         {
             signalsTelegram,
             signalsEmail,
@@ -146,7 +146,7 @@ export default class UserProfileService extends HTTPService {
         return newSettings;
     }
 
-    async changeName(user: UserExtended, { name }: { name: string }) {
+    async changeName(user: User, { name }: { name: string }) {
         await this.db.pg.query(sql`
             UPDATE users
             SET name = ${name}
@@ -154,7 +154,7 @@ export default class UserProfileService extends HTTPService {
         `);
     }
 
-    async userSignalSubscribe(user: UserExtended, { robotId, volume }: { robotId: string; volume: number }) {
+    async userSignalSubscribe(user: User, { robotId, volume }: { robotId: string; volume: number }) {
         const robot: RobotState = await this.db.pg.maybeOne(sql`
             SELECT exchange, asset, currency, available
             FROM robots
@@ -233,7 +233,7 @@ export default class UserProfileService extends HTTPService {
         // TODO: initialize statistics or do nothing
     }
 
-    async userSignalEdit(user: UserExtended, { robotId, volume }: { robotId: string; volume: number }) {
+    async userSignalEdit(user: User, { robotId, volume }: { robotId: string; volume: number }) {
         const userSignal: UserSignalState = await this.db.pg.maybeOne(sql`
             SELECT id
             FROM user_signals
@@ -302,7 +302,7 @@ export default class UserProfileService extends HTTPService {
         `);
     }
 
-    async userSignalUnsubscribe(user: UserExtended, { robotId }: { robotId: string }) {
+    async userSignalUnsubscribe(user: User, { robotId }: { robotId: string }) {
         const userSignal: UserSignalState = await this.db.pg.maybeOne(sql`
             SELECT id
             FROM user_signals

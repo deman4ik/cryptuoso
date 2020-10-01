@@ -80,7 +80,7 @@ jest.mock("threads", () => ({
 jest.mock("bullmq");
 jest.mock("lightship");
 jest.mock("ioredis");
-//jest.mock("@cryptuoso/logger");
+jest.mock("@cryptuoso/logger");
 //jest.mock("@cryptuoso/postgres");
 jest.mock("@cryptuoso/events");
 jest.mock("@cryptuoso/mail");

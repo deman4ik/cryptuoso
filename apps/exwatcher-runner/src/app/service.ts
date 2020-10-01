@@ -9,7 +9,7 @@ import {
 } from "@cryptuoso/exwatcher-events";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { sql } from "slonik";
-import { Job, Queue, QueueScheduler, Worker } from "bullmq";
+import { Queue, QueueScheduler, Worker } from "bullmq";
 
 export type ExwatcherRunnerServiceConfig = HTTPServiceConfig;
 

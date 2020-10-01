@@ -43,6 +43,7 @@ describe("Test Auth class methods", () => {
                         email: params.email,
                         status: UserStatus.enabled,
                         passwordHash: await bcrypt.hash(params.password, 10),
+                        access: 15,
                         roles: {
                             defaultRole: UserRoles.user,
                             allowedRoles: [UserRoles.user]
@@ -79,6 +80,7 @@ describe("Test Auth class methods", () => {
                     passwordHash: await bcrypt.hash(params.password, 10),
                     refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
                     refreshTokenExpireAt: "2120-08-11T12:50:21.055Z",
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -114,6 +116,7 @@ describe("Test Auth class methods", () => {
                     passwordHash: await bcrypt.hash(params.password, 10),
                     refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
                     refreshTokenExpireAt: "1970-08-11T12:50:21.055Z",
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -148,6 +151,7 @@ describe("Test Auth class methods", () => {
                         email: params.email,
                         status: UserStatus.enabled,
                         passwordHash: "wrong hash",
+                        access: 15,
                         roles: {
                             defaultRole: UserRoles.user,
                             allowedRoles: [UserRoles.user]
@@ -177,6 +181,7 @@ describe("Test Auth class methods", () => {
                         email: params.email,
                         status: UserStatus.new,
                         passwordHash: await bcrypt.hash(params.password, 10),
+                        access: 15,
                         roles: {
                             defaultRole: UserRoles.user,
                             allowedRoles: [UserRoles.user]
@@ -233,6 +238,7 @@ describe("Test Auth class methods", () => {
                         status: UserStatus.enabled,
                         refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
                         refreshTokenExpireAt: "2120-08-11T12:50:21.055Z",
+                        access: 15,
                         roles: {
                             defaultRole: UserRoles.user,
                             allowedRoles: [UserRoles.user]
@@ -272,6 +278,7 @@ describe("Test Auth class methods", () => {
                         status: UserStatus.enabled,
                         refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
                         refreshTokenExpireAt: "1970-08-11T12:50:21.055Z",
+                        access: 15,
                         roles: {
                             defaultRole: UserRoles.user,
                             allowedRoles: [UserRoles.user]
@@ -317,6 +324,7 @@ describe("Test Auth class methods", () => {
                         status: UserStatus.enabled,
                         refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
                         refreshTokenExpireAt: "1970-08-11T12:50:21.055Z",
+                        access: 15,
                         roles: {
                             defaultRole: UserRoles.user,
                             allowedRoles: [UserRoles.user]
@@ -397,6 +405,7 @@ describe("Test Auth class methods", () => {
                         status: UserStatus.enabled,
                         refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
                         refreshTokenExpireAt: "2120-08-11T12:50:21.055Z",
+                        access: 15,
                         roles: {
                             defaultRole: UserRoles.user,
                             allowedRoles: [UserRoles.user]
@@ -432,6 +441,7 @@ describe("Test Auth class methods", () => {
                         status: UserStatus.blocked,
                         refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
                         refreshTokenExpireAt: "2120-08-11T12:50:21.055Z",
+                        access: 15,
                         roles: {
                             defaultRole: UserRoles.user,
                             allowedRoles: [UserRoles.user]
@@ -491,6 +501,7 @@ describe("Test Auth class methods", () => {
                     email: params.email,
                     status: UserStatus.new,
                     passwordHash: await bcrypt.hash(params.password, 10),
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -522,6 +533,7 @@ describe("Test Auth class methods", () => {
                     status: UserStatus.enabled,
                     passwordHash: "password",
                     refreshToken: "token",
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -570,6 +582,7 @@ describe("Test Auth class methods", () => {
                     status: UserStatus.blocked,
                     passwordHash: "password",
                     refreshToken: "token",
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -602,6 +615,7 @@ describe("Test Auth class methods", () => {
                     passwordHash: "hash",
                     refreshToken: "token",
                     secretCode: params.secretCode,
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -637,6 +651,7 @@ describe("Test Auth class methods", () => {
                     passwordHash: "hash",
                     refreshToken: "token",
                     secretCode: "OTHER",
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -668,6 +683,7 @@ describe("Test Auth class methods", () => {
                     passwordHash: "hash",
                     refreshToken: "token",
                     secretCode: "code",
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -717,6 +733,7 @@ describe("Test Auth class methods", () => {
                     status: UserStatus.new,
                     passwordHash: "hash",
                     refreshToken: "token",
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -745,6 +762,7 @@ describe("Test Auth class methods", () => {
                     status: UserStatus.blocked,
                     passwordHash: "hash",
                     refreshToken: "token",
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -794,6 +812,7 @@ describe("Test Auth class methods", () => {
                     passwordHash: "hash",
                     refreshToken: "token",
                     secretCode: params.secretCode,
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -830,6 +849,7 @@ describe("Test Auth class methods", () => {
                     passwordHash: "hash",
                     refreshToken: "token",
                     secretCode: "OTHER",
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -881,6 +901,7 @@ describe("Test Auth class methods", () => {
                     status: UserStatus.enabled,
                     passwordHash: "hash",
                     refreshToken: "token",
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -931,6 +952,7 @@ describe("Test Auth class methods", () => {
                     status: UserStatus.enabled,
                     passwordHash: "hash",
                     refreshToken: "token",
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -962,6 +984,7 @@ describe("Test Auth class methods", () => {
                     status: UserStatus.blocked,
                     passwordHash: "hash",
                     refreshToken: "token",
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -997,6 +1020,7 @@ describe("Test Auth class methods", () => {
                     passwordHash: "hash",
                     refreshToken: "token",
                     secretCode: params.secretCode,
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -1033,6 +1057,7 @@ describe("Test Auth class methods", () => {
                     passwordHash: "hash",
                     refreshToken: "token",
                     secretCode: params.secretCode,
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -1065,6 +1090,7 @@ describe("Test Auth class methods", () => {
                     passwordHash: "hash",
                     refreshToken: "token",
                     secretCode: "OTHER",
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -1097,6 +1123,7 @@ describe("Test Auth class methods", () => {
                     passwordHash: "hash",
                     refreshToken: "token",
                     secretCode: params.secretCode,
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]

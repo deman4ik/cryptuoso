@@ -1,6 +1,7 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import { sql } from "@cryptuoso/postgres";
 import { RobotVolumeType, RobotSettingsAssetStatic } from "@cryptuoso/robot-settings";
+import { getAccessValue, User, UserAccessValues } from "@cryptuoso/user-state";
 
 export type UtilsServiceConfig = HTTPServiceConfig;
 
@@ -10,6 +11,16 @@ export default class UtilsService extends HTTPService {
 
         try {
             this.createRoutes({
+                initConfig: {
+                    auth: true,
+                    roles: ["admin"],
+                    handler: this.initConfig
+                },
+                initUserAccess: {
+                    auth: true,
+                    roles: ["admin"],
+                    handler: this.initUserAccess
+                },
                 initRobotSettings: {
                     inputSchema: {
                         robots: { type: "boolean", default: true },
@@ -24,6 +35,71 @@ export default class UtilsService extends HTTPService {
         } catch (err) {
             this.log.error(err, "While consctructing UtilsService");
         }
+    }
+
+    async initConfig(req: any, res: any) {
+        const configs: {
+            available: UserAccessValues;
+            amount: {
+                robot: {
+                    minUSD: number;
+                };
+                userSignal: {
+                    minUSD: number;
+                };
+                userRobot: {
+                    minUSD: number;
+                };
+            };
+        }[] = [
+            {
+                available: UserAccessValues.user,
+                amount: {
+                    robot: {
+                        minUSD: 100
+                    },
+                    userSignal: {
+                        minUSD: 10
+                    },
+                    userRobot: {
+                        minUSD: 20
+                    }
+                }
+            }
+        ];
+        for (const config of configs) {
+            await this.db.pg.query(sql`
+        INSERT INTO configs 
+        (available, 
+        amount) 
+        VALUES 
+        (${config.available},
+        ${sql.json(config.amount)})
+        ON CONFLICT ON CONSTRAINT configs_pkey
+        DO UPDATE SET amount = excluded.amount;`);
+        }
+
+        res.send({ result: "OK" });
+        res.end();
+    }
+
+    async initUserAccess(req: any, res: any) {
+        const users: User[] = await this.db.pg.many(sql`SELECT id, roles from users;`);
+
+        const usersWithAccess: User[] = users.map((user) => ({
+            ...user,
+            access: getAccessValue(user)
+        }));
+
+        for (const user of usersWithAccess) {
+            await this.db.pg.query(sql`
+            UPDATE users
+            SET access = ${user.access}
+            where id = ${user.id};`);
+        }
+
+        res.send({ result: "OK" });
+        res.end();
     }
 
     async initRobotSettings(

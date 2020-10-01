@@ -129,6 +129,7 @@ async function testRoute({
     const dbUser: User = {
         id: uuid(),
         status: UserStatus.enabled,
+        access: 15,
         roles: {
             defaultRole: role,
             allowedRoles: [role]

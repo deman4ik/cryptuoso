@@ -107,8 +107,8 @@ describe("E2E test", () => {
             return [];
         };
 
-        const testHandlerUnbalacedMessage = jest.fn(async ({ message }) => {
-            //console.log(message);
+        const testHandlerUnbalacedMessage = jest.fn(async function () {
+            return;
         });
         describe("Single unbalanced subscriber scenario", () => {
             itif(
@@ -142,8 +142,8 @@ describe("E2E test", () => {
             );
         });
 
-        const testHandlerGroupMessage = jest.fn(async ({ foo, bar }) => {
-            //console.log("foo is " + foo + "\nbar is " + JSON.stringify(bar));
+        const testHandlerGroupMessage = jest.fn(async function () {
+            return;
         });
         describe("Single group subscriber scenario", () => {
             itif(
@@ -180,8 +180,8 @@ describe("E2E test", () => {
             );
         });
 
-        const testHandlerUnbalancedLog = jest.fn(async (data) => {
-            //console.log("The data object is:\n" + JSON.stringify(data));
+        const testHandlerUnbalancedLog = jest.fn(async function () {
+            return;
         });
         describe("Subscribing after unbalanced event is emitted scenario", () => {
             itif(
@@ -214,8 +214,8 @@ describe("E2E test", () => {
             );
         });
 
-        const testHandlerGroupLog = jest.fn(async ({ info }) => {
-            //console.log(info);
+        const testHandlerGroupLog = jest.fn(async function () {
+            return;
         });
         describe("Subscribing after event is emitted scenario", () => {
             itif(
@@ -323,12 +323,11 @@ describe("E2E test", () => {
             );
         });
 
-        const testHandlerSum = jest.fn(async ({ info, numbers }) => {
-                const sum = numbers.reduce((acc: number, n: number) => acc + n, 0);
-                //console.log(info + "\nSum of numbers is " + sum);
+        const testHandlerSum = jest.fn(async function () {
+                return;
             }),
-            testHandlerSumLog = jest.fn(async (data) => {
-                //console.log("This event will be logged\n" + "The data object is:\n" + JSON.stringify(data));
+            testHandlerSumLog = jest.fn(async function () {
+                return;
             });
         describe("Multiple subscribers scenario", () => {
             itif(
@@ -375,8 +374,8 @@ describe("E2E test", () => {
         const testHandlerDivide = jest.fn(async () => {
                 throw new Error("This error is expected");
             }),
-            testHandlerDivideLog = jest.fn(async (data) => {
-                //console.log("This event will be logged\n" + "The data object is:\n" + JSON.stringify(data));
+            testHandlerDivideLog = jest.fn(async function () {
+                return;
             });
         describe("Handling pending event with handling error in one of the subs", () => {
             itif(
