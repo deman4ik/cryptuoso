@@ -318,6 +318,8 @@ export default class UserProfileService extends HTTPService {
                 403
             );
 
+        // TODO: check min value volumeInCurrency for currencyDynamic
+
         const newUserSignalSettings = { ...userSignalSettings, volume };
 
         await this.db.pg.query(sql`
@@ -685,6 +687,8 @@ export default class UserProfileService extends HTTPService {
                 );
         `);
 
+        // TODO: add note to user_robots_settings
+
         return userRobotId;
     }
 
@@ -710,6 +714,8 @@ export default class UserProfileService extends HTTPService {
 
         // Not need
         //if (userRobotExists.status !== RobotStatus.stopped)
+
+        // TODO: check user_robots_settings
 
         const robot: {
             id: string;
@@ -760,6 +766,8 @@ export default class UserProfileService extends HTTPService {
             SET settings = ${sql.json(settings)}
             WHERE id = ${id};
         `);
+
+        // TODO: add note to user_robots_settings
 
         /* TODO: create event subscriber (stats-calc-runner) or do nothing
 
