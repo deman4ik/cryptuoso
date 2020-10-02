@@ -365,11 +365,20 @@ export default class UserProfileService extends HTTPService {
             newSettings = { volumeType: RobotVolumeType.currencyDynamic, volumeInCurrency: _volume };
         }
 
-        if (!_amountMin || !_amountMax) throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
+        if (!_amountMin /*  || !_amountMax */)
+            throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
 
-        if (_volume < _amountMin || _volume > _amountMax)
+        if (_volume < _amountMin)
             throw new ActionsHandlerError(
-                `Wrong volume! Value must be at least ${_amountMin} and not greater than ${_amountMax}.`,
+                `Wrong volume! Value must be at least ${_amountMin}.`,
+                null,
+                "FORBIDDEN",
+                403
+            );
+
+        if (_amountMax && _volume > _amountMax)
+            throw new ActionsHandlerError(
+                `Wrong volume! Value must be not greater than ${_amountMax}.`,
                 null,
                 "FORBIDDEN",
                 403
@@ -380,12 +389,13 @@ export default class UserProfileService extends HTTPService {
 
         await this.db.pg.query(sql`
         INSERT INTO user_signals(
-            id, robot_id, user_id, subscribed_at
+            id, robot_id, user_id, subscribed_at, volume
         ) VALUES (
             ${userSignalId},
             ${robotId},
             ${user.id},
-            ${subscribedAt}
+            ${subscribedAt},
+            0
         );
     `);
         await this.db.pg.query(sql`
@@ -428,7 +438,7 @@ export default class UserProfileService extends HTTPService {
             throw new ActionsHandlerError("This volume value is already set.", null, "FORBIDDEN", 403);
 
         const marketLimits: UserMarketState["limits"] = (await this.db.pg.maybeOneFirst(sql`
-            SELECT m.limits
+            SELECT vm.limits
             FROM robots r, v_user_markets vm
             WHERE r.id = ${robotId}
                 AND vm.user_id = ${user.id}
@@ -454,11 +464,20 @@ export default class UserProfileService extends HTTPService {
             newSettings = { volumeType: RobotVolumeType.currencyDynamic, volumeInCurrency: _volume };
         }
 
-        if (!_amountMin || !_amountMax) throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
+        if (!_amountMin /*  || !_amountMax */)
+            throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
 
-        if (_volume < _amountMin || _volume > _amountMax)
+        if (_volume < _amountMin)
             throw new ActionsHandlerError(
-                `Wrong volume! Value must be at least ${_amountMin} and not greater than ${_amountMax}.`,
+                `Wrong volume! Value must be at least ${_amountMin}.`,
+                null,
+                "FORBIDDEN",
+                403
+            );
+
+        if (_amountMax && _volume > _amountMax)
+            throw new ActionsHandlerError(
+                `Wrong volume! Value must be not greater than ${_amountMax}.`,
                 null,
                 "FORBIDDEN",
                 403
@@ -531,7 +550,12 @@ export default class UserProfileService extends HTTPService {
 
             if (existed) {
                 if (existed.userId !== userId)
-                    throw new ActionsHandlerError("", { userExAccId: existed.id }, "FORBIDDEN", 403);
+                    throw new ActionsHandlerError(
+                        "Current user isn't owner of this User Exchange Account",
+                        { userExAccId: existed.id },
+                        "FORBIDDEN",
+                        403
+                    );
 
                 if (existed.exchange !== exchange)
                     throw new ActionsHandlerError("Invalid exchange", null, "FORBIDDEN", 403);
@@ -653,8 +677,14 @@ export default class UserProfileService extends HTTPService {
 
         if (!userExchangeAcc)
             throw new ActionsHandlerError("User Exchange Account not found", { id }, "NOT_FOUND", 404);
+
         if (userExchangeAcc.userId !== userId)
-            throw new ActionsHandlerError("", { userExAccId: userExchangeAcc.id }, "FORBIDDEN", 403);
+            throw new ActionsHandlerError(
+                "Current user isn't owner of this User Exchange Account",
+                { userExAccId: userExchangeAcc.id },
+                "FORBIDDEN",
+                403
+            );
 
         const existsWithName = await this.db.pg.maybeOne(sql`
             SELECT id
@@ -772,8 +802,9 @@ export default class UserProfileService extends HTTPService {
         if (userExchangeAcc.exchange !== robot.exchange)
             throw new ActionsHandlerError("Wrong exchange", null, "FORBIDDEN", 403);
 
-        if (robot.available < user.access) throw new ActionsHandlerError("", null, "FORBIDDEN", 403);
+        if (robot.available < user.access) throw new ActionsHandlerError("Robot unavailable.", null, "FORBIDDEN", 403);
 
+        // TODO: do something if volumeType == balancePercent
         const marketLimits: UserMarketState["limits"] = (await this.db.pg.maybeOneFirst(sql`
             SELECT limits
             FROM v_user_markets
@@ -786,30 +817,39 @@ export default class UserProfileService extends HTTPService {
         let _volume: number;
         let _amountMin: number;
         let _amountMax: number;
-        let newSettings: UserRobotSettings;
+        let newUserRobotSettings: UserRobotSettings;
 
         if (settings.volumeType === RobotVolumeType.assetStatic) {
             _volume = settings.volume;
             _amountMin = marketLimits?.userRobot?.min?.amount;
             _amountMax = marketLimits?.userRobot?.max?.amount;
-            newSettings = { volumeType: RobotVolumeType.assetStatic, volume: _volume };
+            newUserRobotSettings = { volumeType: RobotVolumeType.assetStatic, volume: _volume };
         } else if (settings.volumeType === RobotVolumeType.currencyDynamic) {
             _volume = settings.volumeInCurrency;
             _amountMin = marketLimits?.userRobot?.min?.amountUSD;
             _amountMax = marketLimits?.userRobot?.max?.amountUSD;
-            newSettings = { volumeType: RobotVolumeType.currencyDynamic, volumeInCurrency: _volume };
+            newUserRobotSettings = { volumeType: RobotVolumeType.currencyDynamic, volumeInCurrency: _volume };
         } else if (settings.volumeType === UserRobotVolumeType.balancePercent) {
             _volume = settings.balancePercent;
             _amountMin = 1;
             _amountMax = 100;
-            newSettings = { volumeType: UserRobotVolumeType.balancePercent, balancePercent: _volume };
+            newUserRobotSettings = { volumeType: UserRobotVolumeType.balancePercent, balancePercent: _volume };
         }
 
-        if (!_amountMin || !_amountMax) throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
+        if (!_amountMin /*  || !_amountMax */)
+            throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
 
-        if (_volume < _amountMin || _volume > _amountMax)
+        if (_volume < _amountMin)
             throw new ActionsHandlerError(
-                `Wrong volume! Value must be at least ${_amountMin} and not greater than ${_amountMax}.`,
+                `Wrong volume! Value must be at least ${_amountMin}.`,
+                null,
+                "FORBIDDEN",
+                403
+            );
+
+        if (_amountMax && _volume > _amountMax)
+            throw new ActionsHandlerError(
+                `Wrong volume! Value must be not greater than ${_amountMax}.`,
                 null,
                 "FORBIDDEN",
                 403
@@ -835,7 +875,7 @@ export default class UserProfileService extends HTTPService {
                     user_robot_id, user_robot_settings, trade_settings
                 ) VALUES (
                     ${userRobotId},
-                    ${sql.json(newSettings)},
+                    ${sql.json(newUserRobotSettings)},
                     ${sql.json({})}
                 );
         `);
@@ -867,32 +907,33 @@ export default class UserProfileService extends HTTPService {
         //if (userRobotExists.status !== RobotStatus.stopped)
 
         const {
-            userRobotSettings: currentUserSignalSettings,
+            userRobotSettings: currentUserRobotSettings,
             tradeSettings: currentTradeSettings
         }: {
             userRobotSettings: UserRobotSettings;
             tradeSettings: any;
         } = await this.db.pg.maybeOne(sql`
-            SELECT user_robot_settings, 
+            SELECT user_robot_settings
             FROM v_user_robot_settings
             WHERE user_robot_id = ${id};
         `);
 
         if (
-            (currentUserSignalSettings?.volumeType === RobotVolumeType.assetStatic &&
+            (currentUserRobotSettings?.volumeType === RobotVolumeType.assetStatic &&
                 settings.volumeType === RobotVolumeType.assetStatic &&
-                settings.volume === currentUserSignalSettings.volume) ||
-            (currentUserSignalSettings?.volumeType === RobotVolumeType.currencyDynamic &&
+                settings.volume === currentUserRobotSettings.volume) ||
+            (currentUserRobotSettings?.volumeType === RobotVolumeType.currencyDynamic &&
                 settings.volumeType === RobotVolumeType.currencyDynamic &&
-                settings.volumeInCurrency === currentUserSignalSettings.volumeInCurrency) ||
-            (currentUserSignalSettings?.volumeType === UserRobotVolumeType.balancePercent &&
+                settings.volumeInCurrency === currentUserRobotSettings.volumeInCurrency) ||
+            (currentUserRobotSettings?.volumeType === UserRobotVolumeType.balancePercent &&
                 settings.volumeType === UserRobotVolumeType.balancePercent &&
-                settings.balancePercent === currentUserSignalSettings.balancePercent)
+                settings.balancePercent === currentUserRobotSettings.balancePercent)
         )
             throw new ActionsHandlerError("This volume value is already set.", null, "FORBIDDEN", 403);
 
+        // TODO: do something if volumeType == balancePercent
         const marketLimits: UserMarketState["limits"] = (await this.db.pg.maybeOneFirst(sql`
-            SELECT m.limits
+            SELECT vm.limits
             FROM robots r, v_user_markets vm
             WHERE r.id = ${userRobotExists.robotId}
                 AND vm.user_id = ${user.id}
@@ -904,30 +945,39 @@ export default class UserProfileService extends HTTPService {
         let _volume: number;
         let _amountMin: number;
         let _amountMax: number;
-        let newSettings: UserRobotSettings;
+        let newUserRobotSettings: UserRobotSettings;
 
         if (settings.volumeType === RobotVolumeType.assetStatic) {
             _volume = settings.volume;
             _amountMin = marketLimits?.userRobot?.min?.amount;
             _amountMax = marketLimits?.userRobot?.max?.amount;
-            newSettings = { volumeType: RobotVolumeType.assetStatic, volume: _volume };
+            newUserRobotSettings = { volumeType: RobotVolumeType.assetStatic, volume: _volume };
         } else if (settings.volumeType === RobotVolumeType.currencyDynamic) {
             _volume = settings.volumeInCurrency;
             _amountMin = marketLimits?.userRobot?.min?.amountUSD;
             _amountMax = marketLimits?.userRobot?.max?.amountUSD;
-            newSettings = { volumeType: RobotVolumeType.currencyDynamic, volumeInCurrency: _volume };
+            newUserRobotSettings = { volumeType: RobotVolumeType.currencyDynamic, volumeInCurrency: _volume };
         } else if (settings.volumeType === UserRobotVolumeType.balancePercent) {
             _volume = settings.balancePercent;
             _amountMin = 1;
             _amountMax = 100;
-            newSettings = { volumeType: UserRobotVolumeType.balancePercent, balancePercent: _volume };
+            newUserRobotSettings = { volumeType: UserRobotVolumeType.balancePercent, balancePercent: _volume };
         }
 
-        if (!_amountMin || !_amountMax) throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
+        if (!_amountMin /*  || !_amountMax */)
+            throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
 
-        if (_volume < _amountMin || _volume > _amountMax)
+        if (_volume < _amountMin)
             throw new ActionsHandlerError(
-                `Wrong volume! Value must be at least ${_amountMin} and not greater than ${_amountMax}.`,
+                `Wrong volume! Value must be at least ${_amountMin}.`,
+                null,
+                "FORBIDDEN",
+                403
+            );
+
+        if (_amountMax && _volume > _amountMax)
+            throw new ActionsHandlerError(
+                `Wrong volume! Value must be not greater than ${_amountMax}.`,
                 null,
                 "FORBIDDEN",
                 403
@@ -939,7 +989,7 @@ export default class UserProfileService extends HTTPService {
                 user_robot_id, user_robot_settings, trade_settings
             ) VALUES (
                 ${id},
-                ${sql.json(newSettings)},
+                ${sql.json(newUserRobotSettings)},
                 ${sql.json(currentTradeSettings || {})}
             );
         `);
@@ -968,11 +1018,13 @@ export default class UserProfileService extends HTTPService {
         if (userRobotExists.status !== RobotStatus.stopped)
             throw new ActionsHandlerError("User Robot is not stopped", null, "FORBIDDEN", 403);
 
+        //const deletingStartTime = Date.now();
         await this.db.pg.query(sql`
                 DELETE
                 FROM user_robots
                 WHERE id = ${id};
         `);
+        //console.warn("DELETING TIME:", Date.now() - deletingStartTime);
 
         await this.events.emit({
             type: StatsCalcRunnerEvents.USER_ROBOT_DELETED,

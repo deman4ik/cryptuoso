@@ -1,20 +1,5 @@
 import { ValidTimeframe } from "./timeframe";
 
-export interface MinMax {
-    min: number;
-    max: number | undefined;
-}
-
-export interface MarketState {
-    exchange: string;
-    asset: string;
-    currency: string;
-    precision: { base: number; quote: number; amount: number; price: number };
-    limits: { amount: MinMax; price: MinMax; cost?: MinMax };
-    averageFee: number;
-    loadFrom: string;
-}
-
 interface UserMarketAmount {
     amount: number;
     amountUSD: number;
