@@ -80,6 +80,10 @@ export default class StatisticCalcRunnerService extends HTTPService {
                     schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_SIGNAL_DELETED],
                     handler: this._eventsHandler.bind(this, this.handleUserSignalDeletedEvent.bind(this))
                 },
+                [StatsCalcRunnerEvents.USER_ROBOT_DELETED]: {
+                    schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_ROBOT_DELETED],
+                    handler: this._eventsHandler.bind(this, this.handleUserRobotDeletedEvent.bind(this))
+                },
                 [StatsCalcRunnerEvents.USER_SIGNAL]: {
                     schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_SIGNAL],
                     handler: this._eventsHandler.bind(this, this.handleCalcUserSignalEvent.bind(this))
@@ -227,6 +231,30 @@ export default class StatisticCalcRunnerService extends HTTPService {
 
         await this.queueJobWithExchangeAssetOption(
             StatsCalcJobType.userSignalsAggr,
+            { calcAll: true, userId },
+            exchange,
+            asset
+        );
+    }
+
+    async handleUserRobotDeletedEvent(params: { userId: string; robotId: string }) {
+        const { userId, robotId } = params;
+
+        const robot: {
+            exchange: string;
+            asset: string;
+        } = await this.db.pg.maybeOne(this.db.sql`
+            SELECT exchange, asset
+            FROM robots
+            WHERE id = ${robotId};
+        `);
+
+        if (!robot) return;
+
+        const { exchange, asset } = robot;
+
+        await this.queueJobWithExchangeAssetOption(
+            StatsCalcJobType.userRobotAggr,
             { calcAll: true, userId },
             exchange,
             asset

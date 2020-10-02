@@ -1329,7 +1329,8 @@
                         "outputPath": "dist/apps/user-profile",
                         "main": "apps/user-profile/src/main.ts",
                         "tsConfig": "apps/user-profile/tsconfig.app.json",
-                        "assets": ["apps/user-profile/src/assets"]
+                        "assets": ["apps/user-profile/src/assets"],
+                        "webpackConfig": "apps/user-profile/webpack.config.js"
                     },
                     "configurations": {
                         "production": {
