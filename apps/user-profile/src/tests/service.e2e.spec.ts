@@ -208,7 +208,7 @@ describe("", () => {
 
     describe("User Robot Deleting", () => {
         test("", async () => {
-            const events = new Events(service.redis, service.lightship);
+            const events = new Events(service.redis.duplicate(), service.lightship);
             const eventHandler = jest.fn();
 
             events.subscribe({
@@ -232,6 +232,8 @@ describe("", () => {
             //console.log(res);
 
             await sleep(3000);
+
+            events.closeConnections();
 
             expect(res.parsedBody.result).toBe("OK");
 
@@ -358,7 +360,7 @@ describe("", () => {
 
     describe("User Signal Unsubscribing", () => {
         test("", async () => {
-            const events = new Events(service.redis, service.lightship);
+            const events = new Events(service.redis.duplicate(), service.lightship);
             const eventHandler = jest.fn();
 
             events.subscribe({
@@ -380,6 +382,8 @@ describe("", () => {
             //console.log(res);
 
             await sleep(3000);
+
+            events.closeConnections();
 
             expect(res.parsedBody.result).toBe("OK");
             expect(eventHandler).toBeCalledWith({ userId, robotId });

@@ -39,10 +39,12 @@ export default class UserProfileService extends HTTPService {
                     },
                     volume: {
                         type: "number",
+                        positive: true,
                         optional: true
                     },
                     volumeInCurrency: {
                         type: "number",
+                        positive: true,
                         optional: true
                     }
                 }
@@ -61,14 +63,17 @@ export default class UserProfileService extends HTTPService {
                     },
                     volume: {
                         type: "number",
+                        positive: true,
                         optional: true
                     },
                     volumeInCurrency: {
                         type: "number",
+                        positive: true,
                         optional: true
                     },
                     balancePercent: {
                         type: "number",
+                        positive: true,
                         optional: true
                     }
                 }
@@ -81,19 +86,19 @@ export default class UserProfileService extends HTTPService {
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     inputSchema: {
                         signalsTelegram: {
-                            type: "string",
+                            type: "boolean",
                             optional: true
                         },
                         signalsEmail: {
-                            type: "string",
+                            type: "boolean",
                             optional: true
                         },
                         tradingTelegram: {
-                            type: "string",
+                            type: "boolean",
                             optional: true
                         },
                         tradingEmail: {
-                            type: "string",
+                            type: "boolean",
                             optional: true
                         }
                     },
@@ -103,9 +108,11 @@ export default class UserProfileService extends HTTPService {
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     inputSchema: {
-                        name: "string" /* ,
-                        // TODO: check
-                        empty: false */
+                        name: {
+                            type: "string",
+                            trim: true,
+                            empty: false
+                        }
                     },
                     handler: this._httpHandler.bind(this, this.changeName.bind(this))
                 },
@@ -150,18 +157,17 @@ export default class UserProfileService extends HTTPService {
                             optional: true
                         },
                         exchange: "string",
-                        name: {
-                            type: "string",
-                            optional: true
-                        },
+                        name: { type: "string", empty: false, trim: true, optional: true },
                         keys: {
                             type: "object",
                             props: {
-                                key: "string",
-                                secret: "string",
+                                key: { type: "string", empty: false, trim: true },
+                                secret: { type: "string", empty: false, trim: true },
                                 pass: {
                                     type: "string",
-                                    optional: true
+                                    optional: true,
+                                    empty: false,
+                                    trim: true
                                 }
                             }
                         }
@@ -173,7 +179,7 @@ export default class UserProfileService extends HTTPService {
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     inputSchema: {
                         id: "uuid",
-                        name: "string"
+                        name: { type: "string", empty: false, trim: true }
                     },
                     handler: this._httpHandler.bind(this, this.userExchangeAccChangeName.bind(this))
                 },
