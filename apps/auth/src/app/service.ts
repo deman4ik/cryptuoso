@@ -140,11 +140,12 @@ export default class AuthService extends HTTPService {
         return {
             expires: new Date(expires),
             httpOnly: true,
-            sameSite: this.isDev ? "none" : "lax",
+            sameSite: "lax", //this.isDev ? "none" : "lax",
             domain: ".cryptuoso.com",
-            secure: this.isDev ? false : true
+            secure: true //this.isDev ? false : true
         };
     }
+
     async login(req: HttpRequest, res: HttpResponse) {
         try {
             const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.login(req.body.input);
