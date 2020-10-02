@@ -141,7 +141,7 @@ export default class AuthService extends HTTPService {
             expires: new Date(expires),
             httpOnly: true,
             sameSite: this.isDev ? "none" : "lax",
-            domain: ".cryptuoso.com",
+            domain: this.isDev ? null : ".cryptuoso.com",
             secure: this.isDev ? false : true
         };
     }
