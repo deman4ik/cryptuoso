@@ -669,7 +669,7 @@ export default class UserProfileService extends HTTPService {
     ) {
         const { id: userId } = user;
 
-        let userExchangeAcc: UserExchangeAccountState = await this.db.pg.maybeOne(sql`
+        const userExchangeAcc: UserExchangeAccountState = await this.db.pg.maybeOne(sql`
             SELECT *
             FROM user_exchange_accs
             WHERE id = ${id};
@@ -712,7 +712,7 @@ export default class UserProfileService extends HTTPService {
     async userExchangeAccDelete(user: User, { id }: { id: string }) {
         const { id: userId } = user;
 
-        let userExchangeAcc: UserExchangeAccountState = await this.db.pg.maybeOne(sql`
+        const userExchangeAcc: UserExchangeAccountState = await this.db.pg.maybeOne(sql`
             SELECT *
             FROM user_exchange_accs
             WHERE id = ${id};

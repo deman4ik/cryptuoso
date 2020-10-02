@@ -240,29 +240,28 @@ describe("", () => {
         });
     });
 
-    if (0)
-        describe("User Exchange Account Changing Name", () => {
-            test("", async () => {
-                const name = Math.random().toString();
+    describe("User Exchange Account Changing Name", () => {
+        test("", async () => {
+            const name = Math.random().toString();
 
-                const res = await makeServiceRequest({
-                    port,
-                    actionName: "userExchangeAccChangeName",
-                    userId,
-                    role: UserRoles.user,
-                    input: {
-                        id: userExAccId,
-                        name
-                    }
-                });
-
-                //console.log(res);
-
-                expect(res.parsedBody.result).toBe("OK");
-
-                expect((await getUserExAcc()).name).toBe(name);
+            const res = await makeServiceRequest({
+                port,
+                actionName: "userExchangeAccChangeName",
+                userId,
+                role: UserRoles.user,
+                input: {
+                    id: userExAccId,
+                    name
+                }
             });
+
+            //console.log(res);
+
+            expect(res.parsedBody.result).toBe("OK");
+
+            expect((await getUserExAcc()).name).toBe(name);
         });
+    });
 
     describe("User Exchange Account Deleting", () => {
         test("", async () => {
@@ -286,110 +285,106 @@ describe("", () => {
         });
     });
 
-    if (0)
-        describe("User Signal Subscribing", () => {
-            test("", async () => {
-                expect(await getUserSignal()).toBeNull();
-                expect(await getLastUserSignalSettings()).toBeNull();
+    describe("User Signal Subscribing", () => {
+        test("", async () => {
+            expect(await getUserSignal()).toBeNull();
+            expect(await getLastUserSignalSettings()).toBeNull();
 
-                const res = await makeServiceRequest({
-                    port,
-                    actionName: "userSignalSubscribe",
-                    userId,
-                    role: UserRoles.user,
-                    input: {
-                        robotId,
-                        settings: {
-                            volumeType: RobotVolumeType.assetStatic,
-                            volume
-                        }
+            const res = await makeServiceRequest({
+                port,
+                actionName: "userSignalSubscribe",
+                userId,
+                role: UserRoles.user,
+                input: {
+                    robotId,
+                    settings: {
+                        volumeType: RobotVolumeType.assetStatic,
+                        volume
                     }
-                });
-
-                //console.log(res);
-
-                expect(res.parsedBody.result).toBe("OK");
-
-                expect((await getLastUserSignalSettings()).volume).toBe(volume);
+                }
             });
+
+            //console.log(res);
+
+            expect(res.parsedBody.result).toBe("OK");
+
+            expect((await getLastUserSignalSettings()).volume).toBe(volume);
         });
+    });
 
-    if (0)
-        describe("User Signal Editing (change volume)", () => {
-            test("", async () => {
-                const newVolume = volume + 1;
+    describe("User Signal Editing (change volume)", () => {
+        test("", async () => {
+            const newVolume = volume + 1;
 
-                const res = await makeServiceRequest({
-                    port,
-                    actionName: "userSignalEdit",
-                    userId,
-                    role: UserRoles.user,
-                    input: {
-                        robotId,
-                        settings: {
-                            volumeType: RobotVolumeType.assetStatic,
-                            volume: newVolume
-                        }
+            const res = await makeServiceRequest({
+                port,
+                actionName: "userSignalEdit",
+                userId,
+                role: UserRoles.user,
+                input: {
+                    robotId,
+                    settings: {
+                        volumeType: RobotVolumeType.assetStatic,
+                        volume: newVolume
                     }
-                });
-
-                expect(res.parsedBody.result).toBe("OK");
-                expect((await getLastUserSignalSettings()).volume).toBe(newVolume);
+                }
             });
-        });
 
-    if (0)
-        describe("User Signal Editing (change volumeType)", () => {
-            test("", async () => {
-                const res = await makeServiceRequest({
-                    port,
-                    actionName: "userSignalEdit",
-                    userId,
-                    role: UserRoles.user,
-                    input: {
-                        robotId,
-                        settings: {
-                            volumeType: RobotVolumeType.currencyDynamic,
-                            volumeInCurrency
-                        }
+            expect(res.parsedBody.result).toBe("OK");
+            expect((await getLastUserSignalSettings()).volume).toBe(newVolume);
+        });
+    });
+
+    describe("User Signal Editing (change volumeType)", () => {
+        test("", async () => {
+            const res = await makeServiceRequest({
+                port,
+                actionName: "userSignalEdit",
+                userId,
+                role: UserRoles.user,
+                input: {
+                    robotId,
+                    settings: {
+                        volumeType: RobotVolumeType.currencyDynamic,
+                        volumeInCurrency
                     }
-                });
-
-                expect(res.parsedBody.result).toBe("OK");
-                expect((await getLastUserSignalSettings()).volumeInCurrency).toBe(volumeInCurrency);
+                }
             });
+
+            expect(res.parsedBody.result).toBe("OK");
+            expect((await getLastUserSignalSettings()).volumeInCurrency).toBe(volumeInCurrency);
         });
+    });
 
-    if (0)
-        describe("User Signal Unsubscribing", () => {
-            test("", async () => {
-                const events = new Events(service.redis, service.lightship);
-                const eventHandler = jest.fn();
+    describe("User Signal Unsubscribing", () => {
+        test("", async () => {
+            const events = new Events(service.redis, service.lightship);
+            const eventHandler = jest.fn();
 
-                events.subscribe({
-                    [StatsCalcRunnerEvents.USER_SIGNAL_DELETED]: {
-                        handler: eventHandler
-                    }
-                });
-
-                await events.start();
-
-                const res = await makeServiceRequest({
-                    port,
-                    actionName: "userSignalUnsubscribe",
-                    userId,
-                    role: UserRoles.user,
-                    input: { robotId }
-                });
-
-                //console.log(res);
-
-                await sleep(3000);
-
-                expect(res.parsedBody.result).toBe("OK");
-                expect(eventHandler).toBeCalledWith({ userId, robotId });
-                expect(await getUserSignal()).toBeNull();
-                expect(await getLastUserSignalSettings()).toBeNull();
+            events.subscribe({
+                [StatsCalcRunnerEvents.USER_SIGNAL_DELETED]: {
+                    handler: eventHandler
+                }
             });
+
+            await events.start();
+
+            const res = await makeServiceRequest({
+                port,
+                actionName: "userSignalUnsubscribe",
+                userId,
+                role: UserRoles.user,
+                input: { robotId }
+            });
+
+            //console.log(res);
+
+            await sleep(3000);
+
+            expect(res.parsedBody.result).toBe("OK");
+            expect(eventHandler).toBeCalledWith({ userId, robotId });
+            expect(await getUserSignal()).toBeNull();
+            expect(await getLastUserSignalSettings()).toBeNull();
         });
+    });
 });
