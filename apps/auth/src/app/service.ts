@@ -141,7 +141,7 @@ export default class AuthService extends HTTPService {
             expires: new Date(expires),
             httpOnly: true,
             sameSite: this.isDev ? "none" : "lax",
-            domain: this.isDev ? ".localhost.com" : ".cryptuoso.com",
+            domain: ".cryptuoso.com",
             secure: this.isDev ? false : true
         };
     }
@@ -330,7 +330,7 @@ export default class AuthService extends HTTPService {
     private async _dbRegisterUserTg(newUser: User): Promise<any> {
         await this.db.pg.query(sql`
             INSERT INTO users
-                (id, telegram_id, telegram_username, name, status, roles, settings)
+                (id, telegram_id, telegram_username, name, status, roles, access, settings)
                 VALUES(
                     ${newUser.id},
                     ${newUser.telegramId},
@@ -338,6 +338,7 @@ export default class AuthService extends HTTPService {
                     ${newUser.name},
                     ${newUser.status},
                     ${sql.json(newUser.roles)},
+                    ${newUser.access},
                     ${sql.json(newUser.settings)}
                 );
         `);
@@ -346,7 +347,7 @@ export default class AuthService extends HTTPService {
     private async _dbRegisterUser(newUser: User): Promise<any> {
         await this.db.pg.query(sql`
             INSERT INTO users
-                (id, name, email, status, password_hash, secret_code, roles, settings)
+                (id, name, email, status, password_hash, secret_code, roles, access, settings)
                 VALUES(
                     ${newUser.id},
                     ${newUser.name},
@@ -355,6 +356,7 @@ export default class AuthService extends HTTPService {
                     ${newUser.passwordHash},
                     ${newUser.secretCode},
                     ${sql.json(newUser.roles)},
+                    ${newUser.access},
                     ${sql.json(newUser.settings)}
                 );
         `);
