@@ -5,7 +5,7 @@ export interface MinMax {
     max: number | undefined;
 }
 
-export interface Market {
+export interface MarketState {
     exchange: string;
     asset: string;
     currency: string;
@@ -13,6 +13,28 @@ export interface Market {
     limits: { amount: MinMax; price: MinMax; cost?: MinMax };
     averageFee: number;
     loadFrom: string;
+}
+
+interface UserMarketAmount {
+    amount: number;
+    amountUSD: number;
+}
+
+interface UserMarketMinMax {
+    min: UserMarketAmount;
+    max: UserMarketAmount;
+}
+
+export interface UserMarketState {
+    exchange: string;
+    asset: string;
+    currency: string;
+    currentPrice: number;
+    userId: string;
+    limits: {
+        userSignal: UserMarketMinMax;
+        userRobot: UserMarketMinMax;
+    };
 }
 
 export const enum CandleType {

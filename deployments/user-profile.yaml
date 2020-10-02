@@ -69,6 +69,11 @@ spec:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
                                 key: REDISCS
+                      - name: ENCRYPTION_PWD
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: ENCRYPTION_PWD
                   ports:
                       - containerPort: 3000
                         protocol: TCP

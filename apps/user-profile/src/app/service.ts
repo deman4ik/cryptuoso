@@ -5,13 +5,12 @@ import {
     UserRoles,
     UserExchangeAccountState,
     UserExchangeKeys,
-    UserExchangeAccStatus,
-    EncryptedData
+    UserExchangeAccStatus
 } from "@cryptuoso/user-state";
 import { UserSignalState /* , UserSignalSettings */ } from "@cryptuoso/user-signal-state";
 import { RobotState, RobotStatus } from "@cryptuoso/robot-state";
 import { UserRobotDB } from "@cryptuoso/user-robot-state";
-import { Market } from "@cryptuoso/market";
+import { UserMarketState } from "@cryptuoso/market";
 import { ActionsHandlerError } from "@cryptuoso/errors";
 import { sql } from "@cryptuoso/postgres";
 import { v4 as uuid } from "uuid";
@@ -20,7 +19,7 @@ import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
 import { spawn, Pool, Worker as ThreadsWorker } from "threads";
 import { Encrypt } from "./encryptWorker";
 import { formatExchange } from "@cryptuoso/helpers";
-import { UserRobotSettings } from "@cryptuoso/robot-settings";
+import { UserRobotSettings, UserSignalSettings, RobotVolumeType, UserRobotVolumeType } from "@cryptuoso/robot-settings";
 
 export type UserProfileServiceConfig = HTTPServiceConfig;
 
@@ -31,7 +30,52 @@ export default class UserProfileService extends HTTPService {
         super(config);
 
         try {
+            const userSignalSettingsInnerSchema = {
+                type: "object",
+                props: {
+                    volumeType: {
+                        type: "enum",
+                        values: [RobotVolumeType.assetStatic, RobotVolumeType.currencyDynamic]
+                    },
+                    volume: {
+                        type: "number",
+                        optional: true
+                    },
+                    volumeInCurrency: {
+                        type: "number",
+                        optional: true
+                    }
+                }
+            };
+
+            const userRobotSettingsInnerSchema = {
+                type: "object",
+                props: {
+                    volumeType: {
+                        type: "enum",
+                        values: [
+                            RobotVolumeType.assetStatic,
+                            RobotVolumeType.currencyDynamic,
+                            UserRobotVolumeType.balancePercent
+                        ]
+                    },
+                    volume: {
+                        type: "number",
+                        optional: true
+                    },
+                    volumeInCurrency: {
+                        type: "number",
+                        optional: true
+                    },
+                    balancePercent: {
+                        type: "number",
+                        optional: true
+                    }
+                }
+            };
+
             this.createRoutes({
+                //#region "User Settings Schemes"
                 setNotificationSettings: {
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
@@ -59,18 +103,21 @@ export default class UserProfileService extends HTTPService {
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     inputSchema: {
-                        name: "string",
+                        name: "string" /* ,
                         // TODO: check
-                        empty: false
+                        empty: false */
                     },
                     handler: this._httpHandler.bind(this, this.changeName.bind(this))
                 },
+                //#endregion "User Settings Schemes"
+
+                //#region "User Signals Schemes"
                 userSignalSubscribe: {
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     inputSchema: {
                         robotId: "uuid",
-                        volume: "number"
+                        settings: userSignalSettingsInnerSchema
                     },
                     handler: this._httpHandler.bind(this, this.userSignalSubscribe.bind(this))
                 },
@@ -79,7 +126,7 @@ export default class UserProfileService extends HTTPService {
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     inputSchema: {
                         robotId: "uuid",
-                        volume: "number"
+                        settings: userSignalSettingsInnerSchema
                     },
                     handler: this._httpHandler.bind(this, this.userSignalEdit.bind(this))
                 },
@@ -90,7 +137,85 @@ export default class UserProfileService extends HTTPService {
                         robotId: "uuid"
                     },
                     handler: this._httpHandler.bind(this, this.userSignalUnsubscribe.bind(this))
+                },
+                //#endregion "User Signals Schemes"
+
+                //#region "User Exchange Account Schemes"
+                userExchangeAccUpsert: {
+                    auth: true,
+                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
+                    inputSchema: {
+                        id: {
+                            type: "uuid",
+                            optional: true
+                        },
+                        exchange: "string",
+                        name: {
+                            type: "string",
+                            optional: true
+                        },
+                        keys: {
+                            type: "object",
+                            props: {
+                                key: "string",
+                                secret: "string",
+                                pass: {
+                                    type: "string",
+                                    optional: true
+                                }
+                            }
+                        }
+                    },
+                    handler: this._httpHandler.bind(this, this.userExchangeAccUpsert.bind(this))
+                },
+                userExchangeAccChangeName: {
+                    auth: true,
+                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
+                    inputSchema: {
+                        id: "uuid",
+                        name: "string"
+                    },
+                    handler: this._httpHandler.bind(this, this.userExchangeAccChangeName.bind(this))
+                },
+                userExchangeAccDelete: {
+                    auth: true,
+                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
+                    inputSchema: {
+                        id: "uuid"
+                    },
+                    handler: this._httpHandler.bind(this, this.userExchangeAccDelete.bind(this))
+                },
+                //#endregion "User Exchange Account Schemes"
+
+                //#region "User Robots Schemes"
+                userRobotCreate: {
+                    auth: true,
+                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
+                    inputSchema: {
+                        userExAccId: "uuid",
+                        robotId: "uuid",
+                        settings: userRobotSettingsInnerSchema
+                    },
+                    handler: this._httpHandler.bind(this, this.userRobotCreate.bind(this))
+                },
+                userRobotEdit: {
+                    auth: true,
+                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
+                    inputSchema: {
+                        id: "uuid",
+                        settings: userRobotSettingsInnerSchema
+                    },
+                    handler: this._httpHandler.bind(this, this.userRobotEdit.bind(this))
+                },
+                userRobotDelete: {
+                    auth: true,
+                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
+                    inputSchema: {
+                        id: "uuid"
+                    },
+                    handler: this._httpHandler.bind(this, this.userRobotDelete.bind(this))
                 }
+                //#endregion "User Robots Schemes"
             });
 
             this.addOnStartHandler(this._onStartService);
@@ -111,7 +236,7 @@ export default class UserProfileService extends HTTPService {
     }
 
     async encrypt(userId: string, data: string) {
-        return this.pool.queue(async (encrypt: Encrypt) => encrypt(userId, data));
+        return await this.pool.queue(async (encrypt: Encrypt) => encrypt(userId, data));
     }
 
     async _httpHandler(
@@ -190,7 +315,7 @@ export default class UserProfileService extends HTTPService {
 
     //#region "User Signals"
 
-    async userSignalSubscribe(user: User, { robotId, volume }: { robotId: string; volume: number }) {
+    async userSignalSubscribe(user: User, { robotId, settings }: { robotId: string; settings: UserSignalSettings }) {
         const robot: RobotState = await this.db.pg.maybeOne(sql`
             SELECT exchange, asset, currency, available
             FROM robots
@@ -204,39 +329,47 @@ export default class UserProfileService extends HTTPService {
         const isSignalExists =
             0 <
             +(await this.db.pg.oneFirst(sql`
-            SELECT COUNT(*)
-            FROM user_signals
-            WHERE user_id = ${user.id}
-                AND robot_id = ${robotId};
-        `));
+                SELECT COUNT(*)
+                FROM user_signals
+                WHERE user_id = ${user.id}
+                    AND robot_id = ${robotId};
+            `));
 
         if (isSignalExists) return;
 
         if (available < user.access) throw new ActionsHandlerError("Robot unavailable.", { robotId }, "FORBIDDEN", 403);
 
-        const marketLimits: Market["limits"] = (await this.db.pg.maybeOneFirst(sql`
+        const marketLimits: UserMarketState["limits"] = (await this.db.pg.maybeOneFirst(sql`
             SELECT limits
-            FROM markets
-            WHERE exchange = ${exchange}
+            FROM v_user_markets
+            WHERE user_id = ${user.id}
+                AND exchange = ${exchange}
                 AND asset = ${asset}
                 AND currency = ${currency};
         `)) as any;
 
-        if (!marketLimits?.amount) throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
+        let _volume: number;
+        let _amountMin: number;
+        let _amountMax: number;
+        let newSettings: UserSignalSettings;
 
-        const { amount } = marketLimits;
+        if (settings.volumeType === RobotVolumeType.assetStatic) {
+            _volume = settings.volume;
+            _amountMin = marketLimits?.userSignal?.min?.amount;
+            _amountMax = marketLimits?.userSignal?.max?.amount;
+            newSettings = { volumeType: RobotVolumeType.assetStatic, volume: _volume };
+        } else if (settings.volumeType === RobotVolumeType.currencyDynamic) {
+            _volume = settings.volumeInCurrency;
+            _amountMin = marketLimits?.userSignal?.min?.amountUSD;
+            _amountMax = marketLimits?.userSignal?.max?.amountUSD;
+            newSettings = { volumeType: RobotVolumeType.currencyDynamic, volumeInCurrency: _volume };
+        }
 
-        if (volume < amount.min)
+        if (!_amountMin || !_amountMax) throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
+
+        if (_volume < _amountMin || _volume > _amountMax)
             throw new ActionsHandlerError(
-                `Wrong volume! Value must be at least ${amount.min}.`,
-                null,
-                "FORBIDDEN",
-                403
-            );
-
-        if (volume > amount.max)
-            throw new ActionsHandlerError(
-                `Wrong volume! Value must be not greater than ${amount.max}.`,
+                `Wrong volume! Value must be at least ${_amountMin} and not greater than ${_amountMax}.`,
                 null,
                 "FORBIDDEN",
                 403
@@ -247,12 +380,11 @@ export default class UserProfileService extends HTTPService {
 
         await this.db.pg.query(sql`
         INSERT INTO user_signals(
-            id, robot_id, user_id, volume, subscribed_at
+            id, robot_id, user_id, subscribed_at
         ) VALUES (
             ${userSignalId},
             ${robotId},
             ${user.id},
-            ${volume},
             ${subscribedAt}
         );
     `);
@@ -261,7 +393,7 @@ export default class UserProfileService extends HTTPService {
                 user_signal_id, user_signal_settings, active_from
             ) VALUES (
                 ${userSignalId},
-                ${sql.json({ volume })},
+                ${sql.json(newSettings)},
                 ${subscribedAt}
             );
         `);
@@ -269,7 +401,7 @@ export default class UserProfileService extends HTTPService {
         // TODO: initialize statistics or do nothing
     }
 
-    async userSignalEdit(user: User, { robotId, volume }: { robotId: string; volume: number }) {
+    async userSignalEdit(user: User, { robotId, settings }: { robotId: string; settings: UserSignalSettings }) {
         const userSignal: UserSignalState = await this.db.pg.maybeOne(sql`
             SELECT id
             FROM user_signals
@@ -279,63 +411,66 @@ export default class UserProfileService extends HTTPService {
 
         if (!userSignal) throw new ActionsHandlerError("Subscription not found.", null, "NOT_FOUND", 404);
 
-        const userSignalSettings: GenericObject & {
-            volume: number;
-        } = await this.db.pg.maybeOne(sql`
+        const currentUserSignalSettings: UserSignalSettings = await this.db.pg.maybeOne(sql`
             SELECT signal_settings
             FROM v_user_signal_settings
             WHERE user_signal_id = ${userSignal.id};
         `);
 
-        if (userSignalSettings?.volume === volume)
+        if (
+            (currentUserSignalSettings?.volumeType === RobotVolumeType.assetStatic &&
+                settings.volumeType === RobotVolumeType.assetStatic &&
+                settings.volume === currentUserSignalSettings.volume) ||
+            (currentUserSignalSettings?.volumeType === RobotVolumeType.currencyDynamic &&
+                settings.volumeType === RobotVolumeType.currencyDynamic &&
+                settings.volumeInCurrency === currentUserSignalSettings.volumeInCurrency)
+        )
             throw new ActionsHandlerError("This volume value is already set.", null, "FORBIDDEN", 403);
 
-        const marketLimits: Market["limits"] = (await this.db.pg.maybeOneFirst(sql`
+        const marketLimits: UserMarketState["limits"] = (await this.db.pg.maybeOneFirst(sql`
             SELECT m.limits
-            FROM robots r, markets m
+            FROM robots r, v_user_markets vm
             WHERE r.id = ${robotId}
-                AND m.exchange = r.exchange
-                AND m.asset = r.asset
-                AND m.currency = r.currency;
+                AND vm.user_id = ${user.id}
+                AND vm.exchange = r.exchange
+                AND vm.asset = r.asset
+                AND vm.currency = r.currency;
         `)) as any;
 
-        if (!marketLimits?.amount) throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
+        let _volume: number;
+        let _amountMin: number;
+        let _amountMax: number;
+        let newSettings: UserSignalSettings;
 
-        const { amount } = marketLimits;
+        if (settings.volumeType === RobotVolumeType.assetStatic) {
+            _volume = settings.volume;
+            _amountMin = marketLimits?.userSignal?.min?.amount;
+            _amountMax = marketLimits?.userSignal?.max?.amount;
+            newSettings = { volumeType: RobotVolumeType.assetStatic, volume: _volume };
+        } else if (settings.volumeType === RobotVolumeType.currencyDynamic) {
+            _volume = settings.volumeInCurrency;
+            _amountMin = marketLimits?.userSignal?.min?.amountUSD;
+            _amountMax = marketLimits?.userSignal?.max?.amountUSD;
+            newSettings = { volumeType: RobotVolumeType.currencyDynamic, volumeInCurrency: _volume };
+        }
 
-        if (volume < amount.min)
+        if (!_amountMin || !_amountMax) throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
+
+        if (_volume < _amountMin || _volume > _amountMax)
             throw new ActionsHandlerError(
-                `Wrong volume! Value must be at least ${amount.min}.`,
+                `Wrong volume! Value must be at least ${_amountMin} and not greater than ${_amountMax}.`,
                 null,
                 "FORBIDDEN",
                 403
             );
 
-        if (volume > amount.max)
-            throw new ActionsHandlerError(
-                `Wrong volume! Value must be not greater than ${amount.max}.`,
-                null,
-                "FORBIDDEN",
-                403
-            );
-
-        // TODO: check min value volumeInCurrency for currencyDynamic
-
-        const newUserSignalSettings = { ...userSignalSettings, volume };
-
-        await this.db.pg.query(sql`
-            UPDATE user_signals
-            SET volume = ${volume}
-            WHERE id = ${userSignal.id};
-        `);
-
+        // active_from = now() // default
         await this.db.pg.query(sql`
             INSERT INTO user_signal_settings(
-                user_signal_id, user_signal_settings, active_from
+                user_signal_id, user_signal_settings
             ) VALUES (
                 ${userSignal.id},
-                ${sql.json(newUserSignalSettings)},
-                ${dayjs.utc().toISOString()}
+                ${sql.json(newSettings)}
             );
         `);
     }
@@ -615,13 +750,18 @@ export default class UserProfileService extends HTTPService {
                 403
             );
 
-        const robot: {
-            id: string;
-            exchange: string;
-            asset: string;
-            currency: string;
-            available: number;
-        } = await this.db.pg.maybeOne(sql`
+        // swapped (next check was after robot check)
+
+        const userRobotExists = await this.db.pg.maybeOne(sql`
+            SELECT id
+            FROM user_robots
+            WHERE user_id = ${userId}
+                AND robot_id = ${robotId};
+        `);
+
+        if (userRobotExists) throw new ActionsHandlerError("User Robot already exists", null, "FORBIDDEN", 403);
+
+        const robot: RobotState = await this.db.pg.maybeOne(sql`
             SELECT id, exchange, asset, currency, available
             FROM robots
             WHERE id = ${robotId};
@@ -634,40 +774,42 @@ export default class UserProfileService extends HTTPService {
 
         if (robot.available < user.access) throw new ActionsHandlerError("", null, "FORBIDDEN", 403);
 
-        const userRobotExists = await this.db.pg.maybeOne(sql`
-            SELECT id
-            FROM user_robots
-            WHERE user_id = ${userId}
-                AND robot_id = ${robotId};
-        `);
-
-        if (userRobotExists) throw new ActionsHandlerError("User Robot already exists", null, "FORBIDDEN", 403);
-
-        const marketLimits: Market["limits"] = (await this.db.pg.maybeOneFirst(sql`
+        const marketLimits: UserMarketState["limits"] = (await this.db.pg.maybeOneFirst(sql`
             SELECT limits
-            FROM markets
-            WHERE exchange = ${robot.exchange}
+            FROM v_user_markets
+            WHERE user_id = ${user.id}
+                AND exchange = ${robot.exchange}
                 AND asset = ${robot.asset}
                 AND currency = ${robot.currency};
         `)) as any;
 
-        if (!marketLimits?.amount) throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
+        let _volume: number;
+        let _amountMin: number;
+        let _amountMax: number;
+        let newSettings: UserRobotSettings;
 
-        const { amount } = marketLimits;
+        if (settings.volumeType === RobotVolumeType.assetStatic) {
+            _volume = settings.volume;
+            _amountMin = marketLimits?.userRobot?.min?.amount;
+            _amountMax = marketLimits?.userRobot?.max?.amount;
+            newSettings = { volumeType: RobotVolumeType.assetStatic, volume: _volume };
+        } else if (settings.volumeType === RobotVolumeType.currencyDynamic) {
+            _volume = settings.volumeInCurrency;
+            _amountMin = marketLimits?.userRobot?.min?.amountUSD;
+            _amountMax = marketLimits?.userRobot?.max?.amountUSD;
+            newSettings = { volumeType: RobotVolumeType.currencyDynamic, volumeInCurrency: _volume };
+        } else if (settings.volumeType === UserRobotVolumeType.balancePercent) {
+            _volume = settings.balancePercent;
+            _amountMin = 1;
+            _amountMax = 100;
+            newSettings = { volumeType: UserRobotVolumeType.balancePercent, balancePercent: _volume };
+        }
 
-        // TODO: settings typing
+        if (!_amountMin || !_amountMax) throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
 
-        if ((settings as any).volume < amount.min)
+        if (_volume < _amountMin || _volume > _amountMax)
             throw new ActionsHandlerError(
-                `Wrong volume! Value must be at least ${amount.min}.`,
-                null,
-                "FORBIDDEN",
-                403
-            );
-
-        if ((settings as any).volume > amount.max)
-            throw new ActionsHandlerError(
-                `Wrong volume! Value must be not greater than ${amount.max}.`,
+                `Wrong volume! Value must be at least ${_amountMin} and not greater than ${_amountMax}.`,
                 null,
                 "FORBIDDEN",
                 403
@@ -676,19 +818,27 @@ export default class UserProfileService extends HTTPService {
         const userRobotId = uuid();
 
         await this.db.pg.query(sql`
-                INSERT INTO user_robots(
-                    id, robot_id, user_ex_acc_id, user_id, status, settings
-                ) VALUES (
-                    ${userRobotId},
-                    ${robotId},
-                    ${userExAccId},
-                    ${userId},
-                    ${RobotStatus.stopped},
-                    ${sql.json(settings)}
-                );
+            INSERT INTO user_robots(
+                id, robot_id, user_ex_acc_id, user_id, status
+            ) VALUES (
+                ${userRobotId},
+                ${robotId},
+                ${userExAccId},
+                ${userId},
+                ${RobotStatus.stopped}
+            );
         `);
 
-        // TODO: add note to user_robots_settings
+        // active_from = now() // default
+        await this.db.pg.query(sql`
+                INSERT INTO user_robot_settings(
+                    user_robot_id, user_robot_settings, trade_settings
+                ) VALUES (
+                    ${userRobotId},
+                    ${sql.json(newSettings)},
+                    ${sql.json({})}
+                );
+        `);
 
         return userRobotId;
     }
@@ -716,66 +866,83 @@ export default class UserProfileService extends HTTPService {
         // Not need
         //if (userRobotExists.status !== RobotStatus.stopped)
 
-        // TODO: check user_robots_settings
-
-        const robot: {
-            id: string;
-            exchange: string;
-            asset: string;
-            currency: string;
+        const {
+            userRobotSettings: currentUserSignalSettings,
+            tradeSettings: currentTradeSettings
+        }: {
+            userRobotSettings: UserRobotSettings;
+            tradeSettings: any;
         } = await this.db.pg.maybeOne(sql`
-            SELECT id, exchange, asset, currency
-            FROM robots
-            WHERE id = ${userRobotExists.robotId};
+            SELECT user_robot_settings, 
+            FROM v_user_robot_settings
+            WHERE user_robot_id = ${id};
         `);
 
-        if (!robot)
-            throw new ActionsHandlerError("Robot not found", { robotId: userRobotExists.robotId }, "NOT_FOUND", 404);
+        if (
+            (currentUserSignalSettings?.volumeType === RobotVolumeType.assetStatic &&
+                settings.volumeType === RobotVolumeType.assetStatic &&
+                settings.volume === currentUserSignalSettings.volume) ||
+            (currentUserSignalSettings?.volumeType === RobotVolumeType.currencyDynamic &&
+                settings.volumeType === RobotVolumeType.currencyDynamic &&
+                settings.volumeInCurrency === currentUserSignalSettings.volumeInCurrency) ||
+            (currentUserSignalSettings?.volumeType === UserRobotVolumeType.balancePercent &&
+                settings.volumeType === UserRobotVolumeType.balancePercent &&
+                settings.balancePercent === currentUserSignalSettings.balancePercent)
+        )
+            throw new ActionsHandlerError("This volume value is already set.", null, "FORBIDDEN", 403);
 
-        const marketLimits: Market["limits"] = (await this.db.pg.maybeOneFirst(sql`
-            SELECT limits
-            FROM markets
-            WHERE exchange = ${robot.exchange}
-                AND asset = ${robot.asset}
-                AND currency = ${robot.currency};
+        const marketLimits: UserMarketState["limits"] = (await this.db.pg.maybeOneFirst(sql`
+            SELECT m.limits
+            FROM robots r, v_user_markets vm
+            WHERE r.id = ${userRobotExists.robotId}
+                AND vm.user_id = ${user.id}
+                AND vm.exchange = r.exchange
+                AND vm.asset = r.asset
+                AND vm.currency = r.currency;
         `)) as any;
 
-        if (!marketLimits?.amount) throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
+        let _volume: number;
+        let _amountMin: number;
+        let _amountMax: number;
+        let newSettings: UserRobotSettings;
 
-        const { amount } = marketLimits;
+        if (settings.volumeType === RobotVolumeType.assetStatic) {
+            _volume = settings.volume;
+            _amountMin = marketLimits?.userRobot?.min?.amount;
+            _amountMax = marketLimits?.userRobot?.max?.amount;
+            newSettings = { volumeType: RobotVolumeType.assetStatic, volume: _volume };
+        } else if (settings.volumeType === RobotVolumeType.currencyDynamic) {
+            _volume = settings.volumeInCurrency;
+            _amountMin = marketLimits?.userRobot?.min?.amountUSD;
+            _amountMax = marketLimits?.userRobot?.max?.amountUSD;
+            newSettings = { volumeType: RobotVolumeType.currencyDynamic, volumeInCurrency: _volume };
+        } else if (settings.volumeType === UserRobotVolumeType.balancePercent) {
+            _volume = settings.balancePercent;
+            _amountMin = 1;
+            _amountMax = 100;
+            newSettings = { volumeType: UserRobotVolumeType.balancePercent, balancePercent: _volume };
+        }
 
-        // TODO: settings typing
+        if (!_amountMin || !_amountMax) throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
 
-        if ((settings as any).volume < amount.min)
+        if (_volume < _amountMin || _volume > _amountMax)
             throw new ActionsHandlerError(
-                `Wrong volume! Value must be at least ${amount.min}.`,
+                `Wrong volume! Value must be at least ${_amountMin} and not greater than ${_amountMax}.`,
                 null,
                 "FORBIDDEN",
                 403
             );
 
-        if ((settings as any).volume > amount.max)
-            throw new ActionsHandlerError(
-                `Wrong volume! Value must be not greater than ${amount.max}.`,
-                null,
-                "FORBIDDEN",
-                403
-            );
-
+        // active_from = now() // default
         await this.db.pg.query(sql`
-            UPDATE user_robots
-            SET settings = ${sql.json(settings)}
-            WHERE id = ${id};
+            INSERT INTO user_robot_settings(
+                user_robot_id, user_robot_settings, trade_settings
+            ) VALUES (
+                ${id},
+                ${sql.json(newSettings)},
+                ${sql.json(currentTradeSettings || {})}
+            );
         `);
-
-        // TODO: add note to user_robots_settings
-
-        /* TODO: create event subscriber (stats-calc-runner) or do nothing
-
-        await this.events.emit({
-            type: StatsCalcRunnerEvents.USER_ROBOT_UPDATED,
-            data: { userRobotId: id }
-        }); */
     }
 
     async userRobotDelete(user: User, { id }: { id: string }) {
