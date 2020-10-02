@@ -7,7 +7,6 @@ import { BaseService, BaseServiceConfig } from "./BaseService";
 import { ActionsHandlerError } from "@cryptuoso/errors";
 import { User, UserRoles, UserStatus } from "@cryptuoso/user-state";
 import { JSONParse } from "@cryptuoso/helpers";
-import { getAccessValue } from "./helpers";
 
 //TODO: req/res typings
 
@@ -23,15 +22,11 @@ export interface ActionPayload {
     };
 }
 
-export interface UserExtended extends User {
-    access: number;
-}
-
 export type RequestExtended<P extends Protocol = any> = Request<P> & {
     body?: ActionPayload;
     meta?: {
         [key: string]: any;
-        user: UserExtended;
+        user: User;
     };
 };
 
@@ -152,7 +147,7 @@ export class HTTPService extends BaseService {
             if (!userId) throw new ActionsHandlerError("Invalid session variables", null, "UNAUTHORIZED", 401);
 
             const cachedUserKey = `cpz:users:${userId}`;
-            let user: UserExtended;
+            let user: User;
 
             const cachedUserJSON = await this.redis.get(cachedUserKey);
 
@@ -174,8 +169,6 @@ export class HTTPService extends BaseService {
                 `);
 
                 if (!user) throw new ActionsHandlerError("User account is not found", null, "NOT_FOUND", 404);
-
-                user.access = getAccessValue(user);
 
                 await this.redis.setex(cachedUserKey, 60, JSON.stringify(user));
             }

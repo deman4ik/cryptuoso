@@ -94,6 +94,7 @@ describe("Test 'AuthService' class methods", () => {
                     email: params.email,
                     status: UserStatus.enabled,
                     passwordHash: await bcrypt.hash(params.password, 10),
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -158,6 +159,7 @@ describe("Test 'AuthService' class methods", () => {
                     email: params.email,
                     status: UserStatus.enabled,
                     passwordHash: "OTHER",
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -199,6 +201,7 @@ describe("Test 'AuthService' class methods", () => {
                     id: "id",
                     telegramId: params.id,
                     status: UserStatus.enabled,
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -276,6 +279,7 @@ describe("Test 'AuthService' class methods", () => {
                     id: "id",
                     telegramId: params.id,
                     status: UserStatus.enabled,
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -369,6 +373,7 @@ describe("Test 'AuthService' class methods", () => {
                 const dbUser: User = {
                     id: "id",
                     status: UserStatus.enabled,
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -405,6 +410,7 @@ describe("Test 'AuthService' class methods", () => {
                 const dbUser: User = {
                     id: "id",
                     status: UserStatus.enabled,
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -476,6 +482,7 @@ describe("Test 'AuthService' class methods", () => {
                     id: params.userId,
                     status: UserStatus.new,
                     secretCode: params.secretCode,
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -540,6 +547,7 @@ describe("Test 'AuthService' class methods", () => {
                     id: params.userId,
                     status: UserStatus.new,
                     secretCode: "OTHER",
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -577,6 +585,7 @@ describe("Test 'AuthService' class methods", () => {
                     id: "id",
                     email: params.email,
                     status: UserStatus.enabled,
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -642,6 +651,7 @@ describe("Test 'AuthService' class methods", () => {
                     id: params.userId,
                     status: UserStatus.enabled,
                     secretCode: params.secretCode,
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -708,6 +718,7 @@ describe("Test 'AuthService' class methods", () => {
                     id: params.userId,
                     status: UserStatus.enabled,
                     secretCode: "OTHER",
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -745,6 +756,7 @@ describe("Test 'AuthService' class methods", () => {
                     id: params.userId,
                     status: UserStatus.enabled,
                     secretCode: "OTHER",
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -783,6 +795,7 @@ describe("Test 'AuthService' class methods", () => {
                     id: "id",
                     email: params.email,
                     status: UserStatus.enabled,
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -821,6 +834,7 @@ describe("Test 'AuthService' class methods", () => {
                     id: "id",
                     email: params.email,
                     status: UserStatus.enabled,
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -859,6 +873,7 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => null);
                 mockPG.maybeOne.mockImplementationOnce(async () => ({
                     id: userId,
+                    access: 15,
                     roles: { allowedRoles: [UserRoles.user] }
                 }));
 
@@ -892,6 +907,7 @@ describe("Test 'AuthService' class methods", () => {
                     emailNew: "example@inbox.com",
                     status: UserStatus.enabled,
                     secretCode: params.secretCode,
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
@@ -932,6 +948,7 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => null);
                 mockPG.maybeOne.mockImplementationOnce(async () => ({
                     id: userId,
+                    access: 15,
                     roles: { allowedRoles: [UserRoles.user] }
                 }));
 
@@ -963,6 +980,7 @@ describe("Test 'AuthService' class methods", () => {
                     id: params.userId,
                     status: UserStatus.enabled,
                     secretCode: "OTHER",
+                    access: 15,
                     roles: {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]

@@ -17,6 +17,8 @@ jest.mock("lightship", () => ({
     createLightship: jest.fn(() => mockLightshipType)
 }));
 
+jest.mock("@cryptuoso/logger");
+
 const unbalancedTopic = "cpz:events:trades",
     groupTopic = "cpz:events:importer",
     groupName = "importer";

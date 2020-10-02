@@ -18,7 +18,6 @@ describe("Test 'tradeStatistics' utils", () => {
             const result = calcStatistics(null, positions);
 
             correctResult.lastUpdatedAt = dayjs.utc().toISOString();
-            console.log(result.equityAvg);
             expect(result).toStrictEqual(correctResult);
         });
     });

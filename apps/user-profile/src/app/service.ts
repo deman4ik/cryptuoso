@@ -1,7 +1,8 @@
-import { HTTPService, HTTPServiceConfig, RequestExtended, UserExtended } from "@cryptuoso/service";
+import { HTTPService, HTTPServiceConfig, RequestExtended } from "@cryptuoso/service";
 import {
     GenericObject,
-    /* User,  */ UserRoles,
+    User,
+    UserRoles,
     UserExchangeAccountState,
     UserExchangeKeys,
     UserExchangeAccStatus,
@@ -114,7 +115,7 @@ export default class UserProfileService extends HTTPService {
     }
 
     async _httpHandler(
-        handler: (user: UserExtended, params: GenericObject) => Promise<GenericObject | any>,
+        handler: (user: User, params: GenericObject) => Promise<GenericObject | any>,
         req: RequestExtended,
         res: any
     ) {
@@ -127,7 +128,7 @@ export default class UserProfileService extends HTTPService {
     //#region "User Settings"
 
     async setNotificationSettings(
-        user: UserExtended,
+        user: User,
         {
             signalsTelegram,
             signalsEmail,
@@ -177,7 +178,7 @@ export default class UserProfileService extends HTTPService {
         return newSettings;
     }
 
-    async changeName(user: UserExtended, { name }: { name: string }) {
+    async changeName(user: User, { name }: { name: string }) {
         await this.db.pg.query(sql`
             UPDATE users
             SET name = ${name}
@@ -189,7 +190,7 @@ export default class UserProfileService extends HTTPService {
 
     //#region "User Signals"
 
-    async userSignalSubscribe(user: UserExtended, { robotId, volume }: { robotId: string; volume: number }) {
+    async userSignalSubscribe(user: User, { robotId, volume }: { robotId: string; volume: number }) {
         const robot: RobotState = await this.db.pg.maybeOne(sql`
             SELECT exchange, asset, currency, available
             FROM robots
@@ -268,7 +269,7 @@ export default class UserProfileService extends HTTPService {
         // TODO: initialize statistics or do nothing
     }
 
-    async userSignalEdit(user: UserExtended, { robotId, volume }: { robotId: string; volume: number }) {
+    async userSignalEdit(user: User, { robotId, volume }: { robotId: string; volume: number }) {
         const userSignal: UserSignalState = await this.db.pg.maybeOne(sql`
             SELECT id
             FROM user_signals
@@ -339,7 +340,7 @@ export default class UserProfileService extends HTTPService {
         `);
     }
 
-    async userSignalUnsubscribe(user: UserExtended, { robotId }: { robotId: string }) {
+    async userSignalUnsubscribe(user: User, { robotId }: { robotId: string }) {
         const userSignal: UserSignalState = await this.db.pg.maybeOne(sql`
             SELECT id
             FROM user_signals
@@ -369,7 +370,7 @@ export default class UserProfileService extends HTTPService {
     //#region "User Exchange Account"
 
     async userExchangeAccUpsert(
-        user: UserExtended,
+        user: User,
         {
             id,
             exchange,
@@ -498,7 +499,7 @@ export default class UserProfileService extends HTTPService {
     }
 
     async userExchangeAccChangeName(
-        user: UserExtended,
+        user: User,
         {
             id,
             name
@@ -543,7 +544,7 @@ export default class UserProfileService extends HTTPService {
         `);
     }
 
-    async userExchangeAccDelete(user: UserExtended, { id }: { id: string }) {
+    async userExchangeAccDelete(user: User, { id }: { id: string }) {
         const { id: userId } = user;
 
         let userExchangeAcc: UserExchangeAccountState = await this.db.pg.maybeOne(sql`
@@ -584,7 +585,7 @@ export default class UserProfileService extends HTTPService {
     //#region "User Robots"
 
     async userRobotCreate(
-        user: UserExtended,
+        user: User,
         {
             userExAccId,
             robotId,
@@ -692,7 +693,7 @@ export default class UserProfileService extends HTTPService {
         return userRobotId;
     }
 
-    async userRobotEdit(user: UserExtended, { id, settings }: { id: string; settings: UserRobotSettings }) {
+    async userRobotEdit(user: User, { id, settings }: { id: string; settings: UserRobotSettings }) {
         const { id: userId } = user;
 
         const userRobotExists: UserRobotDB = await this.db.pg.maybeOne(sql`
@@ -777,7 +778,7 @@ export default class UserProfileService extends HTTPService {
         }); */
     }
 
-    async userRobotDelete(user: UserExtended, { id }: { id: string }) {
+    async userRobotDelete(user: User, { id }: { id: string }) {
         const { id: userId } = user;
 
         const userRobotExists: UserRobotDB = await this.db.pg.maybeOne(sql`

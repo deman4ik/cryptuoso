@@ -24,6 +24,7 @@ const setProperty = (object: any, property: any, value: any) => {
 };
 
 setProperty(process, "exit", mockExit);
+setProperty(console, "log", jest.fn());
 setProperty(console, "error", jest.fn());
 jest.mock("lightship", () => {
     return {

@@ -4,8 +4,8 @@ import dayjs from "@cryptuoso/dayjs";
 import { ActionsHandlerError } from "@cryptuoso/errors";
 import logger from "@cryptuoso/logger";
 import mailUtil from "@cryptuoso/mail";
-import { User, UserStatus, UserRoles } from "@cryptuoso/user-state";
-import { formatTgName, checkTgLogin, getAccessValue } from "./auth-helper";
+import { User, UserStatus, UserRoles, UserAccessValues } from "@cryptuoso/user-state";
+import { formatTgName, checkTgLogin } from "./auth-helper";
 import { DBFunctions, Bcrypt } from "./types";
 import bcrypt from "bcrypt";
 
@@ -147,6 +147,7 @@ export class Auth {
                 allowedRoles: [UserRoles.user],
                 defaultRole: UserRoles.user
             },
+            access: UserAccessValues.user,
             settings: {
                 notifications: {
                     signals: {
@@ -195,6 +196,7 @@ export class Auth {
                 allowedRoles: [UserRoles.user],
                 defaultRole: UserRoles.user
             },
+            access: UserAccessValues.user,
             settings: {
                 notifications: {
                     signals: {
@@ -471,9 +473,9 @@ export class Auth {
     generateAccessToken(user: User) {
         const {
             id,
-            roles: { defaultRole, allowedRoles }
+            roles: { defaultRole, allowedRoles },
+            access
         } = user;
-        const access = getAccessValue(user);
         return jwt.sign(
             {
                 userId: id,

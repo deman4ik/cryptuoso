@@ -21,6 +21,14 @@ export const enum UserRoles {
     anonymous = "anonymous"
 }
 
+export const enum UserAccessValues {
+    admin = 5,
+    manager = 5,
+    vip = 10,
+    user = 15,
+    anonymous = 20
+}
+
 export const enum UserStatus {
     blocked = -1,
     new = 0,
@@ -60,6 +68,7 @@ export interface User {
     refreshToken?: string;
     refreshTokenExpireAt?: string;
     roles: UserRolesList;
+    access: UserAccessValues;
     settings: UserSettings;
     lastActiveAt?: string;
 }
