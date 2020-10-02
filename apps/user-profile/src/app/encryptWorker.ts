@@ -22,7 +22,7 @@ function createKey(userId: string) {
         userKeys[3]
     ].join("");
 
-    return crypto.scryptSync(pass, "salt", 32);
+    return (crypto as any).scryptSync(pass, "salt", 32);
 }
 
 function encrypt(userId: string, data: string): EncryptedData {
