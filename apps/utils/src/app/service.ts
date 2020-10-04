@@ -113,6 +113,7 @@ export default class UtilsService extends HTTPService {
         const { robots, userSignals, userRobots } = req.body.input;
 
         if (robots) {
+            await this.db.pg.query(sql`delete from robot_settings;`);
             const robotsList: {
                 id: string;
                 settings: {
@@ -121,11 +122,12 @@ export default class UtilsService extends HTTPService {
                     requiredHistoryMaxBars: number;
                 };
                 createdAt: string;
+                startedAt: string;
             }[] = await this.db.pg.many(sql`
-            SELECT id, settings, trade_settings, created_at
+            SELECT id, settings, trade_settings, created_at, started_at
             FROM robots;`);
 
-            for (const { id, settings, createdAt } of robotsList) {
+            for (const { id, settings, createdAt, startedAt } of robotsList) {
                 const strategySettings = settings.strategyParameters;
 
                 const robotSettings: RobotSettingsAssetStatic = {
@@ -143,7 +145,7 @@ export default class UtilsService extends HTTPService {
                     (${id},
                     ${sql.json(strategySettings)},
                     ${sql.json(robotSettings)},
-                    ${createdAt})
+                    ${startedAt || createdAt})
                     ON CONFLICT ON CONSTRAINT robot_settings_robot_id_active_from_key
                     DO UPDATE SET strategy_settings = excluded.strategy_settings,
                                   robot_settings = excluded.robot_settings;`);
@@ -151,6 +153,7 @@ export default class UtilsService extends HTTPService {
         }
 
         if (userSignals) {
+            await this.db.pg.query(sql`delete from user_signal_settings;`);
             const userSignalsList: {
                 id: string;
                 volume: number;
@@ -167,24 +170,25 @@ export default class UtilsService extends HTTPService {
                 await this.db.pg.query(sql`
                     INSERT INTO user_signal_settings 
                     (user_signal_id, 
-                    signal_settings, 
+                    user_signal_settings, 
                     active_from) 
                     VALUES 
                     (${id},
                     ${sql.json(userSignalSettings)},
                     ${subscribedAt})
                     ON CONFLICT ON CONSTRAINT user_signal_settings_user_signal_id_active_from_key
-                    DO UPDATE SET signal_settings = excluded.signal_settings;`);
+                    DO UPDATE SET user_signal_settings = excluded.user_signal_settings;`);
             }
         }
 
         if (userRobots) {
+            await this.db.pg.query(sql`delete from user_robot_settings;`);
             const userRobotsList: {
                 id: string;
                 settings: { [key: string]: any };
                 createdAt: string;
             }[] = await this.db.pg.many(sql`
-            SELECT ur.id, ur.settings, ur.created_at, r.trade_settings
+            SELECT ur.id, ur.settings, ur.created_at
             FROM user_robots ur, robots r
             WHERE ur.robot_id = r.id;`);
 
@@ -193,7 +197,6 @@ export default class UtilsService extends HTTPService {
                     INSERT INTO user_robot_settings 
                     (user_robot_id, 
                     user_robot_settings, 
-                    trade_settings,
                     active_from) 
                     VALUES 
                     (${id},
