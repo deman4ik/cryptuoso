@@ -372,8 +372,8 @@ export default class AuthService extends HTTPService {
 
         await await this.db.pg.query(sql`
             UPDATE users
-            SET secret_сode = ${null},
-                secret_сode_expire_at = ${null},
+            SET secret_code = ${null},
+                secret_code_expire_at = ${null},
                 status = ${UserStatus.enabled},
                 refresh_token = ${refreshToken},
                 refresh_token_expire_at = ${refreshTokenExpireAt}
