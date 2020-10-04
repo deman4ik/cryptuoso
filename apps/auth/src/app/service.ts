@@ -438,7 +438,7 @@ export default class AuthService extends HTTPService {
             SET email = ${email},
                 email_new = ${emailNew},
                 secret_code = ${secretCode},
-                secret_code_expire_at = ${secretCodeExpireAt}
+                secret_code_expire_at = ${secretCodeExpireAt},
                 refresh_token = ${refreshToken},
                 refresh_token_expire_at = ${refreshTokenExpireAt},
                 status = ${status}
