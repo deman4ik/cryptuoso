@@ -142,7 +142,7 @@ export default class AuthService extends HTTPService {
             httpOnly: true,
             sameSite: this.isDev ? "none" : "lax",
             domain: ".cryptuoso.com",
-            secure: this.isDev ? false : true
+            secure: true
         };
     }
 
