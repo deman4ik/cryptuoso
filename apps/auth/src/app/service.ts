@@ -1,5 +1,5 @@
-import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
-import { Request, Response, Protocol } from "restana";
+import { HTTPService, HTTPServiceConfig, RequestExtended } from "@cryptuoso/service";
+import { Response, Protocol } from "restana";
 import Cookie, { CookieSerializeOptions } from "cookie";
 import { User, UserStatus, UserRoles } from "@cryptuoso/user-state";
 import { DBFunctions } from "./types";
@@ -7,10 +7,6 @@ import { Auth } from "./auth";
 import { sql } from "slonik";
 import dayjs from "@cryptuoso/dayjs";
 import { ActionsHandlerError } from "@cryptuoso/errors";
-
-interface HttpRequest extends Request<Protocol.HTTP> {
-    body: any;
-}
 
 type HttpResponse = Response<Protocol.HTTP>;
 
@@ -28,6 +24,7 @@ export default class AuthService extends HTTPService {
         updateUserRefreshToken: this._dbUpdateUserRefreshToken.bind(this),
         updateUserSecretCode: this._dbUpdateUserSecretCode.bind(this),
         updateUserPassword: this._dbUpdateUserPassword.bind(this),
+        changeUserPassword: this._dbChangeUserPassword.bind(this),
         changeUserEmail: this._dbChangeUserEmail.bind(this),
         confirmChangeUserEmail: this._dbConfirmChangeUserEmail.bind(this),
         activateUser: this._dbActivateUser.bind(this)
@@ -94,6 +91,20 @@ export default class AuthService extends HTTPService {
                         secretCode: { type: "string", empty: false, trim: true }
                     }
                 },
+                changePassword: {
+                    handler: this.changePassword.bind(this),
+                    roles: [UserRoles.user],
+                    inputSchema: {
+                        password: {
+                            type: "string",
+                            min: 6,
+                            max: 100,
+                            alphanum: true,
+                            trim: true
+                        },
+                        oldPassword: { type: "string", optional: true, trim: true }
+                    }
+                },
                 passwordReset: {
                     handler: this.passwordReset.bind(this),
                     inputSchema: {
@@ -146,7 +157,7 @@ export default class AuthService extends HTTPService {
         };
     }
 
-    async login(req: HttpRequest, res: HttpResponse) {
+    async login(req: RequestExtended, res: HttpResponse) {
         try {
             const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.login(req.body.input);
 
@@ -164,7 +175,7 @@ export default class AuthService extends HTTPService {
         }
     }
 
-    async loginTg(req: HttpRequest, res: HttpResponse) {
+    async loginTg(req: RequestExtended, res: HttpResponse) {
         const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.loginTg(req.body.input);
 
         res.setHeader(
@@ -177,19 +188,19 @@ export default class AuthService extends HTTPService {
         res.end();
     }
 
-    async logout(req: HttpRequest, res: HttpResponse) {
+    async logout(req: RequestExtended, res: HttpResponse) {
         res.setHeader("Set-Cookie", Cookie.serialize("refresh_token", "", this._makeCookieProps(0)));
         res.send({ result: "OK" });
         res.end();
     }
 
-    async register(req: HttpRequest, res: HttpResponse) {
+    async register(req: RequestExtended, res: HttpResponse) {
         const userId = await this.auth.register(req.body.input);
         res.send({ userId });
         res.end();
     }
 
-    async refreshToken(req: HttpRequest, res: HttpResponse) {
+    async refreshToken(req: RequestExtended, res: HttpResponse) {
         const cookies = Cookie.parse((req.headers["cookie"] as string) || "");
         let oldRefreshToken = cookies["refresh_token"];
         this.log.info("cookie ", req.headers["cookie"], cookies, oldRefreshToken);
@@ -217,7 +228,7 @@ export default class AuthService extends HTTPService {
         res.end();
     }
 
-    async activateAccount(req: HttpRequest, res: HttpResponse) {
+    async activateAccount(req: RequestExtended, res: HttpResponse) {
         const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.activateAccount(req.body.input);
 
         res.setHeader(
@@ -230,13 +241,19 @@ export default class AuthService extends HTTPService {
         res.end();
     }
 
-    async passwordReset(req: HttpRequest, res: HttpResponse) {
+    async changePassword(req: RequestExtended, res: HttpResponse) {
+        await this.auth.changePassword(req.meta.user, req.body.input);
+        res.send({ result: "OK" });
+        res.end();
+    }
+
+    async passwordReset(req: RequestExtended, res: HttpResponse) {
         const userId = await this.auth.passwordReset(req.body.input);
         res.send({ userId });
         res.end();
     }
 
-    async confirmPasswordReset(req: HttpRequest, res: HttpResponse) {
+    async confirmPasswordReset(req: RequestExtended, res: HttpResponse) {
         const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.confirmPasswordReset(
             req.body.input
         );
@@ -251,7 +268,7 @@ export default class AuthService extends HTTPService {
         res.end();
     }
 
-    async changeEmail(req: HttpRequest, res: HttpResponse) {
+    async changeEmail(req: RequestExtended, res: HttpResponse) {
         await this.auth.changeEmail({
             userId: req.body.session_variables["x-hasura-user-id"],
             email: req.body.input.email
@@ -260,7 +277,7 @@ export default class AuthService extends HTTPService {
         res.end();
     }
 
-    async confirmChangeEmail(req: HttpRequest, res: HttpResponse) {
+    async confirmChangeEmail(req: RequestExtended, res: HttpResponse) {
         const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.confirmChangeEmail({
             userId: req.body.session_variables["x-hasura-user-id"],
             secretCode: req.body.input.secretCode
@@ -467,7 +484,17 @@ export default class AuthService extends HTTPService {
                 secret_code = ${newSecretCode},
                 secret_code_expire_at = ${newSecretCodeExpireAt},
                 refresh_token = ${refreshToken},
-                refresh_token_expireAt = ${refreshTokenExpireAt}
+                refresh_token_expire_at = ${refreshTokenExpireAt}
+            WHERE id = ${userId};
+        `);
+    }
+
+    private async _dbChangeUserPassword(params: { userId: string; passwordHash: string }): Promise<any> {
+        const { userId, passwordHash } = params;
+
+        await this.db.pg.query(sql`
+            UPDATE users
+            SET password_hash = ${passwordHash}
             WHERE id = ${userId};
         `);
     }

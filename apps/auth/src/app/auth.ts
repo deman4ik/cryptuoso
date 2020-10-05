@@ -286,6 +286,40 @@ export class Auth {
         };
     }
 
+    async changePassword(reqUser: User, params: { password: string; oldPassword?: string }) {
+        const { password, oldPassword } = params;
+        const { id: userId } = reqUser;
+
+        const user = await this.#db.getUserById({ userId });
+        if (!user) throw new ActionsHandlerError("User account not found.", null, "NOT_FOUND", 404);
+
+        if (user.status === UserStatus.blocked)
+            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
+
+        if (user.passwordHash) {
+            if (!oldPassword) throw new ActionsHandlerError("Old password is required.", null, "VALIDATION", 400);
+
+            const oldChecked = await this.#bcrypt.compare(oldPassword, user.passwordHash);
+            if (!oldChecked) throw new ActionsHandlerError("Wrong old password.", null, "FORBIDDEN", 403);
+        }
+
+        const newPasswordHash = await this.#bcrypt.hash(password, 10);
+
+        await this.#db.changeUserPassword({ userId, passwordHash: newPasswordHash });
+
+        if (user.email)
+            await this.#mailUtil.send({
+                to: user.email,
+                subject: "🔐 Cryptuoso - Change Password Confirmation.",
+                variables: {
+                    body: `
+                <p>Your password successfully changed!</p>
+                <p>If you did not request this change, please contact support <a href="mailto:support@cryptuoso.com">support@cryptuoso.com</a></p>`
+                },
+                tags: ["auth"]
+            });
+    }
+
     async passwordReset(params: { email: string }) {
         const { email } = params;
         const user: User = await this.#db.getUserByEmail({ email });

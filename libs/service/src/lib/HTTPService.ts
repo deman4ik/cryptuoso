@@ -14,7 +14,7 @@ export interface ActionPayload {
     action: {
         name: string;
     };
-    input: { [key: string]: any };
+    input: { [key: string]: any } | any;
     session_variables: {
         [key: string]: string;
         "x-hasura-user-id"?: string;
