@@ -484,7 +484,7 @@ export default class AuthService extends HTTPService {
                 secret_code = ${newSecretCode},
                 secret_code_expire_at = ${newSecretCodeExpireAt},
                 refresh_token = ${refreshToken},
-                refresh_token_expireAt = ${refreshTokenExpireAt}
+                refresh_token_expire_at = ${refreshTokenExpireAt}
             WHERE id = ${userId};
         `);
     }
