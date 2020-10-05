@@ -721,6 +721,141 @@ describe("Test Auth class methods", () => {
         });
     });
 
+    describe("changePassword method", () => {
+        describe("W/o user passwordHash and oldPassword parameter", () => {
+            test("Should change password hash in DB", async () => {
+                const params = {
+                    password: "pass"
+                };
+
+                const dbUser: User = {
+                    id: "id",
+                    status: UserStatus.new,
+                    access: 15,
+                    roles: {
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
+                    },
+                    settings: userSettings
+                };
+                const changeUserPassword = jest.fn();
+                const auth = new Auth(
+                    {
+                        getUserById: jest.fn(async () => dbUser),
+                        changeUserPassword
+                    } as any
+                    //   //   bcryptUtils as any
+                );
+
+                await expect(auth.changePassword(dbUser, params)).resolves.not.toThrow();
+                expect(changeUserPassword).toBeCalled();
+
+                const args = changeUserPassword.mock.calls[0][0];
+
+                expect(args.userId).toBe(dbUser.id);
+                expect(await bcrypt.compare(params.password, args.passwordHash)).toBeTruthy();
+            });
+        });
+
+        describe("With passwordHash but w/o oldPassword parameter", () => {
+            test("Should to throw error", async () => {
+                const params = {
+                    password: "pass"
+                };
+
+                const dbUser: User = {
+                    id: "id",
+                    status: UserStatus.enabled,
+                    passwordHash: "hash",
+                    access: 15,
+                    roles: {
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
+                    },
+                    settings: userSettings
+                };
+                const changeUserPassword = jest.fn();
+                const auth = new Auth(
+                    {
+                        getUserById: jest.fn(async () => dbUser),
+                        changeUserPassword
+                    } as any
+                    //   //   bcryptUtils as any
+                );
+
+                await expect(auth.changePassword(dbUser, params)).rejects.toThrow();
+            });
+        });
+
+        describe("With right passwordHash", () => {
+            test("Should change password hash in DB", async () => {
+                const params = {
+                    password: "pass",
+                    oldPassword: "oldPass"
+                };
+
+                const dbUser: User = {
+                    id: "id",
+                    status: UserStatus.enabled,
+                    passwordHash: await bcrypt.hash(params.oldPassword, 10),
+                    access: 15,
+                    roles: {
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
+                    },
+                    settings: userSettings
+                };
+                const changeUserPassword = jest.fn();
+                const auth = new Auth(
+                    {
+                        getUserById: jest.fn(async () => dbUser),
+                        changeUserPassword
+                    } as any
+                    //   //   bcryptUtils as any
+                );
+
+                await expect(auth.changePassword(dbUser, params)).resolves.not.toThrow();
+                expect(changeUserPassword).toBeCalled();
+
+                const args = changeUserPassword.mock.calls[0][0];
+
+                expect(args.userId).toBe(dbUser.id);
+                expect(await bcrypt.compare(params.password, args.passwordHash)).toBeTruthy();
+            });
+        });
+
+        describe("With wrong passwordHash", () => {
+            test("Should to throw error", async () => {
+                const params = {
+                    password: "pass",
+                    oldPassword: "oldPass"
+                };
+
+                const dbUser: User = {
+                    id: "id",
+                    status: UserStatus.enabled,
+                    passwordHash: "wrong",
+                    access: 15,
+                    roles: {
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
+                    },
+                    settings: userSettings
+                };
+                const changeUserPassword = jest.fn();
+                const auth = new Auth(
+                    {
+                        getUserById: jest.fn(async () => dbUser),
+                        changeUserPassword
+                    } as any
+                    //   //   bcryptUtils as any
+                );
+
+                await expect(auth.changePassword(dbUser, params)).rejects.toThrow();
+            });
+        });
+    });
+
     describe("passwordReset method", () => {
         describe("With existing email", () => {
             test("Should prepare DB data and return userId", async () => {
