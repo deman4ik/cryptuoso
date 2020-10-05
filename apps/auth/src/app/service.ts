@@ -141,8 +141,8 @@ export default class AuthService extends HTTPService {
             expires: new Date(expires),
             httpOnly: true,
             sameSite: this.isDev ? "none" : "lax",
-            domain: this.isDev ? null : ".cryptuoso.com",
-            secure: this.isDev ? false : true
+            domain: ".cryptuoso.com",
+            secure: true
         };
     }
 
@@ -212,9 +212,7 @@ export default class AuthService extends HTTPService {
             Cookie.serialize("refresh_token", refreshToken, this._makeCookieProps(refreshTokenExpireAt))
         );
         res.send({
-            accessToken,
-            refreshToken,
-            refreshTokenExpireAt
+            accessToken
         });
         res.end();
     }
@@ -372,8 +370,8 @@ export default class AuthService extends HTTPService {
 
         await await this.db.pg.query(sql`
             UPDATE users
-            SET secret_сode = ${null},
-                secret_сode_expire_at = ${null},
+            SET secret_code = ${null},
+                secret_code_expire_at = ${null},
                 status = ${UserStatus.enabled},
                 refresh_token = ${refreshToken},
                 refresh_token_expire_at = ${refreshTokenExpireAt}
@@ -438,7 +436,7 @@ export default class AuthService extends HTTPService {
             SET email = ${email},
                 email_new = ${emailNew},
                 secret_code = ${secretCode},
-                secret_code_expire_at = ${secretCodeExpireAt}
+                secret_code_expire_at = ${secretCodeExpireAt},
                 refresh_token = ${refreshToken},
                 refresh_token_expire_at = ${refreshTokenExpireAt},
                 status = ${status}

@@ -171,7 +171,7 @@ export class Auth {
             to: email,
             subject: "🚀 Welcome to Cryptuoso Platform - Please confirm your email.",
             variables: {
-                params: `<p>Greetings!</p>
+                body: `<p>Greetings!</p>
                 <p>Your user account is successfully created!</p>
                 <p>Activate your account by confirming your email please click <b><a href="https://cryptuoso.com/auth/activate-account/${urlData}">this link</a></b></p>
                 <p>or enter this code <b>${newUser.secretCode}</b> manually on confirmation page.</p>`
@@ -272,7 +272,7 @@ export class Auth {
             to: user.email,
             subject: "🚀 Welcome to Cryptuoso Platform - User Account Activated.",
             variables: {
-                params: `<p>Congratulations!</p>
+                body: `<p>Congratulations!</p>
                 <p>Your user account is successfully activated!</p>
                 <p>Now you can login to <b><a href="https://cryptuoso.com/auth/login">your account</a></b> using your email and password.</p>
                 <p>Please check out our <b><a href="https://support.cryptuoso.com">Documentation Site</a></b> to get started!</p>`
@@ -318,7 +318,7 @@ export class Auth {
             to: user.email,
             subject: "🔐 Cryptuoso - Password Reset Request.",
             variables: {
-                params: `
+                body: `
                 <p>We received a request to reset your password. Please create a new password by clicking <a href="https://cryptuoso.com/auth/confirm-password-reset/${urlData}">this link</a></p>
                 <p>or enter this code <b>${secretCode}</b> manually on reset password confirmation page.</p>
                 <p>This request will expire in 1 hour.</p>
@@ -366,7 +366,7 @@ export class Auth {
             to: user.email,
             subject: "🔐 Cryptuoso - Reset Password Confirmation.",
             variables: {
-                params: `
+                body: `
                 <p>Your password successfully changed!</p>
                 <p>If you did not request this change, please contact support <a href="mailto:support@cryptuoso.com">support@cryptuoso.com</a></p>`
             },
