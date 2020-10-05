@@ -93,7 +93,8 @@ export default class AuthService extends HTTPService {
                 },
                 changePassword: {
                     handler: this.changePassword.bind(this),
-                    roles: [UserRoles.user],
+                    auth: true,
+                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     inputSchema: {
                         password: {
                             type: "string",
