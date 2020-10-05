@@ -23,6 +23,9 @@ export interface DBFunctions {
             refreshTokenExpireAt: string;
         }): Promise<any>;
     };
+    changeUserPassword: {
+        (params: { userId: string; passwordHash: string }): Promise<any>;
+    };
     changeUserEmail: {
         (params: { userId: string; emailNew: string; secretCode: string; secretCodeExpireAt: string }): Promise<any>;
     };
