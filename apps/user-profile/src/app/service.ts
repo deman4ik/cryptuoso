@@ -878,11 +878,10 @@ export default class UserProfileService extends HTTPService {
         // active_from = now() // default
         await this.db.pg.query(sql`
                 INSERT INTO user_robot_settings(
-                    user_robot_id, user_robot_settings, trade_settings
+                    user_robot_id, user_robot_settings
                 ) VALUES (
                     ${userRobotId},
-                    ${sql.json(newUserRobotSettings)},
-                    ${sql.json({})}
+                    ${sql.json(newUserRobotSettings)}
                 );
         `);
 
@@ -913,11 +912,9 @@ export default class UserProfileService extends HTTPService {
         //if (userRobotExists.status !== RobotStatus.stopped)
 
         const {
-            userRobotSettings: currentUserRobotSettings,
-            tradeSettings: currentTradeSettings
+            userRobotSettings: currentUserRobotSettings
         }: {
             userRobotSettings: UserRobotSettings;
-            tradeSettings: any;
         } = await this.db.pg.maybeOne(sql`
             SELECT user_robot_settings
             FROM v_user_robot_settings
@@ -992,11 +989,10 @@ export default class UserProfileService extends HTTPService {
         // active_from = now() // default
         await this.db.pg.query(sql`
             INSERT INTO user_robot_settings(
-                user_robot_id, user_robot_settings, trade_settings
+                user_robot_id, user_robot_settings
             ) VALUES (
                 ${id},
-                ${sql.json(newUserRobotSettings)},
-                ${sql.json(currentTradeSettings || {})}
+                ${sql.json(newUserRobotSettings)}
             );
         `);
     }

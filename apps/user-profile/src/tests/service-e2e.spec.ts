@@ -1,8 +1,6 @@
-// TODO: Check existing of user_signals.volume field
-
 import Service from "../app/service";
 import { getProperty, makeServiceRequest } from "@cryptuoso/test-helpers";
-import { User, UserRoles, UserExchangeAccountState } from "@cryptuoso/user-state";
+import { User, UserRoles, UserExchangeAccountState, UserExchangeAccStatus } from "@cryptuoso/user-state";
 import { formatExchange, round, sleep } from "@cryptuoso/helpers";
 import { Events } from "@cryptuoso/events";
 import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
@@ -10,114 +8,129 @@ import { UserSignalState } from "@cryptuoso/user-signal-state";
 import { RobotVolumeType, UserSignalSettings, UserRobotSettings, UserRobotVolumeType } from "@cryptuoso/robot-settings";
 import { v4 as uuid } from "uuid";
 import { UserRobotDB, UserRobotState } from "@cryptuoso/user-robot-state";
+import { pg, sql } from "@cryptuoso/postgres";
+import { UserMarketState } from "@cryptuoso/market";
 
 jest.setTimeout(50000);
 
-describe("UserProfile service E2E", () => {
+const mockPG = {
+    any: pg.any as jest.Mock,
+    maybeOne: pg.maybeOne as jest.Mock,
+    oneFirst: pg.oneFirst as jest.Mock,
+    maybeOneFirst: pg.maybeOneFirst as jest.Mock,
+    query: pg.query as jest.Mock
+};
+
+sql.json = jest.fn();
+
+jest.mock("slonik", () => ({
+    createTypeParserPreset: jest.fn(() => []),
+    createPool: jest.fn(() => {
+        return {
+            maybeOne: jest.fn(),
+            any: jest.fn(),
+            oneFirst: jest.fn(),
+            maybeOneFirst: jest.fn(),
+            query: jest.fn()
+        };
+    }),
+    sql: jest.fn()
+}));
+
+describe("UserProfile service E2E w/o DB", () => {
     const service = new Service();
     const port = getProperty(service, "_port");
 
-    const userId = "13b09911-61b4-487d-b558-a73c366af0a2";
-    const robotId = "270983c2-0e96-45ba-9234-a97296a3e95b";
+    const userId = uuid();
+    const robotId = uuid();
     const userExAccId = uuid();
     let userRobotId: string;
     const volume = round(Math.random(), 3);
     const volumeInCurrency = round(10 + 10 * Math.random(), 3);
-    let exchange: string;
+    const exchange = "exchange";
 
-    console.warn("userExAccId: ", userExAccId);
-
-    let user: User;
-
-    const getUserSignal = async (): Promise<UserSignalState> => {
-        return await service.db.pg.maybeOne(service.db.sql`
-            SELECT *
-            FROM user_signals
-            WHERE user_id = ${userId}
-                AND robot_id = ${robotId};
-        `);
+    const user: User = {
+        id: userId,
+        name: null,
+        email: "example6@example.com",
+        status: 1,
+        passwordHash: null,
+        refreshToken: null,
+        roles: { defaultRole: UserRoles.user, allowedRoles: [UserRoles.user] },
+        settings: {
+            notifications: {
+                signals: {
+                    email: false,
+                    telegram: false
+                },
+                trading: {
+                    email: false,
+                    telegram: false
+                }
+            }
+        },
+        // createdAt: "2020-07-29T12:37:02.621Z",
+        telegramId: null,
+        telegramUsername: null,
+        // updatedAt: "2020-10-05T13:16:51.985Z",
+        secretCodeExpireAt: null,
+        refreshTokenExpireAt: null,
+        secretCode: null,
+        emailNew: null,
+        passwordHashNew: null,
+        lastActiveAt: "2020-10-05T13:16:51.985Z",
+        access: 15
     };
 
-    const getLastUserSignalSettings = async (): Promise<{
-        volumeType: RobotVolumeType;
-        volume?: number;
-        volumeInCurrency?: number;
-    }> => {
-        return (await service.db.pg.maybeOneFirst(service.db.sql`
-            SELECT uss.signal_settings
-            FROM user_signals us, v_user_signal_settings uss
-            WHERE us.user_id = ${userId}
-                AND us.robot_id = ${robotId}
-                AND uss.user_signal_id = us.id;
-        `)) as any;
+    const userExAcc: UserExchangeAccountState = {
+        id: userExAccId,
+        userId,
+        exchange,
+        name: "name",
+        status: UserExchangeAccStatus.disabled,
+        keys: {
+            key: {
+                iv: "iv",
+                data: "data"
+            },
+            pass: {
+                iv: "iv",
+                data: "data"
+            },
+            secret: {
+                iv: "iv",
+                data: "data"
+            }
+        },
+        ordersCache: {}
     };
 
-    const getUserExAcc = async (): Promise<UserExchangeAccountState> => {
-        return await service.db.pg.maybeOne(service.db.sql`
-            SELECT *
-            FROM user_exchange_accs
-            WHERE id = ${userExAccId};
-        `);
-    };
-
-    const getUserRobot = async (): Promise<UserRobotDB> => {
-        return await service.db.pg.maybeOne(service.db.sql`
-            SELECT *
-            FROM user_robots
-            WHERE id = ${userRobotId};
-        `);
-    };
-
-    const getLastUserRobotSettings = async (): Promise<{
-        volumeType: RobotVolumeType;
-        volume?: number;
-        volumeInCurrency?: number;
-        balancePercent?: number;
-    }> => {
-        return (await service.db.pg.maybeOneFirst(service.db.sql`
-            SELECT user_robot_settings
-            FROM v_user_robot_settings
-            WHERE user_robot_id = ${userRobotId};
-        `)) as any;
+    const marketLimits: UserMarketState["limits"] = {
+        userSignal: {
+            min: { amount: 24, amountUSD: 10 },
+            max: { amount: 200000, amountUSD: null }
+        },
+        userRobot: {
+            min: { amount: 24, amountUSD: 20 },
+            max: { amount: 200000, amountUSD: null }
+        }
     };
 
     beforeAll(async (done) => {
         await service.startService();
-
-        const signal = await getUserSignal();
-
-        if (signal) {
-            console.warn(`Signal already exists: user - ${userId}, robot - ${robotId}`);
-            process.exit(1);
-        }
-
-        user = await service.db.pg.maybeOne(service.db.sql`
-            SELECT *
-            FROM users
-            WHERE id = ${userId};
-        `);
-
-        console.log(user);
-
-        if (!user) {
-            console.warn(`User doesn't exists: ${userId}`);
-            process.exit(1);
-        }
-
-        exchange = (await service.db.pg.oneFirst(service.db.sql`
-            SELECT exchange
-            FROM robots
-            WHERE id = ${robotId};
-        `)) as any;
 
         done();
     });
 
     describe("User Exchange Account Inserting (with name)", () => {
         test("", async () => {
-            expect(await getUserExAcc()).toBeNull();
-
             const name = uuid();
+
+            mockPG.maybeOne.mockClear();
+            mockPG.query.mockClear();
+            mockPG.maybeOne.mockImplementationOnce(async () => user);
+            mockPG.maybeOne.mockImplementationOnce(async () => null);
+            mockPG.maybeOne.mockImplementationOnce(async () => null);
 
             const res = await makeServiceRequest({
                 port,
@@ -135,22 +148,21 @@ describe("UserProfile service E2E", () => {
                 }
             });
 
-            //console.log(res);
-
             expect(res.parsedBody.result).toBe(name);
 
-            const userExAcc = await getUserExAcc();
-
-            expect(userExAcc).not.toBeNull();
-            expect(userExAcc.name).toBe(res.parsedBody.result);
-            expect(userExAcc.id).toBe(userExAccId);
-            expect(userExAcc.userId).toBe(userId);
+            /* expect(mockPG.maybeOne).toBeCalledTimes(3);
+            expect(mockPG.query).toBeCalledTimes(1); */
         });
     });
 
     describe("User Exchange Account Deleting (with name)", () => {
         test("", async () => {
-            expect(await getUserExAcc()).not.toBeNull();
+            mockPG.maybeOne.mockClear();
+            mockPG.oneFirst.mockClear();
+            mockPG.query.mockClear();
+            //mockPG.maybeOne.mockImplementationOnce(async () => user);
+            mockPG.maybeOne.mockImplementationOnce(async () => userExAcc);
+            mockPG.oneFirst.mockImplementationOnce(async () => "0");
 
             const res = await makeServiceRequest({
                 port,
@@ -162,17 +174,22 @@ describe("UserProfile service E2E", () => {
                 }
             });
 
-            //console.log(res);
-
             expect(res.parsedBody.result).toBe("OK");
 
-            expect(await getUserExAcc()).toBeNull();
+            /* expect(mockPG.maybeOne).toBeCalledTimes(2);
+            expect(mockPG.oneFirst).toBeCalledTimes(1);
+            expect(mockPG.query).toBeCalledTimes(1); */
         });
     });
 
     describe("User Exchange Account Inserting", () => {
         test("", async () => {
-            expect(await getUserExAcc()).toBeNull();
+            mockPG.maybeOne.mockClear();
+            mockPG.maybeOneFirst.mockClear();
+            mockPG.query.mockClear();
+            //mockPG.maybeOne.mockImplementationOnce(async () => user);
+            mockPG.maybeOne.mockImplementationOnce(async () => null);
+            mockPG.maybeOneFirst.mockImplementationOnce(async () => exchange);
 
             const res = await makeServiceRequest({
                 port,
@@ -193,18 +210,20 @@ describe("UserProfile service E2E", () => {
 
             expect(res.parsedBody.result.startsWith(formatExchange(exchange))).toBeTruthy();
 
-            const userExAcc = await getUserExAcc();
-
-            expect(userExAcc).not.toBeNull();
-            expect(userExAcc.name).toBe(res.parsedBody.result);
-            expect(userExAcc.id).toBe(userExAccId);
-            expect(userExAcc.userId).toBe(userId);
+            expect(mockPG.maybeOne).toBeCalled();
+            expect(mockPG.maybeOneFirst).toBeCalled();
+            expect(mockPG.query).toBeCalled();
         });
     });
 
     describe("User Exchange Account Upserting", () => {
         test("", async () => {
-            expect(await getUserExAcc()).not.toBeNull();
+            mockPG.maybeOne.mockClear();
+            mockPG.oneFirst.mockClear();
+            mockPG.query.mockClear();
+            //mockPG.maybeOne.mockImplementationOnce(async () => user);
+            mockPG.maybeOne.mockImplementationOnce(async () => userExAcc);
+            mockPG.oneFirst.mockImplementationOnce(async () => "0");
 
             const name = "SomeNewName";
 
@@ -228,17 +247,24 @@ describe("UserProfile service E2E", () => {
 
             expect(res.parsedBody.result).toBe(name);
 
-            const userExAcc = await getUserExAcc();
-
-            expect(userExAcc.name).toBe(res.parsedBody.result);
-            expect(userExAcc).not.toBeNull();
-            expect(userExAcc.id).toBe(userExAccId);
-            expect(userExAcc.userId).toBe(userId);
+            expect(mockPG.maybeOne).toBeCalled();
+            expect(mockPG.oneFirst).toBeCalled();
+            expect(mockPG.query).toBeCalled();
         });
     });
 
     describe("User Robot Creating", () => {
         test("", async () => {
+            mockPG.maybeOne.mockClear();
+            mockPG.maybeOneFirst.mockClear();
+            mockPG.query.mockClear();
+            //mockPG.maybeOne.mockImplementationOnce(async () => user);
+            mockPG.maybeOne.mockImplementationOnce(async () => userExAcc);
+            mockPG.maybeOne.mockImplementationOnce(async () => null);
+            mockPG.maybeOne.mockImplementationOnce(async () => ({ available: 20, exchange }));
+            mockPG.maybeOneFirst.mockImplementationOnce(async () => marketLimits);
+            mockPG.oneFirst.mockImplementationOnce(async () => "0");
+
             const res = await makeServiceRequest({
                 port,
                 actionName: "userRobotCreate",
@@ -254,21 +280,17 @@ describe("UserProfile service E2E", () => {
                 }
             });
 
-            //console.log(res);
-
             expect(res.parsedBody.result).not.toBe("OK");
+            expect(res.parsedBody.result).not.toBeNull();
 
             userRobotId = res.parsedBody.result;
 
-            const userRobot = await getUserRobot();
-
-            expect(userRobot).not.toBeNull();
-            expect(userRobot.userExAccId).toBe(userExAccId);
-            expect(userRobot.userId).toBe(userId);
-            expect(userRobot.robotId).toBe(robotId);
+            expect(mockPG.maybeOne).toBeCalled();
+            expect(mockPG.maybeOneFirst).toBeCalled();
+            expect(mockPG.query).toBeCalled();
         });
     });
-
+    /*
     describe("User Robot Editing", () => {
         test("", async () => {
             const balancePercent = 1 + 99 * Math.random();
@@ -486,4 +508,5 @@ describe("UserProfile service E2E", () => {
             expect(await getLastUserSignalSettings()).toBeNull();
         });
     });
+    */
 });
