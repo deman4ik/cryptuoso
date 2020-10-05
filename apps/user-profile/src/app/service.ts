@@ -393,15 +393,15 @@ export default class UserProfileService extends HTTPService {
         const userSignalId = uuid();
         const subscribedAt = dayjs.utc().toISOString();
 
+        // w/o volume
         await this.db.pg.query(sql`
         INSERT INTO user_signals(
-            id, robot_id, user_id, subscribed_at, volume
+            id, robot_id, user_id, subscribed_at
         ) VALUES (
             ${userSignalId},
             ${robotId},
             ${user.id},
-            ${subscribedAt},
-            0
+            ${subscribedAt}
         );
     `);
         await this.db.pg.query(sql`
@@ -427,11 +427,11 @@ export default class UserProfileService extends HTTPService {
 
         if (!userSignal) throw new ActionsHandlerError("Subscription not found.", null, "NOT_FOUND", 404);
 
-        const currentUserSignalSettings: UserSignalSettings = await this.db.pg.maybeOne(sql`
+        const currentUserSignalSettings: UserSignalSettings = (await this.db.pg.maybeOneFirst(sql`
             SELECT signal_settings
             FROM v_user_signal_settings
             WHERE user_signal_id = ${userSignal.id};
-        `);
+        `)) as any;
 
         if (
             (currentUserSignalSettings?.volumeType === RobotVolumeType.assetStatic &&
@@ -911,15 +911,11 @@ export default class UserProfileService extends HTTPService {
         // Not need
         //if (userRobotExists.status !== RobotStatus.stopped)
 
-        const {
-            userRobotSettings: currentUserRobotSettings
-        }: {
-            userRobotSettings: UserRobotSettings;
-        } = await this.db.pg.maybeOne(sql`
+        const currentUserRobotSettings: UserRobotSettings = (await this.db.pg.maybeOneFirst(sql`
             SELECT user_robot_settings
             FROM v_user_robot_settings
             WHERE user_robot_id = ${id};
-        `);
+        `)) as any;
 
         if (
             (currentUserRobotSettings?.volumeType === RobotVolumeType.assetStatic &&
