@@ -36,7 +36,7 @@ export default class ImporterWorkerService extends BaseService {
             this.addOnStopHandler(this.onStopService);
             this.events.subscribe({
                 [ImporterWorkerEvents.CANCEL]: {
-                    handler: this.pause.bind(this),
+                    handler: this.cancel.bind(this),
                     schema: ImporterWorkerSchema[ImporterWorkerEvents.CANCEL],
                     unbalanced: true
                 }
@@ -62,7 +62,7 @@ export default class ImporterWorkerService extends BaseService {
         await this.pool.terminate();
     }
 
-    pause({ id }: ImporterWorkerCancel): void {
+    cancel({ id }: ImporterWorkerCancel): void {
         this.abort[id] = true;
     }
 

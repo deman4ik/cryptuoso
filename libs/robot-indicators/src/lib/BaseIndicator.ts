@@ -25,7 +25,6 @@ export interface IndicatorState {
     indicatorName: string;
     initialized?: boolean;
     parameters?: { [key: string]: number };
-    robotSettings?: { [key: string]: any };
     variables?: { [key: string]: any };
     indicatorFunctions?: { [key: string]: () => any };
     parametersSchema?: ValidationSchema;
@@ -38,9 +37,6 @@ export class BaseIndicator {
     _initialized: boolean;
     _parameters: {
         [key: string]: number;
-    };
-    _robotSettings: {
-        [key: string]: any;
     };
     _candle: DBCandle;
     _candles: DBCandle[];
@@ -58,7 +54,6 @@ export class BaseIndicator {
         this._indicatorName = state.indicatorName;
         this._initialized = state.initialized || false;
         this._parameters = state.parameters || {};
-        this._robotSettings = state.robotSettings;
         this._candle = null;
         this._candles = [];
         this._candlesProps = {

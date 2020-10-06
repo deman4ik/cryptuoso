@@ -1,11 +1,18 @@
-import { Robot, StrategyCode, StrategySettings, RobotPositionState, StrategyProps } from "@cryptuoso/robot-state";
-import { ValidTimeframe, Candle, SignalEvent, DBCandle } from "@cryptuoso/market";
+import {
+    Robot,
+    StrategyCode,
+    StrategySettings,
+    RobotPositionState,
+    StrategyProps,
+    RobotStats
+} from "@cryptuoso/robot-state";
+import { ValidTimeframe, Candle, SignalEvent, DBCandle, calcPositionProfit } from "@cryptuoso/market";
 import dayjs from "@cryptuoso/dayjs";
 import { round, defaultValue } from "@cryptuoso/helpers";
 import logger from "@cryptuoso/logger";
 import { IndicatorCode } from "@cryptuoso/robot-indicators";
-import { calcStatistics, TradeStats } from "@cryptuoso/stats-calc";
-import { RobotSettings } from "@cryptuoso/robot-settings";
+import { calcStatistics } from "@cryptuoso/stats-calc";
+import { getRobotPositionVolume, RobotSettings } from "@cryptuoso/robot-settings";
 
 export const enum Status {
     queued = "queued",
@@ -66,9 +73,8 @@ export interface BacktesterLogs {
     backtestId: string;
 }
 
-export interface BacktesterStats extends TradeStats {
+export interface BacktesterStats extends RobotStats {
     backtestId: string;
-    robotId: string;
 }
 
 export class Backtester {
@@ -79,6 +85,7 @@ export class Backtester {
     #currency: string;
     #timeframe: ValidTimeframe;
     #strategyName: string;
+    #averageFee: number;
     #dateFrom: string;
     #dateTo: string;
     #settings?: BacktesterSettings;
@@ -103,6 +110,13 @@ export class Backtester {
                 alerts: BacktesterSignals[];
                 trades: BacktesterSignals[];
                 positions: { [key: string]: BacktesterPositionState };
+                settings: {
+                    [key: string]: {
+                        strategySettings: StrategySettings;
+                        robotSettings: RobotSettings;
+                        activeFrom: string;
+                    };
+                };
                 stats: BacktesterStats;
             };
         };
@@ -169,6 +183,10 @@ export class Backtester {
         return this.#id;
     }
 
+    get robotId() {
+        return this.#robotId;
+    }
+
     get exchange() {
         return this.#exchange;
     }
@@ -209,9 +227,13 @@ export class Backtester {
         return this.#status === Status.started;
     }
 
+    set averageFee(averageFee: number) {
+        this.#averageFee = averageFee;
+    }
+
     start() {
         this.#status = Status.started;
-        this.#startedAt = this.#startedAt ? this.#startedAt : dayjs.utc().toISOString();
+        this.#startedAt = this.#startedAt || dayjs.utc().toISOString();
     }
 
     set startedAt(date: string) {
@@ -306,8 +328,11 @@ export class Backtester {
                         currency: this.#currency,
                         timeframe: this.#timeframe,
                         strategyName: this.#strategyName,
-                        strategySettings: settings,
-                        robotSettings: this.#robotSettings,
+                        settings: {
+                            strategySettings: settings,
+                            robotSettings: this.#robotSettings,
+                            activeFrom: this.#dateFrom
+                        },
                         backtest: true
                     }),
                     data: {
@@ -315,6 +340,7 @@ export class Backtester {
                         alerts: [],
                         trades: [],
                         positions: {},
+                        settings: {},
                         stats: null
                     }
                 };
@@ -395,11 +421,28 @@ export class Backtester {
         }
     };
 
+    #saveSettings = (id: string) => {
+        const robot = this.robots[id];
+        if (!robot.data.settings[robot.instance.settingsActiveFrom])
+            robot.data.settings[robot.instance.settingsActiveFrom] = robot.instance.settings;
+    };
+
     #calcStats = (id: string) => {
         const robot = this.robots[id];
         if (robot.instance.hasClosedPositions) {
+            const positions = robot.instance.closedPositions.map((pos) => {
+                const volume = getRobotPositionVolume(robot.instance.settings.robotSettings, pos.entryPrice);
+                const profit = calcPositionProfit(
+                    pos.direction,
+                    pos.entryPrice,
+                    pos.exitPrice,
+                    volume,
+                    this.#averageFee
+                );
+                return { ...pos, volume, profit };
+            });
             robot.data.stats = {
-                ...calcStatistics(robot.data.stats, robot.instance.closedPositions),
+                ...calcStatistics(robot.data.stats, positions),
                 robotId: id,
                 backtestId: this.#id
             };
@@ -417,6 +460,7 @@ export class Backtester {
             this.#saveSignals(id);
             this.#savePositions(id);
             this.#calcStats(id);
+            this.#saveSettings(id);
 
             robot.instance.clearEvents();
             await robot.instance.calcIndicators();
@@ -427,6 +471,7 @@ export class Backtester {
             this.#saveSignals(id);
             this.#savePositions(id);
             this.#calcStats(id);
+            this.#saveSettings(id);
         });
     }
 
