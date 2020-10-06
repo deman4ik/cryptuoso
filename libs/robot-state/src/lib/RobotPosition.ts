@@ -23,7 +23,6 @@ export class RobotPosition {
     private _id: string;
     private _robotId: string;
     private _timeframe: ValidTimeframe;
-    private _volume: number;
     private _prefix: string;
     private _code: string;
     private _parentId?: string;
@@ -56,7 +55,6 @@ export class RobotPosition {
         this._id = state.id;
         this._robotId = state.robotId;
         this._timeframe = state.timeframe;
-        this._volume = state.volume;
         this._prefix = state.prefix;
         this._code = state.code;
         this._parentId = state.parentId;
@@ -170,7 +168,6 @@ export class RobotPosition {
             id: this._id,
             robotId: this._robotId,
             timeframe: this._timeframe,
-            volume: this._volume,
             prefix: this._prefix,
             code: this._code,
             parentId: this._parentId,
@@ -213,11 +210,6 @@ export class RobotPosition {
     }
 
     _calcStats() {
-        if (this._direction === PositionDirection.long) {
-            this._profit = +round((this._exitPrice - this._entryPrice) * this._volume, 6);
-        } else {
-            this._profit = +round((this._entryPrice - this._exitPrice) * this._volume, 6);
-        }
         this._barsHeld = +round(
             dayjs.utc(this._exitCandleTimestamp).diff(dayjs.utc(this._entryCandleTimestamp), "minute") / this._timeframe
         );

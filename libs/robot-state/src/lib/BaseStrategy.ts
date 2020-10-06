@@ -217,7 +217,6 @@ export class BaseStrategy {
             id: uuid(),
             robotId: this._robotId,
             timeframe: this._timeframe,
-            volume: this._robotSettings.volume,
             prefix,
             code,
             parentId: parentId,

@@ -2,9 +2,8 @@ import { Queue } from "bullmq";
 import { v4 as uuid } from "uuid";
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import dayjs from "@cryptuoso/dayjs";
-import { CANDLES_RECENT_AMOUNT } from "@cryptuoso/helpers";
 import { BaseError } from "@cryptuoso/errors";
-import { Timeframe, ValidTimeframe } from "@cryptuoso/market";
+import { ValidTimeframe } from "@cryptuoso/market";
 import {
     BacktesterRunnerEvents,
     BacktesterWorkerEvents,
@@ -15,8 +14,8 @@ import {
     BacktesterWorkerCancel,
     BacktesterWorkerFailed
 } from "@cryptuoso/backtester-events";
-import { RobotState, StrategySettings } from "@cryptuoso/robot-state";
-import { Backtester, BacktesterState, Status } from "@cryptuoso/backtester-state";
+import { RobotStatus, StrategySettings } from "@cryptuoso/robot-state";
+import { Backtester, Status } from "@cryptuoso/backtester-state";
 import { sql } from "@cryptuoso/postgres";
 import { RobotSettings } from "@cryptuoso/robot-settings";
 
@@ -186,16 +185,23 @@ export default class BacktesterRunnerService extends HTTPService {
                     currency: string;
                     timeframe: ValidTimeframe;
                     strategyName: string;
+                    status: RobotStatus;
                     strategySettings?: StrategySettings;
                     robotSettings?: RobotSettings;
                 } = await this.db.pg.one(
                     sql`SELECT r.exchange, r.asset, r.currency,
                                r.timeframe, r.strategy_name, 
+                               r.status,
                                s.strategy_settings, s.robot_settings
                          FROM robots r, v_robot_settings s
                          WHERE s.robot_id = r.id
                          AND r.id = ${id};`
                 );
+                if (params.settings?.populateHistory && robot.status !== RobotStatus.starting)
+                    throw new BaseError(`Wrong Robot status "${status}" must be "${RobotStatus.starting}"`, {
+                        backtestId: params.id,
+                        robotId: params.robotId
+                    });
                 robotParams = {
                     exchange: robot.exchange,
                     asset: robot.asset,
@@ -260,7 +266,7 @@ export default class BacktesterRunnerService extends HTTPService {
                 status: Status.queued
             });
 
-            await this.queues.backtest.add("single", backtester.state, {
+            await this.queues.backtest.add("backtest", backtester.state, {
                 jobId: backtester.id,
                 removeOnComplete: true
             });
@@ -288,9 +294,21 @@ export default class BacktesterRunnerService extends HTTPService {
         res.end();
     }
 
-    async stop(params: BacktesterRunnerStop) {
+    async stop({ id }: BacktesterRunnerStop) {
         try {
-            //TODO
+            const job = await this.queues.backtest.getJob(id);
+            if (job) {
+                if (job.isActive) {
+                    await this.events.emit<BacktesterWorkerCancel>({
+                        type: BacktesterWorkerEvents.CANCEL,
+                        data: {
+                            id
+                        }
+                    });
+                } else {
+                    await job.remove();
+                }
+            }
         } catch (error) {
             this.log.error(error);
             throw error;
