@@ -3,7 +3,7 @@ import { BaseIndicator, TulipIndicator, IndicatorCode, IndicatorType } from "@cr
 import { ValidTimeframe, CandleProps, DBCandle, RobotPositionStatus } from "@cryptuoso/market";
 import { RobotWorkerEvents } from "@cryptuoso/robot-events";
 import { NewEvent } from "@cryptuoso/events";
-import { CANDLES_RECENT_AMOUNT, sortAsc } from "@cryptuoso/helpers";
+import { CANDLES_RECENT_AMOUNT, defaultValue, sortAsc } from "@cryptuoso/helpers";
 import { BaseStrategy } from "./BaseStrategy";
 import { RobotPositionState, RobotState, RobotStatus, StrategyProps, StrategySettings } from "./types";
 import logger from "@cryptuoso/logger";
@@ -27,8 +27,11 @@ export class Robot {
     _currency: string;
     _timeframe: ValidTimeframe;
     _strategyName: string;
-    _strategySettings: StrategySettings;
-    _robotSettings: RobotSettings;
+    _settings: {
+        strategySettings: StrategySettings;
+        robotSettings: RobotSettings;
+        activeFrom: string;
+    };
     _lastCandle: DBCandle;
     _state: StrategyProps;
     _strategyInstance: BaseStrategy;
@@ -67,12 +70,17 @@ export class Robot {
         this._strategyName = state.strategyName;
 
         /* Настройки */
-        this._strategySettings = {
-            ...state.strategySettings,
-            requiredHistoryMaxBars: state.strategySettings.requiredHistoryMaxBars || CANDLES_RECENT_AMOUNT
+        this._settings = {
+            strategySettings: {
+                ...state.settings.strategySettings,
+                requiredHistoryMaxBars: defaultValue(
+                    state.settings.strategySettings.requiredHistoryMaxBars,
+                    CANDLES_RECENT_AMOUNT
+                )
+            },
+            robotSettings: state.settings.robotSettings,
+            activeFrom: defaultValue(state.settings.activeFrom, state.startedAt)
         };
-
-        this._strategySettings = state.strategySettings || {};
 
         /* Последняя свеча */
         this._lastCandle = state.lastCandle;
@@ -188,16 +196,6 @@ export class Robot {
         });
     }
 
-    update(settings: RobotSettings) {
-        this._robotSettings = { ...this._robotSettings, ...settings };
-        this._eventsToSend.push({
-            type: RobotWorkerEvents.UPDATED,
-            data: {
-                robotId: this._id
-            }
-        });
-    }
-
     pause() {
         this._status = RobotStatus.paused;
         this._eventsToSend.push({
@@ -219,7 +217,7 @@ export class Robot {
     }
 
     get requiredHistoryMaxBars() {
-        return this._strategySettings.requiredHistoryMaxBars;
+        return this._settings.strategySettings.requiredHistoryMaxBars;
     }
 
     get id() {
@@ -238,12 +236,24 @@ export class Robot {
         return this._lastCandle;
     }
 
-    get settings() {
-        return this._robotSettings;
+    get strategySettings() {
+        return this._settings.strategySettings;
     }
 
-    get equity() {
-        return this._equity;
+    get robotSettings() {
+        return this._settings.robotSettings;
+    }
+
+    get settingsActiveFrom() {
+        return this._settings.activeFrom;
+    }
+
+    get settings() {
+        return this._settings;
+    }
+
+    set settings(settings: { strategySettings: StrategySettings; robotSettings: RobotSettings; activeFrom: string }) {
+        this._settings = settings;
     }
 
     get hasActions() {
@@ -292,7 +302,7 @@ export class Robot {
         // Создаем новый инстанс класса стратегии
         this._strategyInstance = new BaseStrategy({
             initialized: strategyState.initialized,
-            strategySettings: this._strategySettings,
+            strategySettings: this._settings.strategySettings,
             exchange: this._exchange,
             asset: this._asset,
             currency: this._currency,
@@ -341,7 +351,6 @@ export class Robot {
                         asset: this._asset,
                         currency: this._currency,
                         timeframe: this._timeframe,
-                        robotSettings: this._robotSettings,
                         robotId: this._id,
                         parametersSchema,
                         indicatorFunctions, // функции индикатора
@@ -358,7 +367,6 @@ export class Robot {
                         asset: this._asset,
                         currency: this._currency,
                         timeframe: this._timeframe,
-                        robotSettings: this._robotSettings,
                         robotId: this._id,
                         parameters: indicator.parameters,
                         ...indicator // стейт индикатора
@@ -374,7 +382,6 @@ export class Robot {
                 asset: this._asset,
                 currency: this._currency,
                 timeframe: this._timeframe,
-                robotSettings: this._settings,
                 robotId: this._id,
                 parameters: indicator.parameters,
                 ...indicator // стейт индикатора
@@ -391,7 +398,6 @@ export class Robot {
                 asset: this._asset,
                 currency: this._currency,
                 timeframe: this._timeframe,
-                robotSettings: this._settings,
                 robotId: this._id,
                 parameters: indicator.parameters,
                 ...indicator // стейт индикатора
@@ -606,8 +612,7 @@ export class Robot {
             currency: this._currency,
             timeframe: this._timeframe,
             strategyName: this._strategyName,
-            strategySettings: this._strategySettings,
-            robotSettings: this._robotSettings,
+            settings: this._settings,
             lastCandle: this._lastCandle,
             hasAlerts: this._hasAlerts,
             status: this._status,

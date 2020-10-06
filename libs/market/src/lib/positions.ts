@@ -1,3 +1,4 @@
+import { round } from "@cryptuoso/helpers";
 import { OrderType, TradeAction } from "./market";
 import { ValidTimeframe } from "./timeframe";
 
@@ -38,8 +39,28 @@ export interface BasePosition {
     exitOrderType?: OrderType;
     exitAction?: TradeAction;
     exitCandleTimestamp?: string;
+    volume?: number;
     profit?: number;
     barsHeld?: number;
     fee?: number;
-    volume?: number;
 }
+
+export const calcPositionProfit = (
+    direction: PositionDirection,
+    entryPrice: number,
+    exitPrice: number,
+    volume: number,
+    fee?: number
+): number => {
+    let profit: number;
+    if (direction === PositionDirection.long) {
+        profit = (exitPrice - entryPrice) * volume;
+    } else {
+        profit = (entryPrice - exitPrice) * volume;
+    }
+    profit = round(profit, 6);
+    if (fee) {
+        profit = round(profit - profit * fee, 6);
+    }
+    return profit;
+};

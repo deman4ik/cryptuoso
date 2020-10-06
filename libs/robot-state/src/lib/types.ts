@@ -11,6 +11,7 @@ import {
 } from "@cryptuoso/market";
 import { RobotSettings } from "@cryptuoso/robot-settings";
 import { IndicatorState } from "@cryptuoso/robot-indicators";
+import { TradeStats } from "@cryptuoso/stats-calc";
 
 export const enum RobotStatus {
     pending = "pending",
@@ -46,7 +47,6 @@ export interface RobotPostionInternalState {
 
 export interface RobotPositionState extends BasePosition {
     robotId: string;
-    volume: number;
     parentId?: string;
     direction?: PositionDirection;
     status?: RobotPositionStatus;
@@ -63,6 +63,7 @@ export interface RobotPositionState extends BasePosition {
     exitAction?: TradeAction;
     exitCandleTimestamp?: string;
     alerts?: { [key: string]: AlertInfo };
+    volume?: number;
     profit?: number;
     barsHeld?: number;
     fee?: number;
@@ -81,8 +82,11 @@ export interface RobotState {
     timeframe: ValidTimeframe;
     available?: number;
     strategyName: string;
-    strategySettings: StrategySettings;
-    robotSettings: RobotSettings;
+    settings: {
+        strategySettings: StrategySettings;
+        robotSettings: RobotSettings;
+        activeFrom: string;
+    };
     lastCandle?: DBCandle;
     state?: StrategyProps;
     hasAlerts?: boolean;
@@ -90,4 +94,8 @@ export interface RobotState {
     startedAt?: string;
     stoppedAt?: string;
     backtest?: boolean;
+}
+
+export interface RobotStats extends TradeStats {
+    robotId: string;
 }
