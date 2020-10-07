@@ -27,9 +27,9 @@ export const assetDynamicDelta = (initialVolume: number, delta: number, profit: 
     const minVolume = initialVolume / 2;
     const mvd = delta * minVolume;
 
-    if (profit < mvd || !profit) return null;
-
-    if (mvd <= profit && profit < mvd * 2) return round(minVolume, 2);
+    if (profit < 0 || (!profit && profit !== 0)) return null;
+    if (profit < mvd) return round(minVolume, 2);
+    if (profit < mvd * 2) return round(initialVolume, 2);
 
     const lvl = Math.trunc((-1 + Math.sqrt(1 + 8 * (profit / mvd + 1))) / 2);
 

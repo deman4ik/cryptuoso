@@ -5,9 +5,9 @@ function assetDynamicDeltaCycled(initialVolume: number, delta: number, profit: n
     const minVolume = initialVolume / 2;
     const mvd = delta * minVolume;
 
-    if (profit < mvd || !profit) return null;
-
-    if (mvd <= profit && profit < mvd * 2) return round(minVolume, 2);
+    if (profit < 0 || (!profit && profit !== 0)) return null;
+    if (profit < mvd) return round(minVolume, 2);
+    if (profit < mvd * 2) return round(initialVolume, 2);
 
     let volume = initialVolume;
     let threshold = delta * volume;
@@ -21,32 +21,34 @@ function assetDynamicDeltaCycled(initialVolume: number, delta: number, profit: n
 }
 
 describe("assetDynamicDelta function test", () => {
-    describe("Testing edge values", () => {
-        describe("Should return nulls", () => {
-            it("With null / 0 profit provided", () => {
-                expect(assetDynamicDelta(2.6, 20, null)).toBeNull();
+    describe("With null / undefined / NaN profit provided", () => {
+        it("Should return null", () => {
+            expect(assetDynamicDelta(2.6, 20, null)).toBeNull();
 
-                expect(assetDynamicDelta(2.6, 20, 0)).toBeNull();
+            expect(assetDynamicDelta(2.6, 20, undefined)).toBeNull();
 
-                expect(assetDynamicDelta(2.6, 20, 0)).toBeNull();
-            });
+            expect(assetDynamicDelta(2.6, 20, NaN)).toBeNull();
         });
+    });
 
-        describe("With profit < minValidProfit provided", () => {
-            it("Should return nulls", () => {
-                const volume = 2.6;
-                const delta = 20;
-                const minValidProfit = (volume * delta) / 2;
-
-                for (let i = -10; i < minValidProfit; ++i) {
-                    expect(assetDynamicDelta(volume, delta, i)).toBeNull();
-                }
-            });
+    describe("With negative profit provided", () => {
+        it("Should return null", () => {
+            expect(assetDynamicDelta(2.6, 20, -1)).toBeNull();
         });
     });
 
     describe("Exact values", () => {
         it("Should return expected results", () => {
+            expect(assetDynamicDelta(2.6, 20, 0)).toBe(1.3);
+            expect(assetDynamicDelta(2.6, 20, 1)).toBe(1.3);
+            expect(assetDynamicDelta(2.6, 20, 25)).toBe(1.3);
+            expect(assetDynamicDelta(2.6, 20, 26)).toBe(2.6);
+            expect(assetDynamicDelta(2.6, 20, 27)).toBe(2.6);
+            expect(assetDynamicDelta(2.6, 20, 51)).toBe(2.6);
+            expect(assetDynamicDelta(2.6, 20, 52)).toBe(3.9);
+            expect(assetDynamicDelta(2.6, 20, 129)).toBe(3.9);
+            expect(assetDynamicDelta(2.6, 20, 130)).toBe(5.2);
+            expect(assetDynamicDelta(2.6, 20, 131)).toBe(5.2);
             expect(assetDynamicDelta(2.6, 20, 2339)).toBe(16.9);
             expect(assetDynamicDelta(2.6, 20, 2400)).toBe(18.2);
             expect(assetDynamicDelta(2.6, 20, 2401)).toBe(18.2);
