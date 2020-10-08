@@ -23,14 +23,14 @@ export const getUserRobotPositionVolume = (settings: UserRobotSettings, price?: 
 };
 
 export const assetDynamicDelta = (initialVolume: number, delta: number, profit: number) => {
-    const baseVolume = initialVolume / 2;
-    const mvd = delta * baseVolume;
-
     if (!profit) return initialVolume;
-    if (profit <= -2 * mvd) return roundFirstSignificant(baseVolume);
-    if (profit < 2 * mvd) return initialVolume;
 
-    const lvl = Math.trunc((-1 + Math.sqrt(1 + 8 * (profit / mvd + 1))) / 2);
+    const baseVolume = initialVolume / 2;
+
+    if (profit <= -initialVolume * delta) return roundFirstSignificant(baseVolume);
+    if (profit < initialVolume * delta) return initialVolume;
+
+    const lvl = Math.trunc((-1 + Math.sqrt(1 + 8 * (profit / (baseVolume * delta) + 1))) / 2);
 
     return roundFirstSignificant(baseVolume * (lvl + 1));
 };
