@@ -4,21 +4,18 @@ import dayjs from "@cryptuoso/dayjs";
 import { ActionsHandlerError } from "@cryptuoso/errors";
 import logger from "@cryptuoso/logger";
 import mailUtil from "@cryptuoso/mail";
-import { User, UserStatus, UserRoles, UserAccessValues } from "@cryptuoso/user-state";
+import { User, UserStatus, UserRoles, UserAccessValues, UserSettings } from "@cryptuoso/user-state";
 import { formatTgName, checkTgLogin } from "./auth-helper";
-import { DBFunctions, Bcrypt } from "./types";
+import { Bcrypt } from "./types";
 import bcrypt from "bcrypt";
+import { pg, sql } from "@cryptuoso/postgres";
 
 export class Auth {
-    #db: DBFunctions;
     #bcrypt: Bcrypt;
     #mailUtil: typeof mailUtil;
 
-    constructor(
-        db: DBFunctions // bcrypt: Bcrypt
-    ) {
+    constructor(/* bcrypt: Bcrypt */) {
         try {
-            this.#db = db;
             this.#bcrypt = bcrypt;
             this.#mailUtil = mailUtil;
         } catch (e) {
@@ -29,7 +26,7 @@ export class Auth {
     async login(params: { email: string; password: string }) {
         const { email, password } = params;
 
-        const user: User = await this.#db.getUserByEmail({ email });
+        const user: User = await this._dbGetUserByEmail({ email });
         if (!user) throw new ActionsHandlerError("User account is not found.", null, "NOT_FOUND", 404);
         if (user.status === UserStatus.blocked)
             throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
@@ -62,7 +59,7 @@ export class Auth {
         } else {
             refreshToken = user.refreshToken;
             refreshTokenExpireAt = user.refreshTokenExpireAt;
-            await this.#db.updateUserRefreshToken({
+            await this._dbUpdateUserRefreshToken({
                 userId: user.id,
                 refreshToken,
                 refreshTokenExpireAt
@@ -114,7 +111,7 @@ export class Auth {
                 .utc()
                 .add(+process.env.REFRESH_TOKEN_EXPIRES, "day")
                 .toISOString();
-            await this.#db.updateUserRefreshToken({
+            await this._dbUpdateUserRefreshToken({
                 refreshToken,
                 refreshTokenExpireAt,
                 userId: user.id
@@ -131,10 +128,66 @@ export class Auth {
         };
     }
 
+    async setTelegram(
+        reqUser: User,
+        params: {
+            id: number;
+            first_name?: string;
+            last_name?: string;
+            username?: string;
+            photo_url?: string;
+            auth_date: number;
+            hash: string;
+        }
+    ) {
+        const loginData = await checkTgLogin(params, process.env.BOT_TOKEN);
+        if (!loginData) throw new ActionsHandlerError("Invalid login data.", null, "FORBIDDEN", 403);
+
+        const { id: telegramId, username: telegramUsername } = loginData;
+
+        const userExists: User = await this._dbGetUserTg({ telegramId });
+
+        if (userExists)
+            throw new ActionsHandlerError("User already exists. Try to login with Telegram.", null, "CONFLICT", 409);
+
+        const { id: userId } = reqUser;
+        const user: User = await this._dbGetUserById({ userId });
+
+        if (!user) throw new ActionsHandlerError("User account is not found.", null, "NOT_FOUND", 404);
+
+        if (user.status === UserStatus.blocked)
+            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
+
+        const notifications = user.settings?.notifications;
+
+        const newSettings: UserSettings = {
+            ...user.settings,
+            notifications: {
+                signals: {
+                    ...notifications?.signals,
+                    telegram: true
+                },
+                trading: {
+                    ...notifications?.trading,
+                    telegram: true
+                }
+            }
+        };
+
+        await pg.query(sql`
+            UPDATE users
+            SET telegram_id = ${telegramId},
+                telegram_username = ${telegramUsername}
+                status = ${UserStatus.enabled}
+                settings = ${sql.json(newSettings)}
+            WHERE id = ${userId};
+        `);
+    }
+
     async register(params: { email: string; password: string; name: string }) {
         const { email, password, name } = params;
 
-        const userExists: User = await this.#db.getUserByEmail({ email });
+        const userExists: User = await this._dbGetUserByEmail({ email });
         if (userExists) throw new ActionsHandlerError("User account already exists.", null, "CONFLICT", 409);
         const newUser: User = {
             id: uuid(),
@@ -161,7 +214,7 @@ export class Auth {
                 }
             }
         };
-        await this.#db.registerUser(newUser);
+        await this._dbRegisterUser(newUser);
 
         const urlData = this.encodeData({
             userId: newUser.id,
@@ -184,7 +237,7 @@ export class Auth {
     async registerTg(params: { telegramId: number; telegramUsername: string; name: string }) {
         const { telegramId, telegramUsername, name } = params;
 
-        const userExists: User = await this.#db.getUserTg({ telegramId });
+        const userExists: User = await this._dbGetUserTg({ telegramId });
         if (userExists) return userExists;
         const newUser: User = {
             id: uuid(),
@@ -210,13 +263,13 @@ export class Auth {
                 }
             }
         };
-        await this.#db.registerUserTg(newUser);
+        await this._dbRegisterUserTg(newUser);
 
         return newUser;
     }
 
     async refreshToken(params: { refreshToken: string }) {
-        const user: User = await this.#db.getUserByToken(params);
+        const user: User = await this._dbGetUserByToken(params);
 
         if (!user)
             throw new ActionsHandlerError(
@@ -241,7 +294,7 @@ export class Auth {
     async activateAccount(params: { userId: string; secretCode: string }) {
         const { userId, secretCode } = params;
 
-        const user: User = await this.#db.getUserById({ userId });
+        const user: User = await this._dbGetUserById({ userId });
 
         if (!user) throw new ActionsHandlerError("User account not found.", null, "NOT_FOUND", 404);
         if (user.status === UserStatus.blocked)
@@ -258,7 +311,7 @@ export class Auth {
             .add(+process.env.REFRESH_TOKEN_EXPIRES, "day")
             .toISOString();
 
-        await this.#db.activateUser({
+        await this._dbActivateUser({
             refreshToken,
             refreshTokenExpireAt,
             userId
@@ -286,9 +339,43 @@ export class Auth {
         };
     }
 
+    async changePassword(reqUser: User, params: { password: string; oldPassword?: string }) {
+        const { password, oldPassword } = params;
+        const { id: userId } = reqUser;
+
+        const user = await this._dbGetUserById({ userId });
+        if (!user) throw new ActionsHandlerError("User account not found.", null, "NOT_FOUND", 404);
+
+        if (user.status === UserStatus.blocked)
+            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
+
+        if (user.passwordHash) {
+            if (!oldPassword) throw new ActionsHandlerError("Old password is required.", null, "VALIDATION", 400);
+
+            const oldChecked = await this.#bcrypt.compare(oldPassword, user.passwordHash);
+            if (!oldChecked) throw new ActionsHandlerError("Wrong old password.", null, "FORBIDDEN", 403);
+        }
+
+        const newPasswordHash = await this.#bcrypt.hash(password, 10);
+
+        await this._dbChangeUserPassword({ userId, passwordHash: newPasswordHash });
+
+        if (user.email)
+            await this.#mailUtil.send({
+                to: user.email,
+                subject: "🔐 Cryptuoso - Change Password Confirmation.",
+                variables: {
+                    body: `
+                <p>Your password successfully changed!</p>
+                <p>If you did not request this change, please contact support <a href="mailto:support@cryptuoso.com">support@cryptuoso.com</a></p>`
+                },
+                tags: ["auth"]
+            });
+    }
+
     async passwordReset(params: { email: string }) {
         const { email } = params;
-        const user: User = await this.#db.getUserByEmail({ email });
+        const user: User = await this._dbGetUserByEmail({ email });
 
         if (!user) throw new ActionsHandlerError("User account not found.", null, "NOT_FOUND", 404);
         if (user.status === UserStatus.blocked)
@@ -303,7 +390,7 @@ export class Auth {
             secretCode = this.generateCode();
             secretCodeExpireAt = dayjs.utc().add(1, "hour").toISOString();
 
-            this.#db.updateUserSecretCode({
+            this._dbUpdateUserSecretCode({
                 secretCode,
                 secretCodeExpireAt,
                 userId: user.id
@@ -332,7 +419,7 @@ export class Auth {
     async confirmPasswordReset(params: { userId: string; secretCode: string; password: string }) {
         const { userId, secretCode, password } = params;
 
-        const user: User = await this.#db.getUserById({ userId });
+        const user: User = await this._dbGetUserById({ userId });
 
         if (!user) throw new ActionsHandlerError("User account not found.", null, "NOT_FOUND", 404);
         if (user.status === UserStatus.blocked)
@@ -353,7 +440,7 @@ export class Auth {
             newSecretCode = user.secretCode;
             newSecretCodeExpireAt = user.secretCodeExpireAt;
         }
-        await this.#db.updateUserPassword({
+        await this._dbUpdateUserPassword({
             userId,
             passwordHash: await this.#bcrypt.hash(password, 10),
             newSecretCode,
@@ -382,10 +469,10 @@ export class Auth {
 
     async changeEmail(params: { userId: string; email: string }) {
         const { userId, email } = params;
-        const userExists: User = await this.#db.getUserByEmail({ email });
+        const userExists: User = await this._dbGetUserByEmail({ email });
         if (userExists) throw new ActionsHandlerError("User already exists.", null, "CONFLICT", 409);
 
-        const user: User = await this.#db.getUserById({ userId });
+        const user: User = await this._dbGetUserById({ userId });
         if (!user) throw new ActionsHandlerError("User account not found.", null, "NOT_FOUND", 404);
         if (user.status === UserStatus.blocked)
             throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
@@ -403,7 +490,7 @@ export class Auth {
             secretCode = this.generateCode();
             secretCodeExpireAt = dayjs.utc().add(1, "hour").toISOString();
         }
-        await this.#db.changeUserEmail({
+        await this._dbChangeUserEmail({
             userId,
             emailNew: email,
             secretCode,
@@ -425,7 +512,7 @@ export class Auth {
 
     async confirmChangeEmail(params: { userId: string; secretCode: string }) {
         const { userId, secretCode } = params;
-        const user: User = await this.#db.getUserById({ userId });
+        const user: User = await this._dbGetUserById({ userId });
 
         if (!user) throw new ActionsHandlerError("User account not found.", null, "NOT_FOUND", 404);
         if (user.status === UserStatus.blocked)
@@ -441,7 +528,7 @@ export class Auth {
             .add(+process.env.REFRESH_TOKEN_EXPIRES, "day")
             .toISOString();
 
-        await this.#db.confirmChangeUserEmail({
+        await this._dbConfirmChangeUserEmail({
             userId,
             email: user.emailNew,
             emailNew: null,
@@ -504,4 +591,214 @@ export class Auth {
     encodeData(data: any): string {
         return Buffer.from(JSON.stringify(data)).toString("base64");
     }
+
+    // #region "DB functions"
+
+    async _dbGetUserByEmail(params: { email: string }): Promise<User> {
+        const { email } = params;
+
+        return await pg.maybeOne(sql`
+            SELECT * FROM users
+            WHERE email = ${email}
+        `);
+    }
+
+    async _dbGetUserById(params: { userId: string }): Promise<User> {
+        const { userId } = params;
+
+        return await pg.maybeOne(sql`
+            SELECT * FROM users
+            WHERE id = ${userId}
+        `);
+    }
+
+    async _dbGetUserTg(params: { telegramId: number }): Promise<User> {
+        const { telegramId } = params;
+
+        return await pg.maybeOne(sql`
+            SELECT * FROM users
+            WHERE telegram_id = ${telegramId};
+        `);
+    }
+
+    async _dbGetUserByToken(params: { refreshToken: string }): Promise<User> {
+        const { refreshToken } = params;
+
+        return await pg.maybeOne(sql`
+            SELECT * FROM users
+            WHERE refresh_token = ${refreshToken} AND refresh_token_expire_at > ${dayjs.utc().toISOString()};
+        `);
+    }
+
+    async _dbUpdateUserRefreshToken(params: {
+        refreshToken: string;
+        refreshTokenExpireAt: string;
+        userId: string;
+    }): Promise<any> {
+        const { refreshToken, refreshTokenExpireAt, userId } = params;
+
+        await pg.query(sql`
+            UPDATE users
+            SET refresh_token = ${refreshToken}, refresh_token_expire_at = ${refreshTokenExpireAt}
+            WHERE id = ${userId}
+        `);
+    }
+
+    async _dbRegisterUserTg(newUser: User): Promise<any> {
+        await pg.query(sql`
+            INSERT INTO users
+                (id, telegram_id, telegram_username, name, status, roles, access, settings)
+                VALUES(
+                    ${newUser.id},
+                    ${newUser.telegramId},
+                    ${newUser.telegramUsername},
+                    ${newUser.name},
+                    ${newUser.status},
+                    ${sql.json(newUser.roles)},
+                    ${newUser.access},
+                    ${sql.json(newUser.settings)}
+                );
+        `);
+    }
+
+    async _dbRegisterUser(newUser: User): Promise<any> {
+        await pg.query(sql`
+            INSERT INTO users
+                (id, name, email, status, password_hash, secret_code, roles, access, settings)
+                VALUES(
+                    ${newUser.id},
+                    ${newUser.name},
+                    ${newUser.email},
+                    ${newUser.status},
+                    ${newUser.passwordHash},
+                    ${newUser.secretCode},
+                    ${sql.json(newUser.roles)},
+                    ${newUser.access},
+                    ${sql.json(newUser.settings)}
+                );
+        `);
+    }
+
+    async _dbActivateUser(params: {
+        refreshToken: string;
+        refreshTokenExpireAt: string;
+        userId: string;
+    }): Promise<any> {
+        const { refreshToken, refreshTokenExpireAt, userId } = params;
+
+        await await pg.query(sql`
+            UPDATE users
+            SET secret_code = ${null},
+                secret_code_expire_at = ${null},
+                status = ${UserStatus.enabled},
+                refresh_token = ${refreshToken},
+                refresh_token_expire_at = ${refreshTokenExpireAt}
+            WHERE id = ${userId};
+        `);
+    }
+
+    async _dbUpdateUserSecretCode(params: {
+        userId: string;
+        secretCode: string;
+        secretCodeExpireAt: string;
+    }): Promise<any> {
+        const { userId, secretCode, secretCodeExpireAt } = params;
+
+        await pg.query(sql`
+            UPDATE users
+            SET secret_code = ${secretCode}, secret_code_expire_at = ${secretCodeExpireAt}
+            WHERE id = ${userId}
+        `);
+    }
+
+    async _dbChangeUserEmail(params: {
+        userId: string;
+        emailNew: string;
+        secretCode: string;
+        secretCodeExpireAt: string;
+    }): Promise<any> {
+        const { secretCode, secretCodeExpireAt, userId, emailNew } = params;
+
+        await pg.query(sql`
+            UPDATE users
+            SET email_new = ${emailNew},
+                secret_code = ${secretCode},
+                secret_code_expire_at = ${secretCodeExpireAt}
+            WHERE id = ${userId}
+        `);
+    }
+
+    async _dbConfirmChangeUserEmail(params: {
+        userId: string;
+        email: string;
+        emailNew: string;
+        secretCode: string;
+        secretCodeExpireAt: string;
+        refreshToken: string;
+        refreshTokenExpireAt: string;
+        status: UserStatus;
+    }): Promise<any> {
+        const {
+            userId,
+            email,
+            emailNew,
+            secretCode,
+            secretCodeExpireAt,
+            refreshToken,
+            refreshTokenExpireAt,
+            status
+        } = params;
+
+        await pg.query(sql`
+            UPDATE users
+            SET email = ${email},
+                email_new = ${emailNew},
+                secret_code = ${secretCode},
+                secret_code_expire_at = ${secretCodeExpireAt},
+                refresh_token = ${refreshToken},
+                refresh_token_expire_at = ${refreshTokenExpireAt},
+                status = ${status}
+            WHERE id = ${userId}
+        `);
+    }
+
+    async _dbUpdateUserPassword(params: {
+        userId: string;
+        passwordHash: string;
+        newSecretCode: string;
+        newSecretCodeExpireAt: string;
+        refreshToken: string;
+        refreshTokenExpireAt: string;
+    }): Promise<any> {
+        const {
+            userId,
+            passwordHash,
+            newSecretCode,
+            newSecretCodeExpireAt,
+            refreshToken,
+            refreshTokenExpireAt
+        } = params;
+
+        await pg.query(sql`
+            UPDATE users
+            SET password_hash = ${passwordHash},
+                secret_code = ${newSecretCode},
+                secret_code_expire_at = ${newSecretCodeExpireAt},
+                refresh_token = ${refreshToken},
+                refresh_token_expire_at = ${refreshTokenExpireAt}
+            WHERE id = ${userId};
+        `);
+    }
+
+    async _dbChangeUserPassword(params: { userId: string; passwordHash: string }): Promise<any> {
+        const { userId, passwordHash } = params;
+
+        await pg.query(sql`
+            UPDATE users
+            SET password_hash = ${passwordHash}
+            WHERE id = ${userId};
+        `);
+    }
+
+    //#endregion "DB functions"
 }

@@ -736,6 +736,228 @@ export default class BacktesterWorkerService extends BaseService {
         }
     };
 
+    #saveSettings = async (
+        settings: {
+            backtestId: string;
+            robotId: string;
+            strategySettings: StrategySettings;
+            robotSettings: RobotSettings;
+            activeFrom: string;
+        }[]
+    ) => {
+        const chunks = chunkArray(
+            settings.map((s) => ({
+                ...s,
+                strategySettings: JSON.stringify(s.strategySettings),
+                robotSettings: JSON.stringify(s.robotSettings)
+            })),
+            this.defaultInsertChunkSize
+        );
+        for (const chunk of chunks) {
+            await this.db.pg.query(sql`
+            INSERT INTO backtest_settings
+            (backtest_id, robot_id, strategy_settings, robot_settings, active_from)
+            SELECT * FROM
+            ${sql.unnest(
+                this.db.util.prepareUnnest(chunk, [
+                    "backtestId",
+                    "robotId",
+                    "strategySettings",
+                    "robotSettings",
+                    "activeFrom"
+                ]),
+                ["uuid", "uuid", "jsonb", "jsonb", "timestamp"]
+            )}
+            `);
+        }
+    };
+
+    #saveRobotState = async (state: RobotState) => {
+        await this.db.pg.query(sql`
+        UPDATE robots 
+        SET state = ${JSON.stringify(state)}, 
+        last_candle = ${JSON.stringify(state.lastCandle)}, 
+        has_alerts = ${state.hasAlerts}
+        WHERE id = ${state.id};
+        `);
+    };
+
+    #saveRobotSettings = async (
+        robotId: string,
+        settings: {
+            strategySettings: StrategySettings;
+            robotSettings: RobotSettings;
+            activeFrom: string;
+        }[]
+    ) => {
+        await this.db.pg.query(sql`DELETE FROM robot_settings WHERE robot_id = ${robotId}`);
+
+        const chunks = chunkArray(
+            settings.map((s) => ({
+                ...s,
+                robotId,
+                strategySettings: JSON.stringify(s.strategySettings),
+                robotSettings: JSON.stringify(s.robotSettings)
+            })),
+            this.defaultInsertChunkSize
+        );
+
+        for (const chunk of chunks) {
+            await this.db.pg.query(sql`
+            INSERT INTO robot_settings
+            (robot_id, strategy_settings, robot_settings, active_from)
+            SELECT * FROM
+            ${sql.unnest(
+                this.db.util.prepareUnnest(chunk, ["robotId", "strategySettings", "robotSettings", "activeFrom"]),
+                ["uuid", "jsonb", "jsonb", "timestamp"]
+            )}
+            `);
+        }
+    };
+
+    #saveRobotSignals = async (robotId: string, signals: SignalEvent[]) => {
+        await this.db.pg.query(sql`DELETE FROM robot_signals where robot_id = ${robotId}`);
+        if (signals && Array.isArray(signals) && signals.length > 0) {
+            const chunks = chunkArray(signals, this.defaultInsertChunkSize);
+            for (const chunk of chunks) {
+                await this.db.pg.query(sql`
+        INSERT INTO robot_signals
+        (robot_id, timestamp, type, 
+        action, order_type, price,
+        position_id, position_prefix, position_code, position_parent_id,
+        candle_timestamp)
+        SELECT * FROM
+        ${sql.unnest(
+            this.db.util.prepareUnnest(chunk, [
+                "robotId",
+                "timestamp",
+                "type",
+                "action",
+                "orderType",
+                "price",
+                "positionId",
+                "positionPrefix",
+                "positionCode",
+                "positionParentId",
+                "candleTimestamp"
+            ]),
+            [
+                "uuid",
+                "timestamp",
+                "varchar",
+                "varchar",
+                "varchar",
+                "numeric",
+                "uuid",
+                "varchar",
+                "varchar",
+                "uuid",
+                "timestamp"
+            ]
+        )}`);
+            }
+        }
+    };
+
+    #saveRobotPositions = async (robotId: string, positions: RobotPositionState[]) => {
+        await this.db.pg.query(sql`DELETE FROM robot_positions where robot_id = ${robotId}`);
+        if (positions && Array.isArray(positions) && positions.length > 0) {
+            const chunks = chunkArray(positions, this.defaultInsertChunkSize);
+            for (const chunk of chunks) {
+                await this.db.pg.query(sql`
+        INSERT INTO robot_positions
+        ( robot_id, prefix, code, parent_id,
+         direction, status, entry_status, entry_price, 
+         entry_date,
+         entry_order_type, entry_action, 
+         entry_candle_timestamp,
+         exit_status, exit_price,
+         exit_date, 
+         exit_order_type,
+         exit_action, 
+         exit_candle_timestamp,
+         alerts,
+         bars_held,
+         internal_state
+        )
+        SELECT * FROM 
+        ${sql.unnest(
+            this.db.util.prepareUnnest(
+                chunk.map((pos) => ({
+                    ...pos,
+                    alerts: JSON.stringify(pos.alerts),
+                    internalState: JSON.stringify(pos.internalState)
+                })),
+                [
+                    "robotId",
+                    "prefix",
+                    "code",
+                    "parentId",
+                    "direction",
+                    "status",
+                    "entryStatus",
+                    "entryPrice",
+                    "entryDate",
+                    "entryOrderType",
+                    "entryAction",
+                    "entryCandleTimestamp",
+                    "exitStatus",
+                    "exitPrice",
+                    "exitDate",
+                    "exitOrderType",
+                    "exitAction",
+                    "exitCandleTimestamp",
+                    "alerts",
+                    "barsHeld",
+                    "internalState"
+                ]
+            ),
+            [
+                "uuid",
+                "varchar",
+                "varchar",
+                "uuid",
+                "varchar",
+                "varchar",
+                "varchar",
+                "numeric",
+                "timestamp",
+                "varchar",
+                "varchar",
+                "timestamp",
+                "varchar",
+                "numeric",
+                "timestamp",
+                "varchar",
+                "varchar",
+                "timestamp",
+                "jsonb",
+                "numeric",
+                "jsonb"
+            ]
+        )}
+        `);
+            }
+        }
+    };
+
+    #saveRobotStats = async (robotId: string, stats: RobotStats) => {
+        await this.db.pg.query(sql`DELETE FROM robot_stats where robot_id = ${robotId}`);
+        if (stats) {
+            const { robotId, statistics, equity, equityAvg, lastPositionExitDate, lastUpdatedAt } = stats;
+
+            await this.db.pg.query(sql`
+        INSERT INTO robot_stats 
+        (robot_id, 
+        statistics, equity, equity_avg, 
+        last_position_exit_date, last_updated_at) VALUES (
+            ${robotId}, ${sql.json(statistics)}, ${sql.json(equity)}, ${sql.json(equityAvg)},
+            ${lastPositionExitDate},${lastUpdatedAt}
+        )
+        `);
+        }
+    };
+
     async run(job: Job<BacktesterState, BacktesterState>, backtester: Backtester): Promise<void> {
         try {
             const query = sql`${sql.identifier([`candles${backtester.timeframe}`])} 
@@ -798,6 +1020,7 @@ export default class BacktesterWorkerService extends BaseService {
                         }
 
                         await this.#saveStats(robot.data.stats);
+
 
                         await this.#saveSettings(
                             Object.values(robot.data.settings).map((s) => ({

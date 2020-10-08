@@ -1,16 +1,9 @@
-import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
-import { Request, Response, Protocol } from "restana";
+import { HTTPService, HTTPServiceConfig, RequestExtended } from "@cryptuoso/service";
+import { Response, Protocol } from "restana";
 import Cookie, { CookieSerializeOptions } from "cookie";
-import { User, UserStatus, UserRoles } from "@cryptuoso/user-state";
-import { DBFunctions } from "./types";
+import { UserRoles } from "@cryptuoso/user-state";
 import { Auth } from "./auth";
-import { sql } from "slonik";
-import dayjs from "@cryptuoso/dayjs";
 import { ActionsHandlerError } from "@cryptuoso/errors";
-
-interface HttpRequest extends Request<Protocol.HTTP> {
-    body: any;
-}
 
 type HttpResponse = Response<Protocol.HTTP>;
 
@@ -18,25 +11,11 @@ export type AuthServiceConfig = HTTPServiceConfig;
 
 export default class AuthService extends HTTPService {
     auth: Auth;
-    dbFunctions: DBFunctions = {
-        getUserByEmail: this._dbGetUserByEmail.bind(this),
-        getUserById: this._dbGetUserById.bind(this),
-        getUserTg: this._dbGetUserTg.bind(this),
-        getUserByToken: this._dbGetUserByToken.bind(this),
-        registerUser: this._dbRegisterUser.bind(this),
-        registerUserTg: this._dbRegisterUserTg.bind(this),
-        updateUserRefreshToken: this._dbUpdateUserRefreshToken.bind(this),
-        updateUserSecretCode: this._dbUpdateUserSecretCode.bind(this),
-        updateUserPassword: this._dbUpdateUserPassword.bind(this),
-        changeUserEmail: this._dbChangeUserEmail.bind(this),
-        confirmChangeUserEmail: this._dbConfirmChangeUserEmail.bind(this),
-        activateUser: this._dbActivateUser.bind(this)
-    };
 
     constructor(config?: AuthServiceConfig) {
         super(config);
         try {
-            this.auth = new Auth(this.dbFunctions);
+            this.auth = new Auth();
             this.createRoutes({
                 login: {
                     handler: this.login.bind(this),
@@ -60,6 +39,29 @@ export default class AuthService extends HTTPService {
                         // eslint-disable-next-line @typescript-eslint/camelcase
                         auth_date: "number",
                         hash: "string"
+                    }
+                },
+                setTelegram: {
+                    handler: this.setTelegram.bind(this),
+                    auth: true,
+                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
+                    inputSchema: {
+                        data: {
+                            type: "object",
+                            props: {
+                                id: "number",
+                                // eslint-disable-next-line @typescript-eslint/camelcase
+                                first_name: { type: "string", optional: true },
+                                // eslint-disable-next-line @typescript-eslint/camelcase
+                                last_name: { type: "string", optional: true },
+                                username: { type: "string", optional: true },
+                                // eslint-disable-next-line @typescript-eslint/camelcase
+                                photo_url: { type: "string", optional: true },
+                                // eslint-disable-next-line @typescript-eslint/camelcase
+                                auth_date: "number",
+                                hash: "string"
+                            }
+                        }
                     }
                 },
                 logout: {
@@ -92,6 +94,21 @@ export default class AuthService extends HTTPService {
                     inputSchema: {
                         userId: "string",
                         secretCode: { type: "string", empty: false, trim: true }
+                    }
+                },
+                changePassword: {
+                    handler: this.changePassword.bind(this),
+                    auth: true,
+                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
+                    inputSchema: {
+                        password: {
+                            type: "string",
+                            min: 6,
+                            max: 100,
+                            alphanum: true,
+                            trim: true
+                        },
+                        oldPassword: { type: "string", optional: true, trim: true }
                     }
                 },
                 passwordReset: {
@@ -146,7 +163,7 @@ export default class AuthService extends HTTPService {
         };
     }
 
-    async login(req: HttpRequest, res: HttpResponse) {
+    async login(req: RequestExtended, res: HttpResponse) {
         try {
             const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.login(req.body.input);
 
@@ -164,7 +181,7 @@ export default class AuthService extends HTTPService {
         }
     }
 
-    async loginTg(req: HttpRequest, res: HttpResponse) {
+    async loginTg(req: RequestExtended, res: HttpResponse) {
         const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.loginTg(req.body.input);
 
         res.setHeader(
@@ -177,19 +194,25 @@ export default class AuthService extends HTTPService {
         res.end();
     }
 
-    async logout(req: HttpRequest, res: HttpResponse) {
+    async setTelegram(req: RequestExtended, res: HttpResponse) {
+        await this.auth.setTelegram(req.meta.user, req.body.input.data);
+        res.send({ result: "OK" });
+        res.end();
+    }
+
+    async logout(req: RequestExtended, res: HttpResponse) {
         res.setHeader("Set-Cookie", Cookie.serialize("refresh_token", "", this._makeCookieProps(0)));
         res.send({ result: "OK" });
         res.end();
     }
 
-    async register(req: HttpRequest, res: HttpResponse) {
+    async register(req: RequestExtended, res: HttpResponse) {
         const userId = await this.auth.register(req.body.input);
         res.send({ userId });
         res.end();
     }
 
-    async refreshToken(req: HttpRequest, res: HttpResponse) {
+    async refreshToken(req: RequestExtended, res: HttpResponse) {
         const cookies = Cookie.parse((req.headers["cookie"] as string) || "");
         let oldRefreshToken = cookies["refresh_token"];
         this.log.info("cookie ", req.headers["cookie"], cookies, oldRefreshToken);
@@ -217,7 +240,7 @@ export default class AuthService extends HTTPService {
         res.end();
     }
 
-    async activateAccount(req: HttpRequest, res: HttpResponse) {
+    async activateAccount(req: RequestExtended, res: HttpResponse) {
         const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.activateAccount(req.body.input);
 
         res.setHeader(
@@ -230,13 +253,19 @@ export default class AuthService extends HTTPService {
         res.end();
     }
 
-    async passwordReset(req: HttpRequest, res: HttpResponse) {
+    async changePassword(req: RequestExtended, res: HttpResponse) {
+        await this.auth.changePassword(req.meta.user, req.body.input);
+        res.send({ result: "OK" });
+        res.end();
+    }
+
+    async passwordReset(req: RequestExtended, res: HttpResponse) {
         const userId = await this.auth.passwordReset(req.body.input);
         res.send({ userId });
         res.end();
     }
 
-    async confirmPasswordReset(req: HttpRequest, res: HttpResponse) {
+    async confirmPasswordReset(req: RequestExtended, res: HttpResponse) {
         const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.confirmPasswordReset(
             req.body.input
         );
@@ -251,7 +280,7 @@ export default class AuthService extends HTTPService {
         res.end();
     }
 
-    async changeEmail(req: HttpRequest, res: HttpResponse) {
+    async changeEmail(req: RequestExtended, res: HttpResponse) {
         await this.auth.changeEmail({
             userId: req.body.session_variables["x-hasura-user-id"],
             email: req.body.input.email
@@ -260,7 +289,7 @@ export default class AuthService extends HTTPService {
         res.end();
     }
 
-    async confirmChangeEmail(req: HttpRequest, res: HttpResponse) {
+    async confirmChangeEmail(req: RequestExtended, res: HttpResponse) {
         const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.confirmChangeEmail({
             userId: req.body.session_variables["x-hasura-user-id"],
             secretCode: req.body.input.secretCode
@@ -274,201 +303,5 @@ export default class AuthService extends HTTPService {
             accessToken
         });
         res.end();
-    }
-
-    private async _dbGetUserByEmail(params: { email: string }): Promise<User> {
-        const { email } = params;
-
-        return await this.db.pg.maybeOne(sql`
-            SELECT * FROM users
-            WHERE email = ${email}
-        `);
-    }
-
-    private async _dbGetUserById(params: { userId: string }): Promise<User> {
-        const { userId } = params;
-
-        return await this.db.pg.maybeOne(sql`
-            SELECT * FROM users
-            WHERE id = ${userId}
-        `);
-    }
-
-    private async _dbGetUserTg(params: { telegramId: number }): Promise<User> {
-        const { telegramId } = params;
-
-        return await this.db.pg.maybeOne(sql`
-            SELECT * FROM users
-            WHERE telegram_id = ${telegramId};
-        `);
-    }
-
-    private async _dbGetUserByToken(params: { refreshToken: string }): Promise<User> {
-        const { refreshToken } = params;
-
-        return await this.db.pg.maybeOne(sql`
-            SELECT * FROM users
-            WHERE refresh_token = ${refreshToken} AND refresh_token_expire_at > ${dayjs.utc().toISOString()};
-        `);
-    }
-
-    private async _dbUpdateUserRefreshToken(params: {
-        refreshToken: string;
-        refreshTokenExpireAt: string;
-        userId: string;
-    }): Promise<any> {
-        const { refreshToken, refreshTokenExpireAt, userId } = params;
-
-        await this.db.pg.query(sql`
-            UPDATE users
-            SET refresh_token = ${refreshToken}, refresh_token_expire_at = ${refreshTokenExpireAt}
-            WHERE id = ${userId}
-        `);
-    }
-
-    private async _dbRegisterUserTg(newUser: User): Promise<any> {
-        await this.db.pg.query(sql`
-            INSERT INTO users
-                (id, telegram_id, telegram_username, name, status, roles, access, settings)
-                VALUES(
-                    ${newUser.id},
-                    ${newUser.telegramId},
-                    ${newUser.telegramUsername},
-                    ${newUser.name},
-                    ${newUser.status},
-                    ${sql.json(newUser.roles)},
-                    ${newUser.access},
-                    ${sql.json(newUser.settings)}
-                );
-        `);
-    }
-
-    private async _dbRegisterUser(newUser: User): Promise<any> {
-        await this.db.pg.query(sql`
-            INSERT INTO users
-                (id, name, email, status, password_hash, secret_code, roles, access, settings)
-                VALUES(
-                    ${newUser.id},
-                    ${newUser.name},
-                    ${newUser.email},
-                    ${newUser.status},
-                    ${newUser.passwordHash},
-                    ${newUser.secretCode},
-                    ${sql.json(newUser.roles)},
-                    ${newUser.access},
-                    ${sql.json(newUser.settings)}
-                );
-        `);
-    }
-
-    private async _dbActivateUser(params: {
-        refreshToken: string;
-        refreshTokenExpireAt: string;
-        userId: string;
-    }): Promise<any> {
-        const { refreshToken, refreshTokenExpireAt, userId } = params;
-
-        await await this.db.pg.query(sql`
-            UPDATE users
-            SET secret_code = ${null},
-                secret_code_expire_at = ${null},
-                status = ${UserStatus.enabled},
-                refresh_token = ${refreshToken},
-                refresh_token_expire_at = ${refreshTokenExpireAt}
-            WHERE id = ${userId};
-        `);
-    }
-
-    private async _dbUpdateUserSecretCode(params: {
-        userId: string;
-        secretCode: string;
-        secretCodeExpireAt: string;
-    }): Promise<any> {
-        const { userId, secretCode, secretCodeExpireAt } = params;
-
-        await this.db.pg.query(sql`
-            UPDATE users
-            SET secret_code = ${secretCode}, secret_code_expire_at = ${secretCodeExpireAt}
-            WHERE id = ${userId}
-        `);
-    }
-
-    private async _dbChangeUserEmail(params: {
-        userId: string;
-        emailNew: string;
-        secretCode: string;
-        secretCodeExpireAt: string;
-    }): Promise<any> {
-        const { secretCode, secretCodeExpireAt, userId, emailNew } = params;
-
-        await this.db.pg.query(sql`
-            UPDATE users
-            SET email_new = ${emailNew},
-                secret_code = ${secretCode},
-                secret_code_expire_at = ${secretCodeExpireAt}
-            WHERE id = ${userId}
-        `);
-    }
-
-    private async _dbConfirmChangeUserEmail(params: {
-        userId: string;
-        email: string;
-        emailNew: string;
-        secretCode: string;
-        secretCodeExpireAt: string;
-        refreshToken: string;
-        refreshTokenExpireAt: string;
-        status: UserStatus;
-    }): Promise<any> {
-        const {
-            userId,
-            email,
-            emailNew,
-            secretCode,
-            secretCodeExpireAt,
-            refreshToken,
-            refreshTokenExpireAt,
-            status
-        } = params;
-
-        await this.db.pg.query(sql`
-            UPDATE users
-            SET email = ${email},
-                email_new = ${emailNew},
-                secret_code = ${secretCode},
-                secret_code_expire_at = ${secretCodeExpireAt},
-                refresh_token = ${refreshToken},
-                refresh_token_expire_at = ${refreshTokenExpireAt},
-                status = ${status}
-            WHERE id = ${userId}
-        `);
-    }
-
-    private async _dbUpdateUserPassword(params: {
-        userId: string;
-        passwordHash: string;
-        newSecretCode: string;
-        newSecretCodeExpireAt: string;
-        refreshToken: string;
-        refreshTokenExpireAt: string;
-    }): Promise<any> {
-        const {
-            userId,
-            passwordHash,
-            newSecretCode,
-            newSecretCodeExpireAt,
-            refreshToken,
-            refreshTokenExpireAt
-        } = params;
-
-        await this.db.pg.query(sql`
-            UPDATE users
-            SET password_hash = ${passwordHash},
-                secret_code = ${newSecretCode},
-                secret_code_expire_at = ${newSecretCodeExpireAt},
-                refresh_token = ${refreshToken},
-                refresh_token_expireAt = ${refreshTokenExpireAt}
-            WHERE id = ${userId};
-        `);
     }
 }

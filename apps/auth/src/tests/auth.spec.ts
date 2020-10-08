@@ -8,6 +8,7 @@ import bcrypt from "bcrypt";
 import { User, UserStatus, UserRoles, UserSettings } from "@cryptuoso/user-state";
 import { makeTgHash } from "./helpers";
 import { Auth } from "../app/auth";
+import { pg } from "@cryptuoso/postgres";
 
 const userSettings: UserSettings = {
     notifications: {
@@ -26,7 +27,17 @@ const userSettings: UserSettings = {
     compare: bcrypt.compare,
     hash: bcrypt.hash
 };*/
-jest.mock("@cryptuoso/postgres");
+
+const mockPG = {
+    query: pg.query as jest.Mock
+};
+
+jest.mock("@cryptuoso/postgres", () => ({
+    sql: Object.assign(jest.fn(), { json: jest.fn() }),
+    pg: {
+        query: jest.fn()
+    }
+}));
 jest.mock("@cryptuoso/mail");
 
 describe("Test Auth class methods", () => {
@@ -50,13 +61,10 @@ describe("Test Auth class methods", () => {
                         },
                         settings: userSettings
                     };
-                    const auth = new Auth(
-                        {
-                            getUserByEmail: jest.fn(async () => dbUser),
-                            updateUserRefreshToken: jest.fn()
-                        } as any
-                        //   //   bcryptUtils as any
-                    );
+                    const auth = new Auth(/* bcryptUtils */);
+
+                    auth._dbGetUserByEmail = jest.fn(async () => dbUser);
+                    auth._dbUpdateUserRefreshToken = jest.fn();
 
                     const result = await auth.login(params);
 
@@ -87,13 +95,10 @@ describe("Test Auth class methods", () => {
                     },
                     settings: userSettings
                 };
-                const auth = new Auth(
-                    {
-                        getUserByEmail: jest.fn(async () => dbUser),
-                        updateUserRefreshToken: jest.fn()
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserByEmail = jest.fn(async () => dbUser);
+                auth._dbUpdateUserRefreshToken = jest.fn();
 
                 const result = await auth.login(params);
 
@@ -123,13 +128,10 @@ describe("Test Auth class methods", () => {
                     },
                     settings: userSettings
                 };
-                const auth = new Auth(
-                    {
-                        getUserByEmail: jest.fn(async () => dbUser),
-                        updateUserRefreshToken: jest.fn()
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserByEmail = jest.fn(async () => dbUser);
+                auth._dbUpdateUserRefreshToken = jest.fn();
 
                 const result = await auth.login(params);
 
@@ -158,13 +160,10 @@ describe("Test Auth class methods", () => {
                         },
                         settings: userSettings
                     };
-                    const auth = new Auth(
-                        {
-                            getUserByEmail: jest.fn(async () => dbUser),
-                            updateUserRefreshToken: jest.fn()
-                        } as any
-                        //   //   bcryptUtils as any
-                    );
+                    const auth = new Auth(/* bcryptUtils */);
+
+                    auth._dbGetUserByEmail = jest.fn(async () => dbUser);
+                    auth._dbUpdateUserRefreshToken = jest.fn();
 
                     await expect(auth.login(params)).rejects.toThrow();
                 });
@@ -188,13 +187,10 @@ describe("Test Auth class methods", () => {
                         },
                         settings: userSettings
                     };
-                    const auth = new Auth(
-                        {
-                            getUserByEmail: jest.fn(async () => dbUser),
-                            updateUserRefreshToken: jest.fn()
-                        } as any
-                        //   //   bcryptUtils as any
-                    );
+                    const auth = new Auth(/* bcryptUtils */);
+
+                    auth._dbGetUserByEmail = jest.fn(async () => dbUser);
+                    auth._dbUpdateUserRefreshToken = jest.fn();
 
                     await expect(auth.login(params)).rejects.toThrow();
                 });
@@ -206,13 +202,10 @@ describe("Test Auth class methods", () => {
                         email: "example@inbox.com",
                         password: "password"
                     };
-                    const auth = new Auth(
-                        {
-                            getUserByEmail: jest.fn(async () => null),
-                            updateUserRefreshToken: jest.fn()
-                        } as any
-                        //   //   bcryptUtils as any
-                    );
+                    const auth = new Auth(/* bcryptUtils */);
+
+                    auth._dbGetUserByEmail = jest.fn(async () => null);
+                    auth._dbUpdateUserRefreshToken = jest.fn();
 
                     await expect(auth.login(params)).rejects.toThrow();
                 });
@@ -245,14 +238,11 @@ describe("Test Auth class methods", () => {
                         },
                         settings: userSettings
                     };
-                    const auth = new Auth(
-                        {
-                            getUserTg: jest.fn(async () => dbUser),
-                            registerUserTg: jest.fn(),
-                            updateUserRefreshToken: jest.fn()
-                        } as any
-                        //   //   bcryptUtils as any
-                    );
+                    const auth = new Auth(/* bcryptUtils */);
+
+                    auth._dbGetUserTg = jest.fn(async () => dbUser);
+                    auth._dbRegisterUserTg = jest.fn();
+                    auth._dbUpdateUserRefreshToken = jest.fn();
 
                     const result = await auth.loginTg(params);
 
@@ -285,14 +275,11 @@ describe("Test Auth class methods", () => {
                         },
                         settings: userSettings
                     };
-                    const auth = new Auth(
-                        {
-                            getUserTg: jest.fn(async () => dbUser),
-                            registerUserTg: jest.fn(),
-                            updateUserRefreshToken: jest.fn()
-                        } as any
-                        //   //   bcryptUtils as any
-                    );
+                    const auth = new Auth(/* bcryptUtils */);
+
+                    auth._dbGetUserTg = jest.fn(async () => dbUser);
+                    auth._dbRegisterUserTg = jest.fn();
+                    auth._dbUpdateUserRefreshToken = jest.fn();
 
                     const result = await auth.loginTg(params);
 
@@ -331,14 +318,11 @@ describe("Test Auth class methods", () => {
                         },
                         settings: userSettings
                     };
-                    const auth = new Auth(
-                        {
-                            getUserTg: jest.fn(async () => dbUser),
-                            registerUserTg: jest.fn(),
-                            updateUserRefreshToken: jest.fn()
-                        } as any
-                        //   //   bcryptUtils as any
-                    );
+                    const auth = new Auth(/* bcryptUtils */);
+
+                    auth._dbGetUserTg = jest.fn(async () => dbUser);
+                    auth._dbRegisterUserTg = jest.fn();
+                    auth._dbUpdateUserRefreshToken = jest.fn();
 
                     const result = await auth.loginTg(params);
 
@@ -364,18 +348,15 @@ describe("Test Auth class methods", () => {
                         hash: ""
                     };
                     params.hash = makeTgHash(params, process.env.BOT_TOKEN);
-                    const dbf = {
-                        getUserTg: jest.fn(async () => null),
-                        registerUserTg: jest.fn(),
-                        updateUserRefreshToken: jest.fn()
-                    };
-                    const auth = new Auth(
-                        dbf as any //   bcryptUtils as any
-                    );
+                    const auth = new Auth(/* bcryptUtils */);
+
+                    auth._dbGetUserTg = jest.fn(async () => null);
+                    auth._dbRegisterUserTg = jest.fn();
+                    auth._dbUpdateUserRefreshToken = jest.fn();
 
                     const result = await auth.loginTg(params);
 
-                    const newUser: User = dbf.registerUserTg.mock.calls.pop()[0];
+                    const newUser: User = (auth._dbRegisterUserTg as jest.Mock).mock.calls.pop()[0];
 
                     expect(newUser.telegramId).toStrictEqual(params.id);
                     expect(newUser.telegramUsername).toStrictEqual(params.username);
@@ -412,14 +393,11 @@ describe("Test Auth class methods", () => {
                         },
                         settings: userSettings
                     };
-                    const auth = new Auth(
-                        {
-                            getUserTg: jest.fn(async () => dbUser),
-                            registerUserTg: jest.fn(),
-                            updateUserRefreshToken: jest.fn()
-                        } as any
-                        //   //   bcryptUtils as any
-                    );
+                    const auth = new Auth(/* bcryptUtils */);
+
+                    auth._dbGetUserTg = jest.fn(async () => dbUser);
+                    auth._dbRegisterUserTg = jest.fn();
+                    auth._dbUpdateUserRefreshToken = jest.fn();
 
                     await expect(auth.loginTg(params)).rejects.toThrowError();
                 });
@@ -448,16 +426,151 @@ describe("Test Auth class methods", () => {
                         },
                         settings: userSettings
                     };
-                    const auth = new Auth(
-                        {
-                            getUserTg: jest.fn(async () => dbUser),
-                            registerUserTg: jest.fn(),
-                            updateUserRefreshToken: jest.fn()
-                        } as any
-                        //   //   bcryptUtils as any
-                    );
+                    const auth = new Auth(/* bcryptUtils */);
+
+                    auth._dbGetUserTg = jest.fn(async () => dbUser);
+                    auth._dbRegisterUserTg = jest.fn();
+                    auth._dbUpdateUserRefreshToken = jest.fn();
 
                     await expect(auth.loginTg(params)).rejects.toThrowError();
+                });
+            });
+        });
+    });
+
+    describe("setTelegram method", () => {
+        describe("With right params provided", () => {
+            describe("W/o same telegramId and right status", () => {
+                test("Should update user in DB", async () => {
+                    const params = {
+                        id: 123,
+                        username: "username",
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        auth_date: Date.now(),
+                        hash: ""
+                    };
+                    params.hash = makeTgHash(params, process.env.BOT_TOKEN);
+                    const dbUser: User = {
+                        id: "id",
+                        telegramId: params.id,
+                        status: UserStatus.enabled,
+                        refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
+                        refreshTokenExpireAt: "2120-08-11T12:50:21.055Z",
+                        access: 15,
+                        roles: {
+                            defaultRole: UserRoles.user,
+                            allowedRoles: [UserRoles.user]
+                        },
+                        settings: userSettings
+                    };
+                    const auth = new Auth(/* bcryptUtils */);
+
+                    auth._dbGetUserTg = jest.fn(async () => null);
+                    auth._dbGetUserById = jest.fn(async () => dbUser);
+
+                    mockPG.query.mockClear();
+
+                    await expect(auth.setTelegram(dbUser, params)).resolves.not.toThrow();
+
+                    expect(mockPG.query).toBeCalled();
+                });
+            });
+        });
+
+        describe("With wrong params provided", () => {
+            describe("With wrong hash", () => {
+                test("Should to throw error", async () => {
+                    const params = {
+                        id: 123,
+                        username: "username",
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        auth_date: Date.now(),
+                        hash: ""
+                    };
+                    //params.hash = makeTgHash(params, process.env.BOT_TOKEN);
+                    const dbUser: User = {
+                        id: "id",
+                        telegramId: params.id,
+                        status: UserStatus.enabled,
+                        refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
+                        refreshTokenExpireAt: "2120-08-11T12:50:21.055Z",
+                        access: 15,
+                        roles: {
+                            defaultRole: UserRoles.user,
+                            allowedRoles: [UserRoles.user]
+                        },
+                        settings: userSettings
+                    };
+                    const auth = new Auth(/* bcryptUtils */);
+
+                    auth._dbGetUserTg = jest.fn(async () => null);
+                    auth._dbGetUserById = jest.fn(async () => dbUser);
+
+                    await expect(auth.setTelegram(dbUser, params)).rejects.toThrowError();
+                });
+            });
+
+            describe("With existing telegramId", () => {
+                test("Should to throw error", async () => {
+                    const params = {
+                        id: 123,
+                        username: "username",
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        auth_date: Date.now(),
+                        hash: ""
+                    };
+                    params.hash = makeTgHash(params, process.env.BOT_TOKEN);
+                    const dbUser: User = {
+                        id: "id",
+                        telegramId: params.id,
+                        status: UserStatus.blocked,
+                        refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
+                        refreshTokenExpireAt: "2120-08-11T12:50:21.055Z",
+                        access: 15,
+                        roles: {
+                            defaultRole: UserRoles.user,
+                            allowedRoles: [UserRoles.user]
+                        },
+                        settings: userSettings
+                    };
+                    const auth = new Auth(/* bcryptUtils */);
+
+                    auth._dbGetUserTg = jest.fn(async () => dbUser);
+                    auth._dbGetUserById = jest.fn(async () => dbUser);
+
+                    await expect(auth.setTelegram(dbUser, params)).rejects.toThrowError();
+                });
+            });
+
+            describe("With wrong status", () => {
+                test("Should to throw error", async () => {
+                    const params = {
+                        id: 123,
+                        username: "username",
+                        // eslint-disable-next-line @typescript-eslint/camelcase
+                        auth_date: Date.now(),
+                        hash: ""
+                    };
+                    params.hash = makeTgHash(params, process.env.BOT_TOKEN);
+                    const dbUser: User = {
+                        id: "id",
+                        telegramId: params.id,
+                        status: UserStatus.blocked,
+                        refreshToken: "48e39a56-ba3a-4009-9d8a-9f23dd071ee2",
+                        refreshTokenExpireAt: "2120-08-11T12:50:21.055Z",
+                        access: 15,
+                        roles: {
+                            defaultRole: UserRoles.user,
+                            allowedRoles: [UserRoles.user]
+                        },
+                        settings: userSettings
+                    };
+                    const auth = new Auth(/* bcryptUtils */);
+
+                    auth._dbGetUserTg = jest.fn(async () => null);
+                    auth._dbGetUserById = jest.fn(async () => dbUser);
+
+                    await expect(auth.setTelegram(dbUser, params)).rejects.toThrowError();
                 });
             });
         });
@@ -471,17 +584,14 @@ describe("Test Auth class methods", () => {
                     password: "password",
                     name: "Name"
                 };
-                const dbf = {
-                    getUserByEmail: jest.fn(async () => null),
-                    registerUser: jest.fn()
-                };
-                const auth = new Auth(
-                    dbf as any //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserByEmail = jest.fn(async () => null);
+                auth._dbRegisterUser = jest.fn();
 
                 await expect(auth.register(params)).resolves.toBeDefined();
 
-                const newUser: User = dbf.registerUser.mock.calls.pop()[0];
+                const newUser: User = (auth._dbRegisterUser as jest.Mock).mock.calls.pop()[0];
 
                 expect(params.email).toStrictEqual(newUser.email);
                 expect(params.name).toStrictEqual(newUser.name);
@@ -508,13 +618,10 @@ describe("Test Auth class methods", () => {
                     },
                     settings: userSettings
                 };
-                const auth = new Auth(
-                    {
-                        getUserByEmail: jest.fn(async () => dbUser),
-                        registerUser: jest.fn()
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserByEmail = jest.fn(async () => dbUser);
+                auth._dbRegisterUser = jest.fn();
 
                 await expect(auth.register(params)).rejects.toThrowError();
             });
@@ -540,12 +647,9 @@ describe("Test Auth class methods", () => {
                     },
                     settings: userSettings
                 };
-                const auth = new Auth(
-                    {
-                        getUserByToken: jest.fn(async () => dbUser)
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserByToken = jest.fn(async () => dbUser);
 
                 const result = await auth.refreshToken(params);
 
@@ -560,12 +664,9 @@ describe("Test Auth class methods", () => {
                 const params = {
                     refreshToken: "token"
                 };
-                const auth = new Auth(
-                    {
-                        getUserByToken: jest.fn(async () => null)
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserByToken = jest.fn(async () => null);
 
                 await expect(auth.refreshToken(params)).rejects.toThrowError();
             });
@@ -589,12 +690,9 @@ describe("Test Auth class methods", () => {
                     },
                     settings: userSettings
                 };
-                const auth = new Auth(
-                    {
-                        getUserByToken: jest.fn(async () => dbUser)
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserByToken = jest.fn(async () => dbUser);
 
                 await expect(auth.refreshToken(params)).rejects.toThrowError();
             });
@@ -622,13 +720,10 @@ describe("Test Auth class methods", () => {
                     },
                     settings: userSettings
                 };
-                const auth = new Auth(
-                    {
-                        getUserById: jest.fn(async () => dbUser),
-                        activateUser: jest.fn()
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserById = jest.fn(async () => dbUser);
+                auth._dbActivateUser = jest.fn();
 
                 const result = await auth.activateAccount(params);
 
@@ -658,13 +753,10 @@ describe("Test Auth class methods", () => {
                     },
                     settings: userSettings
                 };
-                const auth = new Auth(
-                    {
-                        getUserById: jest.fn(async () => dbUser),
-                        activateUser: jest.fn()
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserById = jest.fn(async () => dbUser);
+                auth._dbActivateUser = jest.fn();
 
                 await expect(auth.activateAccount(params)).rejects.toThrowError();
             });
@@ -690,13 +782,10 @@ describe("Test Auth class methods", () => {
                     },
                     settings: userSettings
                 };
-                const auth = new Auth(
-                    {
-                        getUserById: jest.fn(async () => dbUser),
-                        activateUser: jest.fn()
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserById = jest.fn(async () => dbUser);
+                auth._dbActivateUser = jest.fn();
 
                 await expect(auth.activateAccount(params)).rejects.toThrowError();
             });
@@ -708,15 +797,131 @@ describe("Test Auth class methods", () => {
                     userId: "bad-id",
                     secretCode: "code"
                 };
-                const auth = new Auth(
-                    {
-                        getUserById: jest.fn(async () => null),
-                        activateUser: jest.fn()
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserById = jest.fn(async () => null);
+                auth._dbActivateUser = jest.fn();
 
                 await expect(auth.activateAccount(params)).rejects.toThrowError();
+            });
+        });
+    });
+
+    describe("changePassword method", () => {
+        describe("W/o user passwordHash and oldPassword parameter", () => {
+            test("Should change password hash in DB", async () => {
+                const params = {
+                    password: "pass"
+                };
+
+                const dbUser: User = {
+                    id: "id",
+                    status: UserStatus.new,
+                    access: 15,
+                    roles: {
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
+                    },
+                    settings: userSettings
+                };
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserById = jest.fn(async () => dbUser);
+                auth._dbChangeUserPassword = jest.fn();
+
+                await expect(auth.changePassword(dbUser, params)).resolves.not.toThrow();
+                expect(auth._dbChangeUserPassword).toBeCalled();
+
+                const args = (auth._dbChangeUserPassword as jest.Mock).mock.calls[0][0];
+
+                expect(args.userId).toBe(dbUser.id);
+                expect(await bcrypt.compare(params.password, args.passwordHash)).toBeTruthy();
+            });
+        });
+
+        describe("With passwordHash but w/o oldPassword parameter", () => {
+            test("Should to throw error", async () => {
+                const params = {
+                    password: "pass"
+                };
+
+                const dbUser: User = {
+                    id: "id",
+                    status: UserStatus.enabled,
+                    passwordHash: "hash",
+                    access: 15,
+                    roles: {
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
+                    },
+                    settings: userSettings
+                };
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserById = jest.fn(async () => dbUser);
+                auth._dbChangeUserPassword = jest.fn();
+
+                await expect(auth.changePassword(dbUser, params)).rejects.toThrow();
+            });
+        });
+
+        describe("With right passwordHash", () => {
+            test("Should change password hash in DB", async () => {
+                const params = {
+                    password: "pass",
+                    oldPassword: "oldPass"
+                };
+
+                const dbUser: User = {
+                    id: "id",
+                    status: UserStatus.enabled,
+                    passwordHash: await bcrypt.hash(params.oldPassword, 10),
+                    access: 15,
+                    roles: {
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
+                    },
+                    settings: userSettings
+                };
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserById = jest.fn(async () => dbUser);
+                auth._dbChangeUserPassword = jest.fn();
+
+                await expect(auth.changePassword(dbUser, params)).resolves.not.toThrow();
+                expect(auth._dbChangeUserPassword).toBeCalled();
+
+                const args = (auth._dbChangeUserPassword as jest.Mock).mock.calls[0][0];
+
+                expect(args.userId).toBe(dbUser.id);
+                expect(await bcrypt.compare(params.password, args.passwordHash)).toBeTruthy();
+            });
+        });
+
+        describe("With wrong passwordHash", () => {
+            test("Should to throw error", async () => {
+                const params = {
+                    password: "pass",
+                    oldPassword: "oldPass"
+                };
+
+                const dbUser: User = {
+                    id: "id",
+                    status: UserStatus.enabled,
+                    passwordHash: "wrong",
+                    access: 15,
+                    roles: {
+                        defaultRole: UserRoles.user,
+                        allowedRoles: [UserRoles.user]
+                    },
+                    settings: userSettings
+                };
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserById = jest.fn(async () => dbUser);
+                auth._dbChangeUserPassword = jest.fn();
+
+                await expect(auth.changePassword(dbUser, params)).rejects.toThrow();
             });
         });
     });
@@ -740,12 +945,9 @@ describe("Test Auth class methods", () => {
                     },
                     settings: userSettings
                 };
-                const auth = new Auth(
-                    {
-                        getUserByEmail: jest.fn(async () => dbUser)
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserByEmail = jest.fn(async () => dbUser);
 
                 await expect(auth.passwordReset(params)).resolves.toStrictEqual(dbUser.id);
             });
@@ -769,12 +971,9 @@ describe("Test Auth class methods", () => {
                     },
                     settings: userSettings
                 };
-                const auth = new Auth(
-                    {
-                        getUserByEmail: jest.fn(async () => dbUser)
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserByEmail = jest.fn(async () => dbUser);
 
                 await expect(auth.passwordReset(params)).rejects.toThrowError();
             });
@@ -785,12 +984,9 @@ describe("Test Auth class methods", () => {
                 const params = {
                     email: "example@inbox.com"
                 };
-                const auth = new Auth(
-                    {
-                        getUserByEmail: jest.fn(async () => null)
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserByEmail = jest.fn(async () => null);
 
                 await expect(auth.passwordReset(params)).rejects.toThrowError();
             });
@@ -819,13 +1015,10 @@ describe("Test Auth class methods", () => {
                     },
                     settings: userSettings
                 };
-                const auth = new Auth(
-                    {
-                        getUserById: jest.fn(async () => dbUser),
-                        updateUserPassword: jest.fn()
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserById = jest.fn(async () => dbUser);
+                auth._dbUpdateUserPassword = jest.fn();
 
                 const result = await auth.confirmPasswordReset(params);
 
@@ -856,13 +1049,10 @@ describe("Test Auth class methods", () => {
                     },
                     settings: userSettings
                 };
-                const auth = new Auth(
-                    {
-                        getUserById: jest.fn(async () => dbUser),
-                        updateUserPassword: jest.fn()
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserById = jest.fn(async () => dbUser);
+                auth._dbUpdateUserPassword = jest.fn();
 
                 await expect(auth.confirmPasswordReset(params)).rejects.toThrowError();
             });
@@ -870,13 +1060,11 @@ describe("Test Auth class methods", () => {
 
         describe("With not existing email", () => {
             test("Should to throw error", async () => {
-                const auth = new Auth(
-                    {
-                        getUserById: jest.fn(async () => null),
-                        updateUserPassword: jest.fn()
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserById = jest.fn(async () => null);
+                auth._dbUpdateUserPassword = jest.fn();
+
                 const params = {
                     userId: "id",
                     secretCode: "code",
@@ -908,14 +1096,11 @@ describe("Test Auth class methods", () => {
                     },
                     settings: userSettings
                 };
-                const auth = new Auth(
-                    {
-                        getUserByEmail: jest.fn(async () => null),
-                        getUserById: jest.fn(async () => dbUser),
-                        changeUserEmail: jest.fn()
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserByEmail = jest.fn(async () => null);
+                auth._dbGetUserById = jest.fn(async () => dbUser);
+                auth._dbChangeUserEmail = jest.fn();
 
                 await expect(auth.changeEmail(params)).resolves.not.toThrowError();
             });
@@ -927,14 +1112,11 @@ describe("Test Auth class methods", () => {
                     email: "new@inbox.com",
                     userId: "id"
                 };
-                const auth = new Auth(
-                    {
-                        getUserByEmail: jest.fn(async () => null),
-                        getUserById: jest.fn(async () => null),
-                        changeUserEmail: jest.fn()
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserByEmail = jest.fn(async () => null);
+                auth._dbGetUserById = jest.fn(async () => null);
+                auth._dbChangeUserEmail = jest.fn();
 
                 await expect(auth.changeEmail(params)).rejects.toThrowError();
             });
@@ -959,14 +1141,11 @@ describe("Test Auth class methods", () => {
                     },
                     settings: userSettings
                 };
-                const auth = new Auth(
-                    {
-                        getUserByEmail: jest.fn(async () => dbUser),
-                        getUserById: jest.fn(async () => dbUser),
-                        changeUserEmail: jest.fn()
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserByEmail = jest.fn(async () => dbUser);
+                auth._dbGetUserById = jest.fn(async () => dbUser);
+                auth._dbChangeUserEmail = jest.fn();
 
                 await expect(auth.changeEmail(params)).rejects.toThrowError();
             });
@@ -991,14 +1170,11 @@ describe("Test Auth class methods", () => {
                     },
                     settings: userSettings
                 };
-                const auth = new Auth(
-                    {
-                        getUserByEmail: jest.fn(async () => null),
-                        getUserById: jest.fn(async () => dbUser),
-                        changeUserEmail: jest.fn()
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserByEmail = jest.fn(async () => null);
+                auth._dbGetUserById = jest.fn(async () => dbUser);
+                auth._dbChangeUserEmail = jest.fn();
 
                 await expect(auth.changeEmail(params)).rejects.toThrowError();
             });
@@ -1027,13 +1203,10 @@ describe("Test Auth class methods", () => {
                     },
                     settings: userSettings
                 };
-                const auth = new Auth(
-                    {
-                        getUserById: jest.fn(async () => dbUser),
-                        confirmChangeUserEmail: jest.fn()
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserById = jest.fn(async () => dbUser);
+                auth._dbConfirmChangeUserEmail = jest.fn();
 
                 const result = await auth.confirmChangeEmail(params);
 
@@ -1064,13 +1237,10 @@ describe("Test Auth class methods", () => {
                     },
                     settings: userSettings
                 };
-                const auth = new Auth(
-                    {
-                        getUserById: jest.fn(async () => dbUser),
-                        confirmChangeUserEmail: jest.fn()
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserById = jest.fn(async () => dbUser);
+                auth._dbConfirmChangeUserEmail = jest.fn();
 
                 await expect(auth.confirmChangeEmail(params)).rejects.toThrowError();
             });
@@ -1097,13 +1267,10 @@ describe("Test Auth class methods", () => {
                     },
                     settings: userSettings
                 };
-                const auth = new Auth(
-                    {
-                        getUserById: jest.fn(async () => dbUser),
-                        confirmChangeUserEmail: jest.fn()
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserById = jest.fn(async () => dbUser);
+                auth._dbConfirmChangeUserEmail = jest.fn();
 
                 await expect(auth.confirmChangeEmail(params)).rejects.toThrowError();
             });
@@ -1130,13 +1297,10 @@ describe("Test Auth class methods", () => {
                     },
                     settings: userSettings
                 };
-                const auth = new Auth(
-                    {
-                        getUserById: jest.fn(async () => dbUser),
-                        confirmChangeUserEmail: jest.fn()
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserById = jest.fn(async () => dbUser);
+                auth._dbConfirmChangeUserEmail = jest.fn();
 
                 await expect(auth.confirmChangeEmail(params)).rejects.toThrowError();
             });
@@ -1148,13 +1312,10 @@ describe("Test Auth class methods", () => {
                     secretCode: "code",
                     userId: "id"
                 };
-                const auth = new Auth(
-                    {
-                        getUserById: jest.fn(async () => null),
-                        confirmChangeUserEmail: jest.fn()
-                    } as any
-                    //   //   bcryptUtils as any
-                );
+                const auth = new Auth(/* bcryptUtils */);
+
+                auth._dbGetUserById = jest.fn(async () => null);
+                auth._dbConfirmChangeUserEmail = jest.fn();
 
                 await expect(auth.confirmChangeEmail(params)).rejects.toThrowError();
             });
