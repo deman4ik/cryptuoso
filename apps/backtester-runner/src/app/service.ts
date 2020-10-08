@@ -9,7 +9,6 @@ import {
     BacktesterWorkerEvents,
     BacktesterRunnerSchema,
     BacktesterRunnerStart,
-    BacktesterRunnerStartMany,
     BacktesterRunnerStop,
     BacktesterWorkerCancel,
     BacktesterWorkerFailed
@@ -33,12 +32,6 @@ export default class BacktesterRunnerService extends HTTPService {
                     roles: ["manager", "admin"],
                     handler: this.startHTTPHandler
                 },
-                backtesterStartMany: {
-                    inputSchema: BacktesterRunnerSchema[BacktesterRunnerEvents.START_MANY],
-                    auth: true,
-                    roles: ["manager", "admin"],
-                    handler: this.startManyHTTPHandler
-                },
                 backtesterStop: {
                     inputSchema: BacktesterRunnerSchema[BacktesterRunnerEvents.STOP],
                     auth: true,
@@ -50,10 +43,6 @@ export default class BacktesterRunnerService extends HTTPService {
                 [BacktesterRunnerEvents.START]: {
                     handler: this.start.bind(this),
                     schema: BacktesterRunnerSchema[BacktesterRunnerEvents.START]
-                },
-                [BacktesterRunnerEvents.START_MANY]: {
-                    handler: this.start.bind(this),
-                    schema: BacktesterRunnerSchema[BacktesterRunnerEvents.START_MANY]
                 },
                 [BacktesterRunnerEvents.STOP]: {
                     handler: this.stop.bind(this),
@@ -90,19 +79,6 @@ export default class BacktesterRunnerService extends HTTPService {
         res.end();
     }
 
-    async startManyHTTPHandler(
-        req: {
-            body: {
-                input: BacktesterRunnerStartMany;
-            };
-        },
-        res: any
-    ) {
-        const result = await this.start(req.body.input);
-        res.send(result);
-        res.end();
-    }
-
     #checkJobStatus = async (id: string) => {
         const lastJob = await this.queues.backtest.getJob(id);
         if (lastJob) {
@@ -128,7 +104,7 @@ export default class BacktesterRunnerService extends HTTPService {
         limit: number
     ): Promise<number> =>
         +(await this.db.pg.query(
-            sql`select count(1)
+            sql`select count(1) from (select id
             from ${sql.identifier([`candles${timeframe}`])}
             where
             exchange = ${exchange}
@@ -136,10 +112,10 @@ export default class BacktesterRunnerService extends HTTPService {
             and currency = ${currency}
             and time < ${dayjs.utc(loadFrom).valueOf()}
                  order by time desc
-                 limit ${limit} `
+                 limit ${limit}) t`
         ));
 
-    async start(params: BacktesterRunnerStart | BacktesterRunnerStartMany) {
+    async start(params: BacktesterRunnerStart) {
         const id: string = params.id || uuid();
 
         try {
@@ -184,18 +160,18 @@ export default class BacktesterRunnerService extends HTTPService {
                     asset: string;
                     currency: string;
                     timeframe: ValidTimeframe;
-                    strategyName: string;
+                    strategy: string;
                     status: RobotStatus;
                     strategySettings?: StrategySettings;
                     robotSettings?: RobotSettings;
                 } = await this.db.pg.one(
                     sql`SELECT r.exchange, r.asset, r.currency,
-                               r.timeframe, r.strategy_name, 
+                               r.timeframe, r.strategy, 
                                r.status,
                                s.strategy_settings, s.robot_settings
                          FROM robots r, v_robot_settings s
                          WHERE s.robot_id = r.id
-                         AND r.id = ${id};`
+                         AND r.id = ${params.robotId};`
                 );
                 if (params.settings?.populateHistory && robot.status !== RobotStatus.starting)
                     throw new BaseError(`Wrong Robot status "${status}" must be "${RobotStatus.starting}"`, {
@@ -207,7 +183,7 @@ export default class BacktesterRunnerService extends HTTPService {
                     asset: robot.asset,
                     currency: robot.currency,
                     timeframe: robot.timeframe,
-                    strategyName: robot.strategyName
+                    strategyName: robot.strategy
                 };
 
                 strategySettings = { ...robot.strategySettings };
@@ -215,19 +191,18 @@ export default class BacktesterRunnerService extends HTTPService {
             }
 
             /*
+            TODO: generate strategySettings from range
             if ("strategySettingsRange" in params) {
-                //TODO: generate strategySettings from range
+                
             }
             */
 
             const allStrategySettings: { [key: string]: StrategySettings } = {};
-            if (params.strategySettings && !Array.isArray(params.strategySettings)) {
+            if (!Array.isArray(params.strategySettings)) {
                 strategySettings = { ...strategySettings, ...params.strategySettings };
                 allStrategySettings[params.robotId || id] = strategySettings;
-            }
-
-            if (params.strategySettings && Array.isArray(params.strategySettings)) {
-                params.strategySettings.forEach((settings) => {
+            } else if (params.strategySettings && Array.isArray(params.strategySettings)) {
+                params.strategySettings.forEach((settings: StrategySettings) => {
                     allStrategySettings[uuid()] = settings;
                 });
             }
