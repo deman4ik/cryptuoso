@@ -6,7 +6,6 @@ import { RobotSettings } from "@cryptuoso/robot-settings";
 
 export const enum BacktesterRunnerEvents {
     START = "in-backtester-runner.start",
-    START_MANY = "in-backtester-runner.start-many",
     STOP = "in-backtester-runner.stop"
 }
 
@@ -65,6 +64,7 @@ export const BacktesterRunnerSchema = {
         },
         settings: {
             type: "object",
+            optional: true,
             strict: true,
             props: {
                 local: {
@@ -89,10 +89,21 @@ export const BacktesterRunnerSchema = {
                 }
             }
         },
-        strategySettings: {
+        strategySettingsRange: {
             type: "object",
             optional: true
         },
+        strategySettings: [
+            {
+                type: "object",
+                optional: true
+            },
+            {
+                type: "array",
+                props: "object",
+                optional: true
+            }
+        ],
         robotSettings: {
             type: "object",
             optional: true,
@@ -100,97 +111,6 @@ export const BacktesterRunnerSchema = {
             props: {
                 volume: { type: "number", integer: true },
                 requiredHistoryMaxBars: { type: "number", integer: true, default: CANDLES_RECENT_AMOUNT }
-            }
-        }
-    },
-    [BacktesterRunnerEvents.START_MANY]: {
-        id: {
-            type: "uuid",
-            optional: true
-        },
-        robotId: {
-            type: "uuid",
-            optional: true
-        },
-        robotParams: {
-            type: "object",
-            optional: true,
-            strict: true,
-            props: {
-                exchange: {
-                    type: "string",
-                    optional: true
-                },
-                asset: {
-                    type: "string",
-                    optional: true
-                },
-                currency: {
-                    type: "string",
-                    optional: true
-                },
-                timeframe: {
-                    type: "number",
-                    enum: Timeframe.validArray
-                },
-                strategyName: {
-                    type: "string",
-                    optional: true
-                }
-            }
-        },
-        dateFrom: {
-            type: "string",
-            pattern: ISO_DATE_REGEX,
-            optional: true
-        },
-        dateTo: {
-            type: "string",
-            pattern: ISO_DATE_REGEX,
-            optional: true
-        },
-        settings: {
-            type: "object",
-            strict: true,
-            props: {
-                local: {
-                    type: "boolean",
-                    default: false
-                },
-                populateHistory: {
-                    type: "boolean",
-                    default: false
-                },
-                saveSignals: {
-                    type: "boolean",
-                    default: true
-                },
-                savePositions: {
-                    type: "boolean",
-                    default: true
-                },
-                saveLogs: {
-                    type: "boolean",
-                    default: false
-                }
-            }
-        },
-        strategySettings: {
-            type: "array",
-            items: {
-                type: "object"
-            }
-        },
-        robotSettings: {
-            type: "object",
-            optional: true,
-            items: {
-                type: "object",
-                strict: true,
-                props: {
-                    volume: { type: "number", integer: true },
-                    requiredHistoryMaxBars: { type: "number", integer: true, default: CANDLES_RECENT_AMOUNT }
-                }
             }
         }
     },
@@ -231,25 +151,8 @@ export interface BacktesterRunnerStart {
     dateFrom?: string;
     dateTo?: string;
     settings: BacktesterSettings;
-    strategySettings?: StrategySettings;
-    robotSettings?: RobotSettings;
-}
-
-export interface BacktesterRunnerStartMany {
-    id?: string;
-    robotId?: string;
-    robotParams?: {
-        exchange: string;
-        asset: string;
-        currency: string;
-        timeframe: ValidTimeframe;
-        strategyName: string;
-    };
-    dateFrom?: string;
-    dateTo?: string;
-    settings: BacktesterSettings;
     strategySettingsRange?: { [key: string]: any }; //TODO settings generator
-    strategySettings?: StrategySettings[];
+    strategySettings?: StrategySettings;
     robotSettings?: RobotSettings;
 }
 

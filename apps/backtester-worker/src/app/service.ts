@@ -1,12 +1,11 @@
 import { DataStream } from "scramjet";
-import { Worker, Job, QueueBase } from "bullmq";
+import { Worker, Job } from "bullmq";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import dayjs from "@cryptuoso/dayjs";
 import { BaseError } from "@cryptuoso/errors";
 import {
     BacktesterState,
     Backtester,
-    Status,
     BacktesterSignals,
     BacktesterPositionState,
     BacktesterLogs,
@@ -18,7 +17,7 @@ import { IndicatorCode } from "@cryptuoso/robot-indicators";
 import { ValidTimeframe, Candle, DBCandle, SignalEvent } from "@cryptuoso/market";
 import { sortAsc, chunkArray } from "@cryptuoso/helpers";
 import { makeChunksGenerator, sql } from "@cryptuoso/postgres";
-import { RobotSettings, RobotVolumeType } from "@cryptuoso/robot-settings";
+import { RobotSettings } from "@cryptuoso/robot-settings";
 import {
     BacktesterWorkerCancel,
     BacktesterWorkerEvents,
@@ -109,8 +108,9 @@ export default class BacktesterWorkerService extends BaseService {
         loadFrom: string,
         limit: number
     ): Promise<Candle[]> => {
-        const requiredCandles: DBCandle[] = await this.db.pg.many(
-            sql`select *
+        try {
+            const requiredCandles: DBCandle[] = await this.db.pg.many(
+                sql`select *
             from ${sql.identifier([`candles${timeframe}`])}
             where
             exchange = ${exchange}
@@ -118,15 +118,20 @@ export default class BacktesterWorkerService extends BaseService {
             and currency = ${currency}
             and time < ${dayjs.utc(loadFrom).valueOf()}
                  order by time desc
-                 limit ${limit} `
-        );
-        return requiredCandles
-            .sort((a, b) => sortAsc(a.time, b.time))
-            .map((candle: DBCandle) => ({ ...candle, timeframe, id: candle.id }));
+                 limit ${limit};`
+            );
+            return requiredCandles
+                .sort((a, b) => sortAsc(a.time, b.time))
+                .map((candle: DBCandle) => ({ ...candle, timeframe, id: candle.id }));
+        } catch (err) {
+            this.log.error("Failed to load history candles", err);
+            throw err;
+        }
     };
 
     async process(job: Job<BacktesterState, BacktesterState>): Promise<BacktesterState> {
         try {
+            const beacon = this.lightship.createBeacon();
             const backtester = new Backtester(job.data);
             backtester.start();
             this.log.info(`Backtester #${backtester.id} - Starting`);
@@ -179,11 +184,11 @@ export default class BacktesterWorkerService extends BaseService {
                 backtester.averageFee = averageFee;
 
                 await this.#saveState(backtester.state);
-                // Run backtest and save results
+
                 await this.run(job, backtester);
             } catch (err) {
                 backtester.fail(err.message);
-                this.log.warn(`Backtester #${backtester.id}`, err.message);
+                this.log.warn(`Backtester #${backtester.id}`, err);
             }
             backtester.finish(this.abort[backtester.id]);
             await this.#saveState(backtester.state);
@@ -211,16 +216,20 @@ export default class BacktesterWorkerService extends BaseService {
                         status: backtester.status
                     }
                 });
+
+            await beacon.die();
             return backtester.state;
         } catch (err) {
-            this.log.error(`Error while processing job ${job.id}`, err.message);
+            this.log.error(`Error while processing job ${job.id}`, err);
             throw err;
         }
     }
 
     #saveState = async (state: BacktesterState) => {
-        this.log.info(`Backtester #${state.id} - Saving state`);
-        await this.db.pg.query(sql`
+        try {
+            this.log.info(`Backtester #${state.id} - Saving state`);
+
+            await this.db.pg.query(sql`
         INSERT INTO backtests
         (id, robot_id, exchange, asset, currency, 
         timeframe, strategy_name,
@@ -233,8 +242,8 @@ export default class BacktesterWorkerService extends BaseService {
             ${state.dateFrom}, ${state.dateTo}, ${sql.json(state.settings)}, 
             ${state.totalBars}, ${state.processedBars}, ${state.leftBars},${state.completedPercent}, 
             ${state.status}, ${state.startedAt}, ${state.finishedAt}, ${state.error}, ${sql.json(
-            state.robotState || {}
-        )}
+                state.robotState || {}
+            )}
         )
         ON CONFLICT ON CONSTRAINT backtests_pkey
         DO UPDATE SET robot_id = ${state.robotId},
@@ -255,17 +264,22 @@ export default class BacktesterWorkerService extends BaseService {
         error = ${state.error},
         robot_state = ${sql.json(state.robotState || {})};
         `);
+        } catch (err) {
+            this.log.error("Failed to save backtester state", err);
+            throw err;
+        }
     };
 
     #saveSignals = async (signals: BacktesterSignals[]) => {
-        if (signals && Array.isArray(signals) && signals.length > 0) {
-            this.log.info(
-                `Backtester #${signals[0].backtestId} - Saving robot's #${signals[0].robotId} ${signals.length} signals`
-            );
+        try {
+            if (signals && Array.isArray(signals) && signals.length > 0) {
+                this.log.info(
+                    `Backtester #${signals[0].backtestId} - Saving robot's #${signals[0].robotId} ${signals.length} signals`
+                );
 
-            const chunks = chunkArray(signals, this.defaultInsertChunkSize);
-            for (const chunk of chunks) {
-                await this.db.pg.query(sql`
+                const chunks = chunkArray(signals, this.defaultInsertChunkSize);
+                for (const chunk of chunks) {
+                    await this.db.pg.query(sql`
         INSERT INTO backtest_signals
         (backtest_id, robot_id, timestamp, type, 
         action, order_type, price,
@@ -302,7 +316,11 @@ export default class BacktesterWorkerService extends BaseService {
                 "timestamp"
             ]
         )}`);
+                }
             }
+        } catch (err) {
+            this.log.error("Failed to save backtester signals", err);
+            throw err;
         }
     };
 
@@ -392,23 +410,24 @@ export default class BacktesterWorkerService extends BaseService {
                 }
             }
         } catch (err) {
-            this.log.error(`Failed to save positions`, err);
+            this.log.error(`Failed to save backtster positions`, err);
             throw err;
         }
     };
 
     #saveLogs = async (logs: BacktesterLogs[]) => {
-        const chunks = chunkArray(
-            logs.map((log) => ({
-                backtestId: log.backtestId,
-                robotId: log.robotId,
-                candleTimestamp: log.candle.timestamp,
-                data: JSON.stringify(log)
-            })),
-            this.defaultInsertChunkSize
-        );
-        for (const chunk of chunks) {
-            await this.db.pg.query(sql`
+        try {
+            const chunks = chunkArray(
+                logs.map((log) => ({
+                    backtestId: log.backtestId,
+                    robotId: log.robotId,
+                    candleTimestamp: log.candle.timestamp,
+                    data: JSON.stringify(log)
+                })),
+                this.defaultInsertChunkSize
+            );
+            for (const chunk of chunks) {
+                await this.db.pg.query(sql`
             INSERT INTO backtest_logs
             (backtest_id, robot_id, candle_timestamp, data)
             SELECT * FROM
@@ -419,15 +438,28 @@ export default class BacktesterWorkerService extends BaseService {
                 "jsonb"
             ])}
             `);
+            }
+        } catch (err) {
+            this.log.error(`Failed to save backtster logs`, err);
+            throw err;
         }
     };
 
     #saveStats = async (stats: BacktesterStats) => {
-        if (stats) {
-            const { backtestId, robotId, statistics, equity, equityAvg, lastPositionExitDate, lastUpdatedAt } = stats;
+        try {
+            if (stats) {
+                const {
+                    backtestId,
+                    robotId,
+                    statistics,
+                    equity,
+                    equityAvg,
+                    lastPositionExitDate,
+                    lastUpdatedAt
+                } = stats;
 
-            this.log.info(`Backtester #${backtestId} - Saving robot's #${robotId} stats`);
-            await this.db.pg.query(sql`
+                this.log.info(`Backtester #${backtestId} - Saving robot's #${robotId} stats`);
+                await this.db.pg.query(sql`
         INSERT INTO backtest_stats 
         (backtest_id, robot_id, 
         statistics, equity, equity_avg, 
@@ -436,6 +468,10 @@ export default class BacktesterWorkerService extends BaseService {
             ${lastPositionExitDate},${lastUpdatedAt}
         )
         `);
+            }
+        } catch (err) {
+            this.log.error(`Failed to save backtster stats`, err);
+            throw err;
         }
     };
 
@@ -448,16 +484,17 @@ export default class BacktesterWorkerService extends BaseService {
             activeFrom: string;
         }[]
     ) => {
-        const chunks = chunkArray(
-            settings.map((s) => ({
-                ...s,
-                strategySettings: JSON.stringify(s.strategySettings),
-                robotSettings: JSON.stringify(s.robotSettings)
-            })),
-            this.defaultInsertChunkSize
-        );
-        for (const chunk of chunks) {
-            await this.db.pg.query(sql`
+        try {
+            const chunks = chunkArray(
+                settings.map((s) => ({
+                    ...s,
+                    strategySettings: JSON.stringify(s.strategySettings),
+                    robotSettings: JSON.stringify(s.robotSettings)
+                })),
+                this.defaultInsertChunkSize
+            );
+            for (const chunk of chunks) {
+                await this.db.pg.query(sql`
             INSERT INTO backtest_settings
             (backtest_id, robot_id, strategy_settings, robot_settings, active_from)
             SELECT * FROM
@@ -472,17 +509,27 @@ export default class BacktesterWorkerService extends BaseService {
                 ["uuid", "uuid", "jsonb", "jsonb", "timestamp"]
             )}
             `);
+            }
+        } catch (err) {
+            this.log.error(`Failed to save backtster settings`, err);
+            throw err;
         }
     };
 
     #saveRobotState = async (state: RobotState) => {
-        await this.db.pg.query(sql`
+        try {
+            this.log.info(`Robot #${state.id} - Saving state`);
+            await this.db.pg.query(sql`
         UPDATE robots 
-        SET state = ${JSON.stringify(state)}, 
+        SET state = ${JSON.stringify(state.state)}, 
         last_candle = ${JSON.stringify(state.lastCandle)}, 
         has_alerts = ${state.hasAlerts}
         WHERE id = ${state.id};
         `);
+        } catch (err) {
+            this.log.error(`Failed to save robot state`, err);
+            throw err;
+        }
     };
 
     #saveRobotSettings = async (
@@ -493,20 +540,22 @@ export default class BacktesterWorkerService extends BaseService {
             activeFrom: string;
         }[]
     ) => {
-        await this.db.pg.query(sql`DELETE FROM robot_settings WHERE robot_id = ${robotId}`);
+        try {
+            this.log.info(`Robot #${robotId} - Saving settings`);
+            await this.db.pg.query(sql`DELETE FROM robot_settings WHERE robot_id = ${robotId}`);
 
-        const chunks = chunkArray(
-            settings.map((s) => ({
-                ...s,
-                robotId,
-                strategySettings: JSON.stringify(s.strategySettings),
-                robotSettings: JSON.stringify(s.robotSettings)
-            })),
-            this.defaultInsertChunkSize
-        );
+            const chunks = chunkArray(
+                settings.map((s) => ({
+                    ...s,
+                    robotId,
+                    strategySettings: JSON.stringify(s.strategySettings),
+                    robotSettings: JSON.stringify(s.robotSettings)
+                })),
+                this.defaultInsertChunkSize
+            );
 
-        for (const chunk of chunks) {
-            await this.db.pg.query(sql`
+            for (const chunk of chunks) {
+                await this.db.pg.query(sql`
             INSERT INTO robot_settings
             (robot_id, strategy_settings, robot_settings, active_from)
             SELECT * FROM
@@ -515,15 +564,21 @@ export default class BacktesterWorkerService extends BaseService {
                 ["uuid", "jsonb", "jsonb", "timestamp"]
             )}
             `);
+            }
+        } catch (err) {
+            this.log.error(`Failed to save robot settings`, err);
+            throw err;
         }
     };
 
-    #saveRobotSignals = async (robotId: string, signals: SignalEvent[]) => {
-        await this.db.pg.query(sql`DELETE FROM robot_signals where robot_id = ${robotId}`);
-        if (signals && Array.isArray(signals) && signals.length > 0) {
-            const chunks = chunkArray(signals, this.defaultInsertChunkSize);
-            for (const chunk of chunks) {
-                await this.db.pg.query(sql`
+    #saveRobotTrades = async (robotId: string, signals: SignalEvent[]) => {
+        try {
+            this.log.info(`Robot #${robotId} - Saving trades`);
+            await this.db.pg.query(sql`DELETE FROM robot_signals where robot_id = ${robotId}`);
+            if (signals && Array.isArray(signals) && signals.length > 0) {
+                const chunks = chunkArray(signals, this.defaultInsertChunkSize);
+                for (const chunk of chunks) {
+                    await this.db.pg.query(sql`
         INSERT INTO robot_signals
         (robot_id, timestamp, type, 
         action, order_type, price,
@@ -558,16 +613,23 @@ export default class BacktesterWorkerService extends BaseService {
                 "timestamp"
             ]
         )}`);
+                }
             }
+        } catch (err) {
+            this.log.error(`Failed to save robot trades`, err);
+            throw err;
         }
     };
 
     #saveRobotPositions = async (robotId: string, positions: RobotPositionState[]) => {
-        await this.db.pg.query(sql`DELETE FROM robot_positions where robot_id = ${robotId}`);
-        if (positions && Array.isArray(positions) && positions.length > 0) {
-            const chunks = chunkArray(positions, this.defaultInsertChunkSize);
-            for (const chunk of chunks) {
-                await this.db.pg.query(sql`
+        try {
+            this.log.info(`Robot #${robotId} - Saving positions`);
+            await this.db.pg.query(sql`DELETE FROM robot_positions where robot_id = ${robotId}`);
+            if (positions && Array.isArray(positions) && positions.length > 0) {
+                const chunks = chunkArray(positions, this.defaultInsertChunkSize);
+                for (const chunk of chunks) {
+                    try {
+                        await this.db.pg.query(sql`
         INSERT INTO robot_positions
         ( robot_id, prefix, code, parent_id,
          direction, status, entry_status, entry_price, 
@@ -640,16 +702,25 @@ export default class BacktesterWorkerService extends BaseService {
             ]
         )}
         `);
+                    } catch (err) {
+                        this.log.error(err);
+                    }
+                }
             }
+        } catch (err) {
+            this.log.error(`Failed to save robot positions`, err);
+            throw err;
         }
     };
 
     #saveRobotStats = async (robotId: string, stats: RobotStats) => {
-        await this.db.pg.query(sql`DELETE FROM robot_stats where robot_id = ${robotId}`);
-        if (stats) {
-            const { robotId, statistics, equity, equityAvg, lastPositionExitDate, lastUpdatedAt } = stats;
+        try {
+            this.log.info(`Robot #${robotId} - Saving stats`);
+            await this.db.pg.query(sql`DELETE FROM robot_stats where robot_id = ${robotId}`);
+            if (stats) {
+                const { robotId, statistics, equity, equityAvg, lastPositionExitDate, lastUpdatedAt } = stats;
 
-            await this.db.pg.query(sql`
+                await this.db.pg.query(sql`
         INSERT INTO robot_stats 
         (robot_id, 
         statistics, equity, equity_avg, 
@@ -658,6 +729,10 @@ export default class BacktesterWorkerService extends BaseService {
             ${lastPositionExitDate},${lastUpdatedAt}
         )
         `);
+            }
+        } catch (err) {
+            this.log.error(`Failed to save robot stats`, err);
+            throw err;
         }
     };
 
@@ -698,11 +773,9 @@ export default class BacktesterWorkerService extends BaseService {
                     const robot = backtester.robots[backtester.robotId];
                     await this.#saveRobotState(robot.instance.robotState);
                     await this.#saveRobotSettings(backtester.robotId, Object.values(robot.data.settings));
-                    await this.#saveRobotSignals(
+                    await this.#saveRobotTrades(
                         backtester.robotId,
-                        [...robot.data.alerts, ...robot.data.trades].sort((a, b) =>
-                            sortAsc(a.candleTimestamp, b.candleTimestamp)
-                        )
+                        robot.data.trades.sort((a, b) => sortAsc(a.candleTimestamp, b.candleTimestamp))
                     );
                     await this.#saveRobotPositions(backtester.robotId, Object.values(robot.data.positions));
                     await this.#saveRobotStats(backtester.robotId, robot.data.stats);
@@ -739,50 +812,6 @@ export default class BacktesterWorkerService extends BaseService {
         } catch (err) {
             this.log.error(`Backtester #${backtester.id} - Failed`, err);
             throw err;
-        }
-    }
-
-    async test(): Promise<void> {
-        try {
-            const job = new Job(
-                new QueueBase("test"),
-                "test",
-                new Backtester({
-                    id: "e38a47c7-1bdd-4a7f-ad89-c4dffffccc6d",
-                    robotId: "e38a47c7-1bdd-4a7f-ad89-c4dffffccc6d",
-                    exchange: "binance_futures",
-                    asset: "BTC",
-                    currency: "USDT",
-                    strategyName: "breakout",
-                    timeframe: 5,
-                    settings: {
-                        local: true,
-                        populateHistory: false,
-                        saveSignals: true,
-                        savePositions: true,
-                        saveLogs: true
-                    },
-                    strategySettings: {
-                        ["e38a47c7-1bdd-4a7f-ad89-c4dffffccc6d"]: {
-                            adxHigh: 30,
-                            lookback: 10,
-                            adxPeriod: 25,
-                            trailBars: 1,
-                            requiredHistoryMaxBars: 300
-                        }
-                    },
-                    robotSettings: {
-                        volumeType: RobotVolumeType.assetStatic,
-                        volume: 0.002
-                    },
-                    dateFrom: "2020-09-27T00:00:00.000Z",
-                    dateTo: "2020-09-27T03:15:00.000Z",
-                    status: Status.queued
-                }).state
-            );
-            await this.process(job);
-        } catch (err) {
-            this.log.error(err);
         }
     }
 }
