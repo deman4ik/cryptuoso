@@ -134,11 +134,11 @@ export class Backtester {
         this.#dateFrom = state.dateFrom;
         this.#dateTo = state.dateTo;
         this.#settings = {
-            local: defaultValue(state.settings.local, false),
-            populateHistory: defaultValue(state.settings.populateHistory, false),
-            saveSignals: defaultValue(state.settings.saveSignals, true),
-            savePositions: defaultValue(state.settings.savePositions, true),
-            saveLogs: defaultValue(state.settings.saveLogs, false)
+            local: defaultValue(state.settings?.local, false),
+            populateHistory: defaultValue(state.settings?.populateHistory, false),
+            saveSignals: defaultValue(state.settings?.saveSignals, true),
+            savePositions: defaultValue(state.settings?.savePositions, true),
+            saveLogs: defaultValue(state.settings?.saveLogs, false)
         };
         this.#strategySettings = state.strategySettings;
         this.#robotSettings = state.robotSettings;
