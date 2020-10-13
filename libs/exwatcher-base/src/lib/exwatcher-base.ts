@@ -16,12 +16,13 @@ import {
     ImporterWorkerFailed
 } from "@cryptuoso/importer-events";
 import {
-    ExwatcherWorkerEvents,
+    ExwatcherEvents,
     ExwatcherSchema,
     ExwatcherSubscribe,
     ExwatcherSubscribeAll,
     ExwatcherUnsubscribeAll,
-    ExwatcherTick
+    ExwatcherTick,
+    MarketEvents
 } from "@cryptuoso/exwatcher-events";
 import { sql } from "@cryptuoso/postgres";
 
@@ -77,16 +78,16 @@ export class ExwatcherBaseService extends BaseService {
         this.exchange = config.exchange;
         this.publicConnector = new PublicConnector();
         this.events.subscribe({
-            [ExwatcherWorkerEvents.SUBSCRIBE]: {
-                schema: ExwatcherSchema[ExwatcherWorkerEvents.SUBSCRIBE],
+            [ExwatcherEvents.SUBSCRIBE]: {
+                schema: ExwatcherSchema[ExwatcherEvents.SUBSCRIBE],
                 handler: this.addSubscription.bind(this)
             },
-            [ExwatcherWorkerEvents.SUBSCRIBE_ALL]: {
-                schema: ExwatcherSchema[ExwatcherWorkerEvents.SUBSCRIBE_ALL],
+            [ExwatcherEvents.SUBSCRIBE_ALL]: {
+                schema: ExwatcherSchema[ExwatcherEvents.SUBSCRIBE_ALL],
                 handler: this.subscribeAll.bind(this)
             },
-            [ExwatcherWorkerEvents.UNSUBSCRIBE_ALL]: {
-                schema: ExwatcherSchema[ExwatcherWorkerEvents.UNSUBSCRIBE_ALL],
+            [ExwatcherEvents.UNSUBSCRIBE_ALL]: {
+                schema: ExwatcherSchema[ExwatcherEvents.UNSUBSCRIBE_ALL],
                 handler: this.unsubscribeAll.bind(this)
             },
             [ImporterWorkerEvents.FAILED]: {
@@ -452,7 +453,7 @@ export class ExwatcherBaseService extends BaseService {
 
     async publishCandle(candle: ExchangeCandle): Promise<void> {
         try {
-            await this.events.emit<ExchangeCandle>({ type: ExwatcherWorkerEvents.CANDLE, data: candle });
+            await this.events.emit<ExchangeCandle>({ type: MarketEvents.CANDLE, data: candle });
         } catch (err) {
             this.log.error("Failed to publich candle", err);
         }
@@ -860,7 +861,7 @@ export class ExwatcherBaseService extends BaseService {
                 await Promise.all(
                     ticks.map(async (tick) => {
                         try {
-                            await this.events.emit<ExwatcherTick>({ type: ExwatcherWorkerEvents.TICK, data: tick });
+                            await this.events.emit<ExwatcherTick>({ type: MarketEvents.TICK, data: tick });
                         } catch (err) {
                             this.log.error("Failed to publich tick", err);
                         }
