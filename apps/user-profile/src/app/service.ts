@@ -19,7 +19,13 @@ import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
 import { spawn, Pool, Worker as ThreadsWorker } from "threads";
 import { Encrypt } from "./encryptWorker";
 import { formatExchange } from "@cryptuoso/helpers";
-import { UserRobotSettings, UserSignalSettings, RobotVolumeType, UserRobotVolumeType } from "@cryptuoso/robot-settings";
+import {
+    UserRobotSettings,
+    UserRobotSettingsSchema,
+    UserSignalSettings,
+    UserSignalSettingsSchema,
+    VolumeSettingsType
+} from "@cryptuoso/robot-settings";
 
 export type UserProfileServiceConfig = HTTPServiceConfig;
 
@@ -30,55 +36,6 @@ export default class UserProfileService extends HTTPService {
         super(config);
 
         try {
-            const userSignalSettingsInnerSchema = {
-                type: "object",
-                props: {
-                    volumeType: {
-                        type: "enum",
-                        values: [RobotVolumeType.assetStatic, RobotVolumeType.currencyDynamic]
-                    },
-                    volume: {
-                        type: "number",
-                        positive: true,
-                        optional: true
-                    },
-                    volumeInCurrency: {
-                        type: "number",
-                        positive: true,
-                        optional: true
-                    }
-                }
-            };
-
-            const userRobotSettingsInnerSchema = {
-                type: "object",
-                props: {
-                    volumeType: {
-                        type: "enum",
-                        values: [
-                            RobotVolumeType.assetStatic,
-                            RobotVolumeType.currencyDynamic,
-                            UserRobotVolumeType.balancePercent
-                        ]
-                    },
-                    volume: {
-                        type: "number",
-                        positive: true,
-                        optional: true
-                    },
-                    volumeInCurrency: {
-                        type: "number",
-                        positive: true,
-                        optional: true
-                    },
-                    balancePercent: {
-                        type: "number",
-                        positive: true,
-                        optional: true
-                    }
-                }
-            };
-
             this.createRoutes({
                 //#region "User Settings Schemes"
                 setNotificationSettings: {
@@ -124,7 +81,7 @@ export default class UserProfileService extends HTTPService {
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     inputSchema: {
                         robotId: "uuid",
-                        settings: userSignalSettingsInnerSchema
+                        settings: UserSignalSettingsSchema
                     },
                     handler: this._httpHandler.bind(this, this.userSignalSubscribe.bind(this))
                 },
@@ -133,7 +90,7 @@ export default class UserProfileService extends HTTPService {
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     inputSchema: {
                         robotId: "uuid",
-                        settings: userSignalSettingsInnerSchema
+                        settings: UserSignalSettingsSchema
                     },
                     handler: this._httpHandler.bind(this, this.userSignalEdit.bind(this))
                 },
@@ -200,7 +157,7 @@ export default class UserProfileService extends HTTPService {
                     inputSchema: {
                         userExAccId: "uuid",
                         robotId: "uuid",
-                        settings: userRobotSettingsInnerSchema
+                        settings: UserRobotSettingsSchema
                     },
                     handler: this._httpHandler.bind(this, this.userRobotCreate.bind(this))
                 },
@@ -209,7 +166,7 @@ export default class UserProfileService extends HTTPService {
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     inputSchema: {
                         id: "uuid",
-                        settings: userRobotSettingsInnerSchema
+                        settings: UserRobotSettingsSchema
                     },
                     handler: this._httpHandler.bind(this, this.userRobotEdit.bind(this))
                 },
@@ -359,16 +316,16 @@ export default class UserProfileService extends HTTPService {
         let _amountMax: number;
         let newSettings: UserSignalSettings;
 
-        if (settings.volumeType === RobotVolumeType.assetStatic) {
+        if (settings.volumeType === VolumeSettingsType.assetStatic) {
             _volume = settings.volume;
             _amountMin = marketLimits?.userSignal?.min?.amount;
             _amountMax = marketLimits?.userSignal?.max?.amount;
-            newSettings = { volumeType: RobotVolumeType.assetStatic, volume: _volume };
-        } else if (settings.volumeType === RobotVolumeType.currencyDynamic) {
+            newSettings = { volumeType: VolumeSettingsType.assetStatic, volume: _volume };
+        } else if (settings.volumeType === VolumeSettingsType.currencyDynamic) {
             _volume = settings.volumeInCurrency;
             _amountMin = marketLimits?.userSignal?.min?.amountUSD;
             _amountMax = marketLimits?.userSignal?.max?.amountUSD;
-            newSettings = { volumeType: RobotVolumeType.currencyDynamic, volumeInCurrency: _volume };
+            newSettings = { volumeType: VolumeSettingsType.currencyDynamic, volumeInCurrency: _volume };
         }
 
         if (!_amountMin /*  || !_amountMax */)
@@ -434,11 +391,11 @@ export default class UserProfileService extends HTTPService {
         `)) as any;
 
         if (
-            (currentUserSignalSettings?.volumeType === RobotVolumeType.assetStatic &&
-                settings.volumeType === RobotVolumeType.assetStatic &&
+            (currentUserSignalSettings?.volumeType === VolumeSettingsType.assetStatic &&
+                settings.volumeType === VolumeSettingsType.assetStatic &&
                 settings.volume === currentUserSignalSettings.volume) ||
-            (currentUserSignalSettings?.volumeType === RobotVolumeType.currencyDynamic &&
-                settings.volumeType === RobotVolumeType.currencyDynamic &&
+            (currentUserSignalSettings?.volumeType === VolumeSettingsType.currencyDynamic &&
+                settings.volumeType === VolumeSettingsType.currencyDynamic &&
                 settings.volumeInCurrency === currentUserSignalSettings.volumeInCurrency)
         )
             throw new ActionsHandlerError("This volume value is already set.", null, "FORBIDDEN", 403);
@@ -458,16 +415,16 @@ export default class UserProfileService extends HTTPService {
         let _amountMax: number;
         let newSettings: UserSignalSettings;
 
-        if (settings.volumeType === RobotVolumeType.assetStatic) {
+        if (settings.volumeType === VolumeSettingsType.assetStatic) {
             _volume = settings.volume;
             _amountMin = marketLimits?.userSignal?.min?.amount;
             _amountMax = marketLimits?.userSignal?.max?.amount;
-            newSettings = { volumeType: RobotVolumeType.assetStatic, volume: _volume };
-        } else if (settings.volumeType === RobotVolumeType.currencyDynamic) {
+            newSettings = { volumeType: VolumeSettingsType.assetStatic, volume: _volume };
+        } else if (settings.volumeType === VolumeSettingsType.currencyDynamic) {
             _volume = settings.volumeInCurrency;
             _amountMin = marketLimits?.userSignal?.min?.amountUSD;
             _amountMax = marketLimits?.userSignal?.max?.amountUSD;
-            newSettings = { volumeType: RobotVolumeType.currencyDynamic, volumeInCurrency: _volume };
+            newSettings = { volumeType: VolumeSettingsType.currencyDynamic, volumeInCurrency: _volume };
         }
 
         if (!_amountMin /*  || !_amountMax */)
@@ -825,21 +782,21 @@ export default class UserProfileService extends HTTPService {
         let _amountMax: number;
         let newUserRobotSettings: UserRobotSettings;
 
-        if (settings.volumeType === RobotVolumeType.assetStatic) {
+        if (settings.volumeType === VolumeSettingsType.assetStatic) {
             _volume = settings.volume;
             _amountMin = marketLimits?.userRobot?.min?.amount;
             _amountMax = marketLimits?.userRobot?.max?.amount;
-            newUserRobotSettings = { volumeType: RobotVolumeType.assetStatic, volume: _volume };
-        } else if (settings.volumeType === RobotVolumeType.currencyDynamic) {
+            newUserRobotSettings = { volumeType: VolumeSettingsType.assetStatic, volume: _volume };
+        } else if (settings.volumeType === VolumeSettingsType.currencyDynamic) {
             _volume = settings.volumeInCurrency;
             _amountMin = marketLimits?.userRobot?.min?.amountUSD;
             _amountMax = marketLimits?.userRobot?.max?.amountUSD;
-            newUserRobotSettings = { volumeType: RobotVolumeType.currencyDynamic, volumeInCurrency: _volume };
-        } else if (settings.volumeType === UserRobotVolumeType.balancePercent) {
+            newUserRobotSettings = { volumeType: VolumeSettingsType.currencyDynamic, volumeInCurrency: _volume };
+        } else if (settings.volumeType === VolumeSettingsType.balancePercent) {
             _volume = settings.balancePercent;
             _amountMin = 1;
             _amountMax = 100;
-            newUserRobotSettings = { volumeType: UserRobotVolumeType.balancePercent, balancePercent: _volume };
+            newUserRobotSettings = { volumeType: VolumeSettingsType.balancePercent, balancePercent: _volume };
         }
 
         if (!_amountMin /*  || !_amountMax */)
@@ -918,14 +875,14 @@ export default class UserProfileService extends HTTPService {
         `)) as any;
 
         if (
-            (currentUserRobotSettings?.volumeType === RobotVolumeType.assetStatic &&
-                settings.volumeType === RobotVolumeType.assetStatic &&
+            (currentUserRobotSettings?.volumeType === VolumeSettingsType.assetStatic &&
+                settings.volumeType === VolumeSettingsType.assetStatic &&
                 settings.volume === currentUserRobotSettings.volume) ||
-            (currentUserRobotSettings?.volumeType === RobotVolumeType.currencyDynamic &&
-                settings.volumeType === RobotVolumeType.currencyDynamic &&
+            (currentUserRobotSettings?.volumeType === VolumeSettingsType.currencyDynamic &&
+                settings.volumeType === VolumeSettingsType.currencyDynamic &&
                 settings.volumeInCurrency === currentUserRobotSettings.volumeInCurrency) ||
-            (currentUserRobotSettings?.volumeType === UserRobotVolumeType.balancePercent &&
-                settings.volumeType === UserRobotVolumeType.balancePercent &&
+            (currentUserRobotSettings?.volumeType === VolumeSettingsType.balancePercent &&
+                settings.volumeType === VolumeSettingsType.balancePercent &&
                 settings.balancePercent === currentUserRobotSettings.balancePercent)
         )
             throw new ActionsHandlerError("This volume value is already set.", null, "FORBIDDEN", 403);
@@ -946,21 +903,21 @@ export default class UserProfileService extends HTTPService {
         let _amountMax: number;
         let newUserRobotSettings: UserRobotSettings;
 
-        if (settings.volumeType === RobotVolumeType.assetStatic) {
+        if (settings.volumeType === VolumeSettingsType.assetStatic) {
             _volume = settings.volume;
             _amountMin = marketLimits?.userRobot?.min?.amount;
             _amountMax = marketLimits?.userRobot?.max?.amount;
-            newUserRobotSettings = { volumeType: RobotVolumeType.assetStatic, volume: _volume };
-        } else if (settings.volumeType === RobotVolumeType.currencyDynamic) {
+            newUserRobotSettings = { volumeType: VolumeSettingsType.assetStatic, volume: _volume };
+        } else if (settings.volumeType === VolumeSettingsType.currencyDynamic) {
             _volume = settings.volumeInCurrency;
             _amountMin = marketLimits?.userRobot?.min?.amountUSD;
             _amountMax = marketLimits?.userRobot?.max?.amountUSD;
-            newUserRobotSettings = { volumeType: RobotVolumeType.currencyDynamic, volumeInCurrency: _volume };
-        } else if (settings.volumeType === UserRobotVolumeType.balancePercent) {
+            newUserRobotSettings = { volumeType: VolumeSettingsType.currencyDynamic, volumeInCurrency: _volume };
+        } else if (settings.volumeType === VolumeSettingsType.balancePercent) {
             _volume = settings.balancePercent;
             _amountMin = 1;
             _amountMax = 100;
-            newUserRobotSettings = { volumeType: UserRobotVolumeType.balancePercent, balancePercent: _volume };
+            newUserRobotSettings = { volumeType: VolumeSettingsType.balancePercent, balancePercent: _volume };
         }
 
         if (!_amountMin /*  || !_amountMax */)

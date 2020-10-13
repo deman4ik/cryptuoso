@@ -9,7 +9,7 @@ import {
     TradeAction,
     ValidTimeframe
 } from "@cryptuoso/market";
-import { RobotSettings } from "@cryptuoso/robot-settings";
+import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 import { IndicatorState } from "@cryptuoso/robot-indicators";
 import { TradeStats } from "@cryptuoso/stats-calc";
 
@@ -21,11 +21,6 @@ export const enum RobotStatus {
     stopped = "stopped",
     paused = "paused",
     failed = "failed"
-}
-
-export interface StrategySettings {
-    [key: string]: number | string;
-    requiredHistoryMaxBars?: number;
 }
 
 export interface StrategyProps {

@@ -1,33 +1,37 @@
-export const enum RobotVolumeType {
+export const enum VolumeSettingsType {
     assetStatic = "assetStatic",
     currencyDynamic = "currencyDynamic",
+    balancePercent = "balancePercent",
     assetDynamicDelta = "assetDynamicDelta"
 }
 
-export const enum UserRobotVolumeType {
-    balancePercent = "balancePercent"
-}
-
-export interface RobotSettingsAssetStatic {
-    volumeType: RobotVolumeType.assetStatic;
+export interface AssetStaticSettings {
+    volumeType: VolumeSettingsType.assetStatic;
     volume: number;
 }
 
-export interface RobotSettingsCurrencyDynamic {
-    volumeType: RobotVolumeType.currencyDynamic;
+export interface CurrencyDynamicSettings {
+    volumeType: VolumeSettingsType.currencyDynamic;
     volumeInCurrency: number;
 }
 
-export type RobotSettings = RobotSettingsAssetStatic | RobotSettingsCurrencyDynamic;
+export interface AssetDynamicDeltaSettings {
+    volumeType: VolumeSettingsType.assetDynamicDelta;
+    volume?: number;
+    initialVolume: number;
+    delta: number;
+}
 
-export type UserSignalSettings = RobotSettingsAssetStatic | RobotSettingsCurrencyDynamic;
-
-export interface UserRobotSettingsBalancePercent {
-    volumeType: UserRobotVolumeType.balancePercent;
+export interface BalancePercentSettings {
+    volumeType: VolumeSettingsType.balancePercent;
     balancePercent: number;
 }
 
-export type UserRobotSettings = RobotSettings | UserRobotSettingsBalancePercent;
+export type RobotSettings = AssetStaticSettings | CurrencyDynamicSettings | AssetDynamicDeltaSettings;
+
+export type UserSignalSettings = AssetStaticSettings | CurrencyDynamicSettings;
+
+export type UserRobotSettings = RobotSettings | BalancePercentSettings;
 
 export interface RobotTradeSettings {
     orderTimeout: number;
@@ -46,3 +50,61 @@ export interface RobotTradeSettings {
         exit?: number;
     };
 }
+
+export interface StrategySettings {
+    [key: string]: number | string;
+    requiredHistoryMaxBars?: number;
+}
+
+export const AssetStaticSettingsSchema = {
+    $$strict: true,
+    type: "object",
+    props: {
+        volumeType: { type: "equal", value: VolumeSettingsType.assetStatic },
+        volume: { type: "number" }
+    }
+};
+
+export const CurrencyDynamicSettingsSchema = {
+    $$strict: true,
+    type: "object",
+    props: {
+        volumeType: { type: "equal", value: VolumeSettingsType.currencyDynamic },
+        volumeInCurrency: { type: "number" }
+    }
+};
+
+export const AssetDynamicDeltaSettingsSchema = {
+    $$strict: true,
+    type: "object",
+    props: {
+        volumeType: { type: "equal", value: VolumeSettingsType.assetDynamicDelta },
+        volume: { type: "number", optional: true },
+        initialVolume: { type: "number" },
+        delta: { type: "number" }
+    }
+};
+
+export const BalancePercentSettingsSchema = {
+    $$strict: true,
+    type: "object",
+    props: {
+        volumeType: { type: "equal", value: VolumeSettingsType.balancePercent },
+        balancePercent: { type: "number", integer: true }
+    }
+};
+
+export const RobotSettingsSchema = [
+    AssetStaticSettingsSchema,
+    CurrencyDynamicSettingsSchema,
+    AssetDynamicDeltaSettingsSchema
+];
+
+export const UserSignalSettingsSchema = [AssetStaticSettingsSchema, CurrencyDynamicSettingsSchema];
+
+export const UserRobotSettingsSchema = [
+    AssetStaticSettingsSchema,
+    CurrencyDynamicSettingsSchema,
+    AssetDynamicDeltaSettingsSchema,
+    BalancePercentSettingsSchema
+];

@@ -1,7 +1,7 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import {
     ExwatcherSchema,
-    ExwatcherWorkerEvents,
+    ExwatcherEvents,
     ExwatcherSubscribe,
     ExwatcherSubscribeAll,
     ExwatcherUnsubscribeAll,
@@ -27,25 +27,25 @@ export default class ExwatcherRunnerService extends HTTPService {
         this.connector = new PublicConnector();
         this.createRoutes({
             exwatcherSubscribe: {
-                inputSchema: ExwatcherSchema[ExwatcherWorkerEvents.SUBSCRIBE],
+                inputSchema: ExwatcherSchema[ExwatcherEvents.SUBSCRIBE],
                 auth: true,
                 roles: ["manager", "admin"],
                 handler: this.subscribe
             },
             exwatcherSubscribeAll: {
-                inputSchema: ExwatcherSchema[ExwatcherWorkerEvents.SUBSCRIBE_ALL],
+                inputSchema: ExwatcherSchema[ExwatcherEvents.SUBSCRIBE_ALL],
                 auth: true,
                 roles: ["manager", "admin"],
                 handler: this.subscribeAll
             },
             exwatcherUnsubscribeAll: {
-                inputSchema: ExwatcherSchema[ExwatcherWorkerEvents.SUBSCRIBE_ALL],
+                inputSchema: ExwatcherSchema[ExwatcherEvents.SUBSCRIBE_ALL],
                 auth: true,
                 roles: ["manager", "admin"],
                 handler: this.unsubscribeAll
             },
             addMarket: {
-                inputSchema: ExwatcherSchema[ExwatcherWorkerEvents.ADD_MARKET],
+                inputSchema: ExwatcherSchema[ExwatcherEvents.ADD_MARKET],
                 auth: true,
                 roles: ["manager", "admin"],
                 handler: this.addMarket
@@ -121,7 +121,7 @@ export default class ExwatcherRunnerService extends HTTPService {
 
             if (!exwatcher) {
                 await this.events.emit<ExwatcherSubscribe>({
-                    type: ExwatcherWorkerEvents.SUBSCRIBE,
+                    type: ExwatcherEvents.SUBSCRIBE,
                     data: {
                         exchange,
                         asset,
@@ -155,7 +155,7 @@ export default class ExwatcherRunnerService extends HTTPService {
             );
             if (count === 0) throw new Error(`Market ${exchange} doesn't exists`);
             await this.events.emit<ExwatcherSubscribeAll>({
-                type: ExwatcherWorkerEvents.SUBSCRIBE_ALL,
+                type: ExwatcherEvents.SUBSCRIBE_ALL,
                 data: { exchange }
             });
             res.send({ result: "OK" });
@@ -183,7 +183,7 @@ export default class ExwatcherRunnerService extends HTTPService {
             );
             if (count === 0) throw new Error(`Market ${exchange} doesn't exists`);
             await this.events.emit<ExwatcherUnsubscribeAll>({
-                type: ExwatcherWorkerEvents.UNSUBSCRIBE_ALL,
+                type: ExwatcherEvents.UNSUBSCRIBE_ALL,
                 data: { exchange }
             });
             res.send({ result: "OK" });

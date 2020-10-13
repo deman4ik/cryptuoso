@@ -1,18 +1,11 @@
-import {
-    Robot,
-    StrategyCode,
-    StrategySettings,
-    RobotPositionState,
-    StrategyProps,
-    RobotStats
-} from "@cryptuoso/robot-state";
+import { Robot, StrategyCode, RobotPositionState, StrategyProps, RobotStats } from "@cryptuoso/robot-state";
 import { ValidTimeframe, Candle, SignalEvent, DBCandle, calcPositionProfit } from "@cryptuoso/market";
 import dayjs from "@cryptuoso/dayjs";
 import { round, defaultValue } from "@cryptuoso/helpers";
 import logger from "@cryptuoso/logger";
 import { IndicatorCode } from "@cryptuoso/robot-indicators";
 import { calcStatistics } from "@cryptuoso/stats-calc";
-import { getRobotPositionVolume, RobotSettings } from "@cryptuoso/robot-settings";
+import { getRobotPositionVolume, RobotSettings, StrategySettings, VolumeSettingsType } from "@cryptuoso/robot-settings";
 
 export const enum Status {
     queued = "queued",
@@ -431,7 +424,11 @@ export class Backtester {
         const robot = this.robots[id];
         if (robot.instance.hasClosedPositions) {
             const positions = robot.instance.closedPositions.map((pos) => {
-                const volume = getRobotPositionVolume(robot.instance.settings.robotSettings, pos.entryPrice);
+                const volume = getRobotPositionVolume(
+                    robot.instance.settings.robotSettings,
+                    pos.entryPrice,
+                    robot.data.stats.statistics?.netProfit?.all
+                );
                 const profit = calcPositionProfit(
                     pos.direction,
                     pos.entryPrice,
@@ -449,6 +446,26 @@ export class Backtester {
         }
     };
 
+    #updateSettings = (id: string) => {
+        const robot = this.robots[id];
+        if (robot.instance.hasClosedPositions) {
+            if (robot.instance.robotSettings.volumeType === VolumeSettingsType.assetDynamicDelta) {
+                const volume = getRobotPositionVolume(
+                    robot.instance.settings.robotSettings,
+                    null,
+                    robot.data.stats.statistics.netProfit.all
+                );
+
+                if (volume !== robot.instance.robotSettings.volume)
+                    robot.instance.settings = {
+                        strategySettings: robot.instance.strategySettings,
+                        robotSettings: { ...robot.instance.robotSettings, volume },
+                        activeFrom: robot.instance.lastCandle.timestamp
+                    };
+            }
+        }
+    };
+
     async handleCandle(candle: DBCandle) {
         Object.keys(this.#robots).forEach(async (id) => {
             const robot = this.#robots[id];
@@ -460,6 +477,7 @@ export class Backtester {
             this.#saveSignals(id);
             this.#savePositions(id);
             this.#calcStats(id);
+            this.#updateSettings(id);
             this.#saveSettings(id);
 
             robot.instance.clearEvents();
@@ -471,6 +489,7 @@ export class Backtester {
             this.#saveSignals(id);
             this.#savePositions(id);
             this.#calcStats(id);
+            this.#updateSettings(id);
             this.#saveSettings(id);
         });
     }

@@ -1,8 +1,7 @@
 import { ISO_DATE_REGEX, CANDLES_RECENT_AMOUNT } from "@cryptuoso/helpers";
 import { Timeframe, ValidTimeframe } from "@cryptuoso/market";
 import { Status, BacktesterSettings } from "@cryptuoso/backtester-state";
-import { StrategySettings } from "@cryptuoso/robot-state";
-import { RobotSettings } from "@cryptuoso/robot-settings";
+import { RobotSettings, RobotSettingsSchema, StrategySettings } from "@cryptuoso/robot-settings";
 
 export const enum BacktesterRunnerEvents {
     START = "in-backtester-runner.start",
@@ -96,7 +95,10 @@ export const BacktesterRunnerSchema = {
         strategySettings: [
             {
                 type: "object",
-                optional: true
+                optional: true,
+                props: {
+                    requiredHistoryMaxBars: { type: "number", integer: true, default: CANDLES_RECENT_AMOUNT }
+                }
             },
             {
                 type: "array",
@@ -104,15 +106,7 @@ export const BacktesterRunnerSchema = {
                 optional: true
             }
         ],
-        robotSettings: {
-            type: "object",
-            optional: true,
-            strict: true,
-            props: {
-                volume: { type: "number", integer: true },
-                requiredHistoryMaxBars: { type: "number", integer: true, default: CANDLES_RECENT_AMOUNT }
-            }
-        }
+        robotSettings: RobotSettingsSchema.map((s) => ({ ...s, optional: true }))
     },
     [BacktesterRunnerEvents.STOP]: {
         id: {
@@ -152,7 +146,7 @@ export interface BacktesterRunnerStart {
     dateTo?: string;
     settings: BacktesterSettings;
     strategySettingsRange?: { [key: string]: any }; //TODO settings generator
-    strategySettings?: StrategySettings;
+    strategySettings?: StrategySettings | StrategySettings[];
     robotSettings?: RobotSettings;
 }
 

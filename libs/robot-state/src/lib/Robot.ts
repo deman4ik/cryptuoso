@@ -1,13 +1,13 @@
 import dayjs from "@cryptuoso/dayjs";
 import { BaseIndicator, TulipIndicator, IndicatorCode, IndicatorType } from "@cryptuoso/robot-indicators";
 import { ValidTimeframe, CandleProps, DBCandle, RobotPositionStatus } from "@cryptuoso/market";
-import { RobotWorkerEvents } from "@cryptuoso/robot-events";
+import { RobotWorkerEvents, SignalEvents } from "@cryptuoso/robot-events";
 import { NewEvent } from "@cryptuoso/events";
 import { CANDLES_RECENT_AMOUNT, defaultValue, sortAsc } from "@cryptuoso/helpers";
 import { BaseStrategy } from "./BaseStrategy";
-import { RobotPositionState, RobotState, RobotStatus, StrategyProps, StrategySettings } from "./types";
+import { RobotPositionState, RobotState, RobotStatus, StrategyProps } from "./types";
 import logger from "@cryptuoso/logger";
-import { RobotSettings } from "@cryptuoso/robot-settings";
+import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 
 export interface StrategyCode {
     [key: string]: any;
@@ -129,11 +129,11 @@ export class Robot {
     }
 
     get alertEventsToSend() {
-        return this._eventsToSend.filter(({ type }) => type === RobotWorkerEvents.SIGNAL_ALERT);
+        return this._eventsToSend.filter(({ type }) => type === SignalEvents.ALERT);
     }
 
     get tradeEventsToSend() {
-        return this._eventsToSend.filter(({ type }) => type === RobotWorkerEvents.SIGNAL_TRADE);
+        return this._eventsToSend.filter(({ type }) => type === SignalEvents.TRADE);
     }
 
     get logEventsToSend() {

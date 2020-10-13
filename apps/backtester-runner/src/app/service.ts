@@ -13,10 +13,10 @@ import {
     BacktesterWorkerCancel,
     BacktesterWorkerFailed
 } from "@cryptuoso/backtester-events";
-import { RobotStatus, StrategySettings } from "@cryptuoso/robot-state";
+import { RobotStatus } from "@cryptuoso/robot-state";
 import { Backtester, Status } from "@cryptuoso/backtester-state";
 import { sql } from "@cryptuoso/postgres";
-import { RobotSettings } from "@cryptuoso/robot-settings";
+import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 
 export type BacktesterRunnerServiceConfig = HTTPServiceConfig;
 

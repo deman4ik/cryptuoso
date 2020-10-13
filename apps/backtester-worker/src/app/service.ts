@@ -12,12 +12,12 @@ import {
     BacktesterStats
 } from "@cryptuoso/backtester-state";
 import requireFromString from "require-from-string";
-import { RobotPositionState, RobotState, RobotStats, StrategyCode, StrategySettings } from "@cryptuoso/robot-state";
+import { RobotPositionState, RobotState, RobotStats, StrategyCode } from "@cryptuoso/robot-state";
 import { IndicatorCode } from "@cryptuoso/robot-indicators";
 import { ValidTimeframe, Candle, DBCandle, SignalEvent } from "@cryptuoso/market";
 import { sortAsc, chunkArray } from "@cryptuoso/helpers";
 import { makeChunksGenerator, sql } from "@cryptuoso/postgres";
-import { RobotSettings } from "@cryptuoso/robot-settings";
+import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 import {
     BacktesterWorkerCancel,
     BacktesterWorkerEvents,
