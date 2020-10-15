@@ -9,8 +9,6 @@ import {
 } from "../lib/array";
 
 describe("array utils test", () => {
-    type FooBar = { foo: any; bar: number };
-
     describe("arraysDiff test", () => {
         describe("Only unique elements, 1 common element", () => {
             it("Should output left difference", () => {

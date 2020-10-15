@@ -1,7 +1,7 @@
 import { Service, Protocol } from "restana";
 // eslint-disable-next-line @nrwl/nx/enforce-module-boundaries
 import { HTTPService } from "@cryptuoso/service";
-import fetch, { Response } from "node-fetch";
+import fetch, { Response, HeadersInit } from "node-fetch";
 
 enum Method {
     GET = "get",
@@ -21,8 +21,8 @@ export interface MyResponse extends Response {
 export async function ajax(
     url: string,
     init?: {
-        body?: {};
-        headers?: {};
+        body?: Record<string, unknown>;
+        headers?: HeadersInit;
         method?: Method;
     }
 ): Promise<MyResponse> {
@@ -41,11 +41,11 @@ export async function ajax(
     return res;
 }
 
-ajax.get = (url: string, headers?: {}): Promise<MyResponse> => {
+ajax.get = (url: string, headers?: HeadersInit): Promise<MyResponse> => {
     return ajax(url, { method: Method.GET, headers });
 };
 
-ajax.post = async (url: string, headers?: {}, body?: {}): Promise<MyResponse> => {
+ajax.post = async (url: string, headers?: HeadersInit, body?: Record<string, unknown>): Promise<MyResponse> => {
     return await ajax(url, {
         method: Method.POST,
         body,
@@ -78,7 +78,7 @@ export async function makeServiceRequest({
         {
             action: { name: actionName },
             input,
-            // eslint-disable-next-line @typescript-eslint/camelcase
+
             session_variables: { "x-hasura-user-id": userId, "x-hasura-role": role }
         }
     );
@@ -101,7 +101,7 @@ export function getServerFromService(service: HTTPService): Service<Protocol.HTT
 export function createServiceRoute(
     service: HTTPService,
     route = "my",
-    response: {} = { success: true },
+    response: Record<string, unknown> = { success: true },
     roles?: string[],
     auth?: boolean,
     inputSchema?: any

@@ -163,7 +163,7 @@ describe("Test 'BaseService' class", () => {
                             {
                                 action: { name: "my1" },
                                 input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
+
                                 session_variables: {}
                             }
                         );
@@ -186,7 +186,7 @@ describe("Test 'BaseService' class", () => {
                             {
                                 action: { name: "wrong" },
                                 input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
+
                                 session_variables: {}
                             }
                         );
@@ -238,7 +238,7 @@ describe("Test 'BaseService' class", () => {
                             {
                                 action: { name: routeName },
                                 input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
+
                                 session_variables: { "x-hasura-user-id": userId, "x-hasura-role": userRole }
                             }
                         );
@@ -269,7 +269,7 @@ describe("Test 'BaseService' class", () => {
                             {
                                 action: { name: routeName },
                                 input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
+
                                 session_variables: { "x-hasura-user-id": userId, "x-hasura-role": userRole }
                             }
                         );
@@ -308,7 +308,7 @@ describe("Test 'BaseService' class", () => {
                             {
                                 action: { name: routeName },
                                 input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
+
                                 session_variables: { "x-hasura-user-id": userId, "x-hasura-role": userRole }
                             }
                         ];
@@ -338,7 +338,7 @@ describe("Test 'BaseService' class", () => {
                             {
                                 action: { name: routeName },
                                 input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
+
                                 session_variables: { "x-hasura-user-id": userId, "x-hasura-role": routeRole }
                             }
                         );
@@ -362,7 +362,7 @@ describe("Test 'BaseService' class", () => {
                             {
                                 action: { name: routeName },
                                 input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
+
                                 session_variables: { "x-hasura-user-id": userId }
                             }
                         );
@@ -393,7 +393,7 @@ describe("Test 'BaseService' class", () => {
                             {
                                 action: { name: "my6" },
                                 input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
+
                                 session_variables: { "x-hasura-user-id": "", "x-hasura-role": "my-role" }
                             }
                         );
@@ -426,7 +426,7 @@ describe("Test 'BaseService' class", () => {
                             {
                                 action: { name: routeName },
                                 input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
+
                                 session_variables: { "x-hasura-user-id": userId, "x-hasura-role": routeRole }
                             }
                         );
@@ -459,7 +459,7 @@ describe("Test 'BaseService' class", () => {
                             {
                                 action: { name: routeName },
                                 input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
+
                                 session_variables: { "x-hasura-user-id": userId, "x-hasura-role": userRole }
                             }
                         );
@@ -492,7 +492,7 @@ describe("Test 'BaseService' class", () => {
                             {
                                 action: { name: routeName },
                                 input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
+
                                 session_variables: { "x-hasura-user-id": userId, "x-hasura-role": userRole }
                             }
                         );
@@ -524,7 +524,7 @@ describe("Test 'BaseService' class", () => {
                             {
                                 action: { name: routeName },
                                 input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
+
                                 session_variables: { "x-hasura-user-id": userId, "x-hasura-role": routeRole }
                             }
                         );
@@ -550,7 +550,7 @@ describe("Test 'BaseService' class", () => {
                             {
                                 action: { name: routeName },
                                 input: {},
-                                // eslint-disable-next-line @typescript-eslint/camelcase
+
                                 session_variables: { "x-hasura-user-id": userId, "x-hasura-role": "wrong-role" }
                             }
                         );

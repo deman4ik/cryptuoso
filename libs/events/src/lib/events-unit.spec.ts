@@ -229,7 +229,7 @@ describe("Unit tests", () => {
 
         describe("Testing 'start' and data processing methods", () => {
             it("Should call xgroup and bind _recieve[...]Tick functions accordingly", async () => {
-                const isBound = (func: Function) => func.prototype === undefined;
+                const isBound = (func: (...args: any[]) => unknown) => func.prototype === undefined;
                 await events.start();
                 expect(mockXgroup).toHaveBeenCalledTimes(2);
                 expect(isBound(events._receiveMessagesTick)).toBeTruthy();

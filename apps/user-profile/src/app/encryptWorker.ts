@@ -1,10 +1,8 @@
-import { expose, isWorkerRuntime } from "threads";
+import { expose } from "threads";
 import { EncryptedData } from "@cryptuoso/user-state";
 import * as crypto from "crypto";
 
 const pwd = process.env.ENCRYPTION_PWD;
-
-//console.log(process.env.ENCRYPTION_PWD, crypto.scryptSync);
 
 function createKey(userId: string) {
     const userKeys = userId.split("-");
@@ -37,5 +35,4 @@ function encrypt(userId: string, data: string): EncryptedData {
 
 export type Encrypt = typeof encrypt;
 
-//if(isWorkerRuntime())
 expose(encrypt);

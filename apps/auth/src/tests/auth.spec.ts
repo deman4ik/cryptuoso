@@ -220,7 +220,6 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -257,7 +256,7 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -294,13 +293,13 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         first_name: "first_name",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         last_name: "last_name",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         photo_url: "photo_url",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -337,13 +336,13 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         first_name: "first_name",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         last_name: "last_name",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         photo_url: "photo_url",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -375,7 +374,7 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -408,7 +407,7 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -445,7 +444,7 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -483,7 +482,7 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -515,7 +514,7 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -547,7 +546,7 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         auth_date: Date.now(),
                         hash: ""
                     };

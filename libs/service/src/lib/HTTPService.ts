@@ -245,7 +245,7 @@ export class HTTPService extends BaseService {
                         }
                     },
                     input: { type: "object", props: inputSchema },
-                    // eslint-disable-next-line @typescript-eslint/camelcase
+
                     session_variables: {
                         type: "object",
                         props: {

@@ -118,9 +118,6 @@ export class ExwatcherBaseService extends BaseService {
             this.connector = new ccxtpro.binance({
                 enableRateLimit: true,
                 agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
-                // !FIXME: ccxt.pro optional typings
-                // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-                // @ts-ignore
                 options: { defaultType: "future", OHLCVLimit: 100, tradesLimit: 1000 }
             });
             this.cronHandleChanges = cron.schedule("* * * * * *", this.handleCandles.bind(this), {
@@ -130,9 +127,6 @@ export class ExwatcherBaseService extends BaseService {
             this.connector = new ccxtpro.bitfinex({
                 enableRateLimit: true,
                 agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
-                // !FIXME: ccxt.pro optional typings
-                // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-                // @ts-ignore
                 options: { OHLCVLimit: 100, tradesLimit: 1000 }
             });
             this.cronHandleChanges = cron.schedule("* * * * * *", this.handleTrades.bind(this), {
@@ -142,9 +136,6 @@ export class ExwatcherBaseService extends BaseService {
             this.connector = new ccxtpro.kraken({
                 enableRateLimit: true,
                 agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
-                // !FIXME: ccxt.pro optional typings
-                // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-                // @ts-ignore
                 options: { OHLCVLimit: 100, tradesLimit: 1000 }
             });
             this.cronHandleChanges = cron.schedule("* * * * * *", this.handleTrades.bind(this), {

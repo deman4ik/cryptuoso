@@ -29,14 +29,14 @@ export default class AuthService extends HTTPService {
                     handler: this.loginTg.bind(this),
                     inputSchema: {
                         id: "number",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         first_name: { type: "string", optional: true },
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         last_name: { type: "string", optional: true },
                         username: { type: "string", optional: true },
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         photo_url: { type: "string", optional: true },
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         auth_date: "number",
                         hash: "string"
                     }
@@ -50,14 +50,14 @@ export default class AuthService extends HTTPService {
                             type: "object",
                             props: {
                                 id: "number",
-                                // eslint-disable-next-line @typescript-eslint/camelcase
+
                                 first_name: { type: "string", optional: true },
-                                // eslint-disable-next-line @typescript-eslint/camelcase
+
                                 last_name: { type: "string", optional: true },
                                 username: { type: "string", optional: true },
-                                // eslint-disable-next-line @typescript-eslint/camelcase
+
                                 photo_url: { type: "string", optional: true },
-                                // eslint-disable-next-line @typescript-eslint/camelcase
+
                                 auth_date: "number",
                                 hash: "string"
                             }
