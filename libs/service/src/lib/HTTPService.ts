@@ -5,8 +5,9 @@ import helmet from "helmet";
 import Validator, { ValidationSchema, ValidationError } from "fastest-validator";
 import { BaseService, BaseServiceConfig } from "./BaseService";
 import { ActionsHandlerError } from "@cryptuoso/errors";
-import { User, UserRoles, UserStatus } from "@cryptuoso/user-state";
+import { BaseUser, User, UserRoles, UserStatus } from "@cryptuoso/user-state";
 import { JSONParse } from "@cryptuoso/helpers";
+import { sql } from "@cryptuoso/postgres";
 
 //TODO: req/res typings
 
@@ -142,12 +143,11 @@ export class HTTPService extends BaseService {
                 return next();
             }
 
-            //TODO: check user in DB and cache in Redis
             const userId = req.body.session_variables["x-hasura-user-id"];
             if (!userId) throw new ActionsHandlerError("Invalid session variables", null, "UNAUTHORIZED", 401);
 
             const cachedUserKey = `cpz:users:${userId}`;
-            let user: User;
+            let user: BaseUser;
 
             const cachedUserJSON = await this.redis.get(cachedUserKey);
 
@@ -162,8 +162,8 @@ export class HTTPService extends BaseService {
             }
 
             if (!user) {
-                user = await this.db.pg.maybeOne(this.db.sql`
-                    SELECT *
+                user = await this.db.pg.maybeOne(sql`
+                    SELECT id, status, roles, access, settings, last_active_at
                     FROM users
                     WHERE id = ${userId};
                 `);

@@ -8,7 +8,7 @@ import {
     UserExchangeAccStatus
 } from "@cryptuoso/user-state";
 import { UserSignalState /* , UserSignalSettings */ } from "@cryptuoso/user-signal-state";
-import { RobotState, RobotStatus } from "@cryptuoso/robot-state";
+import { RobotStatus } from "@cryptuoso/robot-state";
 import { UserRobotDB } from "@cryptuoso/user-robot-state";
 import { UserMarketState } from "@cryptuoso/market";
 import { ActionsHandlerError } from "@cryptuoso/errors";
@@ -279,7 +279,8 @@ export default class UserProfileService extends HTTPService {
     //#region "User Signals"
 
     async userSignalSubscribe(user: User, { robotId, settings }: { robotId: string; settings: UserSignalSettings }) {
-        const robot: RobotState = await this.db.pg.maybeOne(sql`
+        const robot: { exchange: string; asset: string; currency: string; available: number } = await this.db.pg
+            .maybeOne(sql`
             SELECT exchange, asset, currency, available
             FROM robots
             WHERE id = ${robotId};
@@ -289,14 +290,12 @@ export default class UserProfileService extends HTTPService {
 
         const { exchange, asset, currency, available } = robot;
 
-        const isSignalExists =
-            0 <
-            +(await this.db.pg.oneFirst(sql`
-                SELECT COUNT(*)
+        const isSignalExists = await this.db.pg.maybeOne(sql`
+                SELECT id
                 FROM user_signals
                 WHERE user_id = ${user.id}
                     AND robot_id = ${robotId};
-            `));
+            `);
 
         if (isSignalExists) return;
 
@@ -754,7 +753,8 @@ export default class UserProfileService extends HTTPService {
 
         if (userRobotExists) throw new ActionsHandlerError("User Robot already exists", null, "FORBIDDEN", 403);
 
-        const robot: RobotState = await this.db.pg.maybeOne(sql`
+        const robot: { exchange: string; asset: string; currency: string; available: number } = await this.db.pg
+            .maybeOne(sql`
             SELECT id, exchange, asset, currency, available
             FROM robots
             WHERE id = ${robotId};

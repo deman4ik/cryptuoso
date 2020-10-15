@@ -53,22 +53,24 @@ export interface UserSettings {
     };
 }
 
-export interface User {
+export interface BaseUser {
     id: string;
+    status: UserStatus;
+    roles: UserRolesList;
+    access: UserAccessValues;
+    settings: UserSettings;
+    lastActiveAt: string;
+}
+export interface User extends BaseUser {
     name?: string;
     email?: string;
     emailNew?: string;
     telegramId?: number;
     telegramUsername?: string;
-    status: UserStatus;
     passwordHash?: string;
     passwordHashNew?: string;
     secretCode?: string;
     secretCodeExpireAt?: string;
     refreshToken?: string;
     refreshTokenExpireAt?: string;
-    roles: UserRolesList;
-    access: UserAccessValues;
-    settings: UserSettings;
-    lastActiveAt?: string;
 }
