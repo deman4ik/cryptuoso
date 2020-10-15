@@ -6,7 +6,9 @@ const loggerConfig: ISettingsParam =
               name: process.env.SERVICE,
               type: "json",
               exposeErrorCodeFrame: false,
-              minLevel: "info"
+              displayFilePath: "hidden",
+              minLevel: "info",
+              maskValuesOfKeys: ["authorization", "password", "refreshToken", "accessToken"]
           }
         : {
               name: process.env.SERVICE,
