@@ -28,7 +28,10 @@ export const ExwatcherSchema = {
         exchange: "string",
         asset: "string",
         currency: "string"
-    },
+    }
+};
+
+export const MarketSchema = {
     [MarketEvents.TICK]: {
         exchange: "string",
         asset: "string",

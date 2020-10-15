@@ -12,9 +12,9 @@ import {
     BacktesterStats
 } from "@cryptuoso/backtester-state";
 import requireFromString from "require-from-string";
-import { RobotPositionState, RobotState, RobotStats, StrategyCode } from "@cryptuoso/robot-state";
+import { RobotPositionState, RobotState, RobotStats, RobotStatus, StrategyCode } from "@cryptuoso/robot-state";
 import { IndicatorCode } from "@cryptuoso/robot-indicators";
-import { ValidTimeframe, Candle, DBCandle, SignalEvent } from "@cryptuoso/market";
+import { ValidTimeframe, Candle, DBCandle, SignalEvent, CandleType } from "@cryptuoso/market";
 import { sortAsc, chunkArray } from "@cryptuoso/helpers";
 import { makeChunksGenerator, sql } from "@cryptuoso/postgres";
 import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
@@ -43,14 +43,14 @@ export default class BacktesterWorkerService extends BaseService {
                     unbalanced: true
                 }
             });
-            this.addOnStartHandler(this.onStartService);
-            this.addOnStopHandler(this.onStopService);
+            this.addOnStartHandler(this.onServiceStart);
+            this.addOnStopHandler(this.onServiceStop);
         } catch (err) {
             this.log.error("Error in BacktesterWorkerService constructor", err);
         }
     }
 
-    async onStartService(): Promise<void> {
+    async onServiceStart(): Promise<void> {
         this.workers = {
             backtest: new Worker("backtest", async (job: Job) => this.process(job), {
                 connection: this.redis
@@ -58,23 +58,23 @@ export default class BacktesterWorkerService extends BaseService {
         };
     }
 
-    async onStopService(): Promise<void> {
-        await this.workers.backtest.close();
+    async onServiceStop(): Promise<void> {
+        await this.workers.backtest?.close();
     }
 
     cancel({ id }: BacktesterWorkerCancel): void {
         this.abort[id] = true;
     }
 
-    #loadStrategyCode = async (strategyName: string, local: boolean) => {
+    #loadStrategyCode = async (strategy: string, local: boolean) => {
         let strategyCode: StrategyCode;
         if (local) {
-            this.log.debug(`Loading local strategy ${strategyName}`);
-            strategyCode = await import(`../../../../strategies/${strategyName}`);
+            this.log.debug(`Loading local strategy ${strategy}`);
+            strategyCode = await import(`../../../../strategies/${strategy}`);
         } else {
-            this.log.debug(`Loading remote strategy ${strategyName}`);
+            this.log.debug(`Loading remote strategy ${strategy}`);
             const { file }: { file: string } = await this.db.pg.one(
-                sql`select file from strategies where id = ${strategyName}`
+                sql`select file from strategies where id = ${strategy}`
             );
             strategyCode = requireFromString(file);
         }
@@ -145,7 +145,7 @@ export default class BacktesterWorkerService extends BaseService {
                     await this.db.pg.query(sql`DELETE FROM backtests WHERE id = ${backtester.id}`);
                 }
                 // Load strategy and indicators code, init strategy and indicators
-                const strategyCode = await this.#loadStrategyCode(backtester.strategyName, backtester.settings.local);
+                const strategyCode = await this.#loadStrategyCode(backtester.strategy, backtester.settings.local);
                 backtester.initRobots(strategyCode);
                 const baseIndicatorsFileNames = backtester.robotInstancesArray[0].baseIndicatorsFileNames;
                 const baseIndicatorsCode = await this.#loadBaseIndicatorsCode(
@@ -232,13 +232,13 @@ export default class BacktesterWorkerService extends BaseService {
             await this.db.pg.query(sql`
         INSERT INTO backtests
         (id, robot_id, exchange, asset, currency, 
-        timeframe, strategy_name,
+        timeframe, strategy,
         date_from, date_to, settings, 
         total_bars, processed_bars, left_bars, completed_percent, 
         status, started_at, finished_at, error, robot_state ) 
         VALUES (
             ${state.id}, ${state.robotId}, ${state.exchange}, ${state.asset}, ${state.currency}, 
-            ${state.timeframe}, ${state.strategyName},
+            ${state.timeframe}, ${state.strategy},
             ${state.dateFrom}, ${state.dateTo}, ${sql.json(state.settings)}, 
             ${state.totalBars}, ${state.processedBars}, ${state.leftBars},${state.completedPercent}, 
             ${state.status}, ${state.startedAt}, ${state.finishedAt}, ${state.error}, ${sql.json(
@@ -250,7 +250,7 @@ export default class BacktesterWorkerService extends BaseService {
         asset = ${state.asset},
         currency = ${state.currency},
         timeframe = ${state.timeframe},
-        strategy_name = ${state.strategyName},
+        strategy = ${state.strategy},
         date_from = ${state.dateFrom},
         date_to = ${state.dateTo},
         settings = ${sql.json(state.settings)},
@@ -516,6 +516,16 @@ export default class BacktesterWorkerService extends BaseService {
         }
     };
 
+    #checkRobotStatus = async (robotId: string) => {
+        const status: RobotStatus = await this.db.pg.one(sql`
+        SELECT status 
+         FROM robots
+        WHERE id = ${robotId}
+        `);
+
+        if (status !== RobotStatus.starting) throw new Error(`Failed to start Robot #${robotId}. Robot is ${status}`);
+    };
+
     #saveRobotState = async (state: RobotState) => {
         try {
             this.log.info(`Robot #${state.id} - Saving state`);
@@ -736,6 +746,18 @@ export default class BacktesterWorkerService extends BaseService {
         }
     };
 
+    #startRobot = async (robotId: string) => {
+        try {
+            this.log.info(`Robot #${robotId} - Update status '${RobotStatus.started}'`);
+            await this.db.pg.query(sql` UPDATE robots 
+            SET status = ${RobotStatus.started}
+            WHERE id = ${robotId};`);
+        } catch (err) {
+            this.log.error(`Failed to update robot status`, err);
+            throw err;
+        }
+    };
+
     async run(job: Job<BacktesterState, BacktesterState>, backtester: Backtester): Promise<void> {
         try {
             const query = sql`${sql.identifier([`candles${backtester.timeframe}`])} 
@@ -744,7 +766,7 @@ export default class BacktesterWorkerService extends BaseService {
               AND currency = ${backtester.currency} 
               AND timestamp >= ${backtester.dateFrom}
               AND timestamp <= ${backtester.dateTo}
-              AND type != 'previous'`;
+              AND type != ${CandleType.previous}`;
             const candlesCount: number = +(await this.db.pg.oneFirst(sql`
                SELECT COUNT(*) FROM ${query}`));
             backtester.init(candlesCount);
@@ -771,6 +793,7 @@ export default class BacktesterWorkerService extends BaseService {
             if (!this.abort[backtester.id]) {
                 if (backtester.settings.populateHistory) {
                     const robot = backtester.robots[backtester.robotId];
+                    await this.#checkRobotStatus(backtester.robotId);
                     await this.#saveRobotState(robot.instance.robotState);
                     await this.#saveRobotSettings(backtester.robotId, Object.values(robot.data.settings));
                     await this.#saveRobotTrades(
@@ -779,6 +802,7 @@ export default class BacktesterWorkerService extends BaseService {
                     );
                     await this.#saveRobotPositions(backtester.robotId, Object.values(robot.data.positions));
                     await this.#saveRobotStats(backtester.robotId, robot.data.stats);
+                    await this.#startRobot(backtester.robotId);
                 } else {
                     for (const robot of Object.values(backtester.robots)) {
                         if (backtester.settings.saveSignals) {

@@ -31,7 +31,7 @@ export interface BacktesterState {
     asset: string;
     currency: string;
     timeframe: ValidTimeframe;
-    strategyName: string;
+    strategy: string;
     dateFrom: string;
     dateTo: string;
     settings: BacktesterSettings;
@@ -77,7 +77,7 @@ export class Backtester {
     #asset: string;
     #currency: string;
     #timeframe: ValidTimeframe;
-    #strategyName: string;
+    #strategy: string;
     #averageFee: number;
     #dateFrom: string;
     #dateTo: string;
@@ -123,7 +123,7 @@ export class Backtester {
         this.#asset = state.asset;
         this.#currency = state.currency;
         this.#timeframe = state.timeframe;
-        this.#strategyName = state.strategyName;
+        this.#strategy = state.strategy;
         this.#dateFrom = state.dateFrom;
         this.#dateTo = state.dateTo;
         this.#settings = {
@@ -154,7 +154,7 @@ export class Backtester {
             asset: this.#asset,
             currency: this.#currency,
             timeframe: this.#timeframe,
-            strategyName: this.#strategyName,
+            strategy: this.#strategy,
             dateFrom: this.#dateFrom,
             dateTo: this.#dateTo,
             settings: this.#settings,
@@ -196,8 +196,8 @@ export class Backtester {
         return this.#timeframe;
     }
 
-    get strategyName() {
-        return this.#strategyName;
+    get strategy() {
+        return this.#strategy;
     }
 
     get dateFrom() {
@@ -320,7 +320,7 @@ export class Backtester {
                         asset: this.#asset,
                         currency: this.#currency,
                         timeframe: this.#timeframe,
-                        strategyName: this.#strategyName,
+                        strategy: this.#strategy,
                         settings: {
                             strategySettings: settings,
                             robotSettings: this.#robotSettings,
@@ -379,7 +379,7 @@ export class Backtester {
     };
 
     #saveSignals = (id: string) => {
-        if (this.#settings.saveSignals) {
+        if (this.#settings.saveSignals || this.#settings.populateHistory) {
             const robot = this.#robots[id];
             robot.data.alerts = [
                 ...robot.data.alerts,
@@ -502,7 +502,7 @@ export class Backtester {
             return;
         }
         if (this.isProcessed) {
-            this.#robotState = this.#robots[this.#robotId].instance.strategy;
+            this.#robotState = this.#robots[this.#robotId].instance.state;
             this.#status = Status.finished;
         }
     }

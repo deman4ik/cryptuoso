@@ -56,11 +56,11 @@ export default class ExwatcherRunnerService extends HTTPService {
                 handler: this.updateMarketsHTTPHandler
             }
         });
-        this.addOnStartHandler(this.onStartService);
-        this.addOnStopHandler(this.onStopService);
+        this.addOnStartHandler(this.onServiceStart);
+        this.addOnStopHandler(this.onServiceStop);
     }
 
-    async onStartService() {
+    async onServiceStart() {
         const queueKey = this.name;
 
         this.queueScheduler = new QueueScheduler(queueKey, { connection: this.redis });
@@ -80,7 +80,7 @@ export default class ExwatcherRunnerService extends HTTPService {
         });
     }
 
-    async onStopService() {
+    async onServiceStop() {
         try {
             const queueKey = this.name;
 

@@ -2,6 +2,8 @@ import {
     AlertInfo,
     BasePosition,
     DBCandle,
+    ExchangeCandle,
+    ExchangePrice,
     OrderType,
     PositionDirection,
     RobotPositionStatus,
@@ -76,7 +78,7 @@ export interface RobotState {
     currency: string;
     timeframe: ValidTimeframe;
     available?: number;
-    strategyName: string;
+    strategy: string;
     settings: {
         strategySettings: StrategySettings;
         robotSettings: RobotSettings;
@@ -93,4 +95,17 @@ export interface RobotState {
 
 export interface RobotStats extends TradeStats {
     robotId: string;
+}
+
+export const enum RobotJobType {
+    stop = "stop",
+    candle = "candle",
+    tick = "tick"
+}
+
+export interface RobotJob {
+    id?: string;
+    robotId: string;
+    type: RobotJobType;
+    data?: ExchangeCandle | ExchangePrice;
 }

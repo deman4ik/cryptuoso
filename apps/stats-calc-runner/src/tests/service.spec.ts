@@ -52,7 +52,7 @@ describe("StatsCalcRunnerService methods", () => {
 
     beforeAll(async (cb) => {
         //await service.startService();
-        await service._onStartService();
+        await service._onServiceStart();
         //mockQueueAdd = service.queues.calcStatistics.add as jest.Mock;
         mockQueueAdd = jest.fn();
         service.queueJob = mockQueueAdd;

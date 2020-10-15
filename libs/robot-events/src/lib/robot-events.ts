@@ -4,7 +4,6 @@ import { RobotSettings, RobotSettingsSchema, StrategySettings } from "@cryptuoso
 
 export const enum RobotRunnerEvents {
     CREATE = "in-robot-runner.create",
-    DELETE = "in-robot-runner.delete",
     START = "in-robot-runner.start",
     STOP = "in-robot-runner.stop",
     PAUSE = "in-robot-runner.pause"
@@ -63,36 +62,53 @@ const RunnerSchema = {
 
 export const RobotRunnerSchema = {
     [RobotRunnerEvents.CREATE]: {
-        exchange: {
-            type: "string"
-        },
-        asset: {
-            type: "string"
-        },
-        currency: {
-            type: "string"
-        },
-        timeframe: {
-            type: "number",
-            enum: Timeframe.validArray
-        },
-        strategyName: {
-            type: "string"
-        },
-        mod: {
-            type: "string",
-            optional: true
-        },
-        strategySettings: {
-            type: "object",
-            rops: {
-                requiredHistoryMaxBars: { type: "number", integer: true, default: CANDLES_RECENT_AMOUNT }
+        entities: {
+            type: "array",
+            items: {
+                type: "object",
+                props: {
+                    exchange: {
+                        type: "string"
+                    },
+                    asset: {
+                        type: "string"
+                    },
+                    currency: {
+                        type: "string"
+                    },
+                    timeframe: {
+                        type: "number",
+                        enum: Timeframe.validArray
+                    },
+                    strategy: {
+                        type: "string"
+                    },
+                    mod: {
+                        type: "string",
+                        optional: true
+                    },
+                    available: { type: "number", integer: true, default: 5 },
+                    signals: { type: "boolean", default: false },
+                    trading: { type: "boolean", default: false },
+                    strategySettings: {
+                        type: "object",
+                        props: {
+                            requiredHistoryMaxBars: { type: "number", integer: true, default: CANDLES_RECENT_AMOUNT }
+                        }
+                    },
+                    robotSettings: RobotSettingsSchema
+                }
             }
-        },
-        robotSettings: RobotSettingsSchema
+        }
     },
-    [RobotRunnerEvents.DELETE]: RunnerSchema,
-    [RobotRunnerEvents.START]: RunnerSchema,
+    [RobotRunnerEvents.START]: {
+        robotId: "uuid",
+        dateFrom: {
+            type: "string",
+            pattern: ISO_DATE_REGEX,
+            optional: true
+        }
+    },
     [RobotRunnerEvents.STOP]: RunnerSchema,
     [RobotRunnerEvents.PAUSE]: RunnerSchema
 };
@@ -117,30 +133,39 @@ export const RobotWorkerSchema = {
     [RobotWorkerEvents.ERROR]: { ...StatusSchema, error: "string" }
 };
 
-export interface RobotRunnerCreate {
+export interface RobotRunnerCreateProps {
     exchange: string;
     asset: string;
     currency: string;
     timeframe: ValidTimeframe;
-    strategyName: string;
+    strategy: string;
+    mod?: string;
+    available: number;
+    signals: boolean;
+    trading: boolean;
     strategySettings: StrategySettings;
     robotSettings: RobotSettings;
 }
 
+export interface RobotRunnerCreate {
+    entities: RobotRunnerCreateProps[];
+}
+
 export interface RobotRunnerDelete {
-    id: "string";
+    id: string;
 }
 
 export interface RobotRunnerStart {
-    id: "string";
+    id: string;
+    dateFrom?: string;
 }
 
 export interface RobotRunnerStop {
-    id: "string";
+    id: string;
 }
 
 export interface RobotRunnerPause {
-    id: "string";
+    id: string;
 }
 
 export interface Signal extends SignalInfo {

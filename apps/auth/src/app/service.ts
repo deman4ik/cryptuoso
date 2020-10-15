@@ -215,7 +215,7 @@ export default class AuthService extends HTTPService {
     async refreshToken(req: RequestExtended, res: HttpResponse) {
         const cookies = Cookie.parse((req.headers["cookie"] as string) || "");
         let oldRefreshToken = cookies["refresh_token"];
-        this.log.info("cookie ", req.headers["cookie"], cookies, oldRefreshToken);
+
         if (!oldRefreshToken) {
             oldRefreshToken = req.headers["x-refresh-token"] as string;
         }

@@ -32,8 +32,8 @@ export default class ImporterWorkerService extends BaseService {
         try {
             this.connector = new PublicConnector();
             this.cpus = os.cpus().length;
-            this.addOnStartHandler(this.onStartService);
-            this.addOnStopHandler(this.onStopService);
+            this.addOnStartHandler(this.onServiceStart);
+            this.addOnStopHandler(this.onServiceStop);
             this.events.subscribe({
                 [ImporterWorkerEvents.CANCEL]: {
                     handler: this.cancel.bind(this),
@@ -46,7 +46,7 @@ export default class ImporterWorkerService extends BaseService {
         }
     }
 
-    async onStartService(): Promise<void> {
+    async onServiceStart(): Promise<void> {
         this.pool = Pool(() => spawn<ImporterUtils>(new ThreadsWorker("./importerUtilsWorker")), {
             name: "importer-utils"
         });
@@ -57,7 +57,7 @@ export default class ImporterWorkerService extends BaseService {
         };
     }
 
-    async onStopService(): Promise<void> {
+    async onServiceStop(): Promise<void> {
         await this.workers.importCandles.close();
         await this.pool.terminate();
     }

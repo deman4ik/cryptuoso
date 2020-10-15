@@ -46,20 +46,20 @@ export default class ImporterRunnerService extends HTTPService {
                     schema: ImporterRunnerSchema[ImporterRunnerEvents.STOP]
                 }
             });
-            this.addOnStartHandler(this.onStartService);
-            this.addOnStopHandler(this.onStopService);
+            this.addOnStartHandler(this.onServiceStart);
+            this.addOnStopHandler(this.onServiceStop);
         } catch (err) {
             this.log.error(err, "While consctructing ImporterRunnerService");
         }
     }
 
-    async onStartService() {
+    async onServiceStart() {
         this.queues = {
             importCandles: new Queue("importCandles", { connection: this.redis })
         };
     }
 
-    async onStopService() {
+    async onServiceStop() {
         await this.queues.importCandles?.close();
     }
 

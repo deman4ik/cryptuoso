@@ -101,8 +101,8 @@ export class ExwatcherBaseService extends BaseService {
                 unbalanced: true
             }
         });
-        this.addOnStartHandler(this.onStartService);
-        this.addOnStopHandler(this.onStopService);
+        this.addOnStartHandler(this.onServiceStart);
+        this.addOnStopHandler(this.onServiceStop);
     }
 
     getCandleMapKey(candle: ExchangeCandle): string {
@@ -153,7 +153,7 @@ export class ExwatcherBaseService extends BaseService {
         } else throw new Error("Unsupported exchange");
     }
 
-    async onStartService() {
+    async onServiceStart() {
         await this.initConnector();
         await this.resubscribe();
         this.cronHandleChanges.start();
@@ -162,7 +162,7 @@ export class ExwatcherBaseService extends BaseService {
         this.ticksPublishTimer = setTimeout(this.handleTicksToPublish.bind(this), 0);
     }
 
-    async onStopService() {
+    async onServiceStop() {
         try {
             this.cronHandleChanges.stop();
             this.cronCheck.stop();

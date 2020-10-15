@@ -109,14 +109,14 @@ export default class StatisticCalcRunnerService extends HTTPService {
                     handler: this._eventsHandler.bind(this, this.handleStatsCalcUserRobotsEvent.bind(this))
                 }
             });
-            this.addOnStartHandler(this._onStartService);
-            this.addOnStopHandler(this._onStopService);
+            this.addOnStartHandler(this._onServiceStart);
+            this.addOnStopHandler(this._onServiceStop);
         } catch (err) {
             this.log.error(err, "While consctructing StatisticCalcRunnerService");
         }
     }
 
-    async _onStartService() {
+    async _onServiceStart() {
         this.queues = {
             calcStatistics: new Queue("calcStatistics", { connection: this.redis })
         };
@@ -127,7 +127,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
         this.queueEvents.calcStatistics.on("failed", this._queueFailHandler.bind(this));
     }
 
-    async _onStopService() {
+    async _onServiceStop() {
         await this.queues?.calcStatistics?.close();
         await this.queueEvents?.calcStatistics?.close();
     }

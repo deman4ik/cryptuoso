@@ -72,8 +72,8 @@ export default class StatisticCalcWorkerService extends BaseService {
             this.jobsConcurrency = config?.jobsConcurrency || +process.env.JOBS_CONCURRENCY || os.cpus().length;
 
             this.makeChunksGenerator = makeChunksGenerator.bind(undefined, this.db.pg);
-            this.addOnStartHandler(this._onStartService);
-            this.addOnStopHandler(this._onStopService);
+            this.addOnStartHandler(this._onServiceStart);
+            this.addOnStopHandler(this._onServiceStop);
 
             const assetOrExchangeSchema = {
                 type: "string",
@@ -165,7 +165,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         }
     }
 
-    private async _onStartService(): Promise<void> {
+    private async _onServiceStart(): Promise<void> {
         this.pool = Pool(() => spawn<StatisticsUtils>(new ThreadsWorker("./statsWorker")), {
             name: "statistics-utils"
         });
@@ -178,7 +178,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         //console.log(this);
     }
 
-    private async _onStopService(): Promise<void> {
+    private async _onServiceStop(): Promise<void> {
         await this.workers.calcStatistics.close();
         await this.pool.terminate();
     }

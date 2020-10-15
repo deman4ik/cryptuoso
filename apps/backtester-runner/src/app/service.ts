@@ -3,7 +3,7 @@ import { v4 as uuid } from "uuid";
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import dayjs from "@cryptuoso/dayjs";
 import { BaseError } from "@cryptuoso/errors";
-import { ValidTimeframe } from "@cryptuoso/market";
+import { CandleType, ValidTimeframe } from "@cryptuoso/market";
 import {
     BacktesterRunnerEvents,
     BacktesterWorkerEvents,
@@ -49,20 +49,20 @@ export default class BacktesterRunnerService extends HTTPService {
                     schema: BacktesterRunnerSchema[BacktesterRunnerEvents.STOP]
                 }
             });
-            this.addOnStartHandler(this.onStartService);
-            this.addOnStopHandler(this.onStopService);
+            this.addOnStartHandler(this.onServiceStart);
+            this.addOnStopHandler(this.onServiceStop);
         } catch (err) {
             this.log.error(err, "While consctructing BacktesterRunnerService");
         }
     }
 
-    async onStartService() {
+    async onServiceStart() {
         this.queues = {
             backtest: new Queue("backtest", { connection: this.redis })
         };
     }
 
-    async onStopService() {
+    async onServiceStop() {
         await this.queues.backtest?.close();
     }
 
@@ -104,15 +104,15 @@ export default class BacktesterRunnerService extends HTTPService {
         limit: number
     ): Promise<number> =>
         +(await this.db.pg.query(
-            sql`select count(1) from (select id
-            from ${sql.identifier([`candles${timeframe}`])}
-            where
-            exchange = ${exchange}
-            and asset = ${asset}
-            and currency = ${currency}
-            and time < ${dayjs.utc(loadFrom).valueOf()}
-                 order by time desc
-                 limit ${limit}) t`
+            sql`SELECT count(1) FROM (SELECT id
+            FROM ${sql.identifier([`candles${timeframe}`])}
+            WHERE exchange = ${exchange}
+              AND asset = ${asset}
+              AND currency = ${currency}
+              AND type != ${CandleType.previous}
+              AND time < ${dayjs.utc(loadFrom).valueOf()}
+            ORDER BY time DESC
+            LIMIT ${limit}) t`
         ));
 
     async start(params: BacktesterRunnerStart) {
@@ -183,7 +183,7 @@ export default class BacktesterRunnerService extends HTTPService {
                     asset: robot.asset,
                     currency: robot.currency,
                     timeframe: robot.timeframe,
-                    strategyName: robot.strategy
+                    strategy: robot.strategy
                 };
 
                 strategySettings = { ...robot.strategySettings };

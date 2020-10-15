@@ -45,7 +45,7 @@ export const BacktesterRunnerSchema = {
                     type: "number",
                     enum: Timeframe.validArray
                 },
-                strategyName: {
+                strategy: {
                     type: "string",
                     optional: true
                 }
@@ -140,7 +140,7 @@ export interface BacktesterRunnerStart {
         asset: string;
         currency: string;
         timeframe: ValidTimeframe;
-        strategyName: string;
+        strategy: string;
     };
     dateFrom?: string;
     dateTo?: string;

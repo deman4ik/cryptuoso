@@ -26,7 +26,7 @@ export class Robot {
     _asset: string;
     _currency: string;
     _timeframe: ValidTimeframe;
-    _strategyName: string;
+    _strategy: string;
     _settings: {
         strategySettings: StrategySettings;
         robotSettings: RobotSettings;
@@ -67,7 +67,7 @@ export class Robot {
         /* Таймфрейм */
         this._timeframe = state.timeframe;
         /* Имя файла стратегии */
-        this._strategyName = state.strategyName;
+        this._strategy = state.strategy;
 
         /* Настройки */
         this._settings = {
@@ -140,8 +140,8 @@ export class Robot {
         return this._eventsToSend.filter(({ type }) => type === RobotWorkerEvents.LOG);
     }
 
-    get strategyName() {
-        return this._strategyName;
+    get strategy() {
+        return this._strategy;
     }
 
     get exchange() {
@@ -611,7 +611,7 @@ export class Robot {
             asset: this._asset,
             currency: this._currency,
             timeframe: this._timeframe,
-            strategyName: this._strategyName,
+            strategy: this._strategy,
             settings: this._settings,
             lastCandle: this._lastCandle,
             hasAlerts: this._hasAlerts,
@@ -629,7 +629,7 @@ export class Robot {
             asset: this._asset,
             currency: this._currency,
             timeframe: this._timeframe,
-            strategyName: this._strategyName
+            strategy: this._strategy
         };
     }
 

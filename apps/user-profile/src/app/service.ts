@@ -181,20 +181,20 @@ export default class UserProfileService extends HTTPService {
                 //#endregion "User Robots Schemes"
             });
 
-            this.addOnStartHandler(this._onStartService);
-            this.addOnStopHandler(this._onStopService);
+            this.addOnStartHandler(this._onServiceStart);
+            this.addOnStopHandler(this._onServiceStop);
         } catch (err) {
             this.log.error("Failed to initialize UserProfileService", err);
         }
     }
 
-    private async _onStartService(): Promise<void> {
+    private async _onServiceStart(): Promise<void> {
         this.pool = Pool(() => spawn<Encrypt>(new ThreadsWorker("./encryptWorker")), {
             name: "encrypt"
         });
     }
 
-    private async _onStopService(): Promise<void> {
+    private async _onServiceStop(): Promise<void> {
         await this.pool.terminate();
     }
 

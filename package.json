@@ -14,7 +14,7 @@
         "nx": "nx",
         "nx:test:e2e": "nx test --e2e=true",
         "start": "nx run-many --target=serve --all --parallel --maxParallel=20",
-        "build": "nx run-many --target=build --all --parallel --maxParallel=5 --progress --with-deps --memoryLimit=512",
+        "build": "nx run-many --target=build --all --progress --with-deps --memoryLimit=512",
         "test": "nx run-many --target=test --all --parallel --maxParallel=5 --with-deps",
         "lint": "nx workspace-lint && nx run-many --target=lint --all --parallel --maxParallel=5",
         "e2e": "nx e2e",
