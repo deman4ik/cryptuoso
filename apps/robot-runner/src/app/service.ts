@@ -80,6 +80,7 @@ export default class RobotRunnerService extends HTTPService {
                 connection: this.redis
             })
         };
+        //TODO: robot jobs checker
     }
 
     async onServiceStop() {
@@ -139,15 +140,11 @@ export default class RobotRunnerService extends HTTPService {
             }
         }
 
-        await this.queues.robot.add(
-            "job",
-            { robotId, type, data },
-            {
-                jobId: robotId,
-                removeOnComplete: true,
-                removeOnFail: true
-            }
-        );
+        await this.queues.robot.add("job", null, {
+            jobId: robotId,
+            removeOnComplete: true,
+            removeOnFail: true
+        });
     }
 
     async createHTTPHandler(
@@ -488,14 +485,13 @@ export default class RobotRunnerService extends HTTPService {
                     timeframes.map(async (timeframe) => {
                         const positions = allPostions.filter((pos) => pos.timeframe === timeframe);
                         const candle: DBCandle = await this.db.pg.one(sql`
-                        SELECT * 
-                        FROM ${sql.identifier([`candles${timeframe}`])}
-                        WHERE exchange = ${exchange}
-                          AND asset = ${asset}
-                          AND currency = ${currency}
-                        ORDER BY time DESC
-                        LIMIT 1;
-                        `);
+                            SELECT * 
+                            FROM ${sql.identifier([`candles${timeframe}`])}
+                            WHERE exchange = ${exchange}
+                            AND asset = ${asset}
+                            AND currency = ${currency}
+                            ORDER BY time DESC
+                            LIMIT 1;`);
                         const robots = positions
                             .filter(({ alerts }) => {
                                 let nextPrice = null;

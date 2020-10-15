@@ -177,3 +177,8 @@ export interface Signal extends SignalInfo {
     timeframe: ValidTimeframe;
     timestamp: string;
 }
+
+export interface RobotWorkerError {
+    robotId: string;
+    error: string;
+}

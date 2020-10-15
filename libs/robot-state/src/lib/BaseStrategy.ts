@@ -9,8 +9,8 @@ import {
     TradeAction,
     ValidTimeframe,
     SignalInfo,
-    DBCandle,
-    RobotPositionStatus
+    RobotPositionStatus,
+    Candle
 } from "@cryptuoso/market";
 import { IndicatorState, IndicatorType } from "@cryptuoso/robot-indicators";
 import { NewEvent } from "@cryptuoso/events";
@@ -44,8 +44,8 @@ export class BaseStrategy {
     _positions: { [key: string]: RobotPosition };
     _parametersSchema: ValidationSchema;
     _backtest?: boolean;
-    _candle: DBCandle;
-    _candles: DBCandle[];
+    _candle: Candle;
+    _candles: Candle[];
     _candlesProps: CandleProps;
     _indicators: {
         [key: string]: IndicatorState;
@@ -188,7 +188,7 @@ export class BaseStrategy {
     }
     /** POSITIONS */
 
-    _positionsHandleCandle(candle: DBCandle) {
+    _positionsHandleCandle(candle: Candle) {
         if (Object.keys(this._positions).length > 0) {
             Object.keys(this._positions).forEach((key) => {
                 this._positions[key]._handleCandle(candle);
@@ -312,7 +312,7 @@ export class BaseStrategy {
         });
     }
 
-    _handleCandles(candle: DBCandle, candles: DBCandle[], candlesProps: CandleProps) {
+    _handleCandles(candle: Candle, candles: Candle[], candlesProps: CandleProps) {
         this._candle = candle;
         this._candles = candles;
         this._candlesProps = candlesProps;

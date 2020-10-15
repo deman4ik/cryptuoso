@@ -7,10 +7,11 @@ import {
     AlertInfo,
     SignalInfo,
     ValidTimeframe,
-    DBCandle,
     PositionDirection,
     RobotPositionStatus,
-    RobotTradeStatus
+    RobotTradeStatus,
+    Candle,
+    DBCandle
 } from "@cryptuoso/market";
 import { RobotPositionState, RobotPostionInternalState } from "./types";
 
@@ -43,10 +44,9 @@ export class RobotPosition {
     private _alerts?: { [key: string]: AlertInfo };
     private _profit: number;
     private _barsHeld: number;
-    private _fee: number;
     private _backtest?: boolean;
     private _internalState: RobotPostionInternalState;
-    private _candle?: DBCandle;
+    private _candle?: Candle;
     private _alertsToPublish: SignalInfo[];
     private _tradeToPublish: SignalInfo;
     _log = console.log;
@@ -75,7 +75,6 @@ export class RobotPosition {
         this._alerts = state.alerts || {};
         this._profit = state.profit || 0;
         this._barsHeld = state.barsHeld || 0;
-        this._fee = state.fee;
         this._backtest = state.backtest;
         this._internalState = state.internalState || {
             highestHigh: null,
@@ -215,7 +214,7 @@ export class RobotPosition {
         );
     }
 
-    _handleCandle(candle: DBCandle) {
+    _handleCandle(candle: Candle) {
         this._candle = candle;
         if (this._status === RobotPositionStatus.open) {
             this._internalState.highestHigh = Math.max(this._internalState.highestHigh || -Infinity, this._candle.high);

@@ -466,7 +466,7 @@ export class Backtester {
         }
     };
 
-    async handleCandle(candle: DBCandle) {
+    async handleCandle(candle: Candle) {
         Object.keys(this.#robots).forEach(async (id) => {
             const robot = this.#robots[id];
             robot.instance.handleCandle(candle);

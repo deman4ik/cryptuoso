@@ -1,7 +1,7 @@
 import {
     AlertInfo,
     BasePosition,
-    DBCandle,
+    Candle,
     ExchangeCandle,
     ExchangePrice,
     OrderType,
@@ -60,31 +60,24 @@ export interface RobotPositionState extends BasePosition {
     exitAction?: TradeAction;
     exitCandleTimestamp?: string;
     alerts?: { [key: string]: AlertInfo };
-    volume?: number;
-    profit?: number;
     barsHeld?: number;
-    fee?: number;
     backtest?: boolean;
     internalState?: RobotPostionInternalState;
 }
 
 export interface RobotState {
     id: string;
-    code?: string;
-    mod?: string;
-    name?: string;
     exchange: string;
     asset: string;
     currency: string;
     timeframe: ValidTimeframe;
-    available?: number;
     strategy: string;
     settings: {
         strategySettings: StrategySettings;
         robotSettings: RobotSettings;
         activeFrom: string;
     };
-    lastCandle?: DBCandle;
+    lastCandle?: Candle;
     state?: StrategyProps;
     hasAlerts?: boolean;
     status?: RobotStatus;
@@ -108,4 +101,6 @@ export interface RobotJob {
     robotId: string;
     type: RobotJobType;
     data?: ExchangeCandle | ExchangePrice;
+    retries?: number;
+    error?: string;
 }
