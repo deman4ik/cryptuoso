@@ -144,80 +144,54 @@ export default class RobotWorkerService extends BaseService {
         }
     };
 
-    #saveRobotPositions = async (transaction: DatabaseTransactionConnectionType, positions: RobotPositionState[]) =>
-        transaction.query(sql`
+    #saveRobotPositions = async (transaction: DatabaseTransactionConnectionType, positions: RobotPositionState[]) => {
+        for (const position of positions) {
+            await transaction.query(sql`
         INSERT INTO robot_positions
         ( robot_id, prefix, code, parent_id,
-         direction, status, entry_status, entry_price, 
-         entry_date,
+         direction, status, 
+         entry_status, entry_price, entry_date,
          entry_order_type, entry_action, 
          entry_candle_timestamp,
-         exit_status, exit_price,
-         exit_date, 
-         exit_order_type,
-         exit_action, 
+         exit_status, exit_price, exit_date, 
+         exit_order_type, exit_action, 
          exit_candle_timestamp,
          alerts,
          bars_held,
          internal_state
-        )
-        SELECT * FROM 
-        ${sql.unnest(
-            this.db.util.prepareUnnest(
-                positions.map((pos) => ({
-                    ...pos,
-                    alerts: JSON.stringify(pos.alerts),
-                    internalState: JSON.stringify(pos.internalState)
-                })),
-                [
-                    "robotId",
-                    "prefix",
-                    "code",
-                    "parentId",
-                    "direction",
-                    "status",
-                    "entryStatus",
-                    "entryPrice",
-                    "entryDate",
-                    "entryOrderType",
-                    "entryAction",
-                    "entryCandleTimestamp",
-                    "exitStatus",
-                    "exitPrice",
-                    "exitDate",
-                    "exitOrderType",
-                    "exitAction",
-                    "exitCandleTimestamp",
-                    "alerts",
-                    "barsHeld",
-                    "internalState"
-                ]
-            ),
-            [
-                "uuid",
-                "varchar",
-                "varchar",
-                "uuid",
-                "varchar",
-                "varchar",
-                "varchar",
-                "numeric",
-                "timestamp",
-                "varchar",
-                "varchar",
-                "timestamp",
-                "varchar",
-                "numeric",
-                "timestamp",
-                "varchar",
-                "varchar",
-                "timestamp",
-                "jsonb",
-                "numeric",
-                "jsonb"
-            ]
-        )}
-        `);
+        ) VALUES (
+            ${position.robotId}, ${position.prefix}, ${position.code}, ${position.parentId || null},
+            ${position.direction || null}, ${position.status}, 
+            ${position.entryStatus || null},${position.entryPrice || null}, ${position.entryDate || null}, 
+            ${position.entryOrderType || null}, ${position.entryAction || null}, 
+            ${position.entryCandleTimestamp || null},
+            ${position.exitStatus || null},${position.exitPrice || null}, ${position.exitDate || null}, 
+            ${position.exitOrderType || null},${position.exitAction || null}, 
+            ${position.exitCandleTimestamp || null},
+            ${JSON.stringify(position.alerts)},
+            ${position.barsHeld || null},
+            ${JSON.stringify(position.internalState)}
+        ) ON CONFLICT ON CONSTRAINT robot_positions_robot_id_code_key 
+         DO UPDATE SET updated_at = now(),
+         direction = excluded.direction,
+         status = excluded.status,
+         entry_status = excluded.entry_status,
+         entry_price = excluded.entry_price,
+         entry_date = excluded.entry_date,
+         entry_order_type = excluded.entry_order_type,
+         entry_action = excluded.entry_action,
+         entry_candle_timestamp = excluded.entry_candle_timestamp,
+         exit_status = excluded.exit_status,
+         exit_price = excluded.exit_price,
+         exit_date = excluded.exit_date,
+         exit_order_type = excluded.exit_order_type,
+         exit_action = excluded.exit_action,
+         exit_candle_timestamp = excluded.exit_candle_timestamp,
+         alerts = excluded.alerts,
+         bars_held = excluded.bars_held,
+         internal_state = excluded.internal_state;`);
+        }
+    };
 
     #saveRobotState = async (transaction: DatabaseTransactionConnectionType, state: RobotState) =>
         transaction.query(sql`
@@ -310,6 +284,7 @@ export default class RobotWorkerService extends BaseService {
                 if (robot.positionsToSave.length > 0) {
                     await this.#saveRobotPositions(t, robot.positionsToSave);
                 }
+                //TODO: save signals
                 await this.#saveRobotState(t, robot.robotState);
 
                 await t.query(sql`DELETE FROM robot_jobs WHERE id = ${job.id};`);

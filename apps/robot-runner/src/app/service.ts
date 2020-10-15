@@ -161,6 +161,7 @@ export default class RobotRunnerService extends HTTPService {
     }
 
     async create({ entities }: RobotRunnerCreate): Promise<{ result: string }> {
+        //TODO: check market
         const strategiesList: { id: string; code: string }[] = await this.db.pg.many(sql`
         SELECT id, code FROM strategies;
         `);
@@ -277,7 +278,7 @@ export default class RobotRunnerService extends HTTPService {
         res.end();
     }
 
-    async start({ id, dateFrom }: RobotRunnerStart): Promise<{ result: string }> {
+    async start({ robotId, dateFrom }: RobotRunnerStart): Promise<{ result: string }> {
         const {
             status,
             exchange,
@@ -295,14 +296,15 @@ export default class RobotRunnerService extends HTTPService {
         } = await this.db.pg.one(sql`
         SELECT r.status, r.exchange, r.asset, r.currency, r.timeframe, rs.strategy_settings 
         FROM robots r, v_robot_settings rs
-        WHERE id = ${id};
+        WHERE id = ${robotId};
         `);
 
+        //TODO: check exwatcher
         if (status === RobotStatus.paused) {
             await this.db.pg.query(sql`
             UPDATE robots 
             SET status = ${RobotStatus.started}
-            WHERE id = ${id};
+            WHERE id = ${robotId};
             `);
         }
 
@@ -352,14 +354,14 @@ export default class RobotRunnerService extends HTTPService {
         await this.db.pg.query(sql`
         UPDATE robots 
         SET status = ${RobotStatus.starting}
-        WHERE id = ${id};
+        WHERE id = ${robotId};
         `);
 
         await this.events.emit<BacktesterRunnerStart>({
             type: BacktesterRunnerEvents.START,
             data: {
-                id,
-                robotId: id,
+                id: robotId,
+                robotId,
                 dateFrom: historyDateFrom,
                 dateTo,
                 settings: {
@@ -384,11 +386,11 @@ export default class RobotRunnerService extends HTTPService {
         res.end();
     }
 
-    async stop({ id }: RobotRunnerStop): Promise<{ result: string }> {
+    async stop({ robotId }: RobotRunnerStop): Promise<{ result: string }> {
         const status: RobotStatus = await this.db.pg.one(sql`
         SELECT status 
          FROM robots
-        WHERE id = ${id}
+        WHERE id = ${robotId}
         `);
         if (status === RobotStatus.stopping || status === RobotStatus.stopped) return { result: status };
 
@@ -399,7 +401,7 @@ export default class RobotRunnerService extends HTTPService {
         try {
             if (candle.type === CandleType.previous) return;
             const { exchange, asset, currency, timeframe, timestamp } = candle;
-            const robots: { id: string; status: RobotStatus }[] = await this.db.pg.many(sql`
+            const robots: { id: string; status: RobotStatus }[] = await this.db.pg.any(sql`
             SELECT id, status
               FROM robots
              WHERE exchange = ${exchange}
@@ -473,7 +475,7 @@ export default class RobotRunnerService extends HTTPService {
             AND r.exchange = ${exchange}
             AND r.asset = ${asset}
             AND r.currency = ${currency}
-            ;`);
+            and r.status in (${RobotStatus.started}, ${RobotStatus.starting}, ${RobotStatus.paused});`);
 
             if (allPostions && Array.isArray(allPostions) && allPostions.length > 0) {
                 const timeframes = uniqueElementsBy(

@@ -152,20 +152,20 @@ export interface RobotRunnerCreate {
 }
 
 export interface RobotRunnerDelete {
-    id: string;
+    robotId: string;
 }
 
 export interface RobotRunnerStart {
-    id: string;
+    robotId: string;
     dateFrom?: string;
 }
 
 export interface RobotRunnerStop {
-    id: string;
+    robotId: string;
 }
 
 export interface RobotRunnerPause {
-    id: string;
+    robotId: string;
 }
 
 export interface Signal extends SignalInfo {

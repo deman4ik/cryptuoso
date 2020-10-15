@@ -780,7 +780,7 @@ export default class BacktesterWorkerService extends BaseService {
             )
                 .flatMap((i) => i)
                 .while(() => backtester.isStarted && !this.abort[backtester.id])
-                .each(async (candle: DBCandle) => {
+                .each(async (candle: Candle) => {
                     await backtester.handleCandle(candle);
                     backtester.incrementProgress();
                 })
