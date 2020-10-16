@@ -20,9 +20,9 @@ import {
     ExwatcherSchema,
     ExwatcherSubscribe,
     ExwatcherSubscribeAll,
-    ExwatcherUnsubscribeAll,
-    ExwatcherTick,
-    MarketEvents
+    ExwatcherUnsubscribeAll
+    // ExwatcherTick,
+    // MarketEvents
 } from "@cryptuoso/exwatcher-events";
 import { sql } from "@cryptuoso/postgres";
 
@@ -64,8 +64,8 @@ export class ExwatcherBaseService extends BaseService {
     candlesCurrent: { [id: string]: { [timeframe: string]: ExchangeCandle } } = {};
     candlesToSave: Map<string, ExchangeCandle> = new Map();
     candlesSaveTimer: NodeJS.Timer;
-    ticksToPublish: Map<string, ExchangePrice> = new Map();
-    ticksPublishTimer: NodeJS.Timer;
+    // ticksToPublish: Map<string, ExchangePrice> = new Map();
+    // ticksPublishTimer: NodeJS.Timer;
     lastTick: { [key: string]: ExchangePrice } = {};
     cronCheck: cron.ScheduledTask = cron.schedule("*/30 * * * * *", this.check.bind(this), {
         scheduled: false
@@ -150,7 +150,7 @@ export class ExwatcherBaseService extends BaseService {
         this.cronHandleChanges.start();
         this.cronCheck.start();
         this.candlesSaveTimer = setTimeout(this.handleCandlesToSave.bind(this), 0);
-        this.ticksPublishTimer = setTimeout(this.handleTicksToPublish.bind(this), 0);
+        // this.ticksPublishTimer = setTimeout(this.handleTicksToPublish.bind(this), 0);
     }
 
     async onServiceStop() {
@@ -442,13 +442,13 @@ export class ExwatcherBaseService extends BaseService {
         }
     }
 
-    async publishCandle(candle: ExchangeCandle): Promise<void> {
+    /*  async publishCandle(candle: ExchangeCandle): Promise<void> {
         try {
             await this.events.emit<ExchangeCandle>({ type: MarketEvents.CANDLE, data: candle });
         } catch (err) {
             this.log.error("Failed to publich candle", err);
         }
-    }
+    } */
 
     async saveSubscription(subscription: Exwatcher): Promise<void> {
         const { id, exchange, asset, currency, status, importerId, error } = subscription;
@@ -624,9 +624,9 @@ export class ExwatcherBaseService extends BaseService {
                         if (currentCandles.length > 0 && tick) {
                             this.saveCandles(currentCandles);
                         }
-                        if (tick) {
+                        /*  if (tick) {
                             this.publishTick(tick);
-                        }
+                        }*/
                     } catch (err) {
                         this.log.error(err);
                     }
@@ -670,11 +670,11 @@ export class ExwatcherBaseService extends BaseService {
                 );
                 this.saveCandles(candles);
 
-                await Promise.all(
+                /*  await Promise.all(
                     candles.map(async (candle) => {
                         await this.publishCandle(candle);
                     })
-                );
+                ); */
             }
 
             this.lastDate = date.valueOf();
@@ -784,9 +784,9 @@ export class ExwatcherBaseService extends BaseService {
                                 this.saveCandles(currentCandles);
                             }
 
-                            if (tick) {
+                            /*  if (tick) {
                                 this.publishTick(tick);
-                            }
+                            } */
                         }
                     }
                 })
@@ -828,11 +828,11 @@ export class ExwatcherBaseService extends BaseService {
                 );
                 this.saveCandles(candles);
 
-                await Promise.all(
+                /*  await Promise.all(
                     candles.map(async (candle) => {
                         await this.publishCandle(candle);
                     })
-                );
+                ); */
             }
 
             this.lastDate = date.valueOf();
@@ -841,7 +841,7 @@ export class ExwatcherBaseService extends BaseService {
         }
     }
 
-    publishTick(tick: ExchangePrice) {
+    /*   publishTick(tick: ExchangePrice) {
         this.ticksToPublish.set(`${tick.asset}.${tick.currency}`, tick);
     }
 
@@ -867,6 +867,7 @@ export class ExwatcherBaseService extends BaseService {
             this.ticksPublishTimer = setTimeout(this.handleTicksToPublish.bind(this), 2000);
         }
     }
+    */
 
     saveCandles(candles: ExchangeCandle[]) {
         candles.forEach(({ ...props }) => {

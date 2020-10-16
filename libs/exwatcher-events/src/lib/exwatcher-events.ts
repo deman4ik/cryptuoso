@@ -1,4 +1,4 @@
-import { ExchangeCandle, ExchangePrice } from "@cryptuoso/market";
+//import { ExchangeCandle, ExchangePrice } from "@cryptuoso/market";
 
 export const enum ExwatcherEvents {
     SUBSCRIBE = "in-exwatcher.subscribe",
@@ -7,10 +7,10 @@ export const enum ExwatcherEvents {
     ADD_MARKET = "in-exwatcher.add-market"
 }
 
-export const enum MarketEvents {
+/*export const enum MarketEvents {
     TICK = "market.tick",
     CANDLE = "market.candle"
-}
+}*/
 
 export const ExwatcherSchema = {
     [ExwatcherEvents.SUBSCRIBE]: {
@@ -31,7 +31,7 @@ export const ExwatcherSchema = {
     }
 };
 
-export const MarketSchema = {
+/*export const MarketSchema = {
     [MarketEvents.TICK]: {
         exchange: "string",
         asset: "string",
@@ -54,7 +54,7 @@ export const MarketSchema = {
         volume: "number",
         type: "string"
     }
-};
+};*/
 
 export interface ExwatcherSubscribe {
     exchange: string;
@@ -76,6 +76,6 @@ export interface ExwatcherAddMarket {
     currency: string;
 }
 
-export type ExwatcherTick = ExchangePrice;
+//export type ExwatcherTick = ExchangePrice;
 
-export type ExwatcherCandle = ExchangeCandle;
+//export type ExwatcherCandle = ExchangeCandle;
