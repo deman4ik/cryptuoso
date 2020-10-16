@@ -1,7 +1,7 @@
 import { DataStream } from "scramjet";
 import os from "os";
 import { spawn, Pool, Worker as ThreadsWorker } from "threads";
-import { Worker, Job } from "bullmq";
+import { Job } from "bullmq";
 import retry from "async-retry";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
@@ -26,7 +26,6 @@ export default class ImporterWorkerService extends BaseService {
     abort: { [key: string]: boolean } = {};
     cpus: number;
     pool: Pool<any>;
-    workers: { [key: string]: Worker };
     constructor(config?: ImporterWorkerServiceConfig) {
         super(config);
         try {
@@ -50,15 +49,10 @@ export default class ImporterWorkerService extends BaseService {
         this.pool = Pool(() => spawn<ImporterUtils>(new ThreadsWorker("./importerUtilsWorker")), {
             name: "importer-utils"
         });
-        this.workers = {
-            importCandles: new Worker("importCandles", async (job: Job) => this.process(job), {
-                connection: this.redis
-            })
-        };
+        this.createWorker("importCandles", this.process);
     }
 
     async onServiceStop(): Promise<void> {
-        await this.workers.importCandles.close();
         await this.pool.terminate();
     }
 

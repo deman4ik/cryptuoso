@@ -151,6 +151,10 @@ export class Robot {
         return this._timeframe;
     }
 
+    get hasAlerts() {
+        return this._hasAlerts;
+    }
+
     clear() {
         this._lastCandle = null;
         this._state = {

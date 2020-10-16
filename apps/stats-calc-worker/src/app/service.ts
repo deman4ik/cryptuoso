@@ -1,7 +1,6 @@
 import { DataStream } from "scramjet";
 import { spawn, Pool, Worker as ThreadsWorker } from "threads";
-import { Worker, Job } from "bullmq";
-import os from "os";
+import { Job } from "bullmq";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import { StatisticsUtils } from "./statsWorker";
 import { sql, QueryType, makeChunksGenerator } from "@cryptuoso/postgres";
@@ -43,13 +42,10 @@ interface TradeStatsWithId extends TradeStats {
 export interface StatisticCalcWorkerServiceConfig extends BaseServiceConfig {
     maxSingleQueryPosCount?: number;
     defaultChunkSize?: number;
-    jobsConcurrency?: number;
 }
 
 export default class StatisticCalcWorkerService extends BaseService {
     private pool: Pool<any>;
-    private workers: { [key: string]: Worker };
-    private jobsConcurrency: number;
 
     private routes: {
         [K in StatsCalcJobType]?: {
@@ -69,7 +65,6 @@ export default class StatisticCalcWorkerService extends BaseService {
         try {
             this.maxSingleQueryPosCount = config?.maxSingleQueryPosCount || 750;
             this.defaultChunkSize = config?.defaultChunkSize || 500;
-            this.jobsConcurrency = config?.jobsConcurrency || +process.env.JOBS_CONCURRENCY || os.cpus().length;
 
             this.makeChunksGenerator = makeChunksGenerator.bind(undefined, this.db.pg);
             this.addOnStartHandler(this._onServiceStart);
@@ -169,17 +164,10 @@ export default class StatisticCalcWorkerService extends BaseService {
         this.pool = Pool(() => spawn<StatisticsUtils>(new ThreadsWorker("./statsWorker")), {
             name: "statistics-utils"
         });
-        this.workers = {
-            calcStatistics: new Worker("calcStatistics", async (job: Job) => this.process(job), {
-                connection: this.redis,
-                concurrency: this.jobsConcurrency
-            })
-        };
-        //console.log(this);
+        this.createWorker("calcStatistics", this.process);
     }
 
     private async _onServiceStop(): Promise<void> {
-        await this.workers.calcStatistics.close();
         await this.pool.terminate();
     }
 

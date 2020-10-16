@@ -1,7 +1,6 @@
-import { Worker, Job } from "bullmq";
+import { Job } from "bullmq";
 import requireFromString from "require-from-string";
 import { Robot, RobotJob, RobotJobType, RobotPositionState, RobotState, RobotStatus } from "@cryptuoso/robot-state";
-
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import { DatabaseTransactionConnectionType, sql } from "slonik";
 import { Candle, DBCandle, ValidTimeframe } from "@cryptuoso/market";
@@ -20,7 +19,6 @@ interface CodeFilesInDB {
 }
 
 export default class RobotWorkerService extends BaseService {
-    workers: { [key: string]: Worker };
     strategiesCode: { [key: string]: any } = {};
     baseIndicatorsCode: { [key: string]: any } = {};
     #jobRetries = 3;
@@ -28,7 +26,6 @@ export default class RobotWorkerService extends BaseService {
         super(config);
         try {
             this.addOnStartHandler(this.onServiceStart);
-            this.addOnStopHandler(this.onServiceStop);
             //TODO: Reload code event
         } catch (err) {
             this.log.error(err, "While consctructing RobotWorkerService");
@@ -37,15 +34,8 @@ export default class RobotWorkerService extends BaseService {
 
     async onServiceStart(): Promise<void> {
         await this.loadCode();
-        this.workers = {
-            robot: new Worker("robot", async (job: Job) => this.process(job), {
-                connection: this.redis
-            })
-        };
-    }
 
-    async onServiceStop(): Promise<void> {
-        await this.workers.robot?.close();
+        this.createWorker("robot", this.process);
     }
 
     async loadCode() {
@@ -226,7 +216,7 @@ export default class RobotWorkerService extends BaseService {
 
             const robot = new Robot(robotState);
 
-            if (type === RobotJobType.tick) {
+            if (type === RobotJobType.tick && robot.hasAlerts) {
                 const currentCandle: DBCandle = await this.db.pg.one(sql`
                 SELECT * 
                 FROM ${sql.identifier([`candles${robot.timeframe}`])}

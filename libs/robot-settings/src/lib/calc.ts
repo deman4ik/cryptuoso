@@ -1,10 +1,10 @@
 import { roundFirstSignificant } from "@cryptuoso/helpers";
 import { RobotSettings, VolumeSettingsType, UserRobotSettings, UserSignalSettings } from "./types";
 
-const calcCurrencyDynamic = (volumeInCurrency: number, price: number) =>
+export const calcCurrencyDynamic = (volumeInCurrency: number, price: number) =>
     roundFirstSignificant(volumeInCurrency / price);
 
-const calcAssetDynamicDelta = (initialVolume: number, delta: number, profit: number) => {
+export const calcAssetDynamicDelta = (initialVolume: number, delta: number, profit: number) => {
     if (!profit) return initialVolume;
 
     const baseVolume = initialVolume / 2;

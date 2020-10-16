@@ -1,4 +1,4 @@
-import { Job, Queue, Worker } from "bullmq";
+import { Job } from "bullmq";
 import { v4 as uuid } from "uuid";
 import { sql } from "slonik";
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
@@ -10,7 +10,7 @@ import {
     RobotRunnerStop
 } from "@cryptuoso/robot-events";
 import { BacktesterRunnerEvents, BacktesterRunnerStart } from "@cryptuoso/backtester-events";
-import { ExwatcherCandle, ExwatcherTick, MarketEvents, MarketSchema } from "@cryptuoso/exwatcher-events";
+//import { ExwatcherCandle, ExwatcherTick, MarketEvents, MarketSchema } from "@cryptuoso/exwatcher-events";
 import { RobotJob, RobotJobType, RobotPosition, RobotStatus } from "@cryptuoso/robot-state";
 import { StrategySettings } from "@cryptuoso/robot-settings";
 import { equals, robotExchangeName, sortAsc, sortDesc, uniqueElementsBy } from "@cryptuoso/helpers";
@@ -27,8 +27,6 @@ import {
 export type RobotRunnerServiceConfig = HTTPServiceConfig;
 
 export default class RobotRunnerService extends HTTPService {
-    queues: { [key: string]: Queue<any> };
-    workers: { [key: string]: Worker };
     constructor(config?: RobotRunnerServiceConfig) {
         super(config);
         try {
@@ -53,7 +51,7 @@ export default class RobotRunnerService extends HTTPService {
                 }
             });
 
-            this.events.subscribe({
+            /*  this.events.subscribe({
                 [MarketEvents.CANDLE]: {
                     handler: this.handleNewCandle.bind(this),
                     schema: MarketSchema[MarketEvents.CANDLE]
@@ -62,31 +60,19 @@ export default class RobotRunnerService extends HTTPService {
                     handler: this.handleNewTick.bind(this),
                     schema: MarketSchema[MarketEvents.TICK]
                 }
-            });
+            }); */
             this.addOnStartHandler(this.onServiceStart);
-            this.addOnStopHandler(this.onServiceStop);
         } catch (err) {
             this.log.error(err, "While consctructing RobotRunnerService");
         }
     }
 
     async onServiceStart() {
-        this.queues = {
-            robot: new Queue("robot", { connection: this.redis }),
-            alerts: new Queue("alerts", { connection: this.redis })
-        };
-        this.workers = {
-            alerts: new Worker("alerts", async (job: Job) => this.checkAlerts(job), {
-                connection: this.redis
-            })
-        };
-        //TODO: robot jobs checker
-    }
+        this.createQueue("robot");
+        this.createQueue("alerts");
+        this.createWorker("alerts", this.checkAlerts);
 
-    async onServiceStop() {
-        await this.queues.tick?.close();
-        await this.queues.robot?.close();
-        await this.workers.alerts?.close();
+        //TODO: robot jobs checker
     }
 
     #createRobotCode = (
@@ -126,7 +112,7 @@ export default class RobotRunnerService extends HTTPService {
         `);
 
         if (status === RobotStatus.started) {
-            const lastJob = await this.queues.robot.getJob(robotId);
+            const lastJob = await this.queues["robot"].instance.getJob(robotId);
             if (lastJob) {
                 const lastJobState = await lastJob.getState();
                 if (["unknown", "completed", "failed"].includes(lastJobState)) {
@@ -140,11 +126,16 @@ export default class RobotRunnerService extends HTTPService {
             }
         }
 
-        await this.queues.robot.add("job", null, {
-            jobId: robotId,
-            removeOnComplete: true,
-            removeOnFail: true
-        });
+        await this.addJob(
+            "robot",
+            "job",
+            { robotId },
+            {
+                jobId: robotId,
+                removeOnComplete: true,
+                removeOnFail: true
+            }
+        );
     }
 
     async createHTTPHandler(
@@ -397,7 +388,7 @@ export default class RobotRunnerService extends HTTPService {
         return { result: RobotStatus.stopping };
     }
 
-    async handleNewCandle(candle: ExwatcherCandle) {
+    /* async handleNewCandle(candle: ExwatcherCandle) {
         try {
             if (candle.type === CandleType.previous) return;
             const { exchange, asset, currency, timeframe, timestamp } = candle;
@@ -457,35 +448,50 @@ export default class RobotRunnerService extends HTTPService {
             this.log.error("Failed to handle new tick", err);
             throw err;
         }
-    }
+    } */
 
-    async checkAlerts(job: Job<ExwatcherTick>) {
+    async checkAlerts(job: Job) {
         try {
-            const { exchange, asset, currency } = job.data;
-            const allPostions: {
+            const entities: {
                 robotId: string;
+                exchange: string;
+                asset: string;
+                currency: string;
                 status: RobotStatus;
                 alerts: { [key: string]: AlertInfo };
                 timeframe: ValidTimeframe;
             }[] = await this.db.pg.any(sql`
-            SELECT rp.robot_id, rp.alerts, r.timeframe, r.status
+            SELECT rp.robot_id, rp.alerts, r.exchange, r.asset, r.currency, r.timeframe, r.status
             FROM robot_positions rp, robots r
             WHERE rp.robot_id = r.id
             AND rp.status in (${RobotPositionStatus.new},${RobotPositionStatus.open})
-            AND r.exchange = ${exchange}
-            AND r.asset = ${asset}
-            AND r.currency = ${currency}
-            and r.status in (${RobotStatus.started}, ${RobotStatus.starting}, ${RobotStatus.paused});`);
+            AND r.has_alerts = true
+            AND r.status in (${RobotStatus.started}, ${RobotStatus.starting}, ${RobotStatus.paused});`);
 
-            if (allPostions && Array.isArray(allPostions) && allPostions.length > 0) {
-                const timeframes = uniqueElementsBy(
-                    allPostions.map((p) => p.timeframe),
-                    (a, b) => a === b
+            if (entities && Array.isArray(entities) && entities.length > 0) {
+                const markets = uniqueElementsBy(
+                    entities.map(({ exchange, asset, currency, timeframe }) => ({
+                        exchange,
+                        asset,
+                        currency,
+                        timeframe
+                    })),
+                    (a, b) =>
+                        a.exchange === b.exchange &&
+                        a.asset === b.asset &&
+                        a.currency === b.currency &&
+                        a.timeframe === b.timeframe
                 );
 
                 await Promise.all(
-                    timeframes.map(async (timeframe) => {
-                        const positions = allPostions.filter((pos) => pos.timeframe === timeframe);
+                    markets.map(async ({ exchange, asset, currency, timeframe }) => {
+                        const positions = entities.filter(
+                            (e) =>
+                                e.exchange === exchange &&
+                                e.asset === asset &&
+                                e.currency === currency &&
+                                e.timeframe === timeframe
+                        );
                         const candle: DBCandle = await this.db.pg.one(sql`
                             SELECT * 
                             FROM ${sql.identifier([`candles${timeframe}`])}

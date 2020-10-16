@@ -1,4 +1,3 @@
-import { Queue } from "bullmq";
 import { v4 as uuid } from "uuid";
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import dayjs from "@cryptuoso/dayjs";
@@ -21,7 +20,6 @@ import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 export type BacktesterRunnerServiceConfig = HTTPServiceConfig;
 
 export default class BacktesterRunnerService extends HTTPService {
-    queues: { [key: string]: Queue<any> };
     constructor(config?: BacktesterRunnerServiceConfig) {
         super(config);
         try {
@@ -50,20 +48,13 @@ export default class BacktesterRunnerService extends HTTPService {
                 }
             });
             this.addOnStartHandler(this.onServiceStart);
-            this.addOnStopHandler(this.onServiceStop);
         } catch (err) {
             this.log.error(err, "While consctructing BacktesterRunnerService");
         }
     }
 
     async onServiceStart() {
-        this.queues = {
-            backtest: new Queue("backtest", { connection: this.redis })
-        };
-    }
-
-    async onServiceStop() {
-        await this.queues.backtest?.close();
+        this.createQueue("backtest");
     }
 
     async startHTTPHandler(
@@ -80,7 +71,7 @@ export default class BacktesterRunnerService extends HTTPService {
     }
 
     #checkJobStatus = async (id: string) => {
-        const lastJob = await this.queues.backtest.getJob(id);
+        const lastJob = await this.queues["backtest"].instance.getJob(id);
         if (lastJob) {
             const lastJobState = await lastJob.getState();
             if (["stuck", "completed", "failed"].includes(lastJobState)) {
@@ -241,7 +232,7 @@ export default class BacktesterRunnerService extends HTTPService {
                 status: Status.queued
             });
 
-            await this.queues.backtest.add("backtest", backtester.state, {
+            await this.addJob("backtest", "backtest", backtester.state, {
                 jobId: backtester.id,
                 removeOnComplete: true
             });
@@ -271,7 +262,7 @@ export default class BacktesterRunnerService extends HTTPService {
 
     async stop({ id }: BacktesterRunnerStop) {
         try {
-            const job = await this.queues.backtest.getJob(id);
+            const job = await this.queues["backtest"].instance.getJob(id);
             if (job) {
                 if (job.isActive) {
                     await this.events.emit<BacktesterWorkerCancel>({

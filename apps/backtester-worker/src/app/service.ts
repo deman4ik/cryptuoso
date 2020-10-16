@@ -1,5 +1,5 @@
 import { DataStream } from "scramjet";
-import { Worker, Job } from "bullmq";
+import { Job } from "bullmq";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import dayjs from "@cryptuoso/dayjs";
 import { BaseError } from "@cryptuoso/errors";
@@ -32,7 +32,6 @@ export default class BacktesterWorkerService extends BaseService {
     abort: { [key: string]: boolean } = {};
     defaultChunkSize = 500;
     defaultInsertChunkSize = 1000;
-    workers: { [key: string]: Worker };
     constructor(config?: BacktesterWorkerServiceConfig) {
         super(config);
         try {
@@ -44,22 +43,13 @@ export default class BacktesterWorkerService extends BaseService {
                 }
             });
             this.addOnStartHandler(this.onServiceStart);
-            this.addOnStopHandler(this.onServiceStop);
         } catch (err) {
             this.log.error("Error in BacktesterWorkerService constructor", err);
         }
     }
 
     async onServiceStart(): Promise<void> {
-        this.workers = {
-            backtest: new Worker("backtest", async (job: Job) => this.process(job), {
-                connection: this.redis
-            })
-        };
-    }
-
-    async onServiceStop(): Promise<void> {
-        await this.workers.backtest?.close();
+        this.createWorker("backtest", this.process);
     }
 
     cancel({ id }: BacktesterWorkerCancel): void {

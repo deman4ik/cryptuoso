@@ -9,7 +9,6 @@ import {
 } from "@cryptuoso/exwatcher-events";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { sql } from "slonik";
-import { Queue, QueueScheduler, Worker } from "bullmq";
 
 export type ExwatcherRunnerServiceConfig = HTTPServiceConfig;
 
@@ -19,9 +18,7 @@ const enum JobTypes {
 
 export default class ExwatcherRunnerService extends HTTPService {
     connector: PublicConnector;
-    queueScheduler: QueueScheduler;
-    queues: { [key: string]: Queue };
-    workers: { [key: string]: Worker };
+
     constructor(config?: ExwatcherRunnerServiceConfig) {
         super(config);
         this.connector = new PublicConnector();
@@ -57,39 +54,22 @@ export default class ExwatcherRunnerService extends HTTPService {
             }
         });
         this.addOnStartHandler(this.onServiceStart);
-        this.addOnStopHandler(this.onServiceStop);
     }
 
     async onServiceStart() {
         const queueKey = this.name;
 
-        this.queueScheduler = new QueueScheduler(queueKey, { connection: this.redis });
-        this.queues = {
-            [queueKey]: new Queue(queueKey, { connection: this.redis })
-        };
-        this.workers = {
-            [queueKey]: new Worker(queueKey, this.updateMarkets.bind(this))
-        };
+        this.createQueue(queueKey);
 
-        await this.queues[queueKey].add(JobTypes.updateMarkets, null, {
+        this.createWorker(queueKey, this.updateMarkets);
+
+        await this.addJob(queueKey, JobTypes.updateMarkets, null, {
             repeat: {
                 cron: "0 0 */12 * * *"
             },
             attempts: 3,
             backoff: { type: "exponential", delay: 60000 }
         });
-    }
-
-    async onServiceStop() {
-        try {
-            const queueKey = this.name;
-
-            await this.queueScheduler.close();
-            await this.queues[queueKey]?.close();
-            await this.workers[queueKey]?.close();
-        } catch (e) {
-            this.log.error(e);
-        }
     }
 
     async subscribe(

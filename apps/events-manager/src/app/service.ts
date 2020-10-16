@@ -11,7 +11,7 @@ import { UserRoles } from "@cryptuoso/user-state";
 import { JSONParse } from "@cryptuoso/helpers";
 import dayjs from "dayjs";
 import { CloudEvent } from "cloudevents";
-import { Job, Queue, QueueScheduler, Worker } from "bullmq";
+import { Job } from "bullmq";
 
 interface StoredDeadLetter {
     id: string;
@@ -53,10 +53,6 @@ export default class EventsManager extends HTTPService {
     /** in milliseconds */
     checkInterval: number;
     clearingChunkSize: number;
-
-    queueScheduler: QueueScheduler;
-    queues: { [key: string]: Queue };
-    workers: { [key: string]: Worker };
 
     constructor(config?: EventsManagerConfig) {
         super(config);
@@ -106,33 +102,19 @@ export default class EventsManager extends HTTPService {
         });
 
         this.addOnStartHandler(this._onServiceStart);
-        this.addOnStopHandler(this._onServiceStop);
     }
 
     async _onServiceStart() {
         const queueKey = this.name;
 
-        this.queueScheduler = new QueueScheduler(queueKey, { connection: this.redis });
-        this.queues = {
-            [queueKey]: new Queue(queueKey, { connection: this.redis })
-        };
-        this.workers = {
-            [queueKey]: new Worker(queueKey, this.processJob.bind(this))
-        };
+        this.createQueue(queueKey);
+        this.createWorker(queueKey, this.processJob);
 
-        await this.queues[queueKey].add(JobTypes.clearStreams, null, {
+        await this.addJob(queueKey, JobTypes.clearStreams, null, {
             repeat: {
                 every: this.checkInterval
             }
         });
-    }
-
-    async _onServiceStop() {
-        const queueKey = this.name;
-
-        await this.queueScheduler.close();
-        await this.queues[queueKey]?.close();
-        await this.workers[queueKey]?.close();
     }
 
     #deadLettersHandler = async (deadLetter: DeadLetter) => {

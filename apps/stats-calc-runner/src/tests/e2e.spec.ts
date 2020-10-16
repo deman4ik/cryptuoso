@@ -6,6 +6,7 @@ import { User, UserStatus, UserRoles } from "@cryptuoso/user-state";
 import { makeServiceRequest, getProperty, setProperty } from "@cryptuoso/test-helpers";
 import { pg } from "@cryptuoso/postgres";
 import { v4 as uuid } from "uuid";
+import dayjs from "dayjs";
 
 const mockExit = jest.fn();
 setProperty(process, "exit", mockExit);
@@ -134,7 +135,8 @@ async function testRoute({
             defaultRole: role,
             allowedRoles: [role]
         },
-        settings: null
+        settings: null,
+        lastActiveAt: dayjs.utc().toISOString()
     };
 
     let mockHandler: jest.Mock;

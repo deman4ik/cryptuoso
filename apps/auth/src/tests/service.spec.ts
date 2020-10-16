@@ -13,6 +13,7 @@ import { User, UserStatus, UserRoles, UserSettings } from "@cryptuoso/user-state
 import { pg } from "@cryptuoso/postgres";
 import { makeTgHash } from "./helpers";
 import { ajax, setProperty } from "@cryptuoso/test-helpers";
+import dayjs from "@cryptuoso/dayjs";
 
 const userSettings: UserSettings = {
     notifications: {
@@ -99,7 +100,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -164,7 +166,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -206,7 +209,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -284,7 +288,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -378,7 +383,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -415,7 +421,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -487,7 +494,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -552,7 +560,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -590,7 +599,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -656,7 +666,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -723,7 +734,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -761,7 +773,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -800,7 +813,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementationOnce(async () => dbUser);
@@ -839,7 +853,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -912,7 +927,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -985,7 +1001,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);

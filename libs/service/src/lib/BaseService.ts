@@ -1,4 +1,15 @@
 import { createLightship, LightshipType } from "lightship";
+import {
+    Job,
+    JobsOptions,
+    Processor,
+    Queue,
+    QueueOptions,
+    QueueScheduler,
+    QueueSchedulerOptions,
+    Worker,
+    WorkerOptions
+} from "bullmq";
 import Redis from "ioredis";
 import RedLock from "redlock";
 import logger, { Logger } from "@cryptuoso/logger";
@@ -21,6 +32,9 @@ export class BaseService {
     #redLock: RedLock;
     #db: { sql: typeof sql; pg: typeof pg; util: typeof pgUtil };
     #events: Events;
+    #queues: { [key: string]: { instance: Queue<any>; scheduler: QueueScheduler } } = {};
+    #workers: { [key: string]: Worker } = {};
+    #workerConcurrency = +process.env.WORKER_CONCURRENCY || 10;
 
     constructor(config?: BaseServiceConfig) {
         try {
@@ -126,10 +140,30 @@ export class BaseService {
                     await onStopFunc();
                 }
             }
+            await Promise.all(
+                Object.values(this.#workers).map(async (worker) => {
+                    try {
+                        await worker.close();
+                    } catch (err) {
+                        this.log.error(`Failed to correctly close worker while stopping ${this.#name} service`, err);
+                    }
+                })
+            );
+            await Promise.all(
+                Object.values(this.#queues).map(async ({ instance, scheduler }) => {
+                    try {
+                        await instance.close();
+                        await scheduler.close();
+                    } catch (err) {
+                        this.log.error(`Failed to correctly close queues while stopping ${this.#name} service`, err);
+                    }
+                })
+            );
+
             await this.#redisConnection.quit();
             await this.#db.pg.end();
         } catch (err) {
-            this.#log.error(err, `Failed to correctly stop ${this.#name} service`);
+            this.#log.error(`Failed to correctly stop ${this.#name} service`, err);
             process.exit(1);
         }
     };
@@ -210,5 +244,43 @@ export class BaseService {
 
     get isDev() {
         return this.#name.includes("-dev");
+    }
+
+    get queues() {
+        return this.#queues;
+    }
+
+    #createQueue = (name: string, queueOpts?: QueueOptions, schedulerOpts?: QueueSchedulerOptions) => {
+        if (this.#queues[name]) throw new Error(`Queue ${name} already exists`);
+        this.#queues[name] = {
+            instance: new Queue(name, { ...queueOpts, connection: this.redis }),
+            scheduler: new QueueScheduler(name, { ...schedulerOpts, connection: this.redis })
+        };
+    };
+
+    get createQueue() {
+        return this.#createQueue;
+    }
+
+    #addJob = async <T>(queueName: string, jobName: string, data: T, opts?: JobsOptions): Promise<Job<any, any>> => {
+        if (!this.#queues[queueName]) throw new Error(`Queue ${queueName} doesn't exists`);
+        return this.#queues[queueName].instance.add(jobName, data, opts);
+    };
+
+    get addJob() {
+        return this.#addJob;
+    }
+
+    #createWorker = async (name: string, processor: Processor, opts?: WorkerOptions) => {
+        if (this.#workers[name]) throw new Error(`Worker ${name} already exists`);
+        this.#workers[name] = new Worker(name, processor.bind(this), {
+            ...opts,
+            connection: this.redis,
+            concurrency: +this.#workerConcurrency
+        });
+    };
+
+    get createWorker() {
+        return this.#createWorker;
     }
 }
