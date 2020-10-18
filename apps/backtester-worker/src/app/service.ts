@@ -737,11 +737,11 @@ export default class BacktesterWorkerService extends BaseService {
         }
     };
 
-    #startRobot = async (robotId: string) => {
+    #startRobot = async (robotId: string, startedAt: string) => {
         try {
             this.log.info(`Robot #${robotId} - Updating status '${RobotStatus.started}'`);
             await this.db.pg.query(sql` UPDATE robots 
-            SET status = ${RobotStatus.started}
+            SET status = ${RobotStatus.started}, started_at = ${startedAt}, stopped_at = null
             WHERE id = ${robotId};`);
         } catch (err) {
             this.log.error(`Failed to update robot status`, err);
@@ -794,7 +794,7 @@ export default class BacktesterWorkerService extends BaseService {
                     );
                     await this.#saveRobotPositions(backtester.robotId, Object.values(robot.data.positions));
                     await this.#saveRobotStats(backtester.robotId, robot.data.stats);
-                    await this.#startRobot(backtester.robotId);
+                    await this.#startRobot(backtester.robotId, backtester.dateFrom);
                 } else {
                     for (const robot of Object.values(backtester.robots)) {
                         if (backtester.settings.saveSignals) {
