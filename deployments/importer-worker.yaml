@@ -83,6 +83,9 @@ spec:
                       - containerPort: 9000
                         protocol: TCP
                   resources:
+                      requests:
+                          memory: 128Mi
+                          cpu: "10m"
                       limits:
                           memory: 512Mi
                           cpu: "256m"
