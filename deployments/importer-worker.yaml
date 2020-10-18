@@ -74,6 +74,11 @@ spec:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
                                 key: PROXY_ENDPOINT
+                      - name: WORKER_CONCURRENCY
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: WORKER_CONCURRENCY
                   ports:
                       - containerPort: 9000
                         protocol: TCP

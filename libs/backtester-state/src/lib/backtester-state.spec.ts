@@ -8,7 +8,7 @@ const config: BacktesterState = {
     asset: "BTC",
     currency: "USD",
     timeframe: 1440,
-    strategyName: "parabolic",
+    strategy: "parabolic",
     dateFrom: dayjs.utc("2017-01-01 00:00").toISOString(),
     dateTo: dayjs.utc("2017-01-30 00:00").toISOString(),
     settings: {},
@@ -26,7 +26,7 @@ describe("Test 'Backtester' Class", () => {
                 asset: "BTC",
                 currency: "USD",
                 timeframe: 1440,
-                strategyName: "parabolic",
+                strategy: "parabolic",
                 dateFrom: "2017-01-01T00:00:00.000Z",
                 dateTo: "2017-01-30T00:00:00.000Z",
                 settings: {

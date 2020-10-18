@@ -1,32 +1,38 @@
-import { ExchangeCandle, ExchangePrice } from "@cryptuoso/market";
+//import { ExchangeCandle, ExchangePrice } from "@cryptuoso/market";
 
-export const enum ExwatcherWorkerEvents {
-    SUBSCRIBE = "in-exwatcher-worker.subscribe",
-    SUBSCRIBE_ALL = "in-exwatcher-worker.subscribe-all",
-    UNSUBSCRIBE_ALL = "in-exwatcher-worker.unsubscribe-all",
-    ADD_MARKET = "in-exwatcher-worker.add-market",
-    TICK = "out-exwatcher-worker.tick",
-    CANDLE = "out-exwatcher-worker.candle"
+export const enum ExwatcherEvents {
+    SUBSCRIBE = "in-exwatcher.subscribe",
+    SUBSCRIBE_ALL = "in-exwatcher.subscribe-all",
+    UNSUBSCRIBE_ALL = "in-exwatcher.unsubscribe-all",
+    ADD_MARKET = "in-exwatcher.add-market"
 }
 
+/*export const enum MarketEvents {
+    TICK = "market.tick",
+    CANDLE = "market.candle"
+}*/
+
 export const ExwatcherSchema = {
-    [ExwatcherWorkerEvents.SUBSCRIBE]: {
+    [ExwatcherEvents.SUBSCRIBE]: {
         exchange: "string",
         asset: "string",
         currency: "string"
     },
-    [ExwatcherWorkerEvents.SUBSCRIBE_ALL]: {
+    [ExwatcherEvents.SUBSCRIBE_ALL]: {
         exchange: "string"
     },
-    [ExwatcherWorkerEvents.UNSUBSCRIBE_ALL]: {
+    [ExwatcherEvents.UNSUBSCRIBE_ALL]: {
         exchange: "string"
     },
-    [ExwatcherWorkerEvents.ADD_MARKET]: {
+    [ExwatcherEvents.ADD_MARKET]: {
         exchange: "string",
         asset: "string",
         currency: "string"
-    },
-    [ExwatcherWorkerEvents.TICK]: {
+    }
+};
+
+/*export const MarketSchema = {
+    [MarketEvents.TICK]: {
         exchange: "string",
         asset: "string",
         currency: "string",
@@ -34,7 +40,7 @@ export const ExwatcherSchema = {
         timestamp: "string",
         price: "number"
     },
-    [ExwatcherWorkerEvents.CANDLE]: {
+    [MarketEvents.CANDLE]: {
         exchange: "string",
         asset: "string",
         currency: "string",
@@ -48,7 +54,7 @@ export const ExwatcherSchema = {
         volume: "number",
         type: "string"
     }
-};
+};*/
 
 export interface ExwatcherSubscribe {
     exchange: string;
@@ -70,6 +76,6 @@ export interface ExwatcherAddMarket {
     currency: string;
 }
 
-export type ExwatcherTick = ExchangePrice;
+//export type ExwatcherTick = ExchangePrice;
 
-export type ExwatcherCandle = ExchangeCandle;
+//export type ExwatcherCandle = ExchangeCandle;

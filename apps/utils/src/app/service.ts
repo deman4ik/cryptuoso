@@ -1,6 +1,6 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import { sql } from "@cryptuoso/postgres";
-import { RobotVolumeType, RobotSettingsAssetStatic } from "@cryptuoso/robot-settings";
+import { VolumeSettingsType, AssetStaticSettings } from "@cryptuoso/robot-settings";
 import { getAccessValue, User, UserAccessValues } from "@cryptuoso/user-state";
 
 export type UtilsServiceConfig = HTTPServiceConfig;
@@ -130,8 +130,8 @@ export default class UtilsService extends HTTPService {
             for (const { id, settings, createdAt, startedAt } of robotsList) {
                 const strategySettings = settings.strategyParameters;
 
-                const robotSettings: RobotSettingsAssetStatic = {
-                    volumeType: RobotVolumeType.assetStatic,
+                const robotSettings: AssetStaticSettings = {
+                    volumeType: VolumeSettingsType.assetStatic,
                     volume: settings.volume
                 };
 
@@ -163,8 +163,8 @@ export default class UtilsService extends HTTPService {
             FROM user_signals;`);
 
             for (const { id, volume, subscribedAt } of userSignalsList) {
-                const userSignalSettings: RobotSettingsAssetStatic = {
-                    volumeType: RobotVolumeType.assetStatic,
+                const userSignalSettings: AssetStaticSettings = {
+                    volumeType: VolumeSettingsType.assetStatic,
                     volume
                 };
                 await this.db.pg.query(sql`

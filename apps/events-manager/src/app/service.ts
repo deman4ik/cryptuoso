@@ -11,7 +11,7 @@ import { UserRoles } from "@cryptuoso/user-state";
 import { JSONParse } from "@cryptuoso/helpers";
 import dayjs from "dayjs";
 import { CloudEvent } from "cloudevents";
-import { Job, Queue, QueueScheduler, Worker } from "bullmq";
+import { Job } from "bullmq";
 
 interface StoredDeadLetter {
     id: string;
@@ -43,30 +43,16 @@ const enum JobTypes {
     clearStreams = "clearStreams"
 }
 
-export interface EventsManagerConfig extends HTTPServiceConfig {
-    /** in seconds */
-    checkInterval?: number;
-    clearingChunkSize?: number;
-}
+export type EventsManagerConfig = HTTPServiceConfig;
 
 export default class EventsManager extends HTTPService {
-    /** in milliseconds */
-    checkInterval: number;
-    clearingChunkSize: number;
-
-    queueScheduler: QueueScheduler;
-    queues: { [key: string]: Queue };
-    workers: { [key: string]: Worker };
+    clearingChunkSize = 100;
 
     constructor(config?: EventsManagerConfig) {
         super(config);
 
-        this.checkInterval = 1000 * (config?.checkInterval || +process.env.CHECK_INTERVAL || 100);
-        this.clearingChunkSize = config?.clearingChunkSize || 100;
-
         this.events.subscribe({
             [`${DEAD_LETTER_TOPIC}.*`]: {
-                //passFullEvent: true,
                 handler: this.#deadLettersHandler.bind(this)
             },
             [`${ERRORS_TOPIC}.*.*`]: {
@@ -106,33 +92,22 @@ export default class EventsManager extends HTTPService {
         });
 
         this.addOnStartHandler(this._onServiceStart);
-        this.addOnStopHandler(this._onServiceStop);
     }
 
     async _onServiceStart() {
         const queueKey = this.name;
 
-        this.queueScheduler = new QueueScheduler(queueKey, { connection: this.redis });
-        this.queues = {
-            [queueKey]: new Queue(queueKey, { connection: this.redis })
-        };
-        this.workers = {
-            [queueKey]: new Worker(queueKey, this.processJob.bind(this))
-        };
+        this.createQueue(queueKey);
+        this.createWorker(queueKey, this.processJob);
 
-        await this.queues[queueKey].add(JobTypes.clearStreams, null, {
+        await this.addJob(queueKey, JobTypes.clearStreams, null, {
+            jobId: JobTypes.clearStreams,
             repeat: {
-                every: this.checkInterval
-            }
+                cron: "30 6 * * * *"
+            },
+            removeOnComplete: true,
+            removeOnFail: true
         });
-    }
-
-    async _onServiceStop() {
-        const queueKey = this.name;
-
-        await this.queueScheduler.close();
-        await this.queues[queueKey]?.close();
-        await this.workers[queueKey]?.close();
     }
 
     #deadLettersHandler = async (deadLetter: DeadLetter) => {

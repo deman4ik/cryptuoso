@@ -5,11 +5,10 @@ function numberToString(x: number): string {
 
     const s = x.toString();
     if (Math.abs(x) < 1.0) {
-        // eslint-disable-next-line @typescript-eslint/camelcase
         const n_e = s.split("e-");
-        // eslint-disable-next-line @typescript-eslint/camelcase
+
         const n = n_e[0].replace(".", "");
-        // eslint-disable-next-line @typescript-eslint/camelcase
+
         const e = parseInt(n_e[1]);
         const neg = s[0] === "-";
         if (e) {

@@ -9,6 +9,7 @@ import { User, UserStatus, UserRoles, UserSettings } from "@cryptuoso/user-state
 import { makeTgHash } from "./helpers";
 import { Auth } from "../app/auth";
 import { pg } from "@cryptuoso/postgres";
+import dayjs from "@cryptuoso/dayjs";
 
 const userSettings: UserSettings = {
     notifications: {
@@ -59,7 +60,8 @@ describe("Test Auth class methods", () => {
                             defaultRole: UserRoles.user,
                             allowedRoles: [UserRoles.user]
                         },
-                        settings: userSettings
+                        settings: userSettings,
+                        lastActiveAt: dayjs.utc().toISOString()
                     };
                     const auth = new Auth(/* bcryptUtils */);
 
@@ -93,7 +95,8 @@ describe("Test Auth class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
                 const auth = new Auth(/* bcryptUtils */);
 
@@ -126,7 +129,8 @@ describe("Test Auth class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
                 const auth = new Auth(/* bcryptUtils */);
 
@@ -158,7 +162,8 @@ describe("Test Auth class methods", () => {
                             defaultRole: UserRoles.user,
                             allowedRoles: [UserRoles.user]
                         },
-                        settings: userSettings
+                        settings: userSettings,
+                        lastActiveAt: dayjs.utc().toISOString()
                     };
                     const auth = new Auth(/* bcryptUtils */);
 
@@ -185,7 +190,8 @@ describe("Test Auth class methods", () => {
                             defaultRole: UserRoles.user,
                             allowedRoles: [UserRoles.user]
                         },
-                        settings: userSettings
+                        settings: userSettings,
+                        lastActiveAt: dayjs.utc().toISOString()
                     };
                     const auth = new Auth(/* bcryptUtils */);
 
@@ -220,7 +226,6 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -236,7 +241,8 @@ describe("Test Auth class methods", () => {
                             defaultRole: UserRoles.user,
                             allowedRoles: [UserRoles.user]
                         },
-                        settings: userSettings
+                        settings: userSettings,
+                        lastActiveAt: dayjs.utc().toISOString()
                     };
                     const auth = new Auth(/* bcryptUtils */);
 
@@ -257,7 +263,7 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -273,7 +279,8 @@ describe("Test Auth class methods", () => {
                             defaultRole: UserRoles.user,
                             allowedRoles: [UserRoles.user]
                         },
-                        settings: userSettings
+                        settings: userSettings,
+                        lastActiveAt: dayjs.utc().toISOString()
                     };
                     const auth = new Auth(/* bcryptUtils */);
 
@@ -294,13 +301,13 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         first_name: "first_name",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         last_name: "last_name",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         photo_url: "photo_url",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -316,7 +323,8 @@ describe("Test Auth class methods", () => {
                             defaultRole: UserRoles.user,
                             allowedRoles: [UserRoles.user]
                         },
-                        settings: userSettings
+                        settings: userSettings,
+                        lastActiveAt: dayjs.utc().toISOString()
                     };
                     const auth = new Auth(/* bcryptUtils */);
 
@@ -337,13 +345,13 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         first_name: "first_name",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         last_name: "last_name",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         photo_url: "photo_url",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -375,7 +383,7 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -391,7 +399,8 @@ describe("Test Auth class methods", () => {
                             defaultRole: UserRoles.user,
                             allowedRoles: [UserRoles.user]
                         },
-                        settings: userSettings
+                        settings: userSettings,
+                        lastActiveAt: dayjs.utc().toISOString()
                     };
                     const auth = new Auth(/* bcryptUtils */);
 
@@ -408,7 +417,7 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -424,7 +433,8 @@ describe("Test Auth class methods", () => {
                             defaultRole: UserRoles.user,
                             allowedRoles: [UserRoles.user]
                         },
-                        settings: userSettings
+                        settings: userSettings,
+                        lastActiveAt: dayjs.utc().toISOString()
                     };
                     const auth = new Auth(/* bcryptUtils */);
 
@@ -445,7 +455,7 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -461,7 +471,8 @@ describe("Test Auth class methods", () => {
                             defaultRole: UserRoles.user,
                             allowedRoles: [UserRoles.user]
                         },
-                        settings: userSettings
+                        settings: userSettings,
+                        lastActiveAt: dayjs.utc().toISOString()
                     };
                     const auth = new Auth(/* bcryptUtils */);
 
@@ -483,7 +494,7 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -499,7 +510,8 @@ describe("Test Auth class methods", () => {
                             defaultRole: UserRoles.user,
                             allowedRoles: [UserRoles.user]
                         },
-                        settings: userSettings
+                        settings: userSettings,
+                        lastActiveAt: dayjs.utc().toISOString()
                     };
                     const auth = new Auth(/* bcryptUtils */);
 
@@ -515,7 +527,7 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -531,7 +543,8 @@ describe("Test Auth class methods", () => {
                             defaultRole: UserRoles.user,
                             allowedRoles: [UserRoles.user]
                         },
-                        settings: userSettings
+                        settings: userSettings,
+                        lastActiveAt: dayjs.utc().toISOString()
                     };
                     const auth = new Auth(/* bcryptUtils */);
 
@@ -547,7 +560,7 @@ describe("Test Auth class methods", () => {
                     const params = {
                         id: 123,
                         username: "username",
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         auth_date: Date.now(),
                         hash: ""
                     };
@@ -563,7 +576,8 @@ describe("Test Auth class methods", () => {
                             defaultRole: UserRoles.user,
                             allowedRoles: [UserRoles.user]
                         },
-                        settings: userSettings
+                        settings: userSettings,
+                        lastActiveAt: dayjs.utc().toISOString()
                     };
                     const auth = new Auth(/* bcryptUtils */);
 
@@ -616,7 +630,8 @@ describe("Test Auth class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
                 const auth = new Auth(/* bcryptUtils */);
 
@@ -645,7 +660,8 @@ describe("Test Auth class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
                 const auth = new Auth(/* bcryptUtils */);
 
@@ -688,7 +704,8 @@ describe("Test Auth class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
                 const auth = new Auth(/* bcryptUtils */);
 
@@ -718,7 +735,8 @@ describe("Test Auth class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
                 const auth = new Auth(/* bcryptUtils */);
 
@@ -751,7 +769,8 @@ describe("Test Auth class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
                 const auth = new Auth(/* bcryptUtils */);
 
@@ -780,7 +799,8 @@ describe("Test Auth class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
                 const auth = new Auth(/* bcryptUtils */);
 
@@ -822,7 +842,8 @@ describe("Test Auth class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
                 const auth = new Auth(/* bcryptUtils */);
 
@@ -854,7 +875,8 @@ describe("Test Auth class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
                 const auth = new Auth(/* bcryptUtils */);
 
@@ -881,7 +903,8 @@ describe("Test Auth class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
                 const auth = new Auth(/* bcryptUtils */);
 
@@ -914,7 +937,8 @@ describe("Test Auth class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
                 const auth = new Auth(/* bcryptUtils */);
 
@@ -943,7 +967,8 @@ describe("Test Auth class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
                 const auth = new Auth(/* bcryptUtils */);
 
@@ -969,7 +994,8 @@ describe("Test Auth class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
                 const auth = new Auth(/* bcryptUtils */);
 
@@ -1013,7 +1039,8 @@ describe("Test Auth class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
                 const auth = new Auth(/* bcryptUtils */);
 
@@ -1047,7 +1074,8 @@ describe("Test Auth class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
                 const auth = new Auth(/* bcryptUtils */);
 
@@ -1094,7 +1122,8 @@ describe("Test Auth class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
                 const auth = new Auth(/* bcryptUtils */);
 
@@ -1139,7 +1168,8 @@ describe("Test Auth class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
                 const auth = new Auth(/* bcryptUtils */);
 
@@ -1168,7 +1198,8 @@ describe("Test Auth class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
                 const auth = new Auth(/* bcryptUtils */);
 
@@ -1201,7 +1232,8 @@ describe("Test Auth class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
                 const auth = new Auth(/* bcryptUtils */);
 
@@ -1235,7 +1267,8 @@ describe("Test Auth class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
                 const auth = new Auth(/* bcryptUtils */);
 
@@ -1265,7 +1298,8 @@ describe("Test Auth class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
                 const auth = new Auth(/* bcryptUtils */);
 
@@ -1295,7 +1329,8 @@ describe("Test Auth class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
                 const auth = new Auth(/* bcryptUtils */);
 

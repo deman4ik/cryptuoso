@@ -9,14 +9,15 @@ import {
     TradeAction,
     ValidTimeframe,
     SignalInfo,
-    DBCandle,
-    RobotPositionStatus
+    RobotPositionStatus,
+    Candle
 } from "@cryptuoso/market";
 import { IndicatorState, IndicatorType } from "@cryptuoso/robot-indicators";
 import { NewEvent } from "@cryptuoso/events";
-import { RobotWorkerEvents, Signal } from "@cryptuoso/robot-events";
+import { RobotWorkerEvents, Signal, SignalEvents } from "@cryptuoso/robot-events";
 import logger from "@cryptuoso/logger";
-import { RobotPositionState, StrategyProps, StrategySettings } from "./types";
+import { RobotPositionState, StrategyProps } from "./types";
+import { StrategySettings } from "@cryptuoso/robot-settings";
 
 export interface StrategyState extends StrategyProps {
     strategySettings: StrategySettings;
@@ -43,8 +44,8 @@ export class BaseStrategy {
     _positions: { [key: string]: RobotPosition };
     _parametersSchema: ValidationSchema;
     _backtest?: boolean;
-    _candle: DBCandle;
-    _candles: DBCandle[];
+    _candle: Candle;
+    _candles: Candle[];
     _candlesProps: CandleProps;
     _indicators: {
         [key: string]: IndicatorState;
@@ -151,9 +152,7 @@ export class BaseStrategy {
     _createAlertEvents() {
         Object.values(this._positions).forEach((position) => {
             if (position.hasAlertsToPublish) {
-                position.alertsToPublish.forEach((signal) =>
-                    this._createSignalEvent(signal, RobotWorkerEvents.SIGNAL_ALERT)
-                );
+                position.alertsToPublish.forEach((signal) => this._createSignalEvent(signal, SignalEvents.ALERT));
                 position._clearAlertsToPublish();
                 this._positionsToSave.push(position.state);
             }
@@ -163,14 +162,14 @@ export class BaseStrategy {
     _createTradeEvents() {
         Object.values(this._positions).forEach((position) => {
             if (position.hasTradeToPublish) {
-                this._createSignalEvent(position.tradeToPublish, RobotWorkerEvents.SIGNAL_TRADE);
+                this._createSignalEvent(position.tradeToPublish, SignalEvents.TRADE);
                 position._clearTradeToPublish();
                 this._positionsToSave.push(position.state);
             }
         });
     }
 
-    _createSignalEvent(signal: SignalInfo, type: RobotWorkerEvents.SIGNAL_ALERT | RobotWorkerEvents.SIGNAL_TRADE) {
+    _createSignalEvent(signal: SignalInfo, type: SignalEvents.ALERT | SignalEvents.TRADE) {
         const signalData: Signal = {
             ...signal,
             id: uuid(),
@@ -189,7 +188,7 @@ export class BaseStrategy {
     }
     /** POSITIONS */
 
-    _positionsHandleCandle(candle: DBCandle) {
+    _positionsHandleCandle(candle: Candle) {
         if (Object.keys(this._positions).length > 0) {
             Object.keys(this._positions).forEach((key) => {
                 this._positions[key]._handleCandle(candle);
@@ -283,7 +282,7 @@ export class BaseStrategy {
                 if (this._positions[key].hasAlerts) {
                     this._positions[key]._checkAlerts();
                     if (this._positions[key].hasTradeToPublish) {
-                        this._createSignalEvent(this._positions[key].tradeToPublish, RobotWorkerEvents.SIGNAL_TRADE);
+                        this._createSignalEvent(this._positions[key].tradeToPublish, SignalEvents.TRADE);
                         this._positionsToSave.push(this._positions[key].state);
                         this._positions[key]._clearTradeToPublish();
                         if (this._positions[key].status === RobotPositionStatus.closed) {
@@ -313,7 +312,7 @@ export class BaseStrategy {
         });
     }
 
-    _handleCandles(candle: DBCandle, candles: DBCandle[], candlesProps: CandleProps) {
+    _handleCandles(candle: Candle, candles: Candle[], candlesProps: CandleProps) {
         this._candle = candle;
         this._candles = candles;
         this._candlesProps = candlesProps;

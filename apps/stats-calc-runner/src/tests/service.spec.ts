@@ -37,7 +37,7 @@ jest.mock("slonik", () => ({
     })),
     sql: jest.fn()
 }));
-jest.mock("@cryptuoso/service");
+jest.mock("@cryptuoso/service"); //TODO: unmock
 jest.mock("bullmq");
 
 describe("StatsCalcRunnerService methods", () => {
@@ -52,7 +52,7 @@ describe("StatsCalcRunnerService methods", () => {
 
     beforeAll(async (cb) => {
         //await service.startService();
-        await service._onStartService();
+        await service.onServiceStart();
         //mockQueueAdd = service.queues.calcStatistics.add as jest.Mock;
         mockQueueAdd = jest.fn();
         service.queueJob = mockQueueAdd;

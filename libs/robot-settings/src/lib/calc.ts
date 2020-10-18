@@ -1,28 +1,10 @@
 import { roundFirstSignificant } from "@cryptuoso/helpers";
-import { RobotSettings, RobotVolumeType, UserRobotSettings, UserSignalSettings } from "./types";
+import { RobotSettings, VolumeSettingsType, UserRobotSettings, UserSignalSettings } from "./types";
 
-const calcCurrencyDynamic = (volumeInCurrency: number, price: number) =>
+export const calcCurrencyDynamic = (volumeInCurrency: number, price: number) =>
     roundFirstSignificant(volumeInCurrency / price);
 
-export const getRobotPositionVolume = (settings: RobotSettings | UserSignalSettings, price?: number): number => {
-    if (settings.volumeType === RobotVolumeType.assetStatic) {
-        return settings.volume;
-    } else if (settings.volumeType === RobotVolumeType.currencyDynamic) {
-        if (!price) return null;
-        return calcCurrencyDynamic(settings.volumeInCurrency, price);
-    } else return null;
-};
-
-export const getUserRobotPositionVolume = (settings: UserRobotSettings, price?: number): number => {
-    if (settings.volumeType === RobotVolumeType.assetStatic) {
-        return settings.volume;
-    } else if (settings.volumeType === RobotVolumeType.currencyDynamic) {
-        if (!price) return null;
-        return calcCurrencyDynamic(settings.volumeInCurrency, price);
-    } else return null;
-};
-
-export const assetDynamicDelta = (initialVolume: number, delta: number, profit: number) => {
+export const calcAssetDynamicDelta = (initialVolume: number, delta: number, profit: number) => {
     if (!profit) return initialVolume;
 
     const baseVolume = initialVolume / 2;
@@ -35,7 +17,30 @@ export const assetDynamicDelta = (initialVolume: number, delta: number, profit: 
     return roundFirstSignificant(baseVolume * (lvl + 1));
 };
 
-/* export const assetDynamicDelta = (initialVolume: number, delta: number, profit: number) => {
+export const getRobotPositionVolume = (
+    settings: RobotSettings | UserSignalSettings,
+    price?: number,
+    profit?: number
+): number => {
+    if (settings.volumeType === VolumeSettingsType.assetStatic) {
+        return settings.volume;
+    } else if (settings.volumeType === VolumeSettingsType.currencyDynamic) {
+        if (!price) return null;
+        return calcCurrencyDynamic(settings.volumeInCurrency, price);
+    } else if (settings.volumeType === VolumeSettingsType.assetDynamicDelta) {
+        return calcAssetDynamicDelta(settings.initialVolume, settings.delta, profit);
+    } else return null;
+};
+
+export const getUserRobotPositionVolume = (settings: UserRobotSettings, price?: number, profit?: number): number => {
+    if (settings.volumeType === VolumeSettingsType.balancePercent) {
+        //TODO: BalancePercentSettings
+        return null;
+    } else return getRobotPositionVolume(settings, price, profit);
+};
+
+/* with levels down 
+const calcAssetDynamicDelta = (initialVolume: number, delta: number, profit: number) => {
     const baseVolume = initialVolume / 2;
     const mvd = delta * baseVolume;
 

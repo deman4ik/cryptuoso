@@ -1,18 +1,26 @@
 import { Timeframe, ValidTimeframe, TradeAction, OrderType, SignalInfo, SignalType } from "@cryptuoso/market";
-import { ISO_DATE_REGEX } from "@cryptuoso/helpers";
+import { CANDLES_RECENT_AMOUNT, ISO_DATE_REGEX } from "@cryptuoso/helpers";
+import { RobotSettings, RobotSettingsSchema, StrategySettings } from "@cryptuoso/robot-settings";
+
+export const enum RobotRunnerEvents {
+    CREATE = "in-robot-runner.create",
+    START = "in-robot-runner.start",
+    STOP = "in-robot-runner.stop",
+    PAUSE = "in-robot-runner.pause"
+}
 
 export const enum RobotWorkerEvents {
     LOG = "out-robot-worker.log",
-    SIGNAL_ALERT = "out-robot-worker.signal-alert",
-    SIGNAL_TRADE = "out-robot-worker.signal-trade",
     STARTED = "out-robot-worker.started",
     STARTING = "out-robot-worker.starting",
     STOPPED = "out-robot-worker.stopped",
-    UPDATED = "out-robot-worker.updated",
     PAUSED = "out-robot-worker.paused",
-    RESUMED = "out-robot-worker.resumed",
-    FAILED = "out-robot-worker.failed",
     ERROR = "out-robot-worker.error"
+}
+
+export const enum SignalEvents {
+    ALERT = "signal.alert",
+    TRADE = "signal.trade"
 }
 
 const SignalSchema = {
@@ -48,28 +56,117 @@ const StatusSchema = {
     robotId: "uuid"
 };
 
-export const RobotSchema = {
+const RunnerSchema = {
+    robotId: "uuid"
+};
+
+export const RobotRunnerSchema = {
+    [RobotRunnerEvents.CREATE]: {
+        entities: {
+            type: "array",
+            items: {
+                type: "object",
+                props: {
+                    exchange: {
+                        type: "string"
+                    },
+                    asset: {
+                        type: "string"
+                    },
+                    currency: {
+                        type: "string"
+                    },
+                    timeframe: {
+                        type: "number",
+                        enum: Timeframe.validArray
+                    },
+                    strategy: {
+                        type: "string"
+                    },
+                    mod: {
+                        type: "string",
+                        optional: true
+                    },
+                    available: { type: "number", integer: true, default: 5 },
+                    signals: { type: "boolean", default: false },
+                    trading: { type: "boolean", default: false },
+                    strategySettings: {
+                        type: "object",
+                        props: {
+                            requiredHistoryMaxBars: { type: "number", integer: true, default: CANDLES_RECENT_AMOUNT }
+                        }
+                    },
+                    robotSettings: RobotSettingsSchema
+                }
+            }
+        }
+    },
+    [RobotRunnerEvents.START]: {
+        robotId: "uuid",
+        dateFrom: {
+            type: "string",
+            pattern: ISO_DATE_REGEX,
+            optional: true
+        }
+    },
+    [RobotRunnerEvents.STOP]: RunnerSchema,
+    [RobotRunnerEvents.PAUSE]: RunnerSchema
+};
+
+export const RobotWorkerSchema = {
     [RobotWorkerEvents.LOG]: {
         $$root: true,
         type: "object"
     },
-    [RobotWorkerEvents.SIGNAL_ALERT]: {
+    [SignalEvents.ALERT]: {
         ...SignalSchema,
         type: { type: "equal", value: SignalType.alert, strict: true }
     },
-    [RobotWorkerEvents.SIGNAL_TRADE]: {
+    [SignalEvents.TRADE]: {
         ...SignalSchema,
-        type: { type: "equal", value: SignalType.trade, strict: true },
-        positionBarsHeld: { type: "number", optional: true }
+        type: { type: "equal", value: SignalType.trade, strict: true }
     },
     [RobotWorkerEvents.STARTED]: StatusSchema,
     [RobotWorkerEvents.STARTING]: StatusSchema,
     [RobotWorkerEvents.STOPPED]: StatusSchema,
-    [RobotWorkerEvents.UPDATED]: StatusSchema,
     [RobotWorkerEvents.PAUSED]: StatusSchema,
-    [RobotWorkerEvents.RESUMED]: StatusSchema,
-    [RobotWorkerEvents.FAILED]: { ...StatusSchema, error: "string" }
+    [RobotWorkerEvents.ERROR]: { ...StatusSchema, error: "string" }
 };
+
+export interface RobotRunnerCreateProps {
+    exchange: string;
+    asset: string;
+    currency: string;
+    timeframe: ValidTimeframe;
+    strategy: string;
+    mod?: string;
+    available: number;
+    signals: boolean;
+    trading: boolean;
+    strategySettings: StrategySettings;
+    robotSettings: RobotSettings;
+}
+
+export interface RobotRunnerCreate {
+    entities: RobotRunnerCreateProps[];
+}
+
+export interface RobotRunnerDelete {
+    robotId: string;
+}
+
+export interface RobotRunnerStart {
+    robotId: string;
+    dateFrom?: string;
+}
+
+export interface RobotRunnerStop {
+    robotId: string;
+}
+
+export interface RobotRunnerPause {
+    robotId: string;
+}
 
 export interface Signal extends SignalInfo {
     id: string;
@@ -79,4 +176,9 @@ export interface Signal extends SignalInfo {
     currency: string;
     timeframe: ValidTimeframe;
     timestamp: string;
+}
+
+export interface RobotWorkerError {
+    robotId: string;
+    error: string;
 }

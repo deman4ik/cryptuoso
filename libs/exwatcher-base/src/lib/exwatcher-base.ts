@@ -16,12 +16,13 @@ import {
     ImporterWorkerFailed
 } from "@cryptuoso/importer-events";
 import {
-    ExwatcherWorkerEvents,
+    ExwatcherEvents,
     ExwatcherSchema,
     ExwatcherSubscribe,
     ExwatcherSubscribeAll,
-    ExwatcherUnsubscribeAll,
-    ExwatcherTick
+    ExwatcherUnsubscribeAll
+    // ExwatcherTick,
+    // MarketEvents
 } from "@cryptuoso/exwatcher-events";
 import { sql } from "@cryptuoso/postgres";
 
@@ -63,8 +64,8 @@ export class ExwatcherBaseService extends BaseService {
     candlesCurrent: { [id: string]: { [timeframe: string]: ExchangeCandle } } = {};
     candlesToSave: Map<string, ExchangeCandle> = new Map();
     candlesSaveTimer: NodeJS.Timer;
-    ticksToPublish: Map<string, ExchangePrice> = new Map();
-    ticksPublishTimer: NodeJS.Timer;
+    // ticksToPublish: Map<string, ExchangePrice> = new Map();
+    // ticksPublishTimer: NodeJS.Timer;
     lastTick: { [key: string]: ExchangePrice } = {};
     cronCheck: cron.ScheduledTask = cron.schedule("*/30 * * * * *", this.check.bind(this), {
         scheduled: false
@@ -77,16 +78,16 @@ export class ExwatcherBaseService extends BaseService {
         this.exchange = config.exchange;
         this.publicConnector = new PublicConnector();
         this.events.subscribe({
-            [ExwatcherWorkerEvents.SUBSCRIBE]: {
-                schema: ExwatcherSchema[ExwatcherWorkerEvents.SUBSCRIBE],
+            [ExwatcherEvents.SUBSCRIBE]: {
+                schema: ExwatcherSchema[ExwatcherEvents.SUBSCRIBE],
                 handler: this.addSubscription.bind(this)
             },
-            [ExwatcherWorkerEvents.SUBSCRIBE_ALL]: {
-                schema: ExwatcherSchema[ExwatcherWorkerEvents.SUBSCRIBE_ALL],
+            [ExwatcherEvents.SUBSCRIBE_ALL]: {
+                schema: ExwatcherSchema[ExwatcherEvents.SUBSCRIBE_ALL],
                 handler: this.subscribeAll.bind(this)
             },
-            [ExwatcherWorkerEvents.UNSUBSCRIBE_ALL]: {
-                schema: ExwatcherSchema[ExwatcherWorkerEvents.UNSUBSCRIBE_ALL],
+            [ExwatcherEvents.UNSUBSCRIBE_ALL]: {
+                schema: ExwatcherSchema[ExwatcherEvents.UNSUBSCRIBE_ALL],
                 handler: this.unsubscribeAll.bind(this)
             },
             [ImporterWorkerEvents.FAILED]: {
@@ -100,8 +101,8 @@ export class ExwatcherBaseService extends BaseService {
                 unbalanced: true
             }
         });
-        this.addOnStartHandler(this.onStartService);
-        this.addOnStopHandler(this.onStopService);
+        this.addOnStartHandler(this.onServiceStart);
+        this.addOnStopHandler(this.onServiceStop);
     }
 
     getCandleMapKey(candle: ExchangeCandle): string {
@@ -117,9 +118,6 @@ export class ExwatcherBaseService extends BaseService {
             this.connector = new ccxtpro.binance({
                 enableRateLimit: true,
                 agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
-                // !FIXME: ccxt.pro optional typings
-                // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-                // @ts-ignore
                 options: { defaultType: "future", OHLCVLimit: 100, tradesLimit: 1000 }
             });
             this.cronHandleChanges = cron.schedule("* * * * * *", this.handleCandles.bind(this), {
@@ -129,9 +127,6 @@ export class ExwatcherBaseService extends BaseService {
             this.connector = new ccxtpro.bitfinex({
                 enableRateLimit: true,
                 agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
-                // !FIXME: ccxt.pro optional typings
-                // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-                // @ts-ignore
                 options: { OHLCVLimit: 100, tradesLimit: 1000 }
             });
             this.cronHandleChanges = cron.schedule("* * * * * *", this.handleTrades.bind(this), {
@@ -141,9 +136,6 @@ export class ExwatcherBaseService extends BaseService {
             this.connector = new ccxtpro.kraken({
                 enableRateLimit: true,
                 agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
-                // !FIXME: ccxt.pro optional typings
-                // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-                // @ts-ignore
                 options: { OHLCVLimit: 100, tradesLimit: 1000 }
             });
             this.cronHandleChanges = cron.schedule("* * * * * *", this.handleTrades.bind(this), {
@@ -152,16 +144,16 @@ export class ExwatcherBaseService extends BaseService {
         } else throw new Error("Unsupported exchange");
     }
 
-    async onStartService() {
+    async onServiceStart() {
         await this.initConnector();
         await this.resubscribe();
         this.cronHandleChanges.start();
         this.cronCheck.start();
         this.candlesSaveTimer = setTimeout(this.handleCandlesToSave.bind(this), 0);
-        this.ticksPublishTimer = setTimeout(this.handleTicksToPublish.bind(this), 0);
+        // this.ticksPublishTimer = setTimeout(this.handleTicksToPublish.bind(this), 0);
     }
 
-    async onStopService() {
+    async onServiceStop() {
         try {
             this.cronHandleChanges.stop();
             this.cronCheck.stop();
@@ -450,13 +442,13 @@ export class ExwatcherBaseService extends BaseService {
         }
     }
 
-    async publishCandle(candle: ExchangeCandle): Promise<void> {
+    /*  async publishCandle(candle: ExchangeCandle): Promise<void> {
         try {
-            await this.events.emit<ExchangeCandle>({ type: ExwatcherWorkerEvents.CANDLE, data: candle });
+            await this.events.emit<ExchangeCandle>({ type: MarketEvents.CANDLE, data: candle });
         } catch (err) {
             this.log.error("Failed to publich candle", err);
         }
-    }
+    } */
 
     async saveSubscription(subscription: Exwatcher): Promise<void> {
         const { id, exchange, asset, currency, status, importerId, error } = subscription;
@@ -632,9 +624,9 @@ export class ExwatcherBaseService extends BaseService {
                         if (currentCandles.length > 0 && tick) {
                             this.saveCandles(currentCandles);
                         }
-                        if (tick) {
+                        /*  if (tick) {
                             this.publishTick(tick);
-                        }
+                        }*/
                     } catch (err) {
                         this.log.error(err);
                     }
@@ -678,11 +670,11 @@ export class ExwatcherBaseService extends BaseService {
                 );
                 this.saveCandles(candles);
 
-                await Promise.all(
+                /*  await Promise.all(
                     candles.map(async (candle) => {
                         await this.publishCandle(candle);
                     })
-                );
+                ); */
             }
 
             this.lastDate = date.valueOf();
@@ -792,9 +784,9 @@ export class ExwatcherBaseService extends BaseService {
                                 this.saveCandles(currentCandles);
                             }
 
-                            if (tick) {
+                            /*  if (tick) {
                                 this.publishTick(tick);
-                            }
+                            } */
                         }
                     }
                 })
@@ -836,11 +828,11 @@ export class ExwatcherBaseService extends BaseService {
                 );
                 this.saveCandles(candles);
 
-                await Promise.all(
+                /*  await Promise.all(
                     candles.map(async (candle) => {
                         await this.publishCandle(candle);
                     })
-                );
+                ); */
             }
 
             this.lastDate = date.valueOf();
@@ -849,7 +841,7 @@ export class ExwatcherBaseService extends BaseService {
         }
     }
 
-    publishTick(tick: ExchangePrice) {
+    /*   publishTick(tick: ExchangePrice) {
         this.ticksToPublish.set(`${tick.asset}.${tick.currency}`, tick);
     }
 
@@ -860,7 +852,7 @@ export class ExwatcherBaseService extends BaseService {
                 await Promise.all(
                     ticks.map(async (tick) => {
                         try {
-                            await this.events.emit<ExwatcherTick>({ type: ExwatcherWorkerEvents.TICK, data: tick });
+                            await this.events.emit<ExwatcherTick>({ type: MarketEvents.TICK, data: tick });
                         } catch (err) {
                             this.log.error("Failed to publich tick", err);
                         }
@@ -875,6 +867,7 @@ export class ExwatcherBaseService extends BaseService {
             this.ticksPublishTimer = setTimeout(this.handleTicksToPublish.bind(this), 2000);
         }
     }
+    */
 
     saveCandles(candles: ExchangeCandle[]) {
         candles.forEach(({ ...props }) => {
@@ -954,7 +947,7 @@ export class ExwatcherBaseService extends BaseService {
             this.log.error(`Failed to save candles`, error);
         }
         if (!this.lightship.isServerShuttingDown()) {
-            this.candlesSaveTimer = setTimeout(this.handleCandlesToSave.bind(this), 2000);
+            this.candlesSaveTimer = setTimeout(this.handleCandlesToSave.bind(this), 1000);
         }
     }
 }

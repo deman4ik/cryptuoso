@@ -1,4 +1,3 @@
-import { Queue } from "bullmq";
 import { v4 as uuid } from "uuid";
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import dayjs from "@cryptuoso/dayjs";
@@ -18,7 +17,6 @@ import { Timeframe } from "@cryptuoso/market";
 export type ImporterRunnerServiceConfig = HTTPServiceConfig;
 
 export default class ImporterRunnerService extends HTTPService {
-    queues: { [key: string]: Queue<any> };
     constructor(config?: ImporterRunnerServiceConfig) {
         super(config);
         try {
@@ -46,21 +44,14 @@ export default class ImporterRunnerService extends HTTPService {
                     schema: ImporterRunnerSchema[ImporterRunnerEvents.STOP]
                 }
             });
-            this.addOnStartHandler(this.onStartService);
-            this.addOnStopHandler(this.onStopService);
+            this.addOnStartHandler(this.onServiceStart);
         } catch (err) {
             this.log.error(err, "While consctructing ImporterRunnerService");
         }
     }
 
-    async onStartService() {
-        this.queues = {
-            importCandles: new Queue("importCandles", { connection: this.redis })
-        };
-    }
-
-    async onStopService() {
-        await this.queues.importCandles?.close();
+    async onServiceStart() {
+        this.createQueue("importCandles");
     }
 
     async startHTTPHandler(
@@ -110,7 +101,7 @@ export default class ImporterRunnerService extends HTTPService {
             });
             importer.init();
 
-            await this.queues.importCandles.add(importer.type, importer.state, {
+            await this.addJob("importCandles", importer.type, importer.state, {
                 jobId: importer.id,
                 removeOnComplete: true
             });
@@ -136,7 +127,7 @@ export default class ImporterRunnerService extends HTTPService {
 
     async stop({ id }: ImporterRunnerStop) {
         try {
-            const job = await this.queues.importCandles.getJob(id);
+            const job = await this.queues["importCandles"].instance.getJob(id);
             if (job) {
                 if (job.isActive) {
                     await this.events.emit<ImporterWorkerCancel>({

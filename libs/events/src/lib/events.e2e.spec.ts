@@ -29,7 +29,7 @@ const GROUPS = {
 };
 jest.mock("tslog");
 jest.setTimeout(40000);
-const itif = (name: string, condition: () => boolean, cb: Function) => {
+const itif = (name: string, condition: () => boolean, cb: (...args: any[]) => unknown) => {
     it(name, (done) => {
         if (condition()) {
             cb(done);
@@ -114,7 +114,7 @@ describe("E2E test", () => {
             itif(
                 "Should subscribe to event and process emitted data",
                 () => redis != null,
-                async (done: Function) => {
+                async (done: (...args: any[]) => unknown) => {
                     const events = new Events(redis, lightship, eventsConfig);
 
                     events.subscribe({
@@ -149,7 +149,7 @@ describe("E2E test", () => {
             itif(
                 "Should subscribe to event and process emitted data",
                 () => redis != null,
-                async (done: Function) => {
+                async (done: (...args: any[]) => unknown) => {
                     const events = new Events(redis, lightship, eventsConfig);
 
                     events.subscribe({
@@ -187,7 +187,7 @@ describe("E2E test", () => {
             itif(
                 "Should subscribe and handle the event",
                 () => redis != null,
-                async (done: Function) => {
+                async (done: (...args: any[]) => unknown) => {
                     const events = new Events(redis, lightship, eventsConfig);
 
                     await events.emit({
@@ -221,7 +221,7 @@ describe("E2E test", () => {
             itif(
                 "Should subscribe and handle the event",
                 () => redis != null,
-                async (done: Function) => {
+                async (done: (...args: any[]) => unknown) => {
                     const events = new Events(redis, lightship, eventsConfig);
 
                     await events.emit({
@@ -256,7 +256,7 @@ describe("E2E test", () => {
             itif(
                 "Should call the handler two times",
                 () => redis != null,
-                async (done: Function) => {
+                async (done: (...args: any[]) => unknown) => {
                     const events = new Events(redis, lightship, eventsConfig);
 
                     events.subscribe({
@@ -288,7 +288,7 @@ describe("E2E test", () => {
             itif(
                 "Should emit a dead-letter",
                 () => redis != null,
-                async (done: Function) => {
+                async (done: (...args: any[]) => unknown) => {
                     const events = new Events(redis, lightship, eventsConfig);
 
                     events.subscribe({
@@ -333,7 +333,7 @@ describe("E2E test", () => {
             itif(
                 "Should subscribe to the same stream and process event for each subscription",
                 () => redis != null,
-                async (done: Function) => {
+                async (done: (...args: any[]) => unknown) => {
                     const events = new Events(redis, lightship, eventsConfig);
                     const type = `${SERVICES.calc}.sum`;
                     const typeParentAll = `${SERVICES.calc}.*`;
@@ -381,7 +381,7 @@ describe("E2E test", () => {
             itif(
                 "Should call only firts handler once per start() and _receive[...]",
                 () => redis != null,
-                async (done: Function) => {
+                async (done: (...args: any[]) => unknown) => {
                     const events = new Events(redis, lightship, eventsConfig);
                     const type = `${SERVICES.calc2}.divide`;
                     const typeParentAll = `${SERVICES.calc2}.*`;
@@ -423,7 +423,7 @@ describe("E2E test", () => {
             itif(
                 "Should emit a dead-letter event",
                 () => redis != null,
-                async (done: Function) => {
+                async (done: (...args: any[]) => unknown) => {
                     const events = new Events(redis, lightship, eventsConfig);
                     const type = `${SERVICES.calc}.group-substract`;
 
@@ -462,7 +462,7 @@ describe("E2E test", () => {
             itif(
                 "Should emit a dead-letter event",
                 () => redis != null,
-                async (done: Function) => {
+                async (done: (...args: any[]) => unknown) => {
                     const events = new Events(redis, lightship, eventsConfig);
 
                     const type = `${SERVICES.calc}.unbalanced-substract`;

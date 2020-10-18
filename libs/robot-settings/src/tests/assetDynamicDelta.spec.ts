@@ -1,8 +1,8 @@
-import { assetDynamicDelta } from "../lib/calc";
+import { calcAssetDynamicDelta } from "../lib/calc";
 
 function makeTestFunction(initialVolume: number, delta: number) {
     return (profit: number, expected: number) => {
-        const checked = assetDynamicDelta(initialVolume, delta, profit);
+        const checked = calcAssetDynamicDelta(initialVolume, delta, profit);
 
         try {
             expect(checked).toBe(expected);
@@ -15,15 +15,15 @@ function makeTestFunction(initialVolume: number, delta: number) {
     };
 }
 
-describe("assetDynamicDelta function test", () => {
+describe("calcAssetDynamicDelta function test", () => {
     describe("Testing with null / 0 profit provided", () => {
         it("Should return `initialVolume` value`", () => {
             for (let i = 0; i < 100; ++i) {
                 const initialVolume = 1 + 5 * Math.random();
                 const delta = 3 + 50 * Math.random();
 
-                const checked0 = assetDynamicDelta(initialVolume, delta, 0);
-                const checkedNull = assetDynamicDelta(initialVolume, delta, null);
+                const checked0 = calcAssetDynamicDelta(initialVolume, delta, 0);
+                const checkedNull = calcAssetDynamicDelta(initialVolume, delta, null);
 
                 let profit: number;
 

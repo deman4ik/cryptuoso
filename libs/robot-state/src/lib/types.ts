@@ -1,7 +1,9 @@
 import {
     AlertInfo,
     BasePosition,
-    DBCandle,
+    Candle,
+    ExchangeCandle,
+    ExchangePrice,
     OrderType,
     PositionDirection,
     RobotPositionStatus,
@@ -9,7 +11,7 @@ import {
     TradeAction,
     ValidTimeframe
 } from "@cryptuoso/market";
-import { RobotSettings } from "@cryptuoso/robot-settings";
+import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 import { IndicatorState } from "@cryptuoso/robot-indicators";
 import { TradeStats } from "@cryptuoso/stats-calc";
 
@@ -21,11 +23,6 @@ export const enum RobotStatus {
     stopped = "stopped",
     paused = "paused",
     failed = "failed"
-}
-
-export interface StrategySettings {
-    [key: string]: number | string;
-    requiredHistoryMaxBars?: number;
 }
 
 export interface StrategyProps {
@@ -63,31 +60,24 @@ export interface RobotPositionState extends BasePosition {
     exitAction?: TradeAction;
     exitCandleTimestamp?: string;
     alerts?: { [key: string]: AlertInfo };
-    volume?: number;
-    profit?: number;
     barsHeld?: number;
-    fee?: number;
     backtest?: boolean;
     internalState?: RobotPostionInternalState;
 }
 
 export interface RobotState {
     id: string;
-    code?: string;
-    mod?: string;
-    name?: string;
     exchange: string;
     asset: string;
     currency: string;
     timeframe: ValidTimeframe;
-    available?: number;
-    strategyName: string;
+    strategy: string;
     settings: {
         strategySettings: StrategySettings;
         robotSettings: RobotSettings;
         activeFrom: string;
     };
-    lastCandle?: DBCandle;
+    lastCandle?: Candle;
     state?: StrategyProps;
     hasAlerts?: boolean;
     status?: RobotStatus;
@@ -98,4 +88,31 @@ export interface RobotState {
 
 export interface RobotStats extends TradeStats {
     robotId: string;
+}
+
+export const enum RobotJobType {
+    stop = "stop",
+    candle = "candle",
+    tick = "tick"
+}
+
+export interface RobotJob {
+    id?: string;
+    robotId: string;
+    type: RobotJobType;
+    data?: ExchangeCandle | ExchangePrice;
+    retries?: number;
+    error?: string;
+}
+
+export const enum Queues {
+    robot = "robot",
+    robotRunner = "robot-runner"
+}
+
+export const enum RobotRunnerJobType {
+    alerts = "alerts",
+    newCandles = "newCandles",
+    idleCandles = "idleCandles",
+    idleRobotJobs = "idleRobotJobs"
 }

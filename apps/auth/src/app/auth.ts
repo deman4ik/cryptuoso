@@ -212,7 +212,8 @@ export class Auth {
                         email: true
                     }
                 }
-            }
+            },
+            lastActiveAt: dayjs.utc().toISOString()
         };
         await this._dbRegisterUser(newUser);
 
@@ -261,7 +262,8 @@ export class Auth {
                         email: false
                     }
                 }
-            }
+            },
+            lastActiveAt: dayjs.utc().toISOString()
         };
         await this._dbRegisterUserTg(newUser);
 

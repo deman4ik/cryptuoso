@@ -4,10 +4,8 @@ import { User, UserRoles, UserExchangeAccountState, UserExchangeAccStatus } from
 import { formatExchange, round, sleep } from "@cryptuoso/helpers";
 import { Events } from "@cryptuoso/events";
 import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
-import { UserSignalState } from "@cryptuoso/user-signal-state";
-import { RobotVolumeType, UserSignalSettings, UserRobotSettings, UserRobotVolumeType } from "@cryptuoso/robot-settings";
+import { VolumeSettingsType } from "@cryptuoso/robot-settings";
 import { v4 as uuid } from "uuid";
-import { UserRobotDB, UserRobotState } from "@cryptuoso/user-robot-state";
 import { pg, sql } from "@cryptuoso/postgres";
 import { UserMarketState } from "@cryptuoso/market";
 import { RobotStatus } from "@cryptuoso/robot-state";
@@ -278,7 +276,7 @@ describe("UserProfile service E2E w/o DB", () => {
                     userExAccId,
                     robotId,
                     settings: {
-                        volumeType: RobotVolumeType.assetStatic,
+                        volumeType: VolumeSettingsType.assetStatic,
                         volume
                     }
                 }
@@ -305,7 +303,7 @@ describe("UserProfile service E2E w/o DB", () => {
             //mockPG.maybeOne.mockImplementationOnce(async () => user);
             mockPG.maybeOne.mockImplementationOnce(async () => ({ userId }));
             mockPG.maybeOneFirst.mockImplementationOnce(async () => ({
-                volumeType: RobotVolumeType.assetStatic,
+                volumeType: VolumeSettingsType.assetStatic,
                 volume
             }));
             mockPG.maybeOneFirst.mockImplementationOnce(async () => marketLimits);
@@ -320,7 +318,7 @@ describe("UserProfile service E2E w/o DB", () => {
                 input: {
                     id: userRobotId,
                     settings: {
-                        volumeType: UserRobotVolumeType.balancePercent,
+                        volumeType: VolumeSettingsType.balancePercent,
                         balancePercent
                     }
                 }
@@ -342,7 +340,7 @@ describe("UserProfile service E2E w/o DB", () => {
             //mockPG.maybeOne.mockImplementationOnce(async () => user);
             mockPG.maybeOne.mockImplementationOnce(async () => ({ userId }));
             mockPG.maybeOneFirst.mockImplementationOnce(async () => ({
-                volumeType: UserRobotVolumeType.balancePercent,
+                volumeType: VolumeSettingsType.balancePercent,
                 balancePercent: 0
             }));
             mockPG.maybeOneFirst.mockImplementationOnce(async () => marketLimits);
@@ -357,7 +355,7 @@ describe("UserProfile service E2E w/o DB", () => {
                 input: {
                     id: userRobotId,
                     settings: {
-                        volumeType: UserRobotVolumeType.balancePercent,
+                        volumeType: VolumeSettingsType.balancePercent,
                         balancePercent
                     }
                 }
@@ -490,7 +488,7 @@ describe("UserProfile service E2E w/o DB", () => {
                 input: {
                     robotId,
                     settings: {
-                        volumeType: RobotVolumeType.assetStatic,
+                        volumeType: VolumeSettingsType.assetStatic,
                         volume
                     }
                 }
@@ -516,7 +514,7 @@ describe("UserProfile service E2E w/o DB", () => {
             //mockPG.maybeOne.mockImplementationOnce(async () => user);
             mockPG.maybeOne.mockImplementationOnce(async () => ({ id: signalId }));
             mockPG.maybeOneFirst.mockImplementationOnce(async () => ({
-                volumeType: RobotVolumeType.assetStatic,
+                volumeType: VolumeSettingsType.assetStatic,
                 volume
             }));
             mockPG.maybeOneFirst.mockImplementationOnce(async () => marketLimits);
@@ -531,7 +529,7 @@ describe("UserProfile service E2E w/o DB", () => {
                 input: {
                     robotId,
                     settings: {
-                        volumeType: RobotVolumeType.assetStatic,
+                        volumeType: VolumeSettingsType.assetStatic,
                         volume: newVolume
                     }
                 }
@@ -555,12 +553,12 @@ describe("UserProfile service E2E w/o DB", () => {
             //mockPG.maybeOne.mockImplementationOnce(async () => user);
             mockPG.maybeOne.mockImplementationOnce(async () => ({ id: signalId }));
             mockPG.maybeOneFirst.mockImplementationOnce(async () => ({
-                volumeType: RobotVolumeType.assetDynamicDelta,
+                volumeType: VolumeSettingsType.assetDynamicDelta,
                 volumeInCurrency
             }));
             mockPG.maybeOneFirst.mockImplementationOnce(async () => marketLimits);
 
-            const res = await makeServiceRequest({
+            await makeServiceRequest({
                 port,
                 actionName: "userSignalEdit",
                 userId,
@@ -568,7 +566,7 @@ describe("UserProfile service E2E w/o DB", () => {
                 input: {
                     robotId,
                     settings: {
-                        volumeType: RobotVolumeType.currencyDynamic,
+                        volumeType: VolumeSettingsType.currencyDynamic,
                         volumeInCurrency
                     }
                 }

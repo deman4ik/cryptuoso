@@ -13,6 +13,7 @@ import { User, UserStatus, UserRoles, UserSettings } from "@cryptuoso/user-state
 import { pg } from "@cryptuoso/postgres";
 import { makeTgHash } from "./helpers";
 import { ajax, setProperty } from "@cryptuoso/test-helpers";
+import dayjs from "@cryptuoso/dayjs";
 
 const userSettings: UserSettings = {
     notifications: {
@@ -99,7 +100,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -110,7 +112,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "login" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-role": UserRoles.anonymous
                         }
@@ -137,7 +139,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "login" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-role": UserRoles.anonymous
                         }
@@ -164,7 +166,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -175,7 +178,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "login" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-role": UserRoles.anonymous
                         }
@@ -192,7 +195,7 @@ describe("Test 'AuthService' class methods", () => {
             test("Should return accessToken and set cookie refreshToken", async () => {
                 const params = {
                     id: 123,
-                    // eslint-disable-next-line @typescript-eslint/camelcase
+
                     auth_date: Date.now(),
                     hash: ""
                 };
@@ -206,7 +209,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -217,7 +221,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "loginTg" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-user-id": dbUser.id,
                             "x-hasura-role": UserRoles.anonymous
@@ -236,7 +240,7 @@ describe("Test 'AuthService' class methods", () => {
                 const params = {
                     id: 123,
                     username: "username",
-                    // eslint-disable-next-line @typescript-eslint/camelcase
+
                     auth_date: Date.now(),
                     hash: ""
                 };
@@ -250,7 +254,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "loginTg" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-user-id": "id",
                             "x-hasura-role": UserRoles.anonymous
@@ -269,7 +273,7 @@ describe("Test 'AuthService' class methods", () => {
                 const params = {
                     id: 123,
                     username: "username",
-                    // eslint-disable-next-line @typescript-eslint/camelcase
+
                     auth_date: Date.now(),
                     hash: "WRONG_HASH"
                 };
@@ -284,7 +288,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -295,7 +300,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "loginTg" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-user-id": "id",
                             "x-hasura-role": UserRoles.user
@@ -319,7 +324,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "logout" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-user-id": "id",
                             "x-hasura-role": UserRoles.user
@@ -350,7 +355,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "register" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-role": UserRoles.anonymous
                         }
@@ -378,7 +383,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -389,7 +395,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "register" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-role": UserRoles.anonymous
                         }
@@ -415,7 +421,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -429,7 +436,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "refresh-token" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-user-id": dbUser.id,
                             "x-hasura-role": UserRoles.user
@@ -458,7 +465,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "refreshToken" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-user-id": "id",
                             "x-hasura-role": UserRoles.user
@@ -487,7 +494,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -498,7 +506,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "activateAccount" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-role": UserRoles.anonymous
                         }
@@ -526,7 +534,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "activateAccount" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-role": UserRoles.anonymous
                         }
@@ -552,7 +560,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -563,7 +572,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "activateAccount" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-role": UserRoles.anonymous
                         }
@@ -590,7 +599,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -601,7 +611,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "passwordReset" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-role": UserRoles.anonymous
                         }
@@ -627,7 +637,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "passwordReset" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-role": UserRoles.anonymous
                         }
@@ -656,7 +666,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -667,7 +678,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "confirmPasswordReset" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-role": UserRoles.anonymous
                         }
@@ -696,7 +707,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "confirmPasswordReset" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-role": UserRoles.anonymous
                         }
@@ -723,7 +734,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -734,7 +746,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "confirmPasswordReset" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-role": UserRoles.anonymous
                         }
@@ -761,7 +773,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -772,7 +785,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "confirmPasswordReset" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-role": UserRoles.anonymous
                         }
@@ -800,7 +813,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementationOnce(async () => dbUser);
@@ -813,7 +827,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "changeEmail" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-user-id": dbUser.id,
                             "x-hasura-role": UserRoles.user
@@ -839,7 +853,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -851,7 +866,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "changeEmail" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-user-id": dbUser.id,
                             "x-hasura-role": UserRoles.user
@@ -883,7 +898,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "changeEmail" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-user-id": "WRONG",
                             "x-hasura-role": UserRoles.user
@@ -912,7 +927,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -923,7 +939,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "confirmChangeEmail" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-user-id": dbUser.id,
                             "x-hasura-role": UserRoles.user
@@ -958,7 +974,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "confirmChangeEmail" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-user-id": userId,
                             "x-hasura-role": UserRoles.user
@@ -985,7 +1001,8 @@ describe("Test 'AuthService' class methods", () => {
                         defaultRole: UserRoles.user,
                         allowedRoles: [UserRoles.user]
                     },
-                    settings: userSettings
+                    settings: userSettings,
+                    lastActiveAt: dayjs.utc().toISOString()
                 };
 
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
@@ -996,7 +1013,7 @@ describe("Test 'AuthService' class methods", () => {
                     {
                         action: { name: "confirmChangeEmail" },
                         input: params,
-                        // eslint-disable-next-line @typescript-eslint/camelcase
+
                         session_variables: {
                             "x-hasura-user-id": dbUser.id,
                             "x-hasura-role": UserRoles.user

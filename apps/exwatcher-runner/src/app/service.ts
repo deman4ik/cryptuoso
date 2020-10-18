@@ -1,7 +1,7 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import {
     ExwatcherSchema,
-    ExwatcherWorkerEvents,
+    ExwatcherEvents,
     ExwatcherSubscribe,
     ExwatcherSubscribeAll,
     ExwatcherUnsubscribeAll,
@@ -9,7 +9,6 @@ import {
 } from "@cryptuoso/exwatcher-events";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { sql } from "slonik";
-import { Queue, QueueScheduler, Worker } from "bullmq";
 
 export type ExwatcherRunnerServiceConfig = HTTPServiceConfig;
 
@@ -19,33 +18,31 @@ const enum JobTypes {
 
 export default class ExwatcherRunnerService extends HTTPService {
     connector: PublicConnector;
-    queueScheduler: QueueScheduler;
-    queues: { [key: string]: Queue };
-    workers: { [key: string]: Worker };
+
     constructor(config?: ExwatcherRunnerServiceConfig) {
         super(config);
         this.connector = new PublicConnector();
         this.createRoutes({
             exwatcherSubscribe: {
-                inputSchema: ExwatcherSchema[ExwatcherWorkerEvents.SUBSCRIBE],
+                inputSchema: ExwatcherSchema[ExwatcherEvents.SUBSCRIBE],
                 auth: true,
                 roles: ["manager", "admin"],
                 handler: this.subscribe
             },
             exwatcherSubscribeAll: {
-                inputSchema: ExwatcherSchema[ExwatcherWorkerEvents.SUBSCRIBE_ALL],
+                inputSchema: ExwatcherSchema[ExwatcherEvents.SUBSCRIBE_ALL],
                 auth: true,
                 roles: ["manager", "admin"],
                 handler: this.subscribeAll
             },
             exwatcherUnsubscribeAll: {
-                inputSchema: ExwatcherSchema[ExwatcherWorkerEvents.SUBSCRIBE_ALL],
+                inputSchema: ExwatcherSchema[ExwatcherEvents.SUBSCRIBE_ALL],
                 auth: true,
                 roles: ["manager", "admin"],
                 handler: this.unsubscribeAll
             },
             addMarket: {
-                inputSchema: ExwatcherSchema[ExwatcherWorkerEvents.ADD_MARKET],
+                inputSchema: ExwatcherSchema[ExwatcherEvents.ADD_MARKET],
                 auth: true,
                 roles: ["manager", "admin"],
                 handler: this.addMarket
@@ -56,40 +53,25 @@ export default class ExwatcherRunnerService extends HTTPService {
                 handler: this.updateMarketsHTTPHandler
             }
         });
-        this.addOnStartHandler(this.onStartService);
-        this.addOnStopHandler(this.onStopService);
+        this.addOnStartHandler(this.onServiceStart);
     }
 
-    async onStartService() {
+    async onServiceStart() {
         const queueKey = this.name;
 
-        this.queueScheduler = new QueueScheduler(queueKey, { connection: this.redis });
-        this.queues = {
-            [queueKey]: new Queue(queueKey, { connection: this.redis })
-        };
-        this.workers = {
-            [queueKey]: new Worker(queueKey, this.updateMarkets.bind(this))
-        };
+        this.createQueue(queueKey);
 
-        await this.queues[queueKey].add(JobTypes.updateMarkets, null, {
+        this.createWorker(queueKey, this.updateMarkets);
+
+        await this.addJob(queueKey, JobTypes.updateMarkets, null, {
             repeat: {
                 cron: "0 0 */12 * * *"
             },
             attempts: 3,
-            backoff: { type: "exponential", delay: 60000 }
+            backoff: { type: "exponential", delay: 60000 },
+            removeOnComplete: true,
+            removeOnFail: true
         });
-    }
-
-    async onStopService() {
-        try {
-            const queueKey = this.name;
-
-            await this.queueScheduler.close();
-            await this.queues[queueKey]?.close();
-            await this.workers[queueKey]?.close();
-        } catch (e) {
-            this.log.error(e);
-        }
     }
 
     async subscribe(
@@ -121,7 +103,7 @@ export default class ExwatcherRunnerService extends HTTPService {
 
             if (!exwatcher) {
                 await this.events.emit<ExwatcherSubscribe>({
-                    type: ExwatcherWorkerEvents.SUBSCRIBE,
+                    type: ExwatcherEvents.SUBSCRIBE,
                     data: {
                         exchange,
                         asset,
@@ -155,7 +137,7 @@ export default class ExwatcherRunnerService extends HTTPService {
             );
             if (count === 0) throw new Error(`Market ${exchange} doesn't exists`);
             await this.events.emit<ExwatcherSubscribeAll>({
-                type: ExwatcherWorkerEvents.SUBSCRIBE_ALL,
+                type: ExwatcherEvents.SUBSCRIBE_ALL,
                 data: { exchange }
             });
             res.send({ result: "OK" });
@@ -183,7 +165,7 @@ export default class ExwatcherRunnerService extends HTTPService {
             );
             if (count === 0) throw new Error(`Market ${exchange} doesn't exists`);
             await this.events.emit<ExwatcherUnsubscribeAll>({
-                type: ExwatcherWorkerEvents.UNSUBSCRIBE_ALL,
+                type: ExwatcherEvents.UNSUBSCRIBE_ALL,
                 data: { exchange }
             });
             res.send({ result: "OK" });

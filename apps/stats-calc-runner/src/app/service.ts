@@ -1,5 +1,5 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
-import { Queue, QueueEvents } from "bullmq";
+import { QueueEvents } from "bullmq";
 import {
     STATS_CALC_PREFIX,
     StatsCalcJob,
@@ -13,7 +13,6 @@ import { UserRoles } from "@cryptuoso/user-state";
 export type StatisticCalcWorkerServiceConfig = HTTPServiceConfig;
 
 export default class StatisticCalcRunnerService extends HTTPService {
-    queues: { [key: string]: Queue<any> };
     queueEvents: { [key: string]: QueueEvents };
 
     constructor(config?: StatisticCalcWorkerServiceConfig) {
@@ -109,26 +108,23 @@ export default class StatisticCalcRunnerService extends HTTPService {
                     handler: this._eventsHandler.bind(this, this.handleStatsCalcUserRobotsEvent.bind(this))
                 }
             });
-            this.addOnStartHandler(this._onStartService);
-            this.addOnStopHandler(this._onStopService);
+            this.addOnStartHandler(this.onServiceStart);
+            this.addOnStopHandler(this.onServiceStop);
         } catch (err) {
             this.log.error(err, "While consctructing StatisticCalcRunnerService");
         }
     }
 
-    async _onStartService() {
-        this.queues = {
-            calcStatistics: new Queue("calcStatistics", { connection: this.redis })
-        };
+    async onServiceStart() {
+        this.createQueue("calcStatistics");
         this.queueEvents = {
-            calcStatistics: new QueueEvents("calcStatistics", { connection: this.redis })
+            calcStatistics: new QueueEvents("calcStatistics", { connection: this.redis.duplicate() })
         };
 
         this.queueEvents.calcStatistics.on("failed", this._queueFailHandler.bind(this));
     }
 
-    async _onStopService() {
-        await this.queues?.calcStatistics?.close();
+    async onServiceStop() {
         await this.queueEvents?.calcStatistics?.close();
     }
 
@@ -178,7 +174,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
         try {
             await locker.lock();
 
-            const { name, data } = await this.queues.calcStatistics.getJob(jobId);
+            const { name, data } = await this.queues["calcStatistics"].instance.getJob(jobId);
 
             await this.events.emit({
                 type: `errors.${STATS_CALC_PREFIX}.${name}`,
@@ -193,7 +189,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
     }
 
     async queueJob(type: StatsCalcJobType, job: StatsCalcJob) {
-        await this.queues.calcStatistics.add(type, job, {
+        await this.addJob("calcStatistics", type, job, {
             removeOnComplete: true,
             removeOnFail: 100,
             attempts: 3,

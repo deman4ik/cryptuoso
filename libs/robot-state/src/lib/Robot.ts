@@ -1,13 +1,13 @@
 import dayjs from "@cryptuoso/dayjs";
 import { BaseIndicator, TulipIndicator, IndicatorCode, IndicatorType } from "@cryptuoso/robot-indicators";
-import { ValidTimeframe, CandleProps, DBCandle, RobotPositionStatus } from "@cryptuoso/market";
-import { RobotWorkerEvents } from "@cryptuoso/robot-events";
+import { ValidTimeframe, CandleProps, RobotPositionStatus, Candle } from "@cryptuoso/market";
+import { RobotWorkerEvents, SignalEvents } from "@cryptuoso/robot-events";
 import { NewEvent } from "@cryptuoso/events";
 import { CANDLES_RECENT_AMOUNT, defaultValue, sortAsc } from "@cryptuoso/helpers";
 import { BaseStrategy } from "./BaseStrategy";
-import { RobotPositionState, RobotState, RobotStatus, StrategyProps, StrategySettings } from "./types";
+import { RobotPositionState, RobotState, RobotStatus, StrategyProps } from "./types";
 import logger from "@cryptuoso/logger";
-import { RobotSettings } from "@cryptuoso/robot-settings";
+import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 
 export interface StrategyCode {
     [key: string]: any;
@@ -18,28 +18,24 @@ export interface StrategyCode {
 export class Robot {
     [key: string]: any;
     _id: string;
-    _code: string;
-    _name: string;
-    _mod: string;
-    _available: number;
     _exchange: string;
     _asset: string;
     _currency: string;
     _timeframe: ValidTimeframe;
-    _strategyName: string;
+    _strategy: string;
     _settings: {
         strategySettings: StrategySettings;
         robotSettings: RobotSettings;
         activeFrom: string;
     };
-    _lastCandle: DBCandle;
+    _lastCandle: Candle;
     _state: StrategyProps;
     _strategyInstance: BaseStrategy;
     _indicatorInstances: { [key: string]: BaseIndicator };
     _hasAlerts: boolean;
     _baseIndicatorsCode: { [key: string]: IndicatorCode };
-    _candle: DBCandle;
-    _candles: DBCandle[];
+    _candle: Candle;
+    _candles: Candle[];
     _candlesProps: CandleProps;
     _status: RobotStatus;
     _startedAt: string;
@@ -53,11 +49,6 @@ export class Robot {
         /* Идентификатор робота */
         this._id = state.id;
 
-        this._code = state.code;
-
-        this._name = state.name;
-        this._mod = state.mod;
-        this._available = state.available;
         /* Код биржи */
         this._exchange = state.exchange;
         /* Базовая валюта */
@@ -67,7 +58,7 @@ export class Robot {
         /* Таймфрейм */
         this._timeframe = state.timeframe;
         /* Имя файла стратегии */
-        this._strategyName = state.strategyName;
+        this._strategy = state.strategy;
 
         /* Настройки */
         this._settings = {
@@ -129,19 +120,19 @@ export class Robot {
     }
 
     get alertEventsToSend() {
-        return this._eventsToSend.filter(({ type }) => type === RobotWorkerEvents.SIGNAL_ALERT);
+        return this._eventsToSend.filter(({ type }) => type === SignalEvents.ALERT);
     }
 
     get tradeEventsToSend() {
-        return this._eventsToSend.filter(({ type }) => type === RobotWorkerEvents.SIGNAL_TRADE);
+        return this._eventsToSend.filter(({ type }) => type === SignalEvents.TRADE);
     }
 
     get logEventsToSend() {
         return this._eventsToSend.filter(({ type }) => type === RobotWorkerEvents.LOG);
     }
 
-    get strategyName() {
-        return this._strategyName;
+    get strategy() {
+        return this._strategy;
     }
 
     get exchange() {
@@ -158,6 +149,10 @@ export class Robot {
 
     get timeframe() {
         return this._timeframe;
+    }
+
+    get hasAlerts() {
+        return this._hasAlerts;
     }
 
     clear() {
@@ -487,7 +482,7 @@ export class Robot {
         this.getStrategyState();
     }
 
-    handleHistoryCandles(candles: DBCandle[]) {
+    handleHistoryCandles(candles: Candle[]) {
         this._candles = candles;
     }
 
@@ -513,9 +508,9 @@ export class Robot {
         });
     }
 
-    handleCandle(candle: DBCandle) {
+    handleCandle(candle: Candle) {
         logger.info(`Robot ${this._id} - New candle ${candle.timestamp}`);
-        if (this._lastCandle && candle.time === this._lastCandle.time) {
+        if (this._lastCandle && candle.time <= this._lastCandle.time) {
             return {
                 success: false,
                 error: `Robot #${this._id} candle ${candle.timestamp} already processed`
@@ -544,8 +539,15 @@ export class Robot {
         return { success: true };
     }
 
-    handleCurrentCandle(candle: DBCandle) {
-        this._candle = candle;
+    handleCurrentCandle(candle: Candle) {
+        if (candle.time > this._lastCandle.time) {
+            this._candle = candle;
+            return { success: true };
+        }
+        return {
+            success: false,
+            error: `Robot #${this._id} wrong current candle ${candle.timestamp} when last candle was ${this._lastCandle.timestamp}`
+        };
     }
 
     clearEvents() {
@@ -603,15 +605,11 @@ export class Robot {
     get robotState(): RobotState {
         return {
             id: this._id,
-            code: this._code,
-            name: this._name,
-            mod: this._mod,
-            available: this._available,
             exchange: this._exchange,
             asset: this._asset,
             currency: this._currency,
             timeframe: this._timeframe,
-            strategyName: this._strategyName,
+            strategy: this._strategy,
             settings: this._settings,
             lastCandle: this._lastCandle,
             hasAlerts: this._hasAlerts,
@@ -629,7 +627,7 @@ export class Robot {
             asset: this._asset,
             currency: this._currency,
             timeframe: this._timeframe,
-            strategyName: this._strategyName
+            strategy: this._strategy
         };
     }
 

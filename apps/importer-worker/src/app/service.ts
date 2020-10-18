@@ -1,7 +1,7 @@
 import { DataStream } from "scramjet";
 import os from "os";
 import { spawn, Pool, Worker as ThreadsWorker } from "threads";
-import { Worker, Job } from "bullmq";
+import { Job } from "bullmq";
 import retry from "async-retry";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
@@ -26,14 +26,13 @@ export default class ImporterWorkerService extends BaseService {
     abort: { [key: string]: boolean } = {};
     cpus: number;
     pool: Pool<any>;
-    workers: { [key: string]: Worker };
     constructor(config?: ImporterWorkerServiceConfig) {
         super(config);
         try {
             this.connector = new PublicConnector();
             this.cpus = os.cpus().length;
-            this.addOnStartHandler(this.onStartService);
-            this.addOnStopHandler(this.onStopService);
+            this.addOnStartHandler(this.onServiceStart);
+            this.addOnStopHandler(this.onServiceStop);
             this.events.subscribe({
                 [ImporterWorkerEvents.CANCEL]: {
                     handler: this.cancel.bind(this),
@@ -46,19 +45,14 @@ export default class ImporterWorkerService extends BaseService {
         }
     }
 
-    async onStartService(): Promise<void> {
+    async onServiceStart(): Promise<void> {
         this.pool = Pool(() => spawn<ImporterUtils>(new ThreadsWorker("./importerUtilsWorker")), {
             name: "importer-utils"
         });
-        this.workers = {
-            importCandles: new Worker("importCandles", async (job: Job) => this.process(job), {
-                connection: this.redis
-            })
-        };
+        this.createWorker("importCandles", this.process);
     }
 
-    async onStopService(): Promise<void> {
-        await this.workers.importCandles.close();
+    async onServiceStop(): Promise<void> {
         await this.pool.terminate();
     }
 

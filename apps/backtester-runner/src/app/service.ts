@@ -1,9 +1,8 @@
-import { Queue } from "bullmq";
 import { v4 as uuid } from "uuid";
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import dayjs from "@cryptuoso/dayjs";
 import { BaseError } from "@cryptuoso/errors";
-import { ValidTimeframe } from "@cryptuoso/market";
+import { CandleType, ValidTimeframe } from "@cryptuoso/market";
 import {
     BacktesterRunnerEvents,
     BacktesterWorkerEvents,
@@ -13,15 +12,14 @@ import {
     BacktesterWorkerCancel,
     BacktesterWorkerFailed
 } from "@cryptuoso/backtester-events";
-import { RobotStatus, StrategySettings } from "@cryptuoso/robot-state";
+import { RobotStatus } from "@cryptuoso/robot-state";
 import { Backtester, Status } from "@cryptuoso/backtester-state";
 import { sql } from "@cryptuoso/postgres";
-import { RobotSettings } from "@cryptuoso/robot-settings";
+import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 
 export type BacktesterRunnerServiceConfig = HTTPServiceConfig;
 
 export default class BacktesterRunnerService extends HTTPService {
-    queues: { [key: string]: Queue<any> };
     constructor(config?: BacktesterRunnerServiceConfig) {
         super(config);
         try {
@@ -49,21 +47,14 @@ export default class BacktesterRunnerService extends HTTPService {
                     schema: BacktesterRunnerSchema[BacktesterRunnerEvents.STOP]
                 }
             });
-            this.addOnStartHandler(this.onStartService);
-            this.addOnStopHandler(this.onStopService);
+            this.addOnStartHandler(this.onServiceStart);
         } catch (err) {
             this.log.error(err, "While consctructing BacktesterRunnerService");
         }
     }
 
-    async onStartService() {
-        this.queues = {
-            backtest: new Queue("backtest", { connection: this.redis })
-        };
-    }
-
-    async onStopService() {
-        await this.queues.backtest?.close();
+    async onServiceStart() {
+        this.createQueue("backtest");
     }
 
     async startHTTPHandler(
@@ -80,7 +71,7 @@ export default class BacktesterRunnerService extends HTTPService {
     }
 
     #checkJobStatus = async (id: string) => {
-        const lastJob = await this.queues.backtest.getJob(id);
+        const lastJob = await this.queues["backtest"].instance.getJob(id);
         if (lastJob) {
             const lastJobState = await lastJob.getState();
             if (["stuck", "completed", "failed"].includes(lastJobState)) {
@@ -104,15 +95,15 @@ export default class BacktesterRunnerService extends HTTPService {
         limit: number
     ): Promise<number> =>
         +(await this.db.pg.query(
-            sql`select count(1) from (select id
-            from ${sql.identifier([`candles${timeframe}`])}
-            where
-            exchange = ${exchange}
-            and asset = ${asset}
-            and currency = ${currency}
-            and time < ${dayjs.utc(loadFrom).valueOf()}
-                 order by time desc
-                 limit ${limit}) t`
+            sql`SELECT count(1) FROM (SELECT id
+            FROM ${sql.identifier([`candles${timeframe}`])}
+            WHERE exchange = ${exchange}
+              AND asset = ${asset}
+              AND currency = ${currency}
+              AND type != ${CandleType.previous}
+              AND time < ${dayjs.utc(loadFrom).valueOf()}
+            ORDER BY time DESC
+            LIMIT ${limit}) t`
         ));
 
     async start(params: BacktesterRunnerStart) {
@@ -183,7 +174,7 @@ export default class BacktesterRunnerService extends HTTPService {
                     asset: robot.asset,
                     currency: robot.currency,
                     timeframe: robot.timeframe,
-                    strategyName: robot.strategy
+                    strategy: robot.strategy
                 };
 
                 strategySettings = { ...robot.strategySettings };
@@ -241,7 +232,7 @@ export default class BacktesterRunnerService extends HTTPService {
                 status: Status.queued
             });
 
-            await this.queues.backtest.add("backtest", backtester.state, {
+            await this.addJob("backtest", "backtest", backtester.state, {
                 jobId: backtester.id,
                 removeOnComplete: true
             });
@@ -271,7 +262,7 @@ export default class BacktesterRunnerService extends HTTPService {
 
     async stop({ id }: BacktesterRunnerStop) {
         try {
-            const job = await this.queues.backtest.getJob(id);
+            const job = await this.queues["backtest"].instance.getJob(id);
             if (job) {
                 if (job.isActive) {
                     await this.events.emit<BacktesterWorkerCancel>({

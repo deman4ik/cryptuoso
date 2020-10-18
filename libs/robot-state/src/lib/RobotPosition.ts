@@ -7,10 +7,11 @@ import {
     AlertInfo,
     SignalInfo,
     ValidTimeframe,
-    DBCandle,
     PositionDirection,
     RobotPositionStatus,
-    RobotTradeStatus
+    RobotTradeStatus,
+    Candle,
+    DBCandle
 } from "@cryptuoso/market";
 import { RobotPositionState, RobotPostionInternalState } from "./types";
 
@@ -43,10 +44,9 @@ export class RobotPosition {
     private _alerts?: { [key: string]: AlertInfo };
     private _profit: number;
     private _barsHeld: number;
-    private _fee: number;
     private _backtest?: boolean;
     private _internalState: RobotPostionInternalState;
-    private _candle?: DBCandle;
+    private _candle?: Candle;
     private _alertsToPublish: SignalInfo[];
     private _tradeToPublish: SignalInfo;
     _log = console.log;
@@ -75,7 +75,6 @@ export class RobotPosition {
         this._alerts = state.alerts || {};
         this._profit = state.profit || 0;
         this._barsHeld = state.barsHeld || 0;
-        this._fee = state.fee;
         this._backtest = state.backtest;
         this._internalState = state.internalState || {
             highestHigh: null,
@@ -215,7 +214,7 @@ export class RobotPosition {
         );
     }
 
-    _handleCandle(candle: DBCandle) {
+    _handleCandle(candle: Candle) {
         this._candle = candle;
         if (this._status === RobotPositionStatus.open) {
             this._internalState.highestHigh = Math.max(this._internalState.highestHigh || -Infinity, this._candle.high);
@@ -328,15 +327,15 @@ export class RobotPosition {
         let nextPrice = null;
         switch (orderType) {
             case OrderType.stop: {
-                nextPrice = this._checkStop(action, price);
+                nextPrice = RobotPosition.checkStop(action, price, this._candle, this._backtest);
                 break;
             }
             case OrderType.limit: {
-                nextPrice = this._checkLimit(action, price);
+                nextPrice = RobotPosition.checkLimit(action, price, this._candle, this._backtest);
                 break;
             }
             case OrderType.market: {
-                nextPrice = this._checkMarket(action, price);
+                nextPrice = RobotPosition.checkMarket(action, price, this._candle, this._backtest);
                 break;
             }
             default:
@@ -353,28 +352,28 @@ export class RobotPosition {
         return false;
     }
 
-    _checkMarket(action: TradeAction, price: number) {
+    public static checkMarket(action: TradeAction, price: number, currentCandle: DBCandle, isBacktest = false) {
         if (action === TradeAction.long || action === TradeAction.closeShort) {
-            if (!this._backtest) return +Math.max(+this._candle.close, +price);
-            else return +Math.max(+this._candle.open, +price);
+            if (!isBacktest) return +Math.max(+currentCandle.close, +price);
+            else return +Math.max(+currentCandle.open, +price);
         }
         if (action === TradeAction.short || action === TradeAction.closeLong) {
-            if (!this._backtest) return +Math.min(+this._candle.close, +price);
-            else return +Math.min(+this._candle.open, +price);
+            if (!isBacktest) return +Math.min(+currentCandle.close, +price);
+            else return +Math.min(+currentCandle.open, +price);
         }
         throw new Error(`Unknown action ${action}`);
     }
 
-    _checkStop(action: TradeAction, price: number) {
+    public static checkStop(action: TradeAction, price: number, currentCandle: DBCandle, isBacktest = false) {
         if (action === TradeAction.long || action === TradeAction.closeShort) {
-            if (+this._candle.high >= +price) {
-                if (!this._backtest) return +Math.max(+this._candle.close, +price);
-                else return +Math.max(+this._candle.open, +price);
+            if (+currentCandle.high >= +price) {
+                if (!isBacktest) return +Math.max(+currentCandle.close, +price);
+                else return +Math.max(+currentCandle.open, +price);
             }
         } else if (action === TradeAction.short || action === TradeAction.closeLong) {
-            if (+this._candle.low <= +price) {
-                if (!this._backtest) return +Math.min(+this._candle.close, +price);
-                else return +Math.min(+this._candle.open, +price);
+            if (+currentCandle.low <= +price) {
+                if (!isBacktest) return +Math.min(+currentCandle.close, +price);
+                else return +Math.min(+currentCandle.open, +price);
             }
         } else {
             throw new Error(`Unknown action ${action}`);
@@ -382,16 +381,16 @@ export class RobotPosition {
         return null;
     }
 
-    _checkLimit(action: TradeAction, price: number): number {
+    public static checkLimit(action: TradeAction, price: number, currentCandle: DBCandle, isBacktest = false): number {
         if (action === TradeAction.long || action === TradeAction.closeShort) {
-            if (+this._candle.high <= +price) {
-                if (!this._backtest) return +Math.min(+this._candle.close, +price);
-                else return +Math.min(+this._candle.open, +price);
+            if (+currentCandle.high <= +price) {
+                if (!isBacktest) return +Math.min(+currentCandle.close, +price);
+                else return +Math.min(+currentCandle.open, +price);
             }
         } else if (action === TradeAction.short || action === TradeAction.closeLong) {
-            if (+this._candle.low >= +price) {
-                if (!this._backtest) return +Math.max(+this._candle.close, +price);
-                else return +Math.max(+this._candle.open, +price);
+            if (+currentCandle.low >= +price) {
+                if (!isBacktest) return +Math.max(+currentCandle.close, +price);
+                else return +Math.max(+currentCandle.open, +price);
             }
         } else {
             throw new Error(`Unknown action ${action}`);
