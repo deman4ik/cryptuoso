@@ -190,7 +190,7 @@ describe("Test 'AuthService' class methods", () => {
         });
     });
 
-    describe("loginTg method", () => {
+    describe("loginTelegram method", () => {
         describe("With right telegramId and hash", () => {
             test("Should return accessToken and set cookie refreshToken", async () => {
                 const params = {
@@ -216,11 +216,11 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
 
                 const res = await ajax.post(
-                    `http://localhost:${CONFIG.port}/actions/loginTg`,
+                    `http://localhost:${CONFIG.port}/actions/loginTelegram`,
                     { "x-api-key": process.env.API_KEY },
                     {
-                        action: { name: "loginTg" },
-                        input: params,
+                        action: { name: "loginTelegram" },
+                        input: { data: params },
 
                         session_variables: {
                             "x-hasura-user-id": dbUser.id,
@@ -249,11 +249,11 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => null);
 
                 const res = await ajax.post(
-                    `http://localhost:${CONFIG.port}/actions/loginTg`,
+                    `http://localhost:${CONFIG.port}/actions/loginTelegram`,
                     { "x-api-key": process.env.API_KEY },
                     {
-                        action: { name: "loginTg" },
-                        input: params,
+                        action: { name: "loginTelegram" },
+                        input: { data: params },
 
                         session_variables: {
                             "x-hasura-user-id": "id",
@@ -295,11 +295,11 @@ describe("Test 'AuthService' class methods", () => {
                 mockPG.maybeOne.mockImplementation(async () => dbUser);
 
                 const res = await ajax.post(
-                    `http://localhost:${CONFIG.port}/actions/loginTg`,
+                    `http://localhost:${CONFIG.port}/actions/loginTelegram`,
                     { "x-api-key": process.env.API_KEY },
                     {
-                        action: { name: "loginTg" },
-                        input: params,
+                        action: { name: "loginTelegram" },
+                        input: { data: params },
 
                         session_variables: {
                             "x-hasura-user-id": "id",

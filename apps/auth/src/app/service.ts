@@ -25,20 +25,21 @@ export default class AuthService extends HTTPService {
                         password: { type: "string", empty: false, trim: true }
                     }
                 },
-                loginTg: {
-                    handler: this.loginTg.bind(this),
+                loginTelegram: {
+                    handler: this.loginTelegram.bind(this),
                     inputSchema: {
-                        id: "number",
-
-                        first_name: { type: "string", optional: true },
-
-                        last_name: { type: "string", optional: true },
-                        username: { type: "string", optional: true },
-
-                        photo_url: { type: "string", optional: true },
-
-                        auth_date: "number",
-                        hash: "string"
+                        data: {
+                            type: "object",
+                            props: {
+                                id: "number",
+                                first_name: { type: "string", optional: true },
+                                last_name: { type: "string", optional: true },
+                                username: { type: "string", optional: true },
+                                photo_url: { type: "string", optional: true },
+                                auth_date: "number",
+                                hash: "string"
+                            }
+                        }
                     }
                 },
                 setTelegram: {
@@ -50,14 +51,10 @@ export default class AuthService extends HTTPService {
                             type: "object",
                             props: {
                                 id: "number",
-
                                 first_name: { type: "string", optional: true },
-
                                 last_name: { type: "string", optional: true },
                                 username: { type: "string", optional: true },
-
                                 photo_url: { type: "string", optional: true },
-
                                 auth_date: "number",
                                 hash: "string"
                             }
@@ -181,8 +178,8 @@ export default class AuthService extends HTTPService {
         }
     }
 
-    async loginTg(req: RequestExtended, res: HttpResponse) {
-        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.loginTg(req.body.input);
+    async loginTelegram(req: RequestExtended, res: HttpResponse) {
+        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.loginTg(req.body.input.data);
 
         res.setHeader(
             "Set-Cookie",
