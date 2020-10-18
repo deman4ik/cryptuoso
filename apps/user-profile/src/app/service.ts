@@ -301,14 +301,14 @@ export default class UserProfileService extends HTTPService {
 
         if (available < user.access) throw new ActionsHandlerError("Robot unavailable.", { robotId }, "FORBIDDEN", 403);
 
-        const marketLimits: UserMarketState["limits"] = (await this.db.pg.maybeOneFirst(sql`
+        const { limits: marketLimits }: { limits: UserMarketState["limits"] } = await this.db.pg.one(sql`
             SELECT limits
             FROM v_user_markets
             WHERE user_id = ${user.id}
                 AND exchange = ${exchange}
                 AND asset = ${asset}
                 AND currency = ${currency};
-        `)) as any;
+        `);
 
         let _volume: number;
         let _amountMin: number;
@@ -383,11 +383,12 @@ export default class UserProfileService extends HTTPService {
 
         if (!userSignal) throw new ActionsHandlerError("Subscription not found.", null, "NOT_FOUND", 404);
 
-        const currentUserSignalSettings: UserSignalSettings = (await this.db.pg.maybeOneFirst(sql`
+        const { signalSettings: currentUserSignalSettings }: { signalSettings: UserSignalSettings } = await this.db.pg
+            .one(sql`
             SELECT signal_settings
             FROM v_user_signal_settings
             WHERE user_signal_id = ${userSignal.id};
-        `)) as any;
+        `);
 
         if (
             (currentUserSignalSettings?.volumeType === VolumeSettingsType.assetStatic &&
@@ -399,7 +400,7 @@ export default class UserProfileService extends HTTPService {
         )
             throw new ActionsHandlerError("This volume value is already set.", null, "FORBIDDEN", 403);
 
-        const marketLimits: UserMarketState["limits"] = (await this.db.pg.maybeOneFirst(sql`
+        const marketLimits: UserMarketState["limits"] = await this.db.pg.one(sql`
             SELECT vm.limits
             FROM robots r, v_user_markets vm
             WHERE r.id = ${robotId}
@@ -407,7 +408,7 @@ export default class UserProfileService extends HTTPService {
                 AND vm.exchange = r.exchange
                 AND vm.asset = r.asset
                 AND vm.currency = r.currency;
-        `)) as any;
+        `);
 
         let _volume: number;
         let _amountMin: number;
@@ -549,13 +550,13 @@ export default class UserProfileService extends HTTPService {
 
         if (!existed) {
             if (!name || name === "") {
-                const sameExchangeName: string = (await this.db.pg.maybeOneFirst(sql`
+                const { name: sameExchangeName }: { name: string } = await this.db.pg.maybeOne(sql`
                     SELECT name
                     FROM user_exchange_accs
                     WHERE exchange = ${exchange}
                     ORDER BY created_at
                     LIMIT 1;
-                `)) as any;
+                `);
 
                 const number = (sameExchangeName && +sameExchangeName.split("#")[1]) || 0;
 
@@ -768,14 +769,14 @@ export default class UserProfileService extends HTTPService {
         if (robot.available < user.access) throw new ActionsHandlerError("Robot unavailable.", null, "FORBIDDEN", 403);
 
         // TODO: do something if volumeType == balancePercent
-        const marketLimits: UserMarketState["limits"] = (await this.db.pg.maybeOneFirst(sql`
+        const { limits: marketLimits }: { limits: UserMarketState["limits"] } = await this.db.pg.one(sql`
             SELECT limits
             FROM v_user_markets
             WHERE user_id = ${user.id}
                 AND exchange = ${robot.exchange}
                 AND asset = ${robot.asset}
                 AND currency = ${robot.currency};
-        `)) as any;
+        `);
 
         let _volume: number;
         let _amountMin: number;
@@ -868,11 +869,12 @@ export default class UserProfileService extends HTTPService {
         // Not need
         //if (userRobotExists.status !== RobotStatus.stopped)
 
-        const currentUserRobotSettings: UserRobotSettings = (await this.db.pg.maybeOneFirst(sql`
+        const { userRobotSettings: currentUserRobotSettings }: { userRobotSettings: UserRobotSettings } = await this.db
+            .pg.one(sql`
             SELECT user_robot_settings
             FROM v_user_robot_settings
             WHERE user_robot_id = ${id};
-        `)) as any;
+        `);
 
         if (
             (currentUserRobotSettings?.volumeType === VolumeSettingsType.assetStatic &&
@@ -888,7 +890,7 @@ export default class UserProfileService extends HTTPService {
             throw new ActionsHandlerError("This volume value is already set.", null, "FORBIDDEN", 403);
 
         // TODO: do something if volumeType == balancePercent
-        const marketLimits: UserMarketState["limits"] = (await this.db.pg.maybeOneFirst(sql`
+        const { limits: marketLimits }: { limits: UserMarketState["limits"] } = await this.db.pg.one(sql`
             SELECT vm.limits
             FROM robots r, v_user_markets vm
             WHERE r.id = ${userRobotExists.robotId}
@@ -896,7 +898,7 @@ export default class UserProfileService extends HTTPService {
                 AND vm.exchange = r.exchange
                 AND vm.asset = r.asset
                 AND vm.currency = r.currency;
-        `)) as any;
+        `);
 
         let _volume: number;
         let _amountMin: number;
