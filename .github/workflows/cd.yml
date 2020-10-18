@@ -23,7 +23,7 @@ jobs:
               with:
                   node-version: ${{ matrix.node-version }}
 
-            - uses: webfactory/ssh-agent@v0.2.0
+            - uses: webfactory/ssh-agent@v0.4.1
               with:
                   ssh-private-key: ${{ secrets.GH_SSH_KEY }}
 
@@ -85,8 +85,11 @@ jobs:
             #  if: steps.services.outputs.list == null || steps.services.outputs.list == ${{ ' ' }}
             #  run: exit 1
 
+            - name: Build base container
+              run: docker build --build-arg --build-arg GITHUB_SSH_KEY="${{ secrets.GH_SSH_KEY }}" -t cryptuoso-build:latest -f build.Dockerfile .
+
             - name: Build containers
-              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do docker build --build-arg SERVICE_NAME="${i}" --build-arg GITHUB_SSH_KEY="${{ secrets.GH_SSH_KEY }}" -t registry.digitalocean.com/cpz/$i:$(echo $GITHUB_SHA | head -c7) .; done;
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do docker build --build-arg SERVICE_NAME="${i}"  -t registry.digitalocean.com/cpz/$i:$(echo $GITHUB_SHA | head -c7) .; done;
 
             - name: Install doctl
               uses: digitalocean/action-doctl@v2-experiment
