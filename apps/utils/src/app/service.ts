@@ -128,7 +128,7 @@ export default class UtilsService extends HTTPService {
             FROM robots;`);
 
             for (const { id, settings, createdAt, startedAt } of robotsList) {
-                const strategySettings = settings.strategyParameters;
+                const strategySettings = { ...settings.strategyParameters, requiredHistoryMaxBars: 300 };
 
                 const robotSettings: AssetStaticSettings = {
                     volumeType: VolumeSettingsType.assetStatic,
