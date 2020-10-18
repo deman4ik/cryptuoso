@@ -3,10 +3,11 @@ import requireFromString from "require-from-string";
 import { Robot, RobotJob, RobotJobType, RobotPositionState, RobotState, RobotStatus } from "@cryptuoso/robot-state";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import { DatabaseTransactionConnectionType, sql } from "slonik";
-import { Candle, DBCandle, ValidTimeframe } from "@cryptuoso/market";
+import { Candle, DBCandle, Timeframe, ValidTimeframe } from "@cryptuoso/market";
 import { sortAsc } from "@cryptuoso/helpers";
 import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
 import { RobotWorkerError, RobotWorkerEvents } from "@cryptuoso/robot-events";
+import dayjs from "dayjs";
 
 export type RobotWorkerServiceConfig = BaseServiceConfig;
 
@@ -75,7 +76,7 @@ export default class RobotWorkerService extends BaseService {
     }
 
     #getNextJob = (robotId: string): Promise<RobotJob> =>
-        this.db.pg.one(sql`
+        this.db.pg.maybeOne(sql`
      SELECT id, robot_id, type, data, retries
       FROM robot_jobs
      WHERE robot_id = ${robotId}
@@ -122,8 +123,8 @@ export default class RobotWorkerService extends BaseService {
             WHERE exchange = ${exchange}
               AND asset = ${asset}
               AND currency = ${currency}
+              AND time <= ${Timeframe.getPrevSince(dayjs.utc().toISOString(), timeframe)}
             ORDER BY time DESC
-            OFFSET 1
             LIMIT ${limit};`);
             return requiredCandles
                 .sort((a, b) => sortAsc(a.time, b.time))
@@ -193,7 +194,7 @@ export default class RobotWorkerService extends BaseService {
             `);
 
     async run(job: RobotJob): Promise<RobotStatus> {
-        const { id, robotId, type, data } = job;
+        const { id, robotId, type } = job;
         try {
             const robotState: RobotState = await this.db.pg.one(sql`
              SELECT r.id, 
@@ -239,7 +240,7 @@ export default class RobotWorkerService extends BaseService {
                     this.log.error(error);
                 }
             } else if (type === RobotJobType.candle) {
-                robot.setStrategy(this.strategiesCode[robot.strategyName]);
+                robot.setStrategy(this.strategiesCode[robot.strategy]);
                 if (robot.hasBaseIndicators) {
                     robot.setBaseIndicatorsCode(
                         robot.baseIndicatorsFileNames.map((fileName) => ({
@@ -258,7 +259,7 @@ export default class RobotWorkerService extends BaseService {
                     robot.strategySettings.requiredHistoryMaxBars
                 );
                 robot.handleHistoryCandles(historyCandles);
-                const { success, error } = robot.handleCandle(<Candle>data);
+                const { success, error } = robot.handleCandle(historyCandles[historyCandles.length - 1]);
                 if (success) {
                     await robot.calcIndicators();
                     robot.runStrategy();

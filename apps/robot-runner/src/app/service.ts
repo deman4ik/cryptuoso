@@ -11,7 +11,7 @@ import {
 } from "@cryptuoso/robot-events";
 import { BacktesterRunnerEvents, BacktesterRunnerStart } from "@cryptuoso/backtester-events";
 //import { ExwatcherCandle, ExwatcherTick, MarketEvents, MarketSchema } from "@cryptuoso/exwatcher-events";
-import { RobotJob, RobotJobType, RobotPosition, RobotStatus } from "@cryptuoso/robot-state";
+import { Queues, RobotJob, RobotJobType, RobotPosition, RobotRunnerJobType, RobotStatus } from "@cryptuoso/robot-state";
 import { StrategySettings } from "@cryptuoso/robot-settings";
 import { equals, robotExchangeName, sortAsc, sortDesc, uniqueElementsBy } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
@@ -68,11 +68,29 @@ export default class RobotRunnerService extends HTTPService {
     }
 
     async onServiceStart() {
-        this.createQueue("robot");
-        this.createQueue("alerts");
-        this.createWorker("alerts", this.checkAlerts);
+        // Main robot jobs
+        this.createQueue(Queues.robot);
 
-        //TODO: robot jobs checker
+        this.createQueue(Queues.robotRunner);
+        this.createWorker(Queues.robotRunner, this.process);
+        await this.addJob(Queues.robotRunner, RobotRunnerJobType.alerts, null, {
+            jobId: RobotRunnerJobType.alerts,
+            repeat: {
+                every: 1000
+            },
+            removeOnComplete: true,
+            removeOnFail: true
+        });
+        await this.addJob(Queues.robotRunner, RobotRunnerJobType.newCandles, null, {
+            jobId: RobotRunnerJobType.newCandles,
+            repeat: {
+                cron: "0 */5 * * * *"
+            },
+            removeOnComplete: true,
+            removeOnFail: true
+        });
+
+        //TODO: other runner jobs
     }
 
     #createRobotCode = (
@@ -93,7 +111,7 @@ export default class RobotRunnerService extends HTTPService {
         mod: string
     ) => `${strategy}-${mod} ${robotExchangeName(exchange)} ${asset}/${currency} ${Timeframe.toString(timeframe)}`;
 
-    async queueJob({ robotId, type, data }: RobotJob, status: RobotStatus) {
+    async queueRobotJob({ robotId, type, data }: RobotJob, status: RobotStatus) {
         await this.db.pg.query(sql`
         INSERT INTO robot_jobs
         (
@@ -108,11 +126,13 @@ export default class RobotRunnerService extends HTTPService {
         ON CONFLICT ON CONSTRAINT robot_jobs_robot_id_type_key 
          DO UPDATE SET updated_at = now(),
          type = excluded.type,
-         data = excluded.data
+         data = excluded.data,
+         retries = null,
+         error = null;
         `);
 
         if (status === RobotStatus.started) {
-            const lastJob = await this.queues["robot"].instance.getJob(robotId);
+            const lastJob = await this.queues[Queues.robot].instance.getJob(robotId);
             if (lastJob) {
                 const lastJobState = await lastJob.getState();
                 if (["unknown", "completed", "failed"].includes(lastJobState)) {
@@ -127,7 +147,7 @@ export default class RobotRunnerService extends HTTPService {
         }
 
         await this.addJob(
-            "robot",
+            Queues.robot,
             "job",
             { robotId },
             {
@@ -287,7 +307,8 @@ export default class RobotRunnerService extends HTTPService {
         } = await this.db.pg.one(sql`
         SELECT r.status, r.exchange, r.asset, r.currency, r.timeframe, rs.strategy_settings 
         FROM robots r, v_robot_settings rs
-        WHERE id = ${robotId};
+        WHERE rs.robot_id = r.id
+          AND r.id = ${robotId};
         `);
 
         //TODO: check exwatcher
@@ -388,6 +409,219 @@ export default class RobotRunnerService extends HTTPService {
         return { result: RobotStatus.stopping };
     }
 
+    async process(job: Job) {
+        switch (job.name) {
+            case RobotRunnerJobType.alerts:
+                await this.checkAlerts();
+                break;
+            case RobotRunnerJobType.newCandles:
+                await this.handleNewCandles();
+                break;
+            case RobotRunnerJobType.idleCandles:
+                await this.checkIdleCandles();
+                break;
+            case RobotRunnerJobType.idleRobotJobs:
+                await this.checkIdleRobotJobs();
+                break;
+            default:
+                this.log.error(`Unknow job ${job.name}`);
+        }
+    }
+
+    async checkAlerts() {
+        try {
+            const entities: {
+                robotId: string;
+                exchange: string;
+                asset: string;
+                currency: string;
+                status: RobotStatus;
+                alerts: { [key: string]: AlertInfo };
+                timeframe: ValidTimeframe;
+            }[] = await this.db.pg.any(sql`
+            SELECT rp.robot_id, rp.alerts, r.exchange, r.asset, r.currency, r.timeframe, r.status
+            FROM robot_positions rp, robots r
+            WHERE rp.robot_id = r.id
+            AND rp.status in (${RobotPositionStatus.new},${RobotPositionStatus.open})
+            AND r.has_alerts = true
+            AND r.status in (${RobotStatus.started}, ${RobotStatus.starting}, ${RobotStatus.paused});`);
+
+            if (entities && Array.isArray(entities) && entities.length > 0) {
+                const markets = uniqueElementsBy(
+                    entities.map(({ exchange, asset, currency, timeframe }) => ({
+                        exchange,
+                        asset,
+                        currency,
+                        timeframe
+                    })),
+                    (a, b) =>
+                        a.exchange === b.exchange &&
+                        a.asset === b.asset &&
+                        a.currency === b.currency &&
+                        a.timeframe === b.timeframe
+                );
+
+                await Promise.all(
+                    markets.map(async ({ exchange, asset, currency, timeframe }) => {
+                        const positions = entities.filter(
+                            (e) =>
+                                e.exchange === exchange &&
+                                e.asset === asset &&
+                                e.currency === currency &&
+                                e.timeframe === timeframe
+                        );
+                        const currentTime = Timeframe.getCurrentSince(1, timeframe);
+                        const candle: DBCandle = await this.db.pg.maybeOne(sql`
+                            SELECT * 
+                            FROM ${sql.identifier([`candles${timeframe}`])}
+                            WHERE exchange = ${exchange}
+                            AND asset = ${asset}
+                            AND currency = ${currency}
+                            AND time = ${currentTime};`);
+                        if (!candle) return;
+                        const robots = positions
+                            .filter(({ alerts }) => {
+                                let nextPrice = null;
+                                for (const key of Object.keys(alerts).sort((a, b) => sortAsc(+a, +b))) {
+                                    const alert = alerts[key];
+                                    const { orderType, action, price } = alert;
+
+                                    switch (orderType) {
+                                        case OrderType.stop: {
+                                            nextPrice = RobotPosition.checkStop(action, price, candle);
+                                            break;
+                                        }
+                                        case OrderType.limit: {
+                                            nextPrice = RobotPosition.checkLimit(action, price, candle);
+                                            break;
+                                        }
+                                        case OrderType.market: {
+                                            nextPrice = RobotPosition.checkMarket(action, price, candle);
+                                            break;
+                                        }
+                                        default:
+                                            throw new Error(`Unknown order type ${orderType}`);
+                                    }
+                                    if (nextPrice) break;
+                                }
+                                if (nextPrice) return true;
+
+                                return false;
+                            })
+                            .map(({ robotId, status }) => ({ robotId, status }));
+
+                        await Promise.all(
+                            robots.map(async ({ robotId, status }) =>
+                                this.queueRobotJob({ robotId, type: RobotJobType.tick }, status)
+                            )
+                        );
+                    })
+                );
+            }
+        } catch (err) {
+            this.log.error("Failed to check alerts", err);
+        }
+    }
+
+    async handleNewCandles() {
+        try {
+            const currentDate = dayjs.utc().startOf("minute").toISOString();
+            this.log.debug(`handleNewCandles ${currentDate}`);
+            const currentTimeframes = Timeframe.timeframesByDate(currentDate);
+
+            if (currentTimeframes.length) {
+                this.log.info(`Handling new ${currentTimeframes.join(", ")} candles`);
+                const robots: {
+                    id: string;
+                    status: RobotStatus;
+                    exchange: string;
+                    asset: string;
+                    currency: string;
+                    timeframe: ValidTimeframe;
+                }[] = await this.db.pg.any(sql`
+                SELECT id, status, exchange, asset, currency, timeframe 
+                  FROM robots
+                 WHERE timeframe in (${sql.join(currentTimeframes, sql`, `)}) 
+                   AND status in (${RobotStatus.started}, ${RobotStatus.starting}, ${RobotStatus.paused})
+                `);
+                if (!robots || !robots.length) return;
+                await Promise.all(
+                    currentTimeframes.map(async (timeframe) => {
+                        const robotsInTimeframe = robots.filter((r) => r.timeframe === timeframe);
+                        if (!robotsInTimeframe.length) return;
+                        const markets = uniqueElementsBy(
+                            robotsInTimeframe.map(({ exchange, asset, currency, timeframe }) => ({
+                                exchange,
+                                asset,
+                                currency,
+                                timeframe
+                            })),
+                            (a, b) =>
+                                a.exchange === b.exchange &&
+                                a.asset === b.asset &&
+                                a.currency === b.currency &&
+                                a.timeframe === b.timeframe
+                        );
+                        await Promise.all(
+                            markets.map(async ({ exchange, asset, currency, timeframe }) => {
+                                const prevTime = Timeframe.getPrevSince(currentDate, timeframe);
+                                const candle: DBCandle = await this.db.pg.maybeOne(sql`
+                            SELECT * 
+                            FROM ${sql.identifier([`candles${timeframe}`])}
+                            WHERE exchange = ${exchange}
+                            AND asset = ${asset}
+                            AND currency = ${currency}
+                            AND time = ${prevTime};`);
+
+                                if (!candle)
+                                    this.log.error(
+                                        `Failed to load ${exchange}-${asset}-${currency}-${timeframe}-${dayjs
+                                            .utc(prevTime)
+                                            .toISOString()} candle`
+                                    );
+
+                                const robotsToSend = robotsInTimeframe.filter(
+                                    (r) =>
+                                        r.exchange === exchange &&
+                                        r.asset === asset &&
+                                        r.currency === currency &&
+                                        r.timeframe === timeframe
+                                );
+                                this.log.info(
+                                    `New candle ${exchange}.${asset}.${currency}.${timeframe} ${dayjs
+                                        .utc(prevTime)
+                                        .toISOString()} required by ${robotsToSend.length}`
+                                );
+                                await Promise.all(
+                                    robotsToSend.map(async ({ id, status }) =>
+                                        this.queueRobotJob(
+                                            {
+                                                robotId: id,
+                                                type: RobotJobType.candle,
+                                                data: { ...candle, timeframe }
+                                            },
+                                            status
+                                        )
+                                    )
+                                );
+                            })
+                        );
+                    })
+                );
+            }
+        } catch (error) {
+            this.log.error("Failed to handle new candle", error);
+        }
+    }
+
+    async checkIdleCandles() {
+        //TODO
+    }
+
+    async checkIdleRobotJobs() {
+        //TODO
+    }
+
     /* async handleNewCandle(candle: ExwatcherCandle) {
         try {
             if (candle.type === CandleType.previous) return;
@@ -449,98 +683,4 @@ export default class RobotRunnerService extends HTTPService {
             throw err;
         }
     } */
-
-    async checkAlerts(job: Job) {
-        try {
-            const entities: {
-                robotId: string;
-                exchange: string;
-                asset: string;
-                currency: string;
-                status: RobotStatus;
-                alerts: { [key: string]: AlertInfo };
-                timeframe: ValidTimeframe;
-            }[] = await this.db.pg.any(sql`
-            SELECT rp.robot_id, rp.alerts, r.exchange, r.asset, r.currency, r.timeframe, r.status
-            FROM robot_positions rp, robots r
-            WHERE rp.robot_id = r.id
-            AND rp.status in (${RobotPositionStatus.new},${RobotPositionStatus.open})
-            AND r.has_alerts = true
-            AND r.status in (${RobotStatus.started}, ${RobotStatus.starting}, ${RobotStatus.paused});`);
-
-            if (entities && Array.isArray(entities) && entities.length > 0) {
-                const markets = uniqueElementsBy(
-                    entities.map(({ exchange, asset, currency, timeframe }) => ({
-                        exchange,
-                        asset,
-                        currency,
-                        timeframe
-                    })),
-                    (a, b) =>
-                        a.exchange === b.exchange &&
-                        a.asset === b.asset &&
-                        a.currency === b.currency &&
-                        a.timeframe === b.timeframe
-                );
-
-                await Promise.all(
-                    markets.map(async ({ exchange, asset, currency, timeframe }) => {
-                        const positions = entities.filter(
-                            (e) =>
-                                e.exchange === exchange &&
-                                e.asset === asset &&
-                                e.currency === currency &&
-                                e.timeframe === timeframe
-                        );
-                        const candle: DBCandle = await this.db.pg.one(sql`
-                            SELECT * 
-                            FROM ${sql.identifier([`candles${timeframe}`])}
-                            WHERE exchange = ${exchange}
-                            AND asset = ${asset}
-                            AND currency = ${currency}
-                            ORDER BY time DESC
-                            LIMIT 1;`);
-                        const robots = positions
-                            .filter(({ alerts }) => {
-                                let nextPrice = null;
-                                for (const key of Object.keys(alerts).sort((a, b) => sortAsc(+a, +b))) {
-                                    const alert = alerts[key];
-                                    const { orderType, action, price } = alert;
-
-                                    switch (orderType) {
-                                        case OrderType.stop: {
-                                            nextPrice = RobotPosition.checkStop(action, price, candle);
-                                            break;
-                                        }
-                                        case OrderType.limit: {
-                                            nextPrice = RobotPosition.checkLimit(action, price, candle);
-                                            break;
-                                        }
-                                        case OrderType.market: {
-                                            nextPrice = RobotPosition.checkMarket(action, price, candle);
-                                            break;
-                                        }
-                                        default:
-                                            throw new Error(`Unknown order type ${orderType}`);
-                                    }
-                                    if (nextPrice) break;
-                                }
-                                if (nextPrice) return true;
-
-                                return false;
-                            })
-                            .map(({ robotId, status }) => ({ robotId, status }));
-
-                        await Promise.all(
-                            robots.map(async ({ robotId, status }) =>
-                                this.queueJob({ robotId, type: RobotJobType.tick, data: job.data }, status)
-                            )
-                        );
-                    })
-                );
-            }
-        } catch (err) {
-            this.log.error("Failed to check alerts", err);
-        }
-    }
 }

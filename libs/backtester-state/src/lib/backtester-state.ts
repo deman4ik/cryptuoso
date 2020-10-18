@@ -415,19 +415,19 @@ export class Backtester {
     };
 
     #saveSettings = (id: string) => {
-        const robot = this.robots[id];
+        const robot = this.#robots[id];
         if (!robot.data.settings[robot.instance.settingsActiveFrom])
             robot.data.settings[robot.instance.settingsActiveFrom] = robot.instance.settings;
     };
 
     #calcStats = (id: string) => {
-        const robot = this.robots[id];
+        const robot = this.#robots[id];
         if (robot.instance.hasClosedPositions) {
             const positions = robot.instance.closedPositions.map((pos) => {
                 const volume = getRobotPositionVolume(
                     robot.instance.settings.robotSettings,
                     pos.entryPrice,
-                    robot.data.stats.statistics?.netProfit?.all
+                    robot.data.stats?.statistics?.netProfit?.all
                 );
                 const profit = calcPositionProfit(
                     pos.direction,
@@ -447,7 +447,7 @@ export class Backtester {
     };
 
     #updateSettings = (id: string) => {
-        const robot = this.robots[id];
+        const robot = this.#robots[id];
         if (robot.instance.hasClosedPositions) {
             if (robot.instance.robotSettings.volumeType === VolumeSettingsType.assetDynamicDelta) {
                 const volume = getRobotPositionVolume(
@@ -467,6 +467,7 @@ export class Backtester {
     };
 
     async handleCandle(candle: Candle) {
+        logger.info(`Backtester #${this.id} - Handling ${this.#processedBars + 1} bar of ${this.#totalBars}`);
         Object.keys(this.#robots).forEach(async (id) => {
             const robot = this.#robots[id];
             robot.instance.handleCandle(candle);

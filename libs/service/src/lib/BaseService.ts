@@ -44,7 +44,8 @@ export class BaseService {
             this.#log = logger;
             this.#lightship = createLightship({
                 port: +process.env.LS_PORT || 9000,
-                detectKubernetes: process.env.NODE_ENV === "production"
+                detectKubernetes: process.env.NODE_ENV === "production",
+                signals: process.env.NODE_ENV === "production" ? ["SIGTERM", "SIGHUP", "SIGINT"] : ["SIGTERM", "SIGHUP"]
             });
             this.#lightship.registerShutdownHandler(this.#stopService.bind(this));
             this.#name = config?.name || process.env.SERVICE;

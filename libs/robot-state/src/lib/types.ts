@@ -104,3 +104,15 @@ export interface RobotJob {
     retries?: number;
     error?: string;
 }
+
+export const enum Queues {
+    robot = "robot",
+    robotRunner = "robot-runner"
+}
+
+export const enum RobotRunnerJobType {
+    alerts = "alerts",
+    newCandles = "newCandles",
+    idleCandles = "idleCandles",
+    idleRobotJobs = "idleRobotJobs"
+}

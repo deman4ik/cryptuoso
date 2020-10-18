@@ -111,9 +111,12 @@ export default class EventsManager extends HTTPService {
         this.createWorker(queueKey, this.processJob);
 
         await this.addJob(queueKey, JobTypes.clearStreams, null, {
+            jobId: JobTypes.clearStreams,
             repeat: {
                 every: this.checkInterval
-            }
+            },
+            removeOnComplete: true,
+            removeOnFail: true
         });
     }
 

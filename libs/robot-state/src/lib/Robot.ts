@@ -510,7 +510,7 @@ export class Robot {
 
     handleCandle(candle: Candle) {
         logger.info(`Robot ${this._id} - New candle ${candle.timestamp}`);
-        if (this._lastCandle && candle.time === this._lastCandle.time) {
+        if (this._lastCandle && candle.time <= this._lastCandle.time) {
             return {
                 success: false,
                 error: `Robot #${this._id} candle ${candle.timestamp} already processed`

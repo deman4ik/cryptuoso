@@ -68,7 +68,9 @@ export default class ExwatcherRunnerService extends HTTPService {
                 cron: "0 0 */12 * * *"
             },
             attempts: 3,
-            backoff: { type: "exponential", delay: 60000 }
+            backoff: { type: "exponential", delay: 60000 },
+            removeOnComplete: true,
+            removeOnFail: true
         });
     }
 

@@ -507,7 +507,8 @@ export default class BacktesterWorkerService extends BaseService {
     };
 
     #checkRobotStatus = async (robotId: string) => {
-        const status: RobotStatus = await this.db.pg.one(sql`
+        this.log.info(`Robot #${robotId} - Checking status...`);
+        const { status }: { status: RobotStatus } = await this.db.pg.one(sql`
         SELECT status 
          FROM robots
         WHERE id = ${robotId}
@@ -738,7 +739,7 @@ export default class BacktesterWorkerService extends BaseService {
 
     #startRobot = async (robotId: string) => {
         try {
-            this.log.info(`Robot #${robotId} - Update status '${RobotStatus.started}'`);
+            this.log.info(`Robot #${robotId} - Updating status '${RobotStatus.started}'`);
             await this.db.pg.query(sql` UPDATE robots 
             SET status = ${RobotStatus.started}
             WHERE id = ${robotId};`);
@@ -783,6 +784,7 @@ export default class BacktesterWorkerService extends BaseService {
             if (!this.abort[backtester.id]) {
                 if (backtester.settings.populateHistory) {
                     const robot = backtester.robots[backtester.robotId];
+
                     await this.#checkRobotStatus(backtester.robotId);
                     await this.#saveRobotState(robot.instance.robotState);
                     await this.#saveRobotSettings(backtester.robotId, Object.values(robot.data.settings));
