@@ -100,7 +100,7 @@ export interface RobotJob {
     id?: string;
     robotId: string;
     type: RobotJobType;
-    data?: ExchangeCandle | ExchangePrice;
+    data?: ExchangeCandle | ExchangePrice | { robotId: string };
     retries?: number;
     error?: string;
 }

@@ -405,7 +405,7 @@ export default class RobotRunnerService extends HTTPService {
         WHERE id = ${robotId}
         `);
         if (status === RobotStatus.stopping || status === RobotStatus.stopped) return { result: status };
-
+        await this.queueRobotJob({ robotId, type: RobotJobType.stop, data: { robotId } }, status);
         return { result: RobotStatus.stopping };
     }
 
