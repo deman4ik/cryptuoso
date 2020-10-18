@@ -43,26 +43,16 @@ const enum JobTypes {
     clearStreams = "clearStreams"
 }
 
-export interface EventsManagerConfig extends HTTPServiceConfig {
-    /** in seconds */
-    checkInterval?: number;
-    clearingChunkSize?: number;
-}
+export type EventsManagerConfig = HTTPServiceConfig;
 
 export default class EventsManager extends HTTPService {
-    /** in milliseconds */
-    checkInterval: number;
-    clearingChunkSize: number;
+    clearingChunkSize = 100;
 
     constructor(config?: EventsManagerConfig) {
         super(config);
 
-        this.checkInterval = 1000 * (config?.checkInterval || +process.env.CHECK_INTERVAL || 100);
-        this.clearingChunkSize = config?.clearingChunkSize || 100;
-
         this.events.subscribe({
             [`${DEAD_LETTER_TOPIC}.*`]: {
-                //passFullEvent: true,
                 handler: this.#deadLettersHandler.bind(this)
             },
             [`${ERRORS_TOPIC}.*.*`]: {
@@ -113,7 +103,7 @@ export default class EventsManager extends HTTPService {
         await this.addJob(queueKey, JobTypes.clearStreams, null, {
             jobId: JobTypes.clearStreams,
             repeat: {
-                every: this.checkInterval
+                cron: "30 6 * * * *"
             },
             removeOnComplete: true,
             removeOnFail: true
