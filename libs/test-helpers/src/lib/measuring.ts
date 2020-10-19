@@ -6,17 +6,17 @@ import Monitoring from "./monitoring";
  */
 export async function startSeveralFunctions(func: { (): Promise<any> }, copiesCount = 10) {
     const argArr = [];
-    let errorsCount = 0;
+    const errors: Error[] = [];
     for (let i = 0; i < copiesCount; ++i)
         argArr.push(
             func().catch((e) => {
                 //console.log("Function Error: ", e.message);
-                ++errorsCount;
-                return e.message;
+                errors.push(e);
+                return e;
             })
         );
-    const errors = Array.from(new Set(await Promise.all(argArr))).filter((el) => el);
-    return { copiesCount, errorsCount, errors };
+    const results = await Promise.all(argArr);
+    return { copiesCount, results, errors };
 }
 
 /**
