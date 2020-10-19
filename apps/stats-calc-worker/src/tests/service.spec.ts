@@ -51,10 +51,8 @@ jest.mock("@cryptuoso/service", () => {
 
             makeLocker() {
                 return {
-                    // eslint-disable-next-line @typescript-eslint/no-empty-function
-                    lock: async () => {},
-                    // eslint-disable-next-line @typescript-eslint/no-empty-function
-                    unlock: async () => {}
+                    lock: jest.fn(),
+                    unlock: jest.fn()
                 };
             }
 
@@ -65,6 +63,8 @@ jest.mock("@cryptuoso/service", () => {
             async stopService() {
                 if (this.#onStopHandler) await this.#onStopHandler();
             }
+
+            createWorker = jest.fn();
         },
         BaseServiceConfig: {}
     };
