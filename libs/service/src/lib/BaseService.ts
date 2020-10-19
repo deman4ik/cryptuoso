@@ -254,8 +254,8 @@ export class BaseService {
     #createQueue = (name: string, queueOpts?: QueueOptions, schedulerOpts?: QueueSchedulerOptions) => {
         if (this.#queues[name]) throw new Error(`Queue ${name} already exists`);
         this.#queues[name] = {
-            instance: new Queue(name, { ...queueOpts, connection: this.redis }),
-            scheduler: new QueueScheduler(name, { ...schedulerOpts, connection: this.redis })
+            instance: new Queue(name, { ...queueOpts, connection: this.redis.duplicate() }),
+            scheduler: new QueueScheduler(name, { ...schedulerOpts, connection: this.redis.duplicate() })
         };
     };
 
@@ -275,9 +275,10 @@ export class BaseService {
     #createWorker = async (name: string, processor: Processor, opts?: WorkerOptions) => {
         if (this.#workers[name]) throw new Error(`Worker ${name} already exists`);
         this.#workers[name] = new Worker(name, processor.bind(this), {
-            ...opts,
-            connection: this.redis,
-            concurrency: +this.#workerConcurrency
+            lockDuration: 60000,
+            connection: this.redis.duplicate(),
+            concurrency: +this.#workerConcurrency,
+            ...opts
         });
         this.#workers[name].on("error", (err) => {
             this.log.error("Worker error", err);
