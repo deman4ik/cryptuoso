@@ -41,6 +41,7 @@ jest.mock("slonik", () => ({
 jest.mock("bullmq");
 
 describe("StatsCalcRunnerService methods", () => {
+    process.env.LS_PORT = "9001";
     const service = new Service();
 
     setProperty(service, "db", {
