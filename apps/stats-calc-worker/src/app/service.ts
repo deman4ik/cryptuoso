@@ -350,8 +350,9 @@ export default class StatisticCalcWorkerService extends BaseService {
             const countOfRobots = +(await this.db.pg.oneFirst(sql`
                 SELECT COUNT(*)
                 FROM robots
-                WHERE ${!exchange ? sql`` : sql`exchange = ${exchange}`}
-                    ${!asset ? sql`` : sql`AND asset = ${asset}`};
+                WHERE status = 'started'
+                ${!exchange ? sql`` : sql`AND exchange = ${exchange}`}
+                ${!asset ? sql`` : sql`AND asset = ${asset}`};
             `));
 
             if (countOfRobots === 0) {
