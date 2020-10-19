@@ -279,6 +279,9 @@ export class BaseService {
             connection: this.redis,
             concurrency: +this.#workerConcurrency
         });
+        this.#workers[name].on("error", (err) => {
+            this.log.error("Worker error", err);
+        });
     };
 
     get createWorker() {
