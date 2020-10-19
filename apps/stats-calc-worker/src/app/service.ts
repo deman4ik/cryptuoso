@@ -208,7 +208,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             await locker.unlock();
             this.log.info(`Job ${job.id} finished`);
         } catch (err) {
-            this.log.error(`Error while processing job ${job.id} (${type})`, err);
+            this.log.error(`Error while processing job ${job.id}: ${type}(${JSON.stringify(params)})`, err);
             await locker.unlock();
             throw err;
         }
@@ -347,12 +347,20 @@ export default class StatisticCalcWorkerService extends BaseService {
         `);
 
         if (prevRobotsAggrStats) {
+            let WHERE = sql``;
+
+            if (exchange && asset) {
+                WHERE = sql`WHERE exchange = ${exchange} AND asset = ${asset}`;
+            } else if (exchange) {
+                WHERE = sql`WHERE exchange = ${exchange}`;
+            } else if (asset) {
+                WHERE = sql`WHERE asset = ${asset}`;
+            }
+
             const countOfRobots = +(await this.db.pg.oneFirst(sql`
                 SELECT COUNT(*)
                 FROM robots
-                WHERE status = 'started'
-                ${!exchange ? sql`` : sql`AND exchange = ${exchange}`}
-                ${!asset ? sql`` : sql`AND asset = ${asset}`};
+                ${WHERE};
             `));
 
             if (countOfRobots === 0) {
@@ -446,7 +454,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             const countOfUsersRobots = +(await this.db.pg.oneFirst(sql`
                 SELECT COUNT(*)
                 FROM user_robots ur,
-                    robots r,
+                    robots r
                 WHERE r.id = ur.robot_id
                     ${!exchange ? sql`` : sql`AND r.exchange = ${exchange}`}
                     ${!asset ? sql`` : sql`AND r.asset = ${asset}`};
@@ -657,7 +665,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             const countOfSignals = +(await this.db.pg.oneFirst(sql`
                 SELECT COUNT(*)
                 FROM user_signals us,
-                    robots r,
+                    robots r
                 WHERE us.user_id = ${userId}
                     AND r.id = us.robot_id
                     ${!exchange ? sql`` : sql`AND r.exchange = ${exchange}`}
@@ -830,8 +838,8 @@ export default class StatisticCalcWorkerService extends BaseService {
             const countOfUserRobots = +(await this.db.pg.oneFirst(sql`
                 SELECT COUNT(*)
                 FROM user_robots ur,
-                    robots r,
-                WHERE us.user_id = ${userId}
+                    robots r
+                WHERE ur.user_id = ${userId}
                     AND r.id = ur.robot_id
                     ${!exchange ? sql`` : sql`AND r.exchange = ${exchange}`}
                     ${!asset ? sql`` : sql`AND r.asset = ${asset}`};
