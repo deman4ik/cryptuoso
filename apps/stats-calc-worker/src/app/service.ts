@@ -9,6 +9,7 @@ import { UserAggrStatsTypes } from "@cryptuoso/user-state";
 import { StatsCalcJob, StatsCalcJobType } from "@cryptuoso/stats-calc-events";
 import { BasePosition } from "@cryptuoso/market";
 import Validator, { ValidationSchema, ValidationError } from "fastest-validator";
+import { sleep } from "@cryptuoso/helpers";
 
 type UserSignalStats = {
     id: string;
@@ -177,7 +178,7 @@ export default class StatisticCalcWorkerService extends BaseService {
 
         this.log.info(`Starting job ${job.id}`);
 
-        const locker = this.makeLocker(null, 5000);
+        //const locker = this.makeLocker(null, 5000);
 
         try {
             const route = this.routes[type];
@@ -190,7 +191,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 throw new Error(`Bad params: ${errors.map((e) => e.message).join("\n")}`);
             }
 
-            try {
+            /* try {
                 const paramsKeyPart = Object.keys(params)
                     .filter((prop) => prop != "calcAll")
                     .sort()
@@ -201,15 +202,17 @@ export default class StatisticCalcWorkerService extends BaseService {
             } catch (err) {
                 //this.log.info(`Can't create lock for job ${job.id}`);
                 return;
-            }
+            } */
+
+            await sleep(3000);
 
             await route.handler(params);
 
-            await locker.unlock();
+            //await locker.unlock();
             this.log.info(`Job ${job.id} finished`);
         } catch (err) {
             this.log.error(`Error while processing job ${job.id}: ${type}(${JSON.stringify(params)})`, err);
-            await locker.unlock();
+            //await locker.unlock();
             throw err;
         }
     }
@@ -526,7 +529,7 @@ export default class StatisticCalcWorkerService extends BaseService {
 
     private async _calcDownloadedUserSignal(userSignal: UserSignalStats, calcAll = false) {
         const locker = this.makeLocker(
-            `lock:${this.name}:_innerUserSignal(${userSignal.userId}, ${userSignal.robotId})`,
+            `lock:stats-calc-worker:_innerUserSignal(${userSignal.userId}, ${userSignal.robotId})`,
             5000
         );
 
