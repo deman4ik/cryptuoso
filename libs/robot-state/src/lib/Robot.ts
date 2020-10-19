@@ -509,7 +509,7 @@ export class Robot {
     }
 
     handleCandle(candle: Candle) {
-        logger.info(`Robot ${this._id} - New candle ${candle.timestamp}`);
+        logger.debug(`Robot #${this._id} - New candle ${candle.timestamp}`);
         if (this._lastCandle && candle.time <= this._lastCandle.time) {
             return {
                 success: false,

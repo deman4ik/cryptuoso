@@ -246,6 +246,7 @@ export default class EventsManager extends HTTPService {
     }
 
     async clearStreams() {
+        this.log.info("Starting events streams clean...");
         const streams = await this.redis.keys(`${BASE_REDIS_PREFIX}*`);
         const { common, configs } = eventsManagementConfig;
 
@@ -279,6 +280,7 @@ export default class EventsManager extends HTTPService {
     async deleteExpiredEvents(stream: string, ttl: number) {
         const lastUnsuitableId = (Date.now() - ttl - 1).toString();
         let prevId = "-";
+        let deleted = 0;
 
         // eslint-disable-next-line no-constant-condition
         while (true) {
@@ -289,11 +291,13 @@ export default class EventsManager extends HTTPService {
             if (expiresIds.length == 0) break;
 
             await this.redis.xdel(stream, ...expiresIds);
-
+            deleted += expiresIds.length;
             if (expiresIds.length < this.clearingChunkSize) break;
 
             prevId = expiresIds[expiresIds.length - 1];
         }
+
+        this.log.info(`${deleted} messages deleted from ${stream}`);
     }
 
     /**
@@ -323,6 +327,7 @@ export default class EventsManager extends HTTPService {
 
             for (const consumer of oldConsumers) {
                 await this.redis.xgroup("DELCONSUMER", stream, group.name, consumer.name);
+                this.log.info(`${consumer.name} ${group.name} deleted form ${stream}`);
             }
         }
     }
