@@ -189,7 +189,14 @@ export default class StatisticCalcRunnerService extends HTTPService {
     }
 
     async queueJob(type: StatsCalcJobType, job: StatsCalcJob) {
+        const paramsKeyPart = Object.keys(job)
+            .filter((prop: keyof StatsCalcJob) => prop != "calcAll" && job[prop])
+            .sort()
+            .map((prop: keyof StatsCalcJob) => `${prop}:${job[prop]}`)
+            .join(",");
+        const jobId = `${type}({${paramsKeyPart}})`;
         await this.addJob("calcStatistics", type, job, {
+            jobId,
             removeOnComplete: true,
             removeOnFail: 100,
             attempts: 3,
@@ -367,11 +374,15 @@ export default class StatisticCalcRunnerService extends HTTPService {
 
         this.log.info(`New ${StatsCalcRunnerEvents.ROBOT} event - ${robotId}`);
 
-        const { exchange, asset }: { exchange: string; asset: string } = await this.db.pg.maybeOne(this.db.sql`
+        const robot: { exchange: string; asset: string } = await this.db.pg.maybeOne(this.db.sql`
             SELECT exchange, asset
             FROM robots
             WHERE id = ${robotId};
         `);
+
+        if (!robot) return;
+
+        const { exchange, asset } = robot;
         await this.queueJob(StatsCalcJobType.robot, { calcAll, robotId });
         await this.queueJob(StatsCalcJobType.userSignals, { calcAll, robotId });
 
@@ -426,13 +437,21 @@ export default class StatisticCalcRunnerService extends HTTPService {
         const { calcAll, userRobotId } = params;
 
         this.log.info(`New ${StatsCalcRunnerEvents.USER_ROBOT} event - ${userRobotId}`);
-        const { userId, exchange, asset } = await this.db.pg.maybeOne(this.db.sql`
+        const userRobot: {
+            userId: string;
+            exchange: string;
+            asset: string;
+        } = await this.db.pg.maybeOne(this.db.sql`
             SELECT ur.user_id, r.exchange, r.asset
             FROM user_robots ur,
                     robots r
             WHERE ur.id = ${userRobotId}
                 AND r.id = ur.robot_id;
         `);
+
+        if (!userRobot) return;
+
+        const { userId, exchange, asset } = userRobot;
 
         await this.queueJob(StatsCalcJobType.userRobot, { calcAll, userRobotId });
 

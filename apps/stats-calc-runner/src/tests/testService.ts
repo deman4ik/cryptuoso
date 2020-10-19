@@ -1,5 +1,13 @@
 import Service from "../app/service";
 
+async function checkResult(name: string, prom: Promise<any>) {
+    try {
+        console.log(name, await prom);
+    } catch (err) {
+        console.log(`Error while run ${name}`, err);
+    }
+}
+
 export async function testService(service: Service) {
     const calcAll = true;
     const robotId = "51c90607-6d38-4b7c-81c9-d349886e80b0"; // 8504
@@ -8,75 +16,75 @@ export async function testService(service: Service) {
     const exchange = "kraken"; // "bitfinex"
     const asset = "BTC"; //
 
-    console.log(
+    await checkResult(
         "handleCalcUserSignalEvent",
-        await service.handleCalcUserSignalEvent({
+        service.handleCalcUserSignalEvent({
             calcAll,
             userId,
             robotId
         })
     );
 
-    console.log(
+    await checkResult(
         "handleCalcUserSignalsEvent",
-        await service.handleCalcUserSignalsEvent({
+        service.handleCalcUserSignalsEvent({
             calcAll,
             userId
         })
     );
 
-    console.log(
+    await checkResult(
         "handleStatsCalcRobotEvent",
-        await service.handleStatsCalcRobotEvent({
+        service.handleStatsCalcRobotEvent({
             calcAll,
             robotId
         })
     );
 
-    console.log(
+    await checkResult(
         "handleStatsCalcRobotsEvent",
-        await service.handleStatsCalcRobotsEvent({
+        service.handleStatsCalcRobotsEvent({
             calcAll
         })
     );
 
-    console.log(
+    await checkResult(
         "handleStatsCalcUserRobotEvent",
-        await service.handleStatsCalcUserRobotEvent({
+        service.handleStatsCalcUserRobotEvent({
             calcAll,
             userRobotId
         })
     );
 
-    console.log(
+    await checkResult(
         "handleStatsCalcUserRobotsEvent",
-        await service.handleStatsCalcUserRobotsEvent({
+        service.handleStatsCalcUserRobotsEvent({
             calcAll,
             userId
         })
     );
 
-    console.log(
+    await checkResult(
         "handleStatsCalcUserRobotsEvent",
-        await service.handleStatsCalcUserRobotsEvent({
+        service.handleStatsCalcUserRobotsEvent({
             calcAll,
             userId,
             exchange
         })
     );
 
-    console.log(
+    await checkResult(
         "handleStatsCalcUserRobotsEvent",
-        await service.handleStatsCalcUserRobotsEvent({
+        service.handleStatsCalcUserRobotsEvent({
             calcAll,
             userId,
             asset
         })
     );
 
-    console.log(
+    await checkResult(
         "handleStatsCalcUserRobotsEvent",
-        await service.handleStatsCalcUserRobotsEvent({
+        service.handleStatsCalcUserRobotsEvent({
             calcAll,
             userId,
             asset,
@@ -84,23 +92,23 @@ export async function testService(service: Service) {
         })
     );
 
-    console.log(
+    await checkResult(
         "handleRecalcAllRobotsEvent",
-        await service.handleRecalcAllRobotsEvent({
+        service.handleRecalcAllRobotsEvent({
             /* calcAll, userId, asset, exchange */
         })
     );
 
-    console.log(
+    await checkResult(
         "handleRecalcAllUserSignalsEvent",
-        await service.handleRecalcAllUserSignalsEvent({
+        service.handleRecalcAllUserSignalsEvent({
             /* calcAll, userId, asset, exchange */
         })
     );
 
-    console.log(
+    await checkResult(
         "handleRecalcAllUserRobotsEvent",
-        await service.handleRecalcAllUserRobotsEvent({
+        service.handleRecalcAllUserRobotsEvent({
             /* calcAll, userId, asset, exchange */
         })
     );
