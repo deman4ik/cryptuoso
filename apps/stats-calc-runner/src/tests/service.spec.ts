@@ -37,7 +37,7 @@ jest.mock("slonik", () => ({
     })),
     sql: jest.fn()
 }));
-//jest.mock("@cryptuoso/service"); //TODO: unmock
+// jest.mock("@cryptuoso/service"); //TODO: unmock
 jest.mock("bullmq");
 
 describe("StatsCalcRunnerService methods", () => {
