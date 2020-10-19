@@ -95,7 +95,7 @@ export default class RobotWorkerService extends BaseService {
                 while (nextJob) {
                     const status: RobotStatus = await this.run(nextJob);
 
-                    if (status && status !== RobotStatus.started && status !== RobotStatus.paused) {
+                    if (status && status !== RobotStatus.stopped && status !== RobotStatus.paused) {
                         nextJob = await this.#getNextJob(robotId);
                     } else {
                         nextJob = null;
@@ -195,6 +195,7 @@ export default class RobotWorkerService extends BaseService {
 
     async run(job: RobotJob): Promise<RobotStatus> {
         const { id, robotId, type } = job;
+        this.log.info(`Robot #${robotId} - Processing ${type} job (${id})...`);
         try {
             const robotState: RobotState = await this.db.pg.one(sql`
              SELECT r.id, 
@@ -293,7 +294,7 @@ export default class RobotWorkerService extends BaseService {
             for (const event of robot.eventsToSend) {
                 await this.events.emit(event);
             }
-
+            this.log.info(`Robot #${robotId} - Processed ${type} job (${id})`);
             return robot.status;
         } catch (err) {
             this.log.error(`Robot #${robotId} processing ${type} job #${id} error`, err);
