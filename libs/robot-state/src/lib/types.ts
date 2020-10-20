@@ -113,6 +113,5 @@ export const enum Queues {
 export const enum RobotRunnerJobType {
     alerts = "alerts",
     newCandles = "newCandles",
-    idleCandles = "idleCandles",
     idleRobotJobs = "idleRobotJobs"
 }

@@ -27,6 +27,7 @@ import {
 export type RobotRunnerServiceConfig = HTTPServiceConfig;
 
 export default class RobotRunnerService extends HTTPService {
+    #robotJobRetries = 3;
     constructor(config?: RobotRunnerServiceConfig) {
         super(config);
         try {
@@ -51,16 +52,6 @@ export default class RobotRunnerService extends HTTPService {
                 }
             });
 
-            /*  this.events.subscribe({
-                [MarketEvents.CANDLE]: {
-                    handler: this.handleNewCandle.bind(this),
-                    schema: MarketSchema[MarketEvents.CANDLE]
-                },
-                [MarketEvents.TICK]: {
-                    handler: this.handleNewTick.bind(this),
-                    schema: MarketSchema[MarketEvents.TICK]
-                }
-            }); */
             this.addOnStartHandler(this.onServiceStart);
         } catch (err) {
             this.log.error(err, "While consctructing RobotRunnerService");
@@ -79,7 +70,7 @@ export default class RobotRunnerService extends HTTPService {
                 every: 1000
             },
             removeOnComplete: true,
-            removeOnFail: true
+            removeOnFail: 100
         });
         await this.addJob(Queues.robotRunner, RobotRunnerJobType.newCandles, null, {
             jobId: RobotRunnerJobType.newCandles,
@@ -87,10 +78,17 @@ export default class RobotRunnerService extends HTTPService {
                 cron: "0 */5 * * * *"
             },
             removeOnComplete: true,
-            removeOnFail: true
+            removeOnFail: 100
         });
 
-        //TODO: other runner jobs
+        await this.addJob(Queues.robotRunner, RobotRunnerJobType.idleRobotJobs, null, {
+            jobId: RobotRunnerJobType.idleRobotJobs,
+            repeat: {
+                cron: "*/30 * * * * *"
+            },
+            removeOnComplete: true,
+            removeOnFail: 100
+        });
     }
 
     #createRobotCode = (
@@ -111,7 +109,33 @@ export default class RobotRunnerService extends HTTPService {
         mod: string
     ) => `${strategy}-${mod} ${robotExchangeName(exchange)} ${asset}/${currency} ${Timeframe.toString(timeframe)}`;
 
-    async queueRobotJob({ robotId, type, data }: RobotJob, status: RobotStatus) {
+    async checkAndQueueRobotJob(robotId: string) {
+        const lastJob = await this.queues[Queues.robot].instance.getJob(robotId);
+        if (lastJob) {
+            const lastJobState = await lastJob.getState();
+            if (["unknown", "completed", "failed"].includes(lastJobState)) {
+                try {
+                    await lastJob.remove();
+                } catch (e) {
+                    this.log.warn(e);
+                    return;
+                }
+            } else return;
+        }
+
+        await this.addJob(
+            Queues.robot,
+            "job",
+            { robotId },
+            {
+                jobId: robotId,
+                removeOnComplete: true,
+                removeOnFail: 100
+            }
+        );
+    }
+
+    async addRobotJob({ robotId, type, data }: RobotJob, status: RobotStatus) {
         await this.db.pg.query(sql`
         INSERT INTO robot_jobs
         (
@@ -130,32 +154,7 @@ export default class RobotRunnerService extends HTTPService {
          retries = null,
          error = null;
         `);
-
-        if (status === RobotStatus.started) {
-            const lastJob = await this.queues[Queues.robot].instance.getJob(robotId);
-            if (lastJob) {
-                const lastJobState = await lastJob.getState();
-                if (["unknown", "completed", "failed"].includes(lastJobState)) {
-                    try {
-                        await lastJob.remove();
-                    } catch (e) {
-                        this.log.warn(e);
-                        return;
-                    }
-                } else return;
-            }
-        }
-
-        await this.addJob(
-            Queues.robot,
-            "job",
-            { robotId },
-            {
-                jobId: robotId,
-                removeOnComplete: true,
-                removeOnFail: true
-            }
-        );
+        if (status === RobotStatus.started) await this.checkAndQueueRobotJob(robotId);
     }
 
     async createHTTPHandler(
@@ -405,7 +404,7 @@ export default class RobotRunnerService extends HTTPService {
         WHERE id = ${robotId}
         `);
         if (status === RobotStatus.stopping || status === RobotStatus.stopped) return { result: status };
-        await this.queueRobotJob({ robotId, type: RobotJobType.stop, data: { robotId } }, status);
+        await this.addRobotJob({ robotId, type: RobotJobType.stop, data: { robotId } }, status);
         return { result: RobotStatus.stopping };
     }
 
@@ -416,9 +415,6 @@ export default class RobotRunnerService extends HTTPService {
                 break;
             case RobotRunnerJobType.newCandles:
                 await this.handleNewCandles();
-                break;
-            case RobotRunnerJobType.idleCandles:
-                await this.checkIdleCandles();
                 break;
             case RobotRunnerJobType.idleRobotJobs:
                 await this.checkIdleRobotJobs();
@@ -478,7 +474,15 @@ export default class RobotRunnerService extends HTTPService {
                             AND asset = ${asset}
                             AND currency = ${currency}
                             AND time = ${currentTime};`);
-                        if (!candle) return;
+                        if (!candle) {
+                            if (dayjs.utc(currentTime).diff(dayjs.utc(), "second") > 20)
+                                this.log.error(
+                                    `Failed to load ${exchange}-${asset}-${currency}-${timeframe}-${dayjs
+                                        .utc(currentTime)
+                                        .toISOString()} current candle`
+                                );
+                            return;
+                        }
                         const robots = positions
                             .filter(({ alerts }) => {
                                 let nextPrice = null;
@@ -512,7 +516,7 @@ export default class RobotRunnerService extends HTTPService {
 
                         await Promise.all(
                             robots.map(async ({ robotId, status }) =>
-                                this.queueRobotJob({ robotId, type: RobotJobType.tick }, status)
+                                this.addRobotJob({ robotId, type: RobotJobType.tick }, status)
                             )
                         );
                     })
@@ -573,12 +577,15 @@ export default class RobotRunnerService extends HTTPService {
                             AND currency = ${currency}
                             AND time = ${prevTime};`);
 
-                                if (!candle)
+                                if (!candle) {
                                     this.log.error(
                                         `Failed to load ${exchange}-${asset}-${currency}-${timeframe}-${dayjs
                                             .utc(prevTime)
                                             .toISOString()} candle`
                                     );
+                                    //TODO: send error event
+                                    return;
+                                }
 
                                 const robotsToSend = robotsInTimeframe.filter(
                                     (r) =>
@@ -594,7 +601,7 @@ export default class RobotRunnerService extends HTTPService {
                                 );
                                 await Promise.all(
                                     robotsToSend.map(async ({ id, status }) =>
-                                        this.queueRobotJob(
+                                        this.addRobotJob(
                                             {
                                                 robotId: id,
                                                 type: RobotJobType.candle,
@@ -614,73 +621,18 @@ export default class RobotRunnerService extends HTTPService {
         }
     }
 
-    async checkIdleCandles() {
-        //TODO
-    }
-
     async checkIdleRobotJobs() {
-        //TODO
-    }
+        const robotsWithJobs: { robotId: string }[] = await this.db.pg.any(sql`
+        SELECT distinct robot_id 
+        FROM robot_jobs rj, robots r
+        WHERE rj.robot_id = r.id 
+        AND r.status = ${RobotStatus.started}
+        AND (rj.retries is null OR rj.retries < ${this.#robotJobRetries})
+        AND rj.updated_at < ${dayjs.utc().add(-1, "minute").toISOString()}
+        `);
 
-    /* async handleNewCandle(candle: ExwatcherCandle) {
-        try {
-            if (candle.type === CandleType.previous) return;
-            const { exchange, asset, currency, timeframe, timestamp } = candle;
-            const robots: { id: string; status: RobotStatus }[] = await this.db.pg.any(sql`
-            SELECT id, status
-              FROM robots
-             WHERE exchange = ${exchange}
-               AND asset = ${asset}
-               AND currency = ${currency}
-               AND timeframe = ${timeframe} 
-               AND status in (${RobotStatus.started}, ${RobotStatus.starting}, ${RobotStatus.paused});
-            `);
-            this.log.info(
-                `New candle ${exchange}.${asset}.${currency}.${timeframe} ${timestamp} required by ${robots.length}`
-            );
-            await Promise.all(
-                robots.map(
-                    async ({ id, status }) =>
-                        await this.queueJob(
-                            {
-                                robotId: id,
-                                type: RobotJobType.candle,
-                                data: candle
-                            },
-                            status
-                        )
-                )
-            );
-        } catch (err) {
-            this.log.error("Failed to handle new candle", err);
-            throw err;
+        if (robotsWithJobs && Array.isArray(robotsWithJobs) && robotsWithJobs.length) {
+            await Promise.all(robotsWithJobs.map(async ({ robotId }) => this.checkAndQueueRobotJob(robotId)));
         }
     }
-
-    async handleNewTick(tick: ExwatcherTick) {
-        try {
-            const { exchange, asset, currency } = tick;
-            const jobId = `${exchange}_${asset}_${currency}`;
-            const lastJob = await this.queues.robot.getJob(jobId);
-            if (lastJob) {
-                const lastJobState = await lastJob.getState();
-                if (["unknown", "completed", "failed"].includes(lastJobState)) {
-                    try {
-                        await lastJob.remove();
-                    } catch (e) {
-                        this.log.warn(e);
-                        return;
-                    }
-                } else return;
-            }
-            await this.queues.alerts.add("check", tick, {
-                jobId,
-                removeOnComplete: true,
-                removeOnFail: true
-            });
-        } catch (err) {
-            this.log.error("Failed to handle new tick", err);
-            throw err;
-        }
-    } */
 }

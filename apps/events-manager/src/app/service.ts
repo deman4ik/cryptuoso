@@ -106,7 +106,7 @@ export default class EventsManager extends HTTPService {
                 cron: "30 6 * * * *"
             },
             removeOnComplete: true,
-            removeOnFail: true
+            removeOnFail: 100
         });
     }
 
