@@ -188,7 +188,7 @@ export class BaseService {
             lock: () => Promise<void>;
             unlock: () => Promise<void>;
         };
-    } = (resource: string, ttl: number, extensionStep: number = 0.5) => {
+    } = (resource: string, ttl: number, extensionStep = 0.5) => {
         if (!resource && resource !== null) throw new Error(`"resource" argument must be non-empty string or null`);
 
         let lockName: string = resource;

@@ -9,7 +9,6 @@ import { UserAggrStatsTypes } from "@cryptuoso/user-state";
 import { StatsCalcJob, StatsCalcJobType } from "@cryptuoso/stats-calc-events";
 import { BasePosition } from "@cryptuoso/market";
 import Validator, { ValidationSchema, ValidationError } from "fastest-validator";
-import { sleep } from "@cryptuoso/helpers";
 
 type UserSignalStats = {
     id: string;
