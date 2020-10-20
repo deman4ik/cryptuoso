@@ -204,8 +204,6 @@ export default class StatisticCalcWorkerService extends BaseService {
                 return;
             } */
 
-            await sleep(3000);
-
             await route.handler(params);
 
             //await locker.unlock();
@@ -561,7 +559,10 @@ export default class StatisticCalcWorkerService extends BaseService {
                 ${queryFromAndConditionPart};
             `));
 
-            if (positionsCount == 0) return false;
+            if (positionsCount == 0) {
+                await locker.unlock();
+                return false;
+            }
 
             const newStats = await DataStream.from(
                 this.makeChunksGenerator(

@@ -35,6 +35,7 @@ export class BaseService {
     #queues: { [key: string]: { instance: Queue<any>; scheduler: QueueScheduler } } = {};
     #workers: { [key: string]: Worker } = {};
     #workerConcurrency = +process.env.WORKER_CONCURRENCY || 10;
+    #lockers = new Set<{ unlock(): Promise<void> }>();
 
     constructor(config?: BaseServiceConfig) {
         try {
@@ -142,6 +143,15 @@ export class BaseService {
                 }
             }
             await Promise.all(
+                Array.from(this.#lockers).map(async (locker) => {
+                    try {
+                        await locker.unlock();
+                    } catch (err) {
+                        this.log.error(`Failed to correctly unlock locker while stopping ${this.#name} service`, err);
+                    }
+                })
+            );
+            await Promise.all(
                 Object.values(this.#workers).map(async (worker) => {
                     try {
                         await worker.close();
@@ -170,35 +180,40 @@ export class BaseService {
     };
 
     #makeLocker: {
-        (resource: null, ttl: number): {
+        (resource: null, ttl: number, extensionStep?: number): {
             lock: (resource: string) => Promise<void>;
             unlock: () => Promise<void>;
         };
-        (resource: string, ttl: number): {
+        (resource: string, ttl: number, extensionStep?: number): {
             lock: () => Promise<void>;
             unlock: () => Promise<void>;
         };
-    } = (resource: string, ttl: number) => {
+    } = (resource: string, ttl: number, extensionStep: number = 0.5) => {
         if (!resource && resource !== null) throw new Error(`"resource" argument must be non-empty string or null`);
 
-        const sleepTime = Math.trunc(0.9 * ttl);
         let lockName: string = resource;
         let ended = false;
-        let lock: RedLock.Lock;
+        let redlock: RedLock.Lock;
 
-        const checkForUnlock = async () => {
-            await sleep(sleepTime);
+        const getNextTTL = (cnt: number) => (1 + cnt * extensionStep) * ttl;
+
+        const getCheckDt = () => 0.8 * (redlock.expiration - Date.now());
+
+        const extendUntilEnded = async () => {
+            let checksCount = 0;
+            await sleep(getCheckDt());
             try {
                 while (!ended) {
-                    lock = await lock.extend(ttl);
-                    await sleep(sleepTime);
+                    ++checksCount;
+                    redlock = await redlock.extend(getNextTTL(checksCount));
+                    await sleep(getCheckDt());
                 }
             } catch (err) {
                 this.log.error(`Failed to extend lock (${lockName})`, err);
             }
         };
 
-        return {
+        const locker = {
             lock: async (resource?: string) => {
                 try {
                     if (!lockName) {
@@ -206,25 +221,29 @@ export class BaseService {
                         lockName = resource;
                     }
 
-                    lock = await this.#redLock.lock(lockName, ttl);
+                    redlock = await this.#redLock.lock(lockName, ttl);
+                    this.#lockers.add(locker);
+                    extendUntilEnded();
                 } catch (err) {
                     this.log.error(`Failed to lock (${lockName})` /* , err */);
                     throw err;
                 }
-                checkForUnlock();
             },
             unlock: async () => {
                 ended = true;
+                this.#lockers.delete(locker);
 
-                if (lock) {
+                if (redlock) {
                     try {
-                        await lock.unlock();
+                        await redlock.unlock();
                     } catch (err) {
                         this.log.error(`Failed to unlock (${lockName})`, err);
                     }
                 }
             }
         };
+
+        return locker;
     };
 
     get makeLocker() {
