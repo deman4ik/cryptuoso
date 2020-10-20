@@ -9,7 +9,6 @@ import { UserAggrStatsTypes } from "@cryptuoso/user-state";
 import { StatsCalcJob, StatsCalcJobType } from "@cryptuoso/stats-calc-events";
 import { BasePosition } from "@cryptuoso/market";
 import Validator, { ValidationSchema, ValidationError } from "fastest-validator";
-import { sleep } from "@cryptuoso/helpers";
 
 type UserSignalStats = {
     id: string;
@@ -203,8 +202,6 @@ export default class StatisticCalcWorkerService extends BaseService {
                 //this.log.info(`Can't create lock for job ${job.id}`);
                 return;
             } */
-
-            await sleep(3000);
 
             await route.handler(params);
 
@@ -561,7 +558,10 @@ export default class StatisticCalcWorkerService extends BaseService {
                 ${queryFromAndConditionPart};
             `));
 
-            if (positionsCount == 0) return false;
+            if (positionsCount == 0) {
+                await locker.unlock();
+                return false;
+            }
 
             const newStats = await DataStream.from(
                 this.makeChunksGenerator(
