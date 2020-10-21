@@ -663,28 +663,29 @@ export default class RobotRunnerService extends HTTPService {
         this.db.pg.query(sql`
             INSERT INTO robot_history
             (robot_id, type, data) 
-            VALUES (${robotId}, ${type}, ${JSON.stringify(data)})
+            VALUES (${robotId}, ${type}, ${JSON.stringify(data) || null})
         `);
 
     #saveRobotLog = async (robotId: string, data: { [key: string]: any }) =>
         this.db.pg.query(sql`INSERT INTO robot_logs (robot_id, data) 
-        VALUES (${robotId}, ${JSON.stringify(data)})`);
+        VALUES (${robotId}, ${JSON.stringify(data) || null})`);
 
     async handleRobotWorkerEvents(event: Event) {
+        const { robotId } = event.data as { robotId: string };
+
         const type = event.type.replace("com.cryptuoso.", "");
         const historyType = type.replace(`${ROBOT_WORKER_TOPIC}.`, "");
+        this.log.info(`Robot's #${robotId} ${historyType} event`, JSON.stringify(event.data));
         switch (type) {
             case (RobotWorkerEvents.STARTING,
             RobotWorkerEvents.STARTED,
             RobotWorkerEvents.STOPPED,
             RobotWorkerEvents.PAUSED,
             RobotWorkerEvents.ERROR): {
-                const { robotId } = event.data as { robotId: string };
                 await this.#saveRobotHistory(robotId, historyType, event.data);
                 break;
             }
             case RobotWorkerEvents.LOG: {
-                const { robotId } = event.data as RobotWorkerLog;
                 await this.#saveRobotLog(robotId, event.data);
                 break;
             }
@@ -706,13 +707,14 @@ export default class RobotRunnerService extends HTTPService {
             candleTimestamp,
             timestamp
         } = event;
+        this.log.info(`Robot's #${robotId} ${type} event`, JSON.stringify(event));
         await this.db.pg.query(sql`
             INSERT INTO robot_signals
             (id, robot_id, action, order_type, price, type, position_id,
             position_prefix, position_code, position_parent_id,
             candle_timestamp,timestamp)
-            VALUES (${id}, ${robotId}, ${action}, ${orderType}, ${price}, ${type},
-            ${positionId}, ${positionPrefix}, ${positionCode}, ${positionParentId}, ${candleTimestamp},
+            VALUES (${id}, ${robotId}, ${action}, ${orderType}, ${price || null}, ${type},
+            ${positionId}, ${positionPrefix}, ${positionCode}, ${positionParentId || null}, ${candleTimestamp},
             ${timestamp})
         `);
     }
