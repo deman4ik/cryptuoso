@@ -93,7 +93,7 @@ export class Robot {
         this._candles = [];
 
         /* Текущий статус сервиса */
-        this._status = state.status || RobotStatus.pending;
+        this._status = state.status;
         /* Дата и время запуска */
         this._startedAt = state.startedAt;
         this._stoppedAt = state.stoppedAt;
@@ -174,7 +174,8 @@ export class Robot {
         this._eventsToSend.push({
             type: RobotWorkerEvents.STARTED,
             data: {
-                robotId: this._id
+                robotId: this._id,
+                status: RobotStatus.started
             }
         });
     }
@@ -186,7 +187,8 @@ export class Robot {
         this._eventsToSend.push({
             type: RobotWorkerEvents.STOPPED,
             data: {
-                robotId: this._id
+                robotId: this._id,
+                status: RobotStatus.stopped
             }
         });
     }
@@ -196,7 +198,8 @@ export class Robot {
         this._eventsToSend.push({
             type: RobotWorkerEvents.PAUSED,
             data: {
-                robotId: this._id
+                robotId: this._id,
+                status: RobotStatus.paused
             }
         });
     }
@@ -206,6 +209,8 @@ export class Robot {
             type: RobotWorkerEvents.ERROR,
             data: {
                 robotId: this._id,
+                candle: this._candle,
+                lastCandle: this._lastCandle,
                 error: err.message
             }
         });

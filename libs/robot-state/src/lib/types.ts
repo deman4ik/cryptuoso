@@ -16,13 +16,11 @@ import { IndicatorState } from "@cryptuoso/robot-indicators";
 import { TradeStats } from "@cryptuoso/stats-calc";
 
 export const enum RobotStatus {
-    pending = "pending",
     starting = "starting",
-    stopping = "stopping",
     started = "started",
+    stopping = "stopping",
     stopped = "stopped",
-    paused = "paused",
-    failed = "failed"
+    paused = "paused"
 }
 
 export interface StrategyProps {

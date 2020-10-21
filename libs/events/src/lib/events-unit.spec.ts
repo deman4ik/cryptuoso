@@ -1,8 +1,7 @@
 import Redis from "ioredis";
 import { createLightship } from "lightship";
-import { Events, NewEvent } from "./events";
+import { Events, NewEvent, Event } from "./events";
 import { BASE_REDIS_PREFIX } from "./catalog";
-import { CloudEvent as Event } from "cloudevents";
 import { ValidationSchema } from "fastest-validator";
 
 jest.mock("uuid", () => ({ v4: () => "id123" }));

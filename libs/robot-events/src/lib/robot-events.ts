@@ -1,4 +1,4 @@
-import { Timeframe, ValidTimeframe, TradeAction, OrderType, SignalInfo, SignalType } from "@cryptuoso/market";
+import { Timeframe, ValidTimeframe, TradeAction, OrderType, SignalInfo, SignalType, Candle } from "@cryptuoso/market";
 import { CANDLES_RECENT_AMOUNT, ISO_DATE_REGEX } from "@cryptuoso/helpers";
 import { RobotSettings, RobotSettingsSchema, StrategySettings } from "@cryptuoso/robot-settings";
 
@@ -9,6 +9,8 @@ export const enum RobotRunnerEvents {
     PAUSE = "in-robot-runner.pause"
 }
 
+export const ROBOT_WORKER_TOPIC = "out-robot-worker";
+
 export const enum RobotWorkerEvents {
     LOG = "out-robot-worker.log",
     STARTED = "out-robot-worker.started",
@@ -18,12 +20,14 @@ export const enum RobotWorkerEvents {
     ERROR = "out-robot-worker.error"
 }
 
+export const SIGNAL_TOPIC = "signal";
+
 export const enum SignalEvents {
     ALERT = "signal.alert",
     TRADE = "signal.trade"
 }
 
-const SignalSchema = {
+const SignalsSchema = {
     id: "uuid",
     robotId: "uuid",
     exchange: "string",
@@ -52,8 +56,9 @@ const SignalSchema = {
     positionParentId: { type: "uuid", optional: true }
 };
 
-const StatusSchema = {
-    robotId: "uuid"
+export const StatusSchema = {
+    robotId: "uuid",
+    status: "string"
 };
 
 const RunnerSchema = {
@@ -115,22 +120,24 @@ export const RobotRunnerSchema = {
 
 export const RobotWorkerSchema = {
     [RobotWorkerEvents.LOG]: {
-        $$root: true,
-        type: "object"
-    },
-    [SignalEvents.ALERT]: {
-        ...SignalSchema,
-        type: { type: "equal", value: SignalType.alert, strict: true }
-    },
-    [SignalEvents.TRADE]: {
-        ...SignalSchema,
-        type: { type: "equal", value: SignalType.trade, strict: true }
+        robotId: "uuid"
     },
     [RobotWorkerEvents.STARTED]: StatusSchema,
     [RobotWorkerEvents.STARTING]: StatusSchema,
     [RobotWorkerEvents.STOPPED]: StatusSchema,
     [RobotWorkerEvents.PAUSED]: StatusSchema,
-    [RobotWorkerEvents.ERROR]: { ...StatusSchema, error: "string" }
+    [RobotWorkerEvents.ERROR]: { robotId: "uuid", error: "string" }
+};
+
+export const SignalSchema = {
+    [SignalEvents.ALERT]: {
+        ...SignalsSchema,
+        type: { type: "equal", value: SignalType.alert, strict: true }
+    },
+    [SignalEvents.TRADE]: {
+        ...SignalsSchema,
+        type: { type: "equal", value: SignalType.trade, strict: true }
+    }
 };
 
 export interface RobotRunnerCreateProps {
@@ -179,6 +186,19 @@ export interface Signal extends SignalInfo {
 }
 
 export interface RobotWorkerError {
+    [key: string]: any;
     robotId: string;
     error: string;
+}
+
+export interface RobotWorkerLog {
+    [key: string]: any;
+    robotId: string;
+    candle: Candle;
+}
+
+export interface RobotWorkerStatus {
+    [key: string]: any;
+    robotId: string;
+    status: string;
 }

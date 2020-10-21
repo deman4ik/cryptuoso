@@ -10,7 +10,6 @@ import {
 import { UserRoles } from "@cryptuoso/user-state";
 import { JSONParse } from "@cryptuoso/helpers";
 import dayjs from "dayjs";
-import { CloudEvent } from "cloudevents";
 import { Job } from "bullmq";
 
 interface StoredDeadLetter {
@@ -128,7 +127,7 @@ export default class EventsManager extends HTTPService {
         this.log.info(`Dead letter event: #${event.id} ${event.type} saved`);
     };
 
-    #errorHandler = async (event: CloudEvent) => {
+    #errorHandler = async (event: Event) => {
         await this.db.pg.query(this.db.sql`
             INSERT INTO error_events (
                 event_id, topic, "type", data, "timestamp"

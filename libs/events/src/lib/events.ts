@@ -9,7 +9,7 @@ import { BaseError } from "@cryptuoso/errors";
 import { EventsCatalog, EventHandler, BASE_REDIS_PREFIX } from "./catalog";
 import dayjs from "@cryptuoso/dayjs";
 
-export { CloudEventV1 as Event };
+export { Event };
 export interface NewEvent<T> {
     type: string;
     data: T;
@@ -511,7 +511,7 @@ export class Events {
         [key: string]: {
             group?: string;
             unbalanced?: boolean;
-            handler: (event: Event) => Promise<void>;
+            handler: (event: Event | any) => Promise<void>;
             passFullEvent?: boolean;
             schema?: ValidationSchema;
         };

@@ -276,7 +276,7 @@ export default class RobotWorkerService extends BaseService {
                 if (robot.positionsToSave.length > 0) {
                     await this.#saveRobotPositions(t, robot.positionsToSave);
                 }
-                //TODO: save signals
+
                 await this.#saveRobotState(t, robot.robotState);
 
                 await t.query(sql`DELETE FROM robot_jobs WHERE id = ${job.id};`);
@@ -314,7 +314,8 @@ export default class RobotWorkerService extends BaseService {
                     type: RobotWorkerEvents.ERROR,
                     data: {
                         robotId,
-                        error: err.message
+                        error: err.message,
+                        job
                     }
                 });
             }

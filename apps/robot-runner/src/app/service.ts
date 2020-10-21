@@ -7,10 +7,17 @@ import {
     RobotRunnerSchema,
     RobotRunnerCreate,
     RobotRunnerStart,
-    RobotRunnerStop
+    RobotRunnerStop,
+    RobotWorkerEvents,
+    ROBOT_WORKER_TOPIC,
+    RobotWorkerSchema,
+    StatusSchema,
+    RobotWorkerLog,
+    SignalEvents,
+    SignalSchema,
+    Signal
 } from "@cryptuoso/robot-events";
 import { BacktesterRunnerEvents, BacktesterRunnerStart } from "@cryptuoso/backtester-events";
-//import { ExwatcherCandle, ExwatcherTick, MarketEvents, MarketSchema } from "@cryptuoso/exwatcher-events";
 import { Queues, RobotJob, RobotJobType, RobotPosition, RobotRunnerJobType, RobotStatus } from "@cryptuoso/robot-state";
 import { StrategySettings } from "@cryptuoso/robot-settings";
 import { equals, robotExchangeName, sortAsc, sortDesc, uniqueElementsBy } from "@cryptuoso/helpers";
@@ -24,6 +31,7 @@ import {
     Timeframe,
     ValidTimeframe
 } from "@cryptuoso/market";
+import { Event } from "@cryptuoso/events";
 export type RobotRunnerServiceConfig = HTTPServiceConfig;
 
 export default class RobotRunnerService extends HTTPService {
@@ -49,6 +57,26 @@ export default class RobotRunnerService extends HTTPService {
                     auth: true,
                     roles: ["manager", "admin"],
                     handler: this.stopHTTPHandler
+                }
+            });
+
+            this.events.subscribe({
+                [`${ROBOT_WORKER_TOPIC}.*`]: {
+                    passFullEvent: true,
+                    handler: this.handleRobotWorkerEvents.bind(this),
+                    schema: [
+                        RobotWorkerSchema[RobotWorkerEvents.ERROR],
+                        StatusSchema,
+                        RobotWorkerSchema[RobotWorkerEvents.LOG]
+                    ]
+                },
+                [SignalEvents.ALERT]: {
+                    handler: this.handleSignalEvents.bind(this),
+                    schema: SignalSchema[SignalEvents.ALERT]
+                },
+                [SignalEvents.TRADE]: {
+                    handler: this.handleSignalEvents.bind(this),
+                    schema: SignalSchema[SignalEvents.TRADE]
                 }
             });
 
@@ -634,5 +662,63 @@ export default class RobotRunnerService extends HTTPService {
         if (robotsWithJobs && Array.isArray(robotsWithJobs) && robotsWithJobs.length) {
             await Promise.all(robotsWithJobs.map(async ({ robotId }) => this.checkAndQueueRobotJob(robotId)));
         }
+    }
+
+    #saveRobotHistory = async (robotId: string, type: string, data: { [key: string]: any }) =>
+        this.db.pg.query(sql`
+            INSERT INTO robot_history
+            (robot_id, type, data) 
+            VALUES (${robotId}, ${type}, ${JSON.stringify(data)})
+        `);
+
+    #saveRobotLog = async (robotId: string, data: { [key: string]: any }) =>
+        this.db.pg.query(sql`INSERT INTO robot_logs (robot_id, data) 
+        VALUES (${robotId}, ${JSON.stringify(data)})`);
+
+    async handleRobotWorkerEvents(event: Event) {
+        const type = event.type.replace("com.cryptuoso.", "");
+        const historyType = type.replace(`${ROBOT_WORKER_TOPIC}.`, "");
+        switch (type) {
+            case (RobotWorkerEvents.STARTING,
+            RobotWorkerEvents.STARTED,
+            RobotWorkerEvents.STOPPED,
+            RobotWorkerEvents.PAUSED,
+            RobotWorkerEvents.ERROR): {
+                const { robotId } = event.data as { robotId: string };
+                await this.#saveRobotHistory(robotId, historyType, event.data);
+                break;
+            }
+            case RobotWorkerEvents.LOG: {
+                const { robotId } = event.data as RobotWorkerLog;
+                await this.#saveRobotLog(robotId, event.data);
+                break;
+            }
+        }
+    }
+
+    async handleSignalEvents(event: Signal) {
+        const {
+            id,
+            robotId,
+            action,
+            orderType,
+            price,
+            type,
+            positionId,
+            positionPrefix,
+            positionCode,
+            positionParentId,
+            candleTimestamp,
+            timestamp
+        } = event;
+        await this.db.pg.query(sql`
+            INSERT INTO robot_signals
+            (id, robot_id, action, order_type, price, type, position_id,
+            position_prefix, position_code, position_parent_id,
+            candle_timestamp,timestamp)
+            VALUES (${id}, ${robotId}, ${action}, ${orderType}, ${price}, ${type},
+            ${positionId}, ${positionPrefix}, ${positionCode}, ${positionParentId}, ${candleTimestamp},
+            ${timestamp})
+        `);
     }
 }
