@@ -63,12 +63,7 @@ export default class RobotRunnerService extends HTTPService {
             this.events.subscribe({
                 [`${ROBOT_WORKER_TOPIC}.*`]: {
                     passFullEvent: true,
-                    handler: this.handleRobotWorkerEvents.bind(this),
-                    schema: [
-                        RobotWorkerSchema[RobotWorkerEvents.ERROR],
-                        StatusSchema,
-                        RobotWorkerSchema[RobotWorkerEvents.LOG]
-                    ]
+                    handler: this.handleRobotWorkerEvents.bind(this)
                 },
                 [SignalEvents.ALERT]: {
                     handler: this.handleSignalEvents.bind(this),
