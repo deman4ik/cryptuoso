@@ -221,7 +221,7 @@ export class BaseService {
                         lockName = resource;
                     }
 
-                    if (this.#lockers.has(lockName)) throw new Error("Local locked");
+                    if (this.#lockers.has(lockName)) throw new Error("Locked locally");
 
                     this.#lockers.set(lockName, locker);
                     redlock = await this.#redLock.lock(lockName, ttl);
