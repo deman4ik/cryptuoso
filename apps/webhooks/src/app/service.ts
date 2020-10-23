@@ -41,7 +41,7 @@ export default class WebhooksService extends BaseService {
     };
     private _routesValidators: {
         [key: string]: (body: any) => boolean | ValidationError[];
-    };
+    } = {};
 
     constructor(config?: WebhooksServiceConfig) {
         super(config);
@@ -117,7 +117,8 @@ export default class WebhooksService extends BaseService {
         const validationErrors = validate(body);
 
         if (validationErrors === true) {
-            req.body = body;
+            // fastest validator may change source object
+            //req.body = body;
             return next();
         } else throw new ActionsHandlerError("", null, "VALIDATION", 400);
     }

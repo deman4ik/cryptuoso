@@ -67,7 +67,7 @@ export function makeMailgunWebhookValidator() {
 
 /** Seconds */
 const RATE_LIMIT_PERIOD = 60;
-const RATE_LIMIT = 300;
+export const RATE_LIMIT = 300;
 const LIMITER_PREFIX = `limit:${process.env.MAILGUN_DOMAIN}:`;
 
 export class MailUtil {
@@ -99,7 +99,9 @@ export class MailUtil {
 
             const res = await this.#redis.multi().incr(key).expire(key, RATE_LIMIT_PERIOD).exec();
 
-            const count = +res[1][1];
+            const count = +res[0][1];
+
+            //console.warn(`Count: ${count}`);
 
             if (count <= RATE_LIMIT) return;
 

@@ -70,8 +70,8 @@ export function makeMailPublisherEmitObject<E extends MailPublisherEvents, T ext
 // TODO: do & check
 export const MailPublisherSchemes = {
     [MailPublisherEvents.SEND_NOTIFICATION]: {
-        $$root: true,
-        type: "object"
+        //$$root: true,
+        //type: "object"
     },
     [MailPublisherEvents.SEND_TEMPLATE_MAIL]: {
         from: {
@@ -91,8 +91,8 @@ export const MailPublisherSchemes = {
         }
     },
     [MailPublisherEvents.SEND_MAIL]: {
-        $$root: true,
-        type: "object"
+        //$$root: true,
+        //type: "object"
     },
     [MailPublisherEvents.SUBSCRIBE_TO_LIST]: {
         userId: "uuid",
