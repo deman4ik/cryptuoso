@@ -74,7 +74,7 @@ class MailPublisherService extends BaseService {
                 cron: "30 6 * * * *"
             },
             removeOnComplete: true,
-            removeOnFail: true
+            removeOnFail: 100
         });
     }
 
@@ -95,7 +95,6 @@ class MailPublisherService extends BaseService {
             SELECT u.id, u.email
             FROM users u, notifications n
             WHERE n.send_email = true
-                --AND n.mailgun_id IS NULL
                 AND u.id = n.user_id
                 AND u.email IS NOT NULL
             GROUP BY u.id, u.email;
@@ -111,7 +110,6 @@ class MailPublisherService extends BaseService {
                 SET send_mail = false
                 WHERE user_id = ${id}
                     AND send_email = true
-                    --AND mailgun_id IS NULL
                 RETURNING id, "type", data;
             `);
 
@@ -141,7 +139,6 @@ class MailPublisherService extends BaseService {
                 SET send_email = false
                 WHERE id = ${notificationId}
                     AND send_email = true
-                    --AND mailgun_id IS NULL
                 RETURNING user_id, "type", data;
             `);
 

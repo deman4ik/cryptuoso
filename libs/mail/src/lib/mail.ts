@@ -83,7 +83,7 @@ export function makeMailgunWebhookValidator() {
 /** Seconds */
 const RATE_LIMIT_PERIOD = 60;
 export const RATE_LIMIT = 300;
-const LIMITER_PREFIX = `limit:${process.env.MAILGUN_DOMAIN}:`;
+const LIMITER_PREFIX = `cpz:limit:${process.env.MAILGUN_DOMAIN}:`;
 
 export class MailUtil {
     private mailgun: Mailgun.Mailgun;
