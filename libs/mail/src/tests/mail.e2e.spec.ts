@@ -16,8 +16,8 @@ jest.mock(
         }
 );
 
-describe("", () => {
-    test("", async () => {
+describe("Mail rate limit test", () => {
+    test("Should send no more than RATE_LIMIT letters", async () => {
         const redisConnection = new Redis(6379);
         const mailUtil = new MailUtil(redisConnection);
 
