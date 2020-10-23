@@ -35,7 +35,7 @@ export class BaseService {
     #queues: { [key: string]: { instance: Queue<any>; scheduler: QueueScheduler } } = {};
     #workers: { [key: string]: Worker } = {};
     #workerConcurrency = +process.env.WORKER_CONCURRENCY || 10;
-    #lockers = new Set<{ unlock(): Promise<void> }>();
+    #lockers = new Map<string, { unlock(): Promise<void> }>();
 
     constructor(config?: BaseServiceConfig) {
         try {
@@ -143,7 +143,7 @@ export class BaseService {
                 }
             }
             await Promise.all(
-                Array.from(this.#lockers).map(async (locker) => {
+                Array.from(this.#lockers.values()).map(async (locker) => {
                     try {
                         await locker.unlock();
                     } catch (err) {
@@ -221,17 +221,23 @@ export class BaseService {
                         lockName = resource;
                     }
 
+                    if (this.#lockers.has(lockName)) throw new Error("Locked locally");
+
+                    this.#lockers.set(lockName, locker);
                     redlock = await this.#redLock.lock(lockName, ttl);
-                    this.#lockers.add(locker);
                     extendUntilEnded();
                 } catch (err) {
-                    this.log.error(`Failed to lock (${lockName})` /* , err */);
+                    //if (this.#lockers.get(lockName) === locker) this.#lockers.delete(lockName);
+                    await locker.unlock();
+
+                    this.log.error(`Failed to lock (${lockName}).` /* , err */);
                     throw err;
                 }
             },
             unlock: async () => {
                 ended = true;
-                this.#lockers.delete(locker);
+
+                if (this.#lockers.get(lockName) === locker) this.#lockers.delete(lockName);
 
                 if (redlock) {
                     try {
