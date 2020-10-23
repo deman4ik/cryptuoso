@@ -43,7 +43,8 @@
             "@cryptuoso/test-helpers": ["libs/test-helpers/src/index.ts"],
             "@cryptuoso/user-signal-state": ["libs/user-signal-state/src/index.ts"],
             "@cryptuoso/user-robot-state": ["libs/user-robot-state/src/index.ts"],
-            "@cryptuoso/robot-settings": ["libs/robot-settings/src/index.ts"]
+            "@cryptuoso/robot-settings": ["libs/robot-settings/src/index.ts"],
+            "@cryptuoso/mail-publisher-events": ["libs/mail-publisher-events/src/index.ts"]
         }
     },
     "exclude": ["node_modules", "tmp"]

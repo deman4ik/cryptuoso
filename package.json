@@ -66,7 +66,11 @@
         "build:robot-runner": "nx build robot-runner --prod",
         "serve:robot-runner": "nx serve robot-runner",
         "build:robot-worker": "nx build robot-worker --prod",
-        "serve:robot-worker": "nx serve robot-worker"
+        "serve:robot-worker": "nx serve robot-worker",
+        "build:mail-publisher": "nx build mail-publisher --prod",
+        "serve:mail-publisher": "nx serve mail-publisher",
+        "build:webhooks": "nx build webhooks --prod",
+        "serve:webhooks": "nx serve webhooks"
     },
     "private": true,
     "dependencies": {
