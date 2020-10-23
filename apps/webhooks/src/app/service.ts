@@ -4,8 +4,9 @@ import bodyParser from "body-parser";
 import helmet from "helmet";
 import ifunless from "middleware-if-unless";
 import Validator, { ValidationSchema, ValidationError } from "fastest-validator";
-import { makeMailgunWebhookValidator } from "@cryptuoso/mail";
+import { makeMailgunWebhookValidator, MailGunEventTypes, MailGunEventData } from "@cryptuoso/mail";
 import { ActionsHandlerError } from "@cryptuoso/errors";
+import { UserSettings } from "@cryptuoso/user-state";
 
 //import fetch from "node-fetch";
 
@@ -54,7 +55,7 @@ export default class WebhooksService extends BaseService {
                 mailgun: config?.routes?.mailgun || process.env.MAILGUN_WEBHOOKS_ROUTE || ServiceNames.mailgun
             };
 
-            this._port = config?.port || +process.env.PORT || 443;
+            this._port = config?.port || +process.env.PORT || 3000;
 
             this._server = restana({
                 errorHandler: this._errorHandler.bind(this)
@@ -127,13 +128,16 @@ export default class WebhooksService extends BaseService {
         const body = req.body;
 
         try {
-            const data = body["event-data"];
+            const data: MailGunEventData = body["event-data"];
 
             // TODO: validation
 
             if (!data) throw new ActionsHandlerError("Unknown event provided", null, "VALIDATION", 400);
 
-            if (data.event === "opened") await this.mailgunOpenedHandler(data);
+            const eventType = data.event?.toUpperCase();
+
+            if (eventType === MailGunEventTypes.OPENED) await this.mailgunOpenedHandler(data);
+            else if (eventType === MailGunEventTypes.UNSUBSCRIBED) await this.mailgunUsubscribedHandler(data);
             else throw new ActionsHandlerError("Unknown event provided", null, "VALIDATION", 400);
 
             res.end();
@@ -143,9 +147,43 @@ export default class WebhooksService extends BaseService {
         }
     }
 
-    // TODO: mailgun unsubscribe event handler
+    async mailgunUsubscribedHandler(data: MailGunEventData) {
+        // TODO: check list
+        const user: {
+            id: string;
+            settings: UserSettings;
+        } = await this.db.pg.maybeOne(this.db.sql`
+            SELECT id, settings
+            FROM users
+            WHERE email = ${data.recipient};
+        `);
 
-    async mailgunOpenedHandler(data: { event: string; timestamp: number; id: string }) {
+        if (!user) throw new ActionsHandlerError("", null, "NOT_FOUND", 404);
+
+        const oldNotifications = user.settings.notifications;
+
+        const newSettings: UserSettings = {
+            ...user.settings,
+            notifications: {
+                signals: {
+                    email: false,
+                    telegram: oldNotifications.signals.telegram
+                },
+                trading: {
+                    email: false,
+                    telegram: oldNotifications.trading.telegram
+                }
+            }
+        };
+
+        await this.db.pg.query(this.db.sql`
+            UPDATE users
+            SET settings = ${this.db.sql.json(newSettings)}
+            WHERE id = ${user.id};
+        `);
+    }
+
+    async mailgunOpenedHandler(data: MailGunEventData) {
         await this.db.pg.query(this.db.sql`
             UPDATE notifications
             SET readed = true

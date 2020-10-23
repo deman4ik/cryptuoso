@@ -70,8 +70,7 @@ export function makeMailPublisherEmitObject<E extends MailPublisherEvents, T ext
 // TODO: do & check
 export const MailPublisherSchemes = {
     [MailPublisherEvents.SEND_NOTIFICATION]: {
-        //$$root: true,
-        //type: "object"
+        notificationId: "uuid"
     },
     [MailPublisherEvents.SEND_TEMPLATE_MAIL]: {
         from: {
@@ -95,15 +94,11 @@ export const MailPublisherSchemes = {
         //type: "object"
     },
     [MailPublisherEvents.SUBSCRIBE_TO_LIST]: {
-        userId: "uuid",
-        type: {
+        email: "string",
+        list: "string",
+        name: {
             type: "string",
             optional: true
-        },
-        needToSendImmediately: {
-            type: "boolean",
-            optional: true
-        },
-        data: "object"
+        }
     }
 };

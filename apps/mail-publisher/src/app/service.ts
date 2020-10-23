@@ -28,7 +28,7 @@ const enum JobTypes {
 export type MailPublisherServiceConfig = BaseServiceConfig;
 
 class MailPublisherService extends BaseService {
-    private mailUtilInstance: MailUtil;
+    mailUtilInstance: MailUtil;
 
     constructor(config?: MailPublisherServiceConfig) {
         super(config);
@@ -42,7 +42,7 @@ class MailPublisherService extends BaseService {
                     schema: MailPublisherSchemes[MailPublisherEvents.SEND_NOTIFICATION]
                 },
                 [MailPublisherEvents.SEND_TEMPLATE_MAIL]: {
-                    handler: this._sendNotificationHandler.bind(this),
+                    handler: this._sendTemplateMailHandler.bind(this),
                     schema: MailPublisherSchemes[MailPublisherEvents.SEND_TEMPLATE_MAIL]
                 },
                 [MailPublisherEvents.SEND_MAIL]: {
@@ -50,7 +50,7 @@ class MailPublisherService extends BaseService {
                     schema: MailPublisherSchemes[MailPublisherEvents.SEND_MAIL]
                 },
                 [MailPublisherEvents.SUBSCRIBE_TO_LIST]: {
-                    handler: this._sendNotificationHandler.bind(this),
+                    handler: this._subscribeToListHandler.bind(this),
                     schema: MailPublisherSchemes[MailPublisherEvents.SUBSCRIBE_TO_LIST]
                 }
             });
@@ -98,14 +98,14 @@ class MailPublisherService extends BaseService {
                 --AND n.mailgun_id IS NULL
                 AND u.id = n.user_id
                 AND u.email IS NOT NULL
-            GROUP BY n.user_id;
+            GROUP BY u.id, u.email;
         `);
 
         for (const { id, email } of users) {
             const notifications: {
                 id: string;
                 type: TemplateMailType;
-                data: TemplateMailData;
+                data: TemplateMailData[TemplateMailType];
             }[] = await this.db.pg.any(this.db.sql`
                 UPDATE notifications
                 SET send_mail = false
@@ -135,7 +135,7 @@ class MailPublisherService extends BaseService {
             const notification: {
                 userId: string;
                 type: TemplateMailType;
-                data: TemplateMailData;
+                data: TemplateMailData[TemplateMailType];
             } = await this.db.pg.maybeOne(this.db.sql`
                 UPDATE notifications
                 SET send_email = false
@@ -169,7 +169,10 @@ class MailPublisherService extends BaseService {
                 WHERE id = ${notificationId};
             `);
         } catch (err) {
-            this.log.error(`Failed to handle '${MailPublisherEvents.SEND_MAIL}' event (${JSON.stringify(data)})`, err);
+            this.log.error(
+                `Failed to handle '${MailPublisherEvents.SEND_NOTIFICATION}' event (${JSON.stringify(data)})`,
+                err.message
+            );
             throw err;
         }
     }
@@ -209,7 +212,7 @@ class MailPublisherService extends BaseService {
     }
 
     private async sendNotificationsMail(
-        notifications: { type: TemplateMailType; data: TemplateMailData }[],
+        notifications: { type: TemplateMailType; data: TemplateMailData[TemplateMailType] }[],
         to: string,
         from?: string
     ) {
@@ -225,7 +228,7 @@ class MailPublisherService extends BaseService {
 
     private async sendTemplateMail(
         type: TemplateMailType,
-        data: TemplateMailData,
+        data: TemplateMailData[TemplateMailType],
         to: string,
         from?: string,
         template?: REMOTE_TEMPLATE_TYPES

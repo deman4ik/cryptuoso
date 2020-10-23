@@ -7,7 +7,7 @@ import { HTTPService, HTTPServiceConfig } from "../lib/HTTPService";
 import { ActionsHandlerError } from "@cryptuoso/errors";
 // eslint-disable-next-line @nrwl/nx/enforce-module-boundaries
 import { ajax, setProperty, getServerFromService, createServiceRoute } from "@cryptuoso/test-helpers";
-import { AddressInfo } from "net";
+//import { AddressInfo } from "net";
 
 const mockExit = jest.fn();
 const mockLightship = {
@@ -91,7 +91,7 @@ describe("Test 'BaseService' class", () => {
                     await httpService.startService();
 
                     expect(mockExit).toHaveBeenCalledTimes(0);
-                    const address = <AddressInfo>app.getServer().address();
+                    const address = /* <AddressInfo> */app.getServer().address();
                     expect(address.port).toEqual(CONFIG.port);
                 });
             });
@@ -105,7 +105,7 @@ describe("Test 'BaseService' class", () => {
                     await httpService2.startService();
 
                     expect(mockExit).toHaveBeenCalledTimes(0);
-                    const address = <AddressInfo>app2.getServer().address();
+                    const address = /* <AddressInfo> */app2.getServer().address();
                     expect(address.port).toEqual(3000);
 
                     await shutdownHandler2();

@@ -53,10 +53,25 @@ function makeMailGunConnection() {
     return new Mailgun(config);
 }
 
+export enum MailGunEventTypes {
+    OPENED = "OPENED",
+    UNSUBSCRIBED = "UNSUBSCRIBED",
+    DELIVERED = "DELIVERED"
+}
+
+export interface MailGunEventData {
+    event: MailGunEventTypes;
+    /** MailGun message id */
+    id?: string;
+    /** email */
+    recipient?: string;
+    // TODO: list field for "unsubscribe event"
+}
+
 export function makeMailgunWebhookValidator() {
     const mailgun = makeMailGunConnection();
 
-    return function validateWebhook(body: any) {
+    return function (body: any) {
         if (!body?.signature || !body["event-data"]) return false;
 
         const s = body.signature;

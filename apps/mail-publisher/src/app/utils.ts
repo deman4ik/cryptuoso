@@ -16,13 +16,17 @@ function getMaiTemplate(type: string) {
     return mail;
 }
 
-export function buildEmailBody(type: TemplateMailType, data: TemplateMailData) {
+export function buildEmailBody(type: TemplateMailType, data: TemplateMailData[TemplateMailType]) {
     const mail = getMaiTemplate(type);
 
     return getStringOrFunctionValue(mail.body, data);
 }
 
-export function buildEmail(type: TemplateMailType, data: TemplateMailData, templateType?: REMOTE_TEMPLATE_TYPES) {
+export function buildEmail(
+    type: TemplateMailType,
+    data: TemplateMailData[TemplateMailType],
+    templateType?: REMOTE_TEMPLATE_TYPES
+) {
     const mail = getMaiTemplate(type);
 
     return {
@@ -36,7 +40,7 @@ export function buildEmail(type: TemplateMailType, data: TemplateMailData, templ
 }
 
 export function buildNotificationsEmail(
-    notifications: { type: TemplateMailType; data: TemplateMailData }[],
+    notifications: { type: TemplateMailType; data: TemplateMailData[TemplateMailType] }[],
     templateType?: REMOTE_TEMPLATE_TYPES
 ) {
     if (!notifications?.length) throw new Error("Empty notifications array");

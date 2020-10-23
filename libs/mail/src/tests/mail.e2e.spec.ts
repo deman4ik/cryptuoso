@@ -2,6 +2,7 @@ import { MailUtil, RATE_LIMIT } from "../lib/mail";
 import Redis from "ioredis";
 import { sleep } from "@cryptuoso/helpers";
 
+// eslint-disable-next-line no-var
 var mockMailGunSend = jest.fn(/* console.log */);
 
 jest.mock(
@@ -35,5 +36,7 @@ describe("Mail rate limit test", () => {
         //console.warn(mockMailGunSend.mock.calls.length);
 
         expect(mockMailGunSend.mock.calls.length).toBeLessThanOrEqual(RATE_LIMIT);
+
+        redisConnection.quit();
     });
 });
