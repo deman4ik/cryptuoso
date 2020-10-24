@@ -14,6 +14,5 @@ module.exports = {
     resolver: "@nrwl/jest/plugins/resolver",
     moduleFileExtensions: ["ts", "js", "html"],
     coverageReporters: ["html"],
-    setupFilesAfterEnv: ["jest-extended"],
-    projects: "<rootDir>/libs/ccxt-private"
+    setupFilesAfterEnv: ["jest-extended"]
 };
