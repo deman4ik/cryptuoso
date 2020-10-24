@@ -10,9 +10,6 @@ import {
     RobotRunnerStop,
     RobotWorkerEvents,
     ROBOT_WORKER_TOPIC,
-    RobotWorkerSchema,
-    StatusSchema,
-    RobotWorkerLog,
     SignalEvents,
     SignalSchema,
     Signal
@@ -77,7 +74,7 @@ export default class RobotRunnerService extends HTTPService {
 
             this.addOnStartHandler(this.onServiceStart);
         } catch (err) {
-            this.log.error(err, "While consctructing RobotRunnerService");
+            this.log.error(err, "While constructing RobotRunnerService");
         }
     }
 

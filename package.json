@@ -66,7 +66,15 @@
         "build:robot-runner": "nx build robot-runner --prod",
         "serve:robot-runner": "nx serve robot-runner",
         "build:robot-worker": "nx build robot-worker --prod",
-        "serve:robot-worker": "nx serve robot-worker"
+        "serve:robot-worker": "nx serve robot-worker",
+        "build:user-robot-runner": "nx build user-robot-runner --prod",
+        "serve:user-robot-runner": "nx serve user-robot-runner",
+        "build:user-robot-worker": "nx build user-robot-worker --prod",
+        "serve:user-robot-worker": "nx serve user-robot-worker",
+        "build:connector-runner": "nx build connector-runner --prod",
+        "serve:connector-runner": "nx serve connector-runner",
+        "build:connector-worker": "nx build connector-worker --prod",
+        "serve:connector-worker": "nx serve connector-worker"
     },
     "private": true,
     "dependencies": {
@@ -106,7 +114,7 @@
     "devDependencies": {
         "@nrwl/eslint-plugin-nx": "^10.3.1",
         "@nrwl/jest": "^10.3.1",
-        "@nrwl/node": "^10.3.1",
+        "@nrwl/node": "10.3.1",
         "@nrwl/workspace": "^10.3.1",
         "@types/async-retry": "^1.4.2",
         "@types/bcrypt": "^3.0.0",
