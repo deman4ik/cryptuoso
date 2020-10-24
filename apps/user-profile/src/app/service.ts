@@ -1,6 +1,5 @@
 import { HTTPService, HTTPServiceConfig, RequestExtended } from "@cryptuoso/service";
 import {
-    GenericObject,
     User,
     UserRoles,
     UserExchangeAccountState,
@@ -18,7 +17,7 @@ import dayjs from "@cryptuoso/dayjs";
 import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
 import { spawn, Pool, Worker as ThreadsWorker } from "threads";
 import { Encrypt } from "./encryptWorker";
-import { formatExchange } from "@cryptuoso/helpers";
+import { formatExchange, GenericObject } from "@cryptuoso/helpers";
 import {
     UserRobotSettings,
     UserRobotSettingsSchema,
@@ -26,6 +25,7 @@ import {
     UserSignalSettingsSchema,
     VolumeSettingsType
 } from "@cryptuoso/robot-settings";
+import { PrivateConnector } from "@cryptuoso/ccxt-private";
 
 export type UserProfileServiceConfig = HTTPServiceConfig;
 
@@ -203,7 +203,7 @@ export default class UserProfileService extends HTTPService {
     }
 
     async _httpHandler(
-        handler: (user: User, params: GenericObject) => Promise<GenericObject | any>,
+        handler: (user: User, params: GenericObject<any>) => Promise<GenericObject<any>>,
         req: RequestExtended,
         res: any
     ) {
@@ -524,7 +524,7 @@ export default class UserProfileService extends HTTPService {
                     throw new ActionsHandlerError("Invalid exchange", null, "FORBIDDEN", 403);
 
                 const startedUserRobotsCount = +(await this.db.pg.oneFirst(sql`
-                    SELECT COUNT(*)
+                    SELECT COUNT(1)
                     FROM user_robots
                     WHERE user_ex_acc_id = ${existed.id}
                         AND status = ${RobotStatus.started};
@@ -540,7 +540,17 @@ export default class UserProfileService extends HTTPService {
             }
         }
 
-        // TODO: checkAPIKeys
+        const connector = new PrivateConnector();
+        const check: {
+            success: boolean;
+            error?: string;
+        } = await connector.checkAPIKeys({
+            exchange,
+            key,
+            secret,
+            pass
+        });
+        if (!check.success) return check;
 
         const encryptedKeys: UserExchangeKeys = {
             key: await this.encrypt(userId, key),
@@ -693,7 +703,7 @@ export default class UserProfileService extends HTTPService {
             );
 
         const userRobotsCount = +(await this.db.pg.oneFirst(sql`
-            SELECT COUNT(*)
+            SELECT COUNT(1)
             FROM user_robots
             WHERE user_ex_acc_id = ${id};
         `));

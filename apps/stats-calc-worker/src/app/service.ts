@@ -294,7 +294,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         `;
 
         const positionsCount: number = +(await this.db.pg.oneFirst(sql`
-            SELECT COUNT(*)
+            SELECT COUNT(1)
             ${queryFromAndConditionPart};
         `));
 
@@ -358,7 +358,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             }
 
             const countOfRobots = +(await this.db.pg.oneFirst(sql`
-                SELECT COUNT(*)
+                SELECT COUNT(1)
                 FROM robots
                 ${WHERE};
             `));
@@ -398,7 +398,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         `;
 
         const positionsCount: number = +(await this.db.pg.oneFirst(sql`
-            SELECT COUNT(*)
+            SELECT COUNT(1)
             ${queryFromAndConditionPart};
         `));
 
@@ -452,7 +452,7 @@ export default class StatisticCalcWorkerService extends BaseService {
 
         if (prevUsersRobotsAggrStats) {
             const countOfUsersRobots = +(await this.db.pg.oneFirst(sql`
-                SELECT COUNT(*)
+                SELECT COUNT(1)
                 FROM user_robots ur,
                     robots r
                 WHERE r.id = ur.robot_id
@@ -493,7 +493,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         `;
 
         const positionsCount: number = +(await this.db.pg.oneFirst(sql`
-            SELECT COUNT(*)
+            SELECT COUNT(1)
             ${queryFromAndConditionPart};
         `));
 
@@ -554,7 +554,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             `;
 
             const positionsCount: number = +(await this.db.pg.oneFirst(sql`
-                SELECT COUNT(*)
+                SELECT COUNT(1)
                 ${queryFromAndConditionPart};
             `));
 
@@ -666,7 +666,7 @@ export default class StatisticCalcWorkerService extends BaseService {
 
         if (prevUserAggrStats) {
             const countOfSignals = +(await this.db.pg.oneFirst(sql`
-                SELECT COUNT(*)
+                SELECT COUNT(1)
                 FROM user_signals us,
                     robots r
                 WHERE us.user_id = ${userId}
@@ -716,7 +716,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         `;
 
         const positionsCount: number = +(await this.db.pg.oneFirst(sql`
-            SELECT COUNT(*)
+            SELECT COUNT(1)
             ${queryFromAndConditionPart};
         `));
 
@@ -781,7 +781,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         `;
 
         const positionsCount: number = +(await this.db.pg.oneFirst(sql`
-            SELECT COUNT(*)
+            SELECT COUNT(1)
             ${queryFromAndConditionPart};
         `));
 
@@ -839,7 +839,7 @@ export default class StatisticCalcWorkerService extends BaseService {
 
         if (prevUserAggrStats) {
             const countOfUserRobots = +(await this.db.pg.oneFirst(sql`
-                SELECT COUNT(*)
+                SELECT COUNT(1)
                 FROM user_robots ur,
                     robots r
                 WHERE ur.user_id = ${userId}
@@ -882,7 +882,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         `;
 
         const positionsCount: number = +(await this.db.pg.oneFirst(sql`
-            SELECT COUNT(*)
+            SELECT COUNT(1)
             ${queryFromAndConditionPart};
         `));
 

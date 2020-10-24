@@ -759,7 +759,7 @@ export default class BacktesterWorkerService extends BaseService {
               AND timestamp <= ${backtester.dateTo}
               AND type != ${CandleType.previous}`;
             const candlesCount: number = +(await this.db.pg.oneFirst(sql`
-               SELECT COUNT(*) FROM ${query}`));
+               SELECT COUNT(1) FROM ${query}`));
             backtester.init(candlesCount);
             await DataStream.from(
                 makeChunksGenerator(
