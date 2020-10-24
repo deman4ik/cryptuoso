@@ -1,5 +1,6 @@
 import { round } from "@cryptuoso/helpers";
-import { OrderType, TradeAction } from "./market";
+import { TradeAction } from "./market";
+import { OrderType } from "./orders";
 import { ValidTimeframe } from "./timeframe";
 
 export const enum PositionDirection {
