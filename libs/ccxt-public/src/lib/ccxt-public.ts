@@ -13,33 +13,14 @@ import {
     getCurrentCandleParams,
     getCandlesParams,
     handleCandleGaps,
-    batchCandles
+    batchCandles,
+    Market
 } from "@cryptuoso/market";
 import { createSocksProxyAgent } from "./fetch";
-
-interface MinMax {
-    min: number;
-    max: number | undefined;
-}
-
-export interface Market {
-    exchange: string;
-    asset: string;
-    currency: string;
-    precision: { base: number; quote: number; amount: number; price: number };
-    limits: { amount: MinMax; amountCurrency: MinMax; price: MinMax; cost?: MinMax };
-    averageFee: number;
-    loadFrom: string;
-}
 
 export class PublicConnector {
     log: Logger;
     connectors: { [key: string]: Exchange } = {};
-
-    constructor() {
-        this.log = logger;
-    }
-
     retryOptions = {
         retries: 1000,
         minTimeout: 0,
@@ -50,13 +31,15 @@ export class PublicConnector {
             }
         }
     };
-
-    _agent = process.env.PROXY_ENDPOINT && createSocksProxyAgent(process.env.PROXY_ENDPOINT);
+    agent = process.env.PROXY_ENDPOINT && createSocksProxyAgent(process.env.PROXY_ENDPOINT);
+    constructor() {
+        this.log = logger;
+    }
 
     async initConnector(exchange: string): Promise<void> {
         if (!(exchange in this.connectors)) {
             const config: { [key: string]: any } = {
-                agent: this._agent
+                agent: this.agent
             };
             if (exchange === "bitfinex" || exchange === "kraken") {
                 this.connectors[exchange] = new ccxt[exchange](config);

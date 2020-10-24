@@ -7,4 +7,5 @@ export * from "./lib/object";
 export * from "./lib/sort";
 export * from "./lib/text";
 export * from "./lib/time";
+export * from "./lib/types";
 export * from "./lib/validate";

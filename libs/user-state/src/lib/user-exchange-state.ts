@@ -1,6 +1,4 @@
-export interface GenericObject<T = any> {
-    [key: string]: T;
-}
+import { GenericObject } from "@cryptuoso/helpers";
 
 export interface EncryptedData {
     data: string;

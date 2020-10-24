@@ -1,7 +1,57 @@
 import dayjs from "@cryptuoso/dayjs";
 import { createDatesList, createDatesListWithRange, arraysDiff, sortAsc, sortDesc } from "@cryptuoso/helpers";
 import { Timeframe, ValidTimeframe } from "./timeframe";
-import { CandleType, ExchangeTrade, ExchangeCandle } from "./market";
+import { ExchangeTrade } from "./market";
+
+export const enum CandleType {
+    loaded = "loaded",
+    created = "created",
+    previous = "previous",
+    history = "history"
+}
+
+export interface ExchangeCandle {
+    exchange: string;
+    asset: string;
+    currency: string;
+    timeframe: ValidTimeframe;
+    time: number;
+    timestamp: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+    type: CandleType;
+}
+
+export interface DBCandle {
+    exchange: string;
+    asset: string;
+    currency: string;
+    id?: string;
+    time: number;
+    timestamp: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+    type: CandleType;
+}
+
+export interface Candle extends DBCandle {
+    id: string;
+    timeframe: number;
+}
+
+export interface CandleProps {
+    open: number[];
+    high: number[];
+    low: number[];
+    close: number[];
+    volume: number[];
+}
 
 export interface ExchangeCandlesInTimeframes {
     [key: string]: ExchangeCandle[];
