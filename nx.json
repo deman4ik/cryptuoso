@@ -6,7 +6,7 @@
             "dependencies": "*",
             "devDependencies": "*"
         },
-        ".eslintrc": "*",
+        ".eslintrc.json": "*",
         "nx.json": "*",
         "tsconfig.base.json": "*"
     },
