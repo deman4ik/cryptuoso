@@ -177,7 +177,6 @@ describe("Test 'Timeframe' class", () => {
         });
         it("should return valid date for timeframe 480 and null input", () => {
             const result = Timeframe.validTimeframeDatePrev(null, 480);
-            console.log(result);
             expect(result).toBeTruthy();
         });
     });
