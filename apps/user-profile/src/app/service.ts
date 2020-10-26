@@ -400,7 +400,7 @@ export default class UserProfileService extends HTTPService {
         )
             throw new ActionsHandlerError("This volume value is already set.", null, "FORBIDDEN", 403);
 
-        const marketLimits: UserMarketState["limits"] = await this.db.pg.one(sql`
+        const { limits: marketLimits }: { limits: UserMarketState["limits"] } = await this.db.pg.one(sql`
             SELECT vm.limits
             FROM robots r, v_user_markets vm
             WHERE r.id = ${robotId}
