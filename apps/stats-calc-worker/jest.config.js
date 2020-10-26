@@ -1,5 +1,5 @@
 module.exports = {
-  name: 'stats-calc-worker',
-  preset: '../../jest.config.js',
-  coverageDirectory: '../../coverage/apps/stats-calc-worker'
+    displayName: "stats-calc-worker",
+    preset: "../../jest.preset.js",
+    coverageDirectory: "../../coverage/apps/stats-calc-worker"
 };

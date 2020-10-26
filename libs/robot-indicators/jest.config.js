@@ -1,10 +1,5 @@
 module.exports = {
-    name: "robot-indicators",
-    preset: "../../jest.config.js",
-    transform: {
-        "^.+\\.[tj]sx?$": "ts-jest"
-    },
-    moduleFileExtensions: ["ts", "tsx", "js", "jsx", "html"],
-    coverageDirectory: "../../coverage/libs/robot-indicators",
-    globals: { "ts-jest": { tsConfig: "<rootDir>/tsconfig.spec.json" } }
+    displayName: "robot-indicators",
+    preset: "../../jest.preset.js",
+    coverageDirectory: "../../coverage/libs/robot-indicators"
 };

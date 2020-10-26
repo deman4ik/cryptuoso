@@ -1,10 +1,5 @@
 module.exports = {
-    name: "importer-events",
-    preset: "../../jest.config.js",
-    transform: {
-        "^.+\\.[tj]sx?$": "ts-jest"
-    },
-    moduleFileExtensions: ["ts", "tsx", "js", "jsx", "html"],
-    coverageDirectory: "../../coverage/libs/importer-events",
-    globals: { "ts-jest": { tsConfig: "<rootDir>/tsconfig.spec.json" } }
+    displayName: "importer-events",
+    preset: "../../jest.preset.js",
+    coverageDirectory: "../../coverage/libs/importer-events"
 };
