@@ -74,7 +74,9 @@
     "build:connector-runner": "nx build connector-runner --prod",
     "serve:connector-runner": "nx serve connector-runner",
     "build:connector-worker": "nx build connector-worker --prod",
-    "serve:connector-worker": "nx serve connector-worker"
+    "serve:connector-worker": "nx serve connector-worker",
+    "build:mail-publisher": "nx build mail-publisher --prod",
+    "serve:mail-publisher": "nx serve mail-publisher"
   },
   "private": true,
   "dependencies": {

@@ -39,7 +39,10 @@ jest.mock("@cryptuoso/postgres", () => ({
         query: jest.fn()
     }
 }));
-jest.mock("@cryptuoso/mail");
+//jest.mock("@cryptuoso/mail");
+const mockEvents: any = {
+    emit: jest.fn()
+};
 
 describe("Test Auth class methods", () => {
     describe("login method", () => {
@@ -63,7 +66,7 @@ describe("Test Auth class methods", () => {
                         settings: userSettings,
                         lastActiveAt: dayjs.utc().toISOString()
                     };
-                    const auth = new Auth(/* bcryptUtils */);
+                    const auth = new Auth(mockEvents /* bcryptUtils */);
 
                     auth._dbGetUserByEmail = jest.fn(async () => dbUser);
                     auth._dbUpdateUserRefreshToken = jest.fn();
@@ -98,7 +101,7 @@ describe("Test Auth class methods", () => {
                     settings: userSettings,
                     lastActiveAt: dayjs.utc().toISOString()
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserByEmail = jest.fn(async () => dbUser);
                 auth._dbUpdateUserRefreshToken = jest.fn();
@@ -132,7 +135,7 @@ describe("Test Auth class methods", () => {
                     settings: userSettings,
                     lastActiveAt: dayjs.utc().toISOString()
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserByEmail = jest.fn(async () => dbUser);
                 auth._dbUpdateUserRefreshToken = jest.fn();
@@ -165,7 +168,7 @@ describe("Test Auth class methods", () => {
                         settings: userSettings,
                         lastActiveAt: dayjs.utc().toISOString()
                     };
-                    const auth = new Auth(/* bcryptUtils */);
+                    const auth = new Auth(mockEvents /* bcryptUtils */);
 
                     auth._dbGetUserByEmail = jest.fn(async () => dbUser);
                     auth._dbUpdateUserRefreshToken = jest.fn();
@@ -193,7 +196,7 @@ describe("Test Auth class methods", () => {
                         settings: userSettings,
                         lastActiveAt: dayjs.utc().toISOString()
                     };
-                    const auth = new Auth(/* bcryptUtils */);
+                    const auth = new Auth(mockEvents /* bcryptUtils */);
 
                     auth._dbGetUserByEmail = jest.fn(async () => dbUser);
                     auth._dbUpdateUserRefreshToken = jest.fn();
@@ -208,7 +211,7 @@ describe("Test Auth class methods", () => {
                         email: "example@inbox.com",
                         password: "password"
                     };
-                    const auth = new Auth(/* bcryptUtils */);
+                    const auth = new Auth(mockEvents /* bcryptUtils */);
 
                     auth._dbGetUserByEmail = jest.fn(async () => null);
                     auth._dbUpdateUserRefreshToken = jest.fn();
@@ -244,7 +247,7 @@ describe("Test Auth class methods", () => {
                         settings: userSettings,
                         lastActiveAt: dayjs.utc().toISOString()
                     };
-                    const auth = new Auth(/* bcryptUtils */);
+                    const auth = new Auth(mockEvents /* bcryptUtils */);
 
                     auth._dbGetUserTg = jest.fn(async () => dbUser);
                     auth._dbRegisterUserTg = jest.fn();
@@ -282,7 +285,7 @@ describe("Test Auth class methods", () => {
                         settings: userSettings,
                         lastActiveAt: dayjs.utc().toISOString()
                     };
-                    const auth = new Auth(/* bcryptUtils */);
+                    const auth = new Auth(mockEvents /* bcryptUtils */);
 
                     auth._dbGetUserTg = jest.fn(async () => dbUser);
                     auth._dbRegisterUserTg = jest.fn();
@@ -326,7 +329,7 @@ describe("Test Auth class methods", () => {
                         settings: userSettings,
                         lastActiveAt: dayjs.utc().toISOString()
                     };
-                    const auth = new Auth(/* bcryptUtils */);
+                    const auth = new Auth(mockEvents /* bcryptUtils */);
 
                     auth._dbGetUserTg = jest.fn(async () => dbUser);
                     auth._dbRegisterUserTg = jest.fn();
@@ -356,7 +359,7 @@ describe("Test Auth class methods", () => {
                         hash: ""
                     };
                     params.hash = makeTgHash(params, process.env.BOT_TOKEN);
-                    const auth = new Auth(/* bcryptUtils */);
+                    const auth = new Auth(mockEvents /* bcryptUtils */);
 
                     auth._dbGetUserTg = jest.fn(async () => null);
                     auth._dbRegisterUserTg = jest.fn();
@@ -402,7 +405,7 @@ describe("Test Auth class methods", () => {
                         settings: userSettings,
                         lastActiveAt: dayjs.utc().toISOString()
                     };
-                    const auth = new Auth(/* bcryptUtils */);
+                    const auth = new Auth(mockEvents /* bcryptUtils */);
 
                     auth._dbGetUserTg = jest.fn(async () => dbUser);
                     auth._dbRegisterUserTg = jest.fn();
@@ -436,7 +439,7 @@ describe("Test Auth class methods", () => {
                         settings: userSettings,
                         lastActiveAt: dayjs.utc().toISOString()
                     };
-                    const auth = new Auth(/* bcryptUtils */);
+                    const auth = new Auth(mockEvents /* bcryptUtils */);
 
                     auth._dbGetUserTg = jest.fn(async () => dbUser);
                     auth._dbRegisterUserTg = jest.fn();
@@ -474,7 +477,7 @@ describe("Test Auth class methods", () => {
                         settings: userSettings,
                         lastActiveAt: dayjs.utc().toISOString()
                     };
-                    const auth = new Auth(/* bcryptUtils */);
+                    const auth = new Auth(mockEvents /* bcryptUtils */);
 
                     auth._dbGetUserTg = jest.fn(async () => null);
                     auth._dbGetUserById = jest.fn(async () => dbUser);
@@ -513,7 +516,7 @@ describe("Test Auth class methods", () => {
                         settings: userSettings,
                         lastActiveAt: dayjs.utc().toISOString()
                     };
-                    const auth = new Auth(/* bcryptUtils */);
+                    const auth = new Auth(mockEvents /* bcryptUtils */);
 
                     auth._dbGetUserTg = jest.fn(async () => null);
                     auth._dbGetUserById = jest.fn(async () => dbUser);
@@ -546,7 +549,7 @@ describe("Test Auth class methods", () => {
                         settings: userSettings,
                         lastActiveAt: dayjs.utc().toISOString()
                     };
-                    const auth = new Auth(/* bcryptUtils */);
+                    const auth = new Auth(mockEvents /* bcryptUtils */);
 
                     auth._dbGetUserTg = jest.fn(async () => dbUser);
                     auth._dbGetUserById = jest.fn(async () => dbUser);
@@ -579,7 +582,7 @@ describe("Test Auth class methods", () => {
                         settings: userSettings,
                         lastActiveAt: dayjs.utc().toISOString()
                     };
-                    const auth = new Auth(/* bcryptUtils */);
+                    const auth = new Auth(mockEvents /* bcryptUtils */);
 
                     auth._dbGetUserTg = jest.fn(async () => null);
                     auth._dbGetUserById = jest.fn(async () => dbUser);
@@ -598,7 +601,7 @@ describe("Test Auth class methods", () => {
                     password: "password",
                     name: "Name"
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserByEmail = jest.fn(async () => null);
                 auth._dbRegisterUser = jest.fn();
@@ -633,7 +636,7 @@ describe("Test Auth class methods", () => {
                     settings: userSettings,
                     lastActiveAt: dayjs.utc().toISOString()
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserByEmail = jest.fn(async () => dbUser);
                 auth._dbRegisterUser = jest.fn();
@@ -663,7 +666,7 @@ describe("Test Auth class methods", () => {
                     settings: userSettings,
                     lastActiveAt: dayjs.utc().toISOString()
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserByToken = jest.fn(async () => dbUser);
 
@@ -680,7 +683,7 @@ describe("Test Auth class methods", () => {
                 const params = {
                     refreshToken: "token"
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserByToken = jest.fn(async () => null);
 
@@ -707,7 +710,7 @@ describe("Test Auth class methods", () => {
                     settings: userSettings,
                     lastActiveAt: dayjs.utc().toISOString()
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserByToken = jest.fn(async () => dbUser);
 
@@ -738,7 +741,7 @@ describe("Test Auth class methods", () => {
                     settings: userSettings,
                     lastActiveAt: dayjs.utc().toISOString()
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserById = jest.fn(async () => dbUser);
                 auth._dbActivateUser = jest.fn();
@@ -772,7 +775,7 @@ describe("Test Auth class methods", () => {
                     settings: userSettings,
                     lastActiveAt: dayjs.utc().toISOString()
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserById = jest.fn(async () => dbUser);
                 auth._dbActivateUser = jest.fn();
@@ -802,7 +805,7 @@ describe("Test Auth class methods", () => {
                     settings: userSettings,
                     lastActiveAt: dayjs.utc().toISOString()
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserById = jest.fn(async () => dbUser);
                 auth._dbActivateUser = jest.fn();
@@ -817,7 +820,7 @@ describe("Test Auth class methods", () => {
                     userId: "bad-id",
                     secretCode: "code"
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserById = jest.fn(async () => null);
                 auth._dbActivateUser = jest.fn();
@@ -845,7 +848,7 @@ describe("Test Auth class methods", () => {
                     settings: userSettings,
                     lastActiveAt: dayjs.utc().toISOString()
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserById = jest.fn(async () => dbUser);
                 auth._dbChangeUserPassword = jest.fn();
@@ -878,7 +881,7 @@ describe("Test Auth class methods", () => {
                     settings: userSettings,
                     lastActiveAt: dayjs.utc().toISOString()
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserById = jest.fn(async () => dbUser);
                 auth._dbChangeUserPassword = jest.fn();
@@ -906,7 +909,7 @@ describe("Test Auth class methods", () => {
                     settings: userSettings,
                     lastActiveAt: dayjs.utc().toISOString()
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserById = jest.fn(async () => dbUser);
                 auth._dbChangeUserPassword = jest.fn();
@@ -940,7 +943,7 @@ describe("Test Auth class methods", () => {
                     settings: userSettings,
                     lastActiveAt: dayjs.utc().toISOString()
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserById = jest.fn(async () => dbUser);
                 auth._dbChangeUserPassword = jest.fn();
@@ -970,7 +973,7 @@ describe("Test Auth class methods", () => {
                     settings: userSettings,
                     lastActiveAt: dayjs.utc().toISOString()
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserByEmail = jest.fn(async () => dbUser);
 
@@ -997,7 +1000,7 @@ describe("Test Auth class methods", () => {
                     settings: userSettings,
                     lastActiveAt: dayjs.utc().toISOString()
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserByEmail = jest.fn(async () => dbUser);
 
@@ -1010,7 +1013,7 @@ describe("Test Auth class methods", () => {
                 const params = {
                     email: "example@inbox.com"
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserByEmail = jest.fn(async () => null);
 
@@ -1042,7 +1045,7 @@ describe("Test Auth class methods", () => {
                     settings: userSettings,
                     lastActiveAt: dayjs.utc().toISOString()
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserById = jest.fn(async () => dbUser);
                 auth._dbUpdateUserPassword = jest.fn();
@@ -1077,7 +1080,7 @@ describe("Test Auth class methods", () => {
                     settings: userSettings,
                     lastActiveAt: dayjs.utc().toISOString()
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserById = jest.fn(async () => dbUser);
                 auth._dbUpdateUserPassword = jest.fn();
@@ -1088,7 +1091,7 @@ describe("Test Auth class methods", () => {
 
         describe("With not existing email", () => {
             test("Should to throw error", async () => {
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserById = jest.fn(async () => null);
                 auth._dbUpdateUserPassword = jest.fn();
@@ -1125,7 +1128,7 @@ describe("Test Auth class methods", () => {
                     settings: userSettings,
                     lastActiveAt: dayjs.utc().toISOString()
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserByEmail = jest.fn(async () => null);
                 auth._dbGetUserById = jest.fn(async () => dbUser);
@@ -1141,7 +1144,7 @@ describe("Test Auth class methods", () => {
                     email: "new@inbox.com",
                     userId: "id"
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserByEmail = jest.fn(async () => null);
                 auth._dbGetUserById = jest.fn(async () => null);
@@ -1171,7 +1174,7 @@ describe("Test Auth class methods", () => {
                     settings: userSettings,
                     lastActiveAt: dayjs.utc().toISOString()
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserByEmail = jest.fn(async () => dbUser);
                 auth._dbGetUserById = jest.fn(async () => dbUser);
@@ -1201,7 +1204,7 @@ describe("Test Auth class methods", () => {
                     settings: userSettings,
                     lastActiveAt: dayjs.utc().toISOString()
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserByEmail = jest.fn(async () => null);
                 auth._dbGetUserById = jest.fn(async () => dbUser);
@@ -1235,7 +1238,7 @@ describe("Test Auth class methods", () => {
                     settings: userSettings,
                     lastActiveAt: dayjs.utc().toISOString()
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserById = jest.fn(async () => dbUser);
                 auth._dbConfirmChangeUserEmail = jest.fn();
@@ -1270,7 +1273,7 @@ describe("Test Auth class methods", () => {
                     settings: userSettings,
                     lastActiveAt: dayjs.utc().toISOString()
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserById = jest.fn(async () => dbUser);
                 auth._dbConfirmChangeUserEmail = jest.fn();
@@ -1301,7 +1304,7 @@ describe("Test Auth class methods", () => {
                     settings: userSettings,
                     lastActiveAt: dayjs.utc().toISOString()
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserById = jest.fn(async () => dbUser);
                 auth._dbConfirmChangeUserEmail = jest.fn();
@@ -1332,7 +1335,7 @@ describe("Test Auth class methods", () => {
                     settings: userSettings,
                     lastActiveAt: dayjs.utc().toISOString()
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserById = jest.fn(async () => dbUser);
                 auth._dbConfirmChangeUserEmail = jest.fn();
@@ -1347,7 +1350,7 @@ describe("Test Auth class methods", () => {
                     secretCode: "code",
                     userId: "id"
                 };
-                const auth = new Auth(/* bcryptUtils */);
+                const auth = new Auth(mockEvents /* bcryptUtils */);
 
                 auth._dbGetUserById = jest.fn(async () => null);
                 auth._dbConfirmChangeUserEmail = jest.fn();
