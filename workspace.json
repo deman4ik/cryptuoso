@@ -1783,6 +1783,77 @@
                     }
                 }
             }
+        },
+        "mail-publisher-events": {
+            "root": "libs/mail-publisher-events",
+            "sourceRoot": "libs/mail-publisher-events/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["libs/mail-publisher-events/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/mail-publisher-events/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "mail-publisher": {
+            "root": "apps/mail-publisher",
+            "sourceRoot": "apps/mail-publisher/src",
+            "projectType": "application",
+            "prefix": "mail-publisher",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/mail-publisher",
+                        "main": "apps/mail-publisher/src/main.ts",
+                        "tsConfig": "apps/mail-publisher/tsconfig.app.json",
+                        "assets": ["apps/mail-publisher/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/mail-publisher/src/environments/environment.ts",
+                                    "with": "apps/mail-publisher/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "mail-publisher:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["apps/mail-publisher/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/mail-publisher/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
         }
     },
     "cli": {

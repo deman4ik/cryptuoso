@@ -14,5 +14,6 @@ module.exports = {
     resolver: "@nrwl/jest/plugins/resolver",
     moduleFileExtensions: ["ts", "js", "html"],
     coverageReporters: ["html"],
-    setupFilesAfterEnv: ["jest-extended"]
+    setupFilesAfterEnv: ["jest-extended"],
+    projects: "<rootDir>/apps/mail-publisher"
 };
