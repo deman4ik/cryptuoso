@@ -1,6 +1,5 @@
 module.exports = {
-    name: "backtester-worker",
-    preset: "../../jest.config.js",
-    coverageDirectory: "../../coverage/apps/backtester-worker",
-    globals: { "ts-jest": { tsConfig: "<rootDir>/tsconfig.spec.json" } }
+    displayName: "backtester-worker",
+    preset: "../../jest.preset.js",
+    coverageDirectory: "../../coverage/apps/backtester-worker"
 };

@@ -1,9 +1,5 @@
 module.exports = {
-    name: "stats-calc-events",
-    preset: "../../jest.config.js",
-    transform: {
-        "^.+\\.[tj]sx?$": "ts-jest"
-    },
-    moduleFileExtensions: ["ts", "tsx", "js", "jsx", "html"],
+    displayName: "stats-calc-events",
+    preset: "../../jest.preset.js",
     coverageDirectory: "../../coverage/libs/stats-calc-events"
 };

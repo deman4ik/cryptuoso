@@ -1,6 +1,5 @@
 module.exports = {
-    name: "exwatcher-runner",
-    preset: "../../jest.config.js",
-    coverageDirectory: "../../coverage/apps/exwatcher-runner",
-    globals: { "ts-jest": { tsConfig: "<rootDir>/tsconfig.spec.json" } }
+    displayName: "exwatcher-runner",
+    preset: "../../jest.preset.js",
+    coverageDirectory: "../../coverage/apps/exwatcher-runner"
 };

@@ -1,10 +1,5 @@
 module.exports = {
-  name: 'utils',
-  preset: '../../jest.config.js',
-  globals: {
-    'ts-jest': {
-      tsConfig: '<rootDir>/tsconfig.spec.json',
-    }
-  },
-  coverageDirectory: '../../coverage/apps/utils'
+    displayName: "utils",
+    preset: "../../jest.preset.js",
+    coverageDirectory: "../../coverage/apps/utils"
 };
