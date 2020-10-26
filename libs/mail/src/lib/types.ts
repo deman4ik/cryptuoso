@@ -50,9 +50,13 @@ export const SendPropsSchema: ValidationSchema = {
     },
     template: {
         type: "enum",
-        values: Object.values(REMOTE_TEMPLATE_TYPES)
+        values: Object.values(REMOTE_TEMPLATE_TYPES),
+        optional: true
     },
-    variables: "object",
+    variables: {
+        type: "object",
+        optional: true
+    },
     tags: {
         type: "array",
         items: "string"

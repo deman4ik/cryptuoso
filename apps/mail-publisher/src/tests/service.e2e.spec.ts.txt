@@ -6,7 +6,7 @@ import Service from "../app/service";
 import { buildEmail } from "../app/utils";
 import {
     MailPublisherEvents,
-    makeMailPublisherEmitObject,
+    MailPublisherEventData,
     TemplateMailType,
     TemplateMailData
 } from "@cryptuoso/mail-publisher-events";
@@ -63,7 +63,10 @@ describe("", () => {
                 };
                 mockMailGun.send.mockClear();
 
-                await events.emit(makeMailPublisherEmitObject(MailPublisherEvents.SEND_MAIL, sendProps));
+                await events.emit<MailPublisherEventData[MailPublisherEvents.SEND_MAIL]>({
+                    type: MailPublisherEvents.SEND_MAIL,
+                    data: sendProps
+                });
 
                 await sleep(3000);
 
@@ -100,7 +103,10 @@ describe("", () => {
                 };
                 mockMailGun.send.mockClear();
 
-                await events.emit(makeMailPublisherEmitObject(MailPublisherEvents.SEND_MAIL, sendProps));
+                await events.emit<MailPublisherEventData[MailPublisherEvents.SEND_MAIL]>({
+                    type: MailPublisherEvents.SEND_MAIL,
+                    data: sendProps
+                });
 
                 await sleep(3000);
 
@@ -128,7 +134,10 @@ describe("", () => {
 
             mockMailGun.subscribeToList.mockClear();
 
-            await events.emit(makeMailPublisherEmitObject(MailPublisherEvents.SUBSCRIBE_TO_LIST, subsProps));
+            await events.emit<MailPublisherEventData[MailPublisherEvents.SUBSCRIBE_TO_LIST]>({
+                type: MailPublisherEvents.SUBSCRIBE_TO_LIST,
+                data: subsProps
+            });
 
             await sleep(3000);
 
@@ -185,11 +194,12 @@ describe("", () => {
 
             //console.warn(notificationId);
 
-            await events.emit(
-                makeMailPublisherEmitObject(MailPublisherEvents.SEND_NOTIFICATION, {
+            await events.emit<MailPublisherEventData[MailPublisherEvents.SEND_NOTIFICATION]>({
+                type: MailPublisherEvents.SEND_NOTIFICATION,
+                data: {
                     notificationId
-                })
-            );
+                }
+            });
 
             await sleep(3000);
 
@@ -226,13 +236,14 @@ describe("", () => {
 
             mockMailGun.send.mockClear();
 
-            await events.emit(
-                makeMailPublisherEmitObject(MailPublisherEvents.SEND_TEMPLATE_MAIL, {
+            await events.emit<MailPublisherEventData[MailPublisherEvents.SEND_TEMPLATE_MAIL]>({
+                type: MailPublisherEvents.SEND_TEMPLATE_MAIL,
+                data: {
                     type,
                     to,
                     data
-                })
-            );
+                }
+            });
 
             await sleep(3000);
 

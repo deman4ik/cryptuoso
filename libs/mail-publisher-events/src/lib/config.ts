@@ -56,20 +56,18 @@ class Config {
     }
 
     getImpossibleTypes(userSettings: UserSettings) {
-        return Object.entries(userSettings?.notifications || {})
-            .reduce((acc: TemplateMailType[], [list, info]) => {
-                if (info?.email === false)
-                    acc.push(...this.getTypesByList(list as LIST));
-                return acc;
-            }, []);
+        return Object.entries(userSettings?.notifications || {}).reduce((acc: TemplateMailType[], [list, info]) => {
+            if (info?.email === false) acc.push(...this.getTypesByList(list as LIST));
+            return acc;
+        }, []);
     }
 
-    checkNotification(userSettings: UserSettings, notification: { type: TemplateMailType /* , createdAt?: string */ }) {
-        const list = this.listByType.get(notification.type);
+    checkNotificationType(userSettings: UserSettings, type: TemplateMailType) {
+        const list = this.listByType.get(type);
 
         if (!list) return true;
 
-        return !!userSettings.notifications[list].email;
+        return !!userSettings.notifications[list]?.email;
     }
 }
 

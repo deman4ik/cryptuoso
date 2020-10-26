@@ -108,12 +108,14 @@ class MailPublisherService extends HTTPService {
     }
 
     async checkNotifications() {
+        const timeThreshold = mailPublisherConfig.getThresholdTimeString();
         const users: { id: string; email: string }[] = await this.db.pg.any(this.db.sql`
             SELECT u.id, u.email
             FROM users u, notifications n
             WHERE n.send_email = true
                 AND u.id = n.user_id
                 AND u.email IS NOT NULL
+                AND created_at > ${timeThreshold}
             GROUP BY u.id, u.email;
         `);
 
@@ -137,6 +139,7 @@ class MailPublisherService extends HTTPService {
                 SET send_mail = false
                 WHERE user_id = ${id}
                     AND send_email = true
+                    AND created_at > ${timeThreshold}
                     ${
                         impossibleTypes?.length
                             ? this.db.sql`AND "type" NOT IN (${this.db.sql.array(impossibleTypes, "text")})`
@@ -178,6 +181,7 @@ class MailPublisherService extends HTTPService {
 
     async _sendNotificationHandler(data: MailPublisherEventData[MailPublisherEvents.SEND_NOTIFICATION]) {
         try {
+            const timeThreshold = mailPublisherConfig.getThresholdTimeString();
             const { notificationId } = data;
             const notification: {
                 userId: string;
@@ -188,27 +192,40 @@ class MailPublisherService extends HTTPService {
                 SET send_email = false
                 WHERE id = ${notificationId}
                     AND send_email = true
+                    AND created_at > ${timeThreshold}
                 RETURNING user_id, "type", data;
             `);
 
-            if (!notification) throw new Error(`Notification with id "${notificationId}" doesn't exists`);
+            if (!notification) throw new Error(`Notification with id "${notificationId}" doesn't exists or not valid`);
 
             const { userId, type, data: notificationData } = notification;
 
-            const email = (await this.db.pg.maybeOneFirst(this.db.sql`
+            const user: {
+                email: string;
+                settings: UserSettings;
+            } = await this.db.pg.maybeOne(this.db.sql`
                 SELECT email
                 FROM users
                 WHERE id = ${userId};
-            `)) as string;
+            `);
 
-            if (!email) {
+            if (!user) throw new Error(`Bad userId in notification (id: ${notificationId}, userId: ${userId})`);
+
+            if (!user?.email) {
                 this.log.error(
                     `Can't send notification (id: ${notificationId}). Reason: User (id: ${userId}) has no email`
                 );
                 return;
             }
 
-            const mailgunId = await this.sendTemplateMail(type, notificationData, email);
+            if (!mailPublisherConfig.checkNotificationType(user.settings, type)) {
+                this.log.error(
+                    `Can't send notification (id: ${notificationId}). Reason: User (id: ${userId}) unsubscribed`
+                );
+                return;
+            }
+
+            const mailgunId = await this.sendTemplateMail(type, notificationData, user.email);
             await this.db.pg.query(this.db.sql`
                 UPDATE notifications
                 SET mailgun_id = ${mailgunId}

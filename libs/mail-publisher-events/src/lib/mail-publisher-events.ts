@@ -1,4 +1,10 @@
-import { REMOTE_TEMPLATE_TYPES, SendProps, SubscribeProps, SendPropsSchema, SubscribePropsSchema } from "@cryptuoso/mail";
+import {
+    REMOTE_TEMPLATE_TYPES,
+    SendProps,
+    SubscribeProps,
+    SendPropsSchema,
+    SubscribePropsSchema
+} from "@cryptuoso/mail";
 
 export const enum MailPublisherEvents {
     SEND_NOTIFICATION = "mail-publisher.send-notification",
@@ -50,28 +56,29 @@ export interface MailPublisherEventData {
         //data?: TemplateMailData[TemplateMailType];
         template?: REMOTE_TEMPLATE_TYPES;
     } & (
-        {
-            type: TemplateMailType.USER_ACCOUNT_ACTIVATED |
-            TemplateMailType.PASSWORD_CHANGE_CONFIRMATION |
-            TemplateMailType.PASSWORD_RESET_CONFIRMATION;
-            data?: undefined;
-        } |
-        {
-            type: TemplateMailType.WELCOME;
-            data: TemplateMailData[TemplateMailType.WELCOME];
-        } | 
-        {
-            type: TemplateMailType.PASSWORD_RESET;
-            data: TemplateMailData[TemplateMailType.PASSWORD_RESET];
-        } | 
-        {
-            type: TemplateMailType.CHANGE_EMAIL;
-            data: TemplateMailData[TemplateMailType.CHANGE_EMAIL];
-        } | 
-        {
-            type: TemplateMailType.CHANGE_EMAIL_CONFIRMATION;
-            data: TemplateMailData[TemplateMailType.CHANGE_EMAIL_CONFIRMATION];
-        }
+        | {
+              type:
+                  | TemplateMailType.USER_ACCOUNT_ACTIVATED
+                  | TemplateMailType.PASSWORD_CHANGE_CONFIRMATION
+                  | TemplateMailType.PASSWORD_RESET_CONFIRMATION;
+              data?: undefined;
+          }
+        | {
+              type: TemplateMailType.WELCOME;
+              data: TemplateMailData[TemplateMailType.WELCOME];
+          }
+        | {
+              type: TemplateMailType.PASSWORD_RESET;
+              data: TemplateMailData[TemplateMailType.PASSWORD_RESET];
+          }
+        | {
+              type: TemplateMailType.CHANGE_EMAIL;
+              data: TemplateMailData[TemplateMailType.CHANGE_EMAIL];
+          }
+        | {
+              type: TemplateMailType.CHANGE_EMAIL_CONFIRMATION;
+              data: TemplateMailData[TemplateMailType.CHANGE_EMAIL_CONFIRMATION];
+          }
     );
     [MailPublisherEvents.SEND_MAIL]: SendProps;
     [MailPublisherEvents.SUBSCRIBE_TO_LIST]: SubscribeProps;
