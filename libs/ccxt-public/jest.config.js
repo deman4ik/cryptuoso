@@ -1,10 +1,5 @@
 module.exports = {
-    name: "ccxt-public",
-    preset: "../../jest.config.js",
-    transform: {
-        "^.+\\.[tj]sx?$": "ts-jest"
-    },
-    moduleFileExtensions: ["ts", "tsx", "js", "jsx", "html"],
-    coverageDirectory: "../../coverage/libs/ccxt-public",
-    globals: { "ts-jest": { tsConfig: "<rootDir>/tsconfig.spec.json" } }
+    displayName: "ccxt-public",
+    preset: "../../jest.preset.js",
+    coverageDirectory: "../../coverage/libs/ccxt-public"
 };

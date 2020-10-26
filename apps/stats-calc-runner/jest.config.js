@@ -1,10 +1,5 @@
 module.exports = {
-  name: 'stats-calc-runner',
-  preset: '../../jest.config.js',
-  /* globals: {
-    'ts-jest': {
-      tsConfig: '<rootDir>/tsconfig.spec.json',
-    }
-  }, */
-  coverageDirectory: '../../coverage/apps/stats-calc-runner'
+    displayName: "stats-calc-runner",
+    preset: "../../jest.preset.js",
+    coverageDirectory: "../../coverage/apps/stats-calc-runner"
 };

@@ -1,10 +1,5 @@
 module.exports = {
-  name: 'user-profile',
-  preset: '../../jest.config.js',
-  globals: {
-    'ts-jest': {
-      tsConfig: '<rootDir>/tsconfig.spec.json',
-    }
-  },
-  coverageDirectory: '../../coverage/apps/user-profile'
+    displayName: "user-profile",
+    preset: "../../jest.preset.js",
+    coverageDirectory: "../../coverage/apps/user-profile"
 };
