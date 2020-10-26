@@ -38,7 +38,7 @@ export interface TemplateMailData {
     };
 }
 
-export interface MailPublisherEmittingData {
+export interface MailPublisherEventData {
     [MailPublisherEvents.SEND_NOTIFICATION]: {
         notificationId: string;
         template?: REMOTE_TEMPLATE_TYPES;
@@ -47,12 +47,14 @@ export interface MailPublisherEmittingData {
         from?: string;
         to: string;
         type: TemplateMailType;
+        //data?: TemplateMailData[TemplateMailType];
         template?: REMOTE_TEMPLATE_TYPES;
     } & (
         {
             type: TemplateMailType.USER_ACCOUNT_ACTIVATED |
-                TemplateMailType.PASSWORD_CHANGE_CONFIRMATION |
-                TemplateMailType.PASSWORD_RESET_CONFIRMATION
+            TemplateMailType.PASSWORD_CHANGE_CONFIRMATION |
+            TemplateMailType.PASSWORD_RESET_CONFIRMATION;
+            data?: undefined;
         } |
         {
             type: TemplateMailType.WELCOME;

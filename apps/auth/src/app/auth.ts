@@ -9,7 +9,7 @@ import { formatTgName, checkTgLogin } from "./auth-helper";
 import { Bcrypt } from "./types";
 import bcrypt from "bcrypt";
 import { pg, sql } from "@cryptuoso/postgres";
-import { MailPublisherEvents, MailPublisherEmittingData, TemplateMailType } from "@cryptuoso/mail-publisher-events";
+import { MailPublisherEvents, MailPublisherEventData, TemplateMailType } from "@cryptuoso/mail-publisher-events";
 import { Events } from "@cryptuoso/events";
 
 export class Auth {
@@ -226,7 +226,7 @@ export class Auth {
             secretCode: newUser.secretCode
         });
 
-        await this.#events.emit<MailPublisherEmittingData[MailPublisherEvents.SEND_TEMPLATE_MAIL]>({
+        await this.#events.emit<MailPublisherEventData[MailPublisherEvents.SEND_TEMPLATE_MAIL]>({
             type: MailPublisherEvents.SEND_TEMPLATE_MAIL,
             data: {
                 type: TemplateMailType.WELCOME,
@@ -335,7 +335,7 @@ export class Auth {
             userId
         });
 
-        await this.#events.emit<MailPublisherEmittingData[MailPublisherEvents.SUBSCRIBE_TO_LIST]>({
+        await this.#events.emit<MailPublisherEventData[MailPublisherEvents.SUBSCRIBE_TO_LIST]>({
             type: MailPublisherEvents.SUBSCRIBE_TO_LIST,
             data: {
                 list: "cpz-beta@mg.cryptuoso.com",
@@ -349,7 +349,7 @@ export class Auth {
             name: user.name
         }); */
 
-        await this.#events.emit<MailPublisherEmittingData[MailPublisherEvents.SEND_TEMPLATE_MAIL]>({
+        await this.#events.emit<MailPublisherEventData[MailPublisherEvents.SEND_TEMPLATE_MAIL]>({
             type: MailPublisherEvents.SEND_TEMPLATE_MAIL,
             data: {
                 type: TemplateMailType.USER_ACCOUNT_ACTIVATED,
@@ -396,7 +396,7 @@ export class Auth {
         await this._dbChangeUserPassword({ userId, passwordHash: newPasswordHash });
 
         if (user.email)
-            await this.#events.emit<MailPublisherEmittingData[MailPublisherEvents.SEND_TEMPLATE_MAIL]>({
+            await this.#events.emit<MailPublisherEventData[MailPublisherEvents.SEND_TEMPLATE_MAIL]>({
                 type: MailPublisherEvents.SEND_TEMPLATE_MAIL,
                 data: {
                     type: TemplateMailType.PASSWORD_CHANGE_CONFIRMATION,
@@ -443,7 +443,7 @@ export class Auth {
             userId: user.id,
             secretCode
         });
-        await this.#events.emit<MailPublisherEmittingData[MailPublisherEvents.SEND_TEMPLATE_MAIL]>({
+        await this.#events.emit<MailPublisherEventData[MailPublisherEvents.SEND_TEMPLATE_MAIL]>({
             type: MailPublisherEvents.SEND_TEMPLATE_MAIL,
             data: {
                 type: TemplateMailType.PASSWORD_RESET,
@@ -502,7 +502,7 @@ export class Auth {
             refreshTokenExpireAt
         });
 
-        await this.#events.emit<MailPublisherEmittingData[MailPublisherEvents.SEND_TEMPLATE_MAIL]>({
+        await this.#events.emit<MailPublisherEventData[MailPublisherEvents.SEND_TEMPLATE_MAIL]>({
             type: MailPublisherEvents.SEND_TEMPLATE_MAIL,
             data: {
                 type: TemplateMailType.PASSWORD_RESET_CONFIRMATION,
@@ -557,7 +557,7 @@ export class Auth {
             secretCodeExpireAt
         });
 
-        await this.#events.emit<MailPublisherEmittingData[MailPublisherEvents.SEND_TEMPLATE_MAIL]>({
+        await this.#events.emit<MailPublisherEventData[MailPublisherEvents.SEND_TEMPLATE_MAIL]>({
             type: MailPublisherEvents.SEND_TEMPLATE_MAIL,
             data: {
                 type: TemplateMailType.CHANGE_EMAIL,
@@ -609,7 +609,7 @@ export class Auth {
             status: UserStatus.enabled
         });
 
-        await this.#events.emit<MailPublisherEmittingData[MailPublisherEvents.SEND_TEMPLATE_MAIL]>({
+        await this.#events.emit<MailPublisherEventData[MailPublisherEvents.SEND_TEMPLATE_MAIL]>({
             type: MailPublisherEvents.SEND_TEMPLATE_MAIL,
             data: {
                 type: TemplateMailType.CHANGE_EMAIL_CONFIRMATION,
