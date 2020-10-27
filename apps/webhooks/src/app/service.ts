@@ -137,7 +137,7 @@ export default class WebhooksService extends BaseService {
             const eventType = data.event?.toUpperCase();
 
             if (eventType === MailGunEventTypes.OPENED) await this.mailgunOpenedHandler(data);
-            else if (eventType === MailGunEventTypes.UNSUBSCRIBED) await this.mailgunUsubscribedHandler(data);
+            else if (eventType === MailGunEventTypes.UNSUBSCRIBED) await this.mailgunUnsubscribedHandler(data);
             else throw new ActionsHandlerError("Unknown event provided", null, "VALIDATION", 400);
 
             res.end();
@@ -147,7 +147,7 @@ export default class WebhooksService extends BaseService {
         }
     }
 
-    async mailgunUsubscribedHandler(data: MailGunEventData) {
+    async mailgunUnsubscribedHandler(data: MailGunEventData) {
         // TODO: check list
         const user: {
             id: string;

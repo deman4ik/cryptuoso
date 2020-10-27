@@ -51,6 +51,10 @@ export interface UserSettings {
             email: boolean;
         };
     };
+    news: {
+        mail: boolean;
+        telegram: boolean
+    };
 }
 
 export interface BaseUser {
