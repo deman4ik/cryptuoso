@@ -60,7 +60,7 @@ export interface MailPublisherEventData {
         to: string;
         type: TemplateMailType;
         //data?: TemplateMailData[TemplateMailType];
-        template?: COVER_TEMPLATE_TYPES;
+        //template?: COVER_TEMPLATE_TYPES;
     } & (
         | {
               type:

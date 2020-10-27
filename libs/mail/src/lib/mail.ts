@@ -98,7 +98,6 @@ export class MailUtil {
         }
     }
 
-    /* Метод отправки сообщения*/
     send = async ({
         from, // = "Cryptuoso <noreply@cryptuoso.com>",
         to,
@@ -130,7 +129,6 @@ export class MailUtil {
         }
     };
 
-    /*Подписка на рассылку*/
     subscribeToList = async ({ list, email: address, name }: SubscribeProps) => {
         try {
             await this.waitForLimit();
