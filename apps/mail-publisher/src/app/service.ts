@@ -1,5 +1,5 @@
 import { HTTPService, HTTPServiceConfig, RequestExtended } from "@cryptuoso/service";
-import { MailUtil, REMOTE_TEMPLATE_TYPES } from "@cryptuoso/mail";
+import { MailUtil, COVER_TEMPLATE_TYPES } from "@cryptuoso/mail";
 import {
     mailPublisherConfig,
     MailPublisherSchemes,
@@ -294,7 +294,7 @@ class MailPublisherService extends HTTPService {
         data: TemplateMailData[TemplateMailType],
         to: string,
         from?: string,
-        template?: REMOTE_TEMPLATE_TYPES
+        template?: COVER_TEMPLATE_TYPES
     ) {
         if (!to) throw new Error("Recipient address must not be empty");
 

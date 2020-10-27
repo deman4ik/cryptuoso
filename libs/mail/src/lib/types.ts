@@ -1,7 +1,7 @@
 import { ValidationSchema } from "fastest-validator";
 
 /*template types*/
-export enum REMOTE_TEMPLATE_TYPES {
+export enum COVER_TEMPLATE_TYPES {
     main = "main",
     simple = "simple"
 }
@@ -13,7 +13,7 @@ export interface SendProps {
     subject: string;
     text?: string;
     html?: string;
-    template?: REMOTE_TEMPLATE_TYPES;
+    template?: COVER_TEMPLATE_TYPES;
     variables?: { [key: string]: string };
     tags: string[];
 }
@@ -50,7 +50,7 @@ export const SendPropsSchema: ValidationSchema = {
     },
     template: {
         type: "enum",
-        values: Object.values(REMOTE_TEMPLATE_TYPES),
+        values: Object.values(COVER_TEMPLATE_TYPES),
         optional: true
     },
     variables: {

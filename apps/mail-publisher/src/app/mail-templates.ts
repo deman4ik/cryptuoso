@@ -1,5 +1,5 @@
 import { TemplateMailType, TemplateMailData, MailTags } from "@cryptuoso/mail-publisher-events";
-import { REMOTE_TEMPLATE_TYPES } from "@cryptuoso/mail";
+import { COVER_TEMPLATE_TYPES } from "@cryptuoso/mail";
 
 export const NOTIFICATIONS_AGGREGATE_SUBJECT = "🔔 Your notifications";
 
@@ -17,7 +17,7 @@ export const MAIL_TEMPLATES: {
         subject: string | { (data?: TemplateMailData[T]): string };
         tags: string[];
         /** Can be changed */
-        template?: REMOTE_TEMPLATE_TYPES;
+        cover_template?: COVER_TEMPLATE_TYPES;
         body: string | { (data?: TemplateMailData[T]): string };
     };
 } = {

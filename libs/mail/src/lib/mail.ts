@@ -1,4 +1,4 @@
-import { REMOTE_TEMPLATE_TYPES, SendProps, SubscribeProps } from "./types";
+import { COVER_TEMPLATE_TYPES, SendProps, SubscribeProps } from "./types";
 import Mailgun from "mailgun-js";
 import Redis from "ioredis";
 import logger from "@cryptuoso/logger";
@@ -105,7 +105,7 @@ export class MailUtil {
         subject,
         text,
         html,
-        template = REMOTE_TEMPLATE_TYPES.simple,
+        template = COVER_TEMPLATE_TYPES.simple,
         variables,
         tags
     }: SendProps) => {
