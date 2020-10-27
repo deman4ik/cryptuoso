@@ -35,7 +35,8 @@ export function buildEmail(
         variables: {
             body: getStringOrFunctionValue(mail.body, data)
         },
-        template: REMOTE_TEMPLATE_TYPES[templateType] || REMOTE_TEMPLATE_TYPES.main
+        template:
+            REMOTE_TEMPLATE_TYPES[templateType] || REMOTE_TEMPLATE_TYPES[mail.template] || REMOTE_TEMPLATE_TYPES.main
     };
 }
 

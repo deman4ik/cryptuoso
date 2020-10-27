@@ -1,4 +1,4 @@
-import { TemplateMailType } from "./mail-publisher-events";
+import { TemplateMailType, MailTags } from "./mail-publisher-events";
 import { UserSettings } from "@cryptuoso/user-state";
 import dayjs from "@cryptuoso/dayjs";
 
@@ -8,30 +8,30 @@ const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 const WEEK = 7 * DAY;
 
-export enum LIST {
+/* export enum LIST {
     SIGNALS = "signals",
     TRADING = "trading"
-}
+} */
 
 class Config {
     private threshold: number;
-    private typesByList = new Map<LIST, TemplateMailType[]>();
-    private listByType = new Map<TemplateMailType, LIST>();
+    private typesByTag = new Map<MailTags, TemplateMailType[]>();
+    private tagByType = new Map<TemplateMailType, MailTags>();
 
     constructor(
         threshold: number,
-        typesByLists: {
-            [key in LIST]?: TemplateMailType[];
+        typesByTags: {
+            [key in MailTags]?: TemplateMailType[];
         }
     ) {
         this.threshold = threshold;
 
-        for (const [list, types] of Object.entries(typesByLists)) {
-            this.typesByList.set(list as LIST, Array.from(types));
+        for (const [tag, types] of Object.entries(typesByTags)) {
+            this.typesByTag.set(tag as MailTags, Array.from(types));
 
             for (const type of types) {
-                if (this.listByType.has(type)) throw new Error(`Type duplication (${type})`);
-                this.listByType.set(type, list as LIST);
+                if (this.tagByType.has(type)) throw new Error(`Type duplication (${type})`);
+                this.tagByType.set(type, tag as MailTags);
             }
         }
     }
@@ -40,38 +40,43 @@ class Config {
         return dayjs.utc(Date.now() - this.threshold).toISOString();
     }
 
-    getListNameByType(type: TemplateMailType) {
-        return this.listByType.get(type);
+    getTagNameByType(type: TemplateMailType) {
+        return this.tagByType.get(type);
     }
 
-    getTypesByList(list: LIST) {
-        return Array.from(this.typesByList.get(list) || []);
+    getTypesByTag(tag: MailTags) {
+        return Array.from(this.typesByTag.get(tag) || []);
     }
 
-    getTypesByLists(lists: LIST[]) {
-        return lists.reduce((acc: TemplateMailType[], list) => {
-            acc.push(...this.getTypesByList(list));
+    getTypesByTags(tags: MailTags[]) {
+        return tags.reduce((acc: TemplateMailType[], tag) => {
+            acc.push(...this.getTypesByTag(tag));
             return acc;
         }, []);
     }
 
     getImpossibleTypes(userSettings: UserSettings) {
-        return Object.entries(userSettings?.notifications || {}).reduce((acc: TemplateMailType[], [list, info]) => {
-            if (info?.email === false) acc.push(...this.getTypesByList(list as LIST));
+        return Object.entries(userSettings?.notifications || {}).reduce((acc: TemplateMailType[], [tag, info]) => {
+            if (info?.email === false) acc.push(...this.getTypesByTag(tag as MailTags));
             return acc;
         }, []);
     }
 
     checkNotificationType(userSettings: UserSettings, type: TemplateMailType) {
-        const list = this.listByType.get(type);
+        const tag = this.tagByType.get(type);
 
-        if (!list) return true;
+        if (!tag) return true;
 
-        return !!userSettings.notifications[list]?.email;
+        /* if (list in userSettings.notifications) {
+            return !!userSettings.notifications[list].email
+        }
+        else return true; */
+
+        return !!(userSettings.notifications as any)[tag].email;
     }
 }
 
 export const mailPublisherConfig = new Config(DAY, {
-    [LIST.SIGNALS]: [],
-    [LIST.TRADING]: []
+    [MailTags.SIGNALS]: [],
+    [MailTags.TRADING]: []
 });

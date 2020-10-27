@@ -6,6 +6,12 @@ import {
     SubscribePropsSchema
 } from "@cryptuoso/mail";
 
+export enum MailTags {
+    AUTH = "auth",
+    SIGNALS = "signals",
+    TRADING = "trading"
+}
+
 export const enum MailPublisherEvents {
     SEND_NOTIFICATION = "mail-publisher.send-notification",
     SEND_TEMPLATE_MAIL = "mail-publisher.send-template-mail",
