@@ -21,6 +21,10 @@ const userSettings: UserSettings = {
             telegram: true,
             email: true
         }
+    },
+    news: {
+        telegram: true,
+        email: true
     }
 };
 

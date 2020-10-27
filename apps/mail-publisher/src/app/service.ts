@@ -115,7 +115,7 @@ class MailPublisherService extends HTTPService {
             WHERE n.send_email = true
                 AND u.id = n.user_id
                 AND u.email IS NOT NULL
-                AND created_at > ${timeThreshold}
+                AND n.created_at > ${timeThreshold}
             GROUP BY u.id, u.email;
         `);
 

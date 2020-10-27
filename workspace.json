@@ -1854,6 +1854,56 @@
                     }
                 }
             }
+        },
+        "webhooks": {
+            "root": "apps/webhooks",
+            "sourceRoot": "apps/webhooks/src",
+            "projectType": "application",
+            "prefix": "webhooks",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/webhooks",
+                        "main": "apps/webhooks/src/main.ts",
+                        "tsConfig": "apps/webhooks/tsconfig.app.json",
+                        "assets": ["apps/webhooks/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/webhooks/src/environments/environment.ts",
+                                    "with": "apps/webhooks/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "webhooks:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["apps/webhooks/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/webhooks/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
         }
     },
     "cli": {
