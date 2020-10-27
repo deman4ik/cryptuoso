@@ -1,4 +1,4 @@
-import { REMOTE_TEMPLATE_TYPES, SendProps, SubscribeProps } from "./types";
+import { COVER_TEMPLATE_TYPES, SendProps, SubscribeProps } from "./types";
 import Mailgun from "mailgun-js";
 import Redis from "ioredis";
 import logger from "@cryptuoso/logger";
@@ -98,14 +98,13 @@ export class MailUtil {
         }
     }
 
-    /* Метод отправки сообщения*/
     send = async ({
         from, // = "Cryptuoso <noreply@cryptuoso.com>",
         to,
         subject,
         text,
         html,
-        template = REMOTE_TEMPLATE_TYPES.simple,
+        template = COVER_TEMPLATE_TYPES.simple,
         variables,
         tags
     }: SendProps) => {
@@ -130,7 +129,6 @@ export class MailUtil {
         }
     };
 
-    /*Подписка на рассылку*/
     subscribeToList = async ({ list, email: address, name }: SubscribeProps) => {
         try {
             await this.waitForLimit();

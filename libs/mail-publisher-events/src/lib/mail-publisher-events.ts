@@ -1,10 +1,16 @@
 import {
-    REMOTE_TEMPLATE_TYPES,
+    COVER_TEMPLATE_TYPES,
     SendProps,
     SubscribeProps,
     SendPropsSchema,
     SubscribePropsSchema
 } from "@cryptuoso/mail";
+
+export enum MailTags {
+    AUTH = "auth",
+    SIGNALS = "signals",
+    TRADING = "trading"
+}
 
 export const enum MailPublisherEvents {
     SEND_NOTIFICATION = "mail-publisher.send-notification",
@@ -47,14 +53,14 @@ export interface TemplateMailData {
 export interface MailPublisherEventData {
     [MailPublisherEvents.SEND_NOTIFICATION]: {
         notificationId: string;
-        template?: REMOTE_TEMPLATE_TYPES;
+        template?: COVER_TEMPLATE_TYPES;
     };
     [MailPublisherEvents.SEND_TEMPLATE_MAIL]: {
         from?: string;
         to: string;
         type: TemplateMailType;
         //data?: TemplateMailData[TemplateMailType];
-        template?: REMOTE_TEMPLATE_TYPES;
+        //template?: COVER_TEMPLATE_TYPES;
     } & (
         | {
               type:
@@ -103,7 +109,7 @@ export const MailPublisherSchemes = {
         template: {
             type: "enum",
             optional: true,
-            values: Object.values(REMOTE_TEMPLATE_TYPES)
+            values: Object.values(COVER_TEMPLATE_TYPES)
         }
     },
     [MailPublisherEvents.SEND_MAIL]: SendPropsSchema,

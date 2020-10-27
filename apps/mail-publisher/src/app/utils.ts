@@ -1,4 +1,4 @@
-import { REMOTE_TEMPLATE_TYPES } from "@cryptuoso/mail";
+import { COVER_TEMPLATE_TYPES } from "@cryptuoso/mail";
 //import { formatHTML } from "@cryptuoso/helpers";
 import { TemplateMailType, TemplateMailData } from "@cryptuoso/mail-publisher-events";
 import { getStringOrFunctionValue, MAIL_TEMPLATES, NOTIFICATIONS_AGGREGATE_SUBJECT } from "./mail-templates";
@@ -22,11 +22,7 @@ export function buildEmailBody(type: TemplateMailType, data: TemplateMailData[Te
     return getStringOrFunctionValue(mail.body, data);
 }
 
-export function buildEmail(
-    type: TemplateMailType,
-    data: TemplateMailData[TemplateMailType],
-    templateType?: REMOTE_TEMPLATE_TYPES
-) {
+export function buildEmail(type: TemplateMailType, data: TemplateMailData[TemplateMailType]) {
     const mail = getMaiTemplate(type);
 
     return {
@@ -35,19 +31,18 @@ export function buildEmail(
         variables: {
             body: getStringOrFunctionValue(mail.body, data)
         },
-        template: REMOTE_TEMPLATE_TYPES[templateType] || REMOTE_TEMPLATE_TYPES.main
+        template: COVER_TEMPLATE_TYPES[mail.cover_template] || COVER_TEMPLATE_TYPES.main
     };
 }
 
 export function buildNotificationsEmail(
-    notifications: { type: TemplateMailType; data: TemplateMailData[TemplateMailType] }[],
-    templateType?: REMOTE_TEMPLATE_TYPES
+    notifications: { type: TemplateMailType; data: TemplateMailData[TemplateMailType] }[]
 ) {
     if (!notifications?.length) throw new Error("Empty notifications array");
 
     if (notifications.length === 1) {
         const { type, data } = notifications[0];
-        return buildEmail(type, data, templateType);
+        return buildEmail(type, data);
     }
 
     let body = "";
@@ -67,6 +62,6 @@ export function buildNotificationsEmail(
         variables: {
             body
         },
-        template: REMOTE_TEMPLATE_TYPES[templateType] || REMOTE_TEMPLATE_TYPES.main
+        template: COVER_TEMPLATE_TYPES.main
     };
 }

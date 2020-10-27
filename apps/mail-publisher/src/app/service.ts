@@ -1,5 +1,5 @@
 import { HTTPService, HTTPServiceConfig, RequestExtended } from "@cryptuoso/service";
-import { MailUtil, REMOTE_TEMPLATE_TYPES } from "@cryptuoso/mail";
+import { MailUtil } from "@cryptuoso/mail";
 import {
     mailPublisherConfig,
     MailPublisherSchemes,
@@ -243,7 +243,7 @@ class MailPublisherService extends HTTPService {
     async _sendTemplateMailHandler(data: MailPublisherEventData[MailPublisherEvents.SEND_TEMPLATE_MAIL]) {
         try {
             // TODO: validate
-            await this.sendTemplateMail(data.type, data.data, data.to, data.from, data.template);
+            await this.sendTemplateMail(data.type, data.data, data.to, data.from);
         } catch (err) {
             this.log.error(
                 `Failed to handle '${MailPublisherEvents.SEND_TEMPLATE_MAIL}' event (${JSON.stringify(data)})`,
@@ -293,13 +293,12 @@ class MailPublisherService extends HTTPService {
         type: TemplateMailType,
         data: TemplateMailData[TemplateMailType],
         to: string,
-        from?: string,
-        template?: REMOTE_TEMPLATE_TYPES
+        from?: string
     ) {
         if (!to) throw new Error("Recipient address must not be empty");
 
         return await this.mailUtilInstance.send({
-            ...buildEmail(type, data, template),
+            ...buildEmail(type, data),
             to,
             from
         });

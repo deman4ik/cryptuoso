@@ -12,7 +12,7 @@ import {
 } from "@cryptuoso/mail-publisher-events";
 import { sleep } from "@cryptuoso/helpers";
 import { v4 as uuid } from "uuid";
-import { REMOTE_TEMPLATE_TYPES } from "@cryptuoso/mail";
+import { COVER_TEMPLATE_TYPES } from "@cryptuoso/mail";
 
 var mockMailGun = {
     send: jest.fn(),
@@ -99,7 +99,7 @@ describe("", () => {
                         body: uuid()
                     },
                     tags: [uuid()],
-                    template: REMOTE_TEMPLATE_TYPES.main
+                    template: COVER_TEMPLATE_TYPES.main
                 };
                 mockMailGun.send.mockClear();
 
