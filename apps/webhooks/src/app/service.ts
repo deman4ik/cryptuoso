@@ -207,7 +207,7 @@ export default class WebhooksService extends BaseService {
         await this.db.pg.query(this.db.sql`
             UPDATE notifications
             SET readed = true
-            WHERE mailgun_id = ${data.id};
+            WHERE mailgun_id = ${data.message.headers["message-id"]};
         `);
     }
 
