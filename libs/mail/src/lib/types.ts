@@ -88,14 +88,14 @@ export interface MailGunEventData {
         headers: {
             /** MailGun message id */
             "message-id": string;
-        }
+        };
     };
     tags: string[]; //MailTags[]
     "mailing-list"?: {
         address: string;
         "list-id": string;
         sid: string;
-    }
+    };
 }
 
 export const MailGunEventDataSchema: ValidationSchema = {

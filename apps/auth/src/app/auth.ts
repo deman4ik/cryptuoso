@@ -11,6 +11,7 @@ import bcrypt from "bcrypt";
 import { pg, sql } from "@cryptuoso/postgres";
 import { MailPublisherEvents, MailPublisherEventData, TemplateMailType } from "@cryptuoso/mail-publisher-events";
 import { Events } from "@cryptuoso/events";
+import { NEWS_LIST } from "@cryptuoso/mail";
 
 export class Auth {
     #bcrypt: Bcrypt;
@@ -215,6 +216,10 @@ export class Auth {
                         telegram: false,
                         email: true
                     }
+                },
+                news: {
+                    telegram: false,
+                    email: true
                 }
             },
             lastActiveAt: dayjs.utc().toISOString()
@@ -277,6 +282,10 @@ export class Auth {
                         telegram: true,
                         email: false
                     }
+                },
+                news: {
+                    telegram: true,
+                    email: false
                 }
             },
             lastActiveAt: dayjs.utc().toISOString()
@@ -338,7 +347,7 @@ export class Auth {
         await this.#events.emit<MailPublisherEventData[MailPublisherEvents.SUBSCRIBE_TO_LIST]>({
             type: MailPublisherEvents.SUBSCRIBE_TO_LIST,
             data: {
-                list: "cpz-beta@mg.cryptuoso.com",
+                list: NEWS_LIST,
                 email: user.email,
                 name: user.name
             }

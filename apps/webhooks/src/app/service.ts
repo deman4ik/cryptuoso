@@ -4,7 +4,8 @@ import bodyParser from "body-parser";
 import helmet from "helmet";
 import ifunless from "middleware-if-unless";
 import Validator, { ValidationSchema, ValidationError } from "fastest-validator";
-import { makeMailgunWebhookValidator, MailGunEventTypes, MailGunEventData } from "@cryptuoso/mail";
+import { makeMailgunWebhookValidator, MailGunEventTypes, MailGunEventData, NEWS_LIST } from "@cryptuoso/mail";
+import { MailTags } from "@cryptuoso/mail-publisher-events";
 import { ActionsHandlerError } from "@cryptuoso/errors";
 import { UserSettings } from "@cryptuoso/user-state";
 
@@ -132,7 +133,7 @@ export default class WebhooksService extends BaseService {
 
             // TODO: validation
 
-            if (!data) throw new ActionsHandlerError("Unknown event provided", null, "VALIDATION", 400);
+            //if (!data) throw new ActionsHandlerError("Unknown event provided", null, "VALIDATION", 400);
 
             const eventType = data.event?.toUpperCase();
 
@@ -160,27 +161,46 @@ export default class WebhooksService extends BaseService {
 
         if (!user) throw new ActionsHandlerError("", null, "NOT_FOUND", 404);
 
-        const oldNotifications = user.settings.notifications;
+        const oldNotifications = user.settings?.notifications;
 
         const newSettings: UserSettings = {
             ...user.settings,
             notifications: {
+                ...oldNotifications,
                 signals: {
-                    email: false,
-                    telegram: oldNotifications.signals.telegram
+                    ...oldNotifications?.signals
                 },
                 trading: {
-                    email: false,
-                    telegram: oldNotifications.trading.telegram
+                    ...oldNotifications?.trading
                 }
+            },
+            news: {
+                ...user.settings?.news
             }
         };
 
-        await this.db.pg.query(this.db.sql`
-            UPDATE users
-            SET settings = ${this.db.sql.json(newSettings)}
-            WHERE id = ${user.id};
-        `);
+        let updated = false;
+
+        if (data["mailing-list"]?.address === NEWS_LIST && newSettings.news.email !== false) {
+            updated = true;
+            newSettings.news.email = false;
+        }
+        if (data.tags.includes(MailTags.SIGNALS) && oldNotifications.signals.email !== false) {
+            updated = true;
+            newSettings.notifications.signals.email = true;
+        }
+        if (data.tags.includes(MailTags.TRADING) && oldNotifications.trading.email !== false) {
+            updated = true;
+            newSettings.notifications.trading.email = true;
+        }
+
+        if (updated) {
+            await this.db.pg.query(this.db.sql`
+                UPDATE users
+                SET settings = ${this.db.sql.json(newSettings)}
+                WHERE id = ${user.id};
+            `);
+        }
     }
 
     async mailgunOpenedHandler(data: MailGunEventData) {

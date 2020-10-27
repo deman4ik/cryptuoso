@@ -4,6 +4,11 @@ import Redis from "ioredis";
 import logger from "@cryptuoso/logger";
 import { sleep } from "@cryptuoso/helpers";
 
+export const NEWS_LIST =
+    process.env.NEWS_LIST ||
+    (process.env.MAILGUN_DOMAIN ? `cpz-beta@${process.env.MAILGUN_DOMAIN}` : null) ||
+    "cpz-beta@mg.cryptuoso.com";
+
 export interface MailUtilConfig {
     apiKey: string;
     domain: string;

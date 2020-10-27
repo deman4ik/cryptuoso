@@ -52,8 +52,8 @@ export interface UserSettings {
         };
     };
     news: {
-        mail: boolean;
-        telegram: boolean
+        telegram: boolean;
+        email: boolean;
     };
 }
 
