@@ -108,12 +108,12 @@ export default class UtilsService extends HTTPService {
     }
 
     async initUserNewsNotifications(req: any, res: any) {
-        const news: User["settings"]["news"] = { email: true, telegram: true };
+        const news: User["settings"]["notifications"]["news"] = { email: true, telegram: true };
 
         await this.db.pg.query(sql`
             UPDATE users
-            SET settings = jsonb_set(settings, '{"news"}', ${sql.json(news)}, true)
-            WHERE settings->'news' IS NULL
+            SET settings = jsonb_set(settings, '{"notifications", "news"}', ${sql.json(news)}, true)
+            WHERE settings->'notifications'->'news' IS NULL
         `);
 
         res.send({ result: "OK" });

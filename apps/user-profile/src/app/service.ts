@@ -266,11 +266,14 @@ export default class UserProfileService extends HTTPService {
                         tradingEmail === true || tradingEmail === false
                             ? tradingEmail
                             : settings.notifications.trading.email
+                },
+                news: {
+                    telegram:
+                        newsTelegram === true || newsTelegram === false
+                            ? newsTelegram
+                            : settings.notifications.news.telegram,
+                    email: newsEmail === true || newsEmail === false ? newsEmail : settings.notifications.news.email
                 }
-            },
-            news: {
-                telegram: newsTelegram === true || newsTelegram === false ? newsTelegram : settings.news.telegram,
-                email: newsEmail === true || newsEmail === false ? newsEmail : settings.news.email
             }
         };
 

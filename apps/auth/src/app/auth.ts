@@ -175,6 +175,10 @@ export class Auth {
                 trading: {
                     ...notifications?.trading,
                     telegram: true
+                },
+                news: {
+                    ...notifications?.news,
+                    telegram: true
                 }
             }
         };
@@ -215,11 +219,11 @@ export class Auth {
                     trading: {
                         telegram: false,
                         email: true
+                    },
+                    news: {
+                        telegram: false,
+                        email: true
                     }
-                },
-                news: {
-                    telegram: false,
-                    email: true
                 }
             },
             lastActiveAt: dayjs.utc().toISOString()
@@ -281,11 +285,11 @@ export class Auth {
                     trading: {
                         telegram: true,
                         email: false
+                    },
+                    news: {
+                        telegram: true,
+                        email: false
                     }
-                },
-                news: {
-                    telegram: true,
-                    email: false
                 }
             },
             lastActiveAt: dayjs.utc().toISOString()
