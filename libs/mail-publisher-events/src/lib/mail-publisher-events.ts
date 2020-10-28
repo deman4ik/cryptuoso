@@ -53,7 +53,7 @@ export interface TemplateMailData {
 export interface MailPublisherEventData {
     [MailPublisherEvents.SEND_NOTIFICATION]: {
         notificationId: string;
-        template?: COVER_TEMPLATE_TYPES;
+        //template?: COVER_TEMPLATE_TYPES;
     };
     [MailPublisherEvents.SEND_TEMPLATE_MAIL]: {
         from?: string;
