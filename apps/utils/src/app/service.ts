@@ -21,6 +21,11 @@ export default class UtilsService extends HTTPService {
                     roles: ["admin"],
                     handler: this.initUserAccess
                 },
+                initUserNewsNotifications: {
+                    auth: true,
+                    roles: ["admin"],
+                    handler: this.initUserNewsNotifications
+                },
                 initRobotSettings: {
                     inputSchema: {
                         robots: { type: "boolean", default: true },
@@ -97,6 +102,19 @@ export default class UtilsService extends HTTPService {
             SET access = ${user.access}
             where id = ${user.id};`);
         }
+
+        res.send({ result: "OK" });
+        res.end();
+    }
+
+    async initUserNewsNotifications(req: any, res: any) {
+        const news: User["settings"]["news"] = { email: true, telegram: true };
+
+        await this.db.pg.query(sql`
+            UPDATE users
+            SET settings = jsonb_set(settings, '{"news"}', ${sql.json(news)}, true)
+            WHERE settings->'news' IS NULL
+        `);
 
         res.send({ result: "OK" });
         res.end();
