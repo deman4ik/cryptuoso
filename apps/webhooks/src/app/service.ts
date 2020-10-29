@@ -172,18 +172,18 @@ export default class WebhooksService extends BaseService {
                 },
                 trading: {
                     ...oldNotifications?.trading
+                },
+                news: {
+                    ...oldNotifications?.news
                 }
-            },
-            news: {
-                ...user.settings?.news
             }
         };
 
         let updated = false;
 
-        if (data["mailing-list"]?.address === NEWS_LIST && newSettings.news.email !== false) {
+        if (data["mailing-list"]?.address === NEWS_LIST && oldNotifications.news.email !== false) {
             updated = true;
-            newSettings.news.email = false;
+            newSettings.notifications.news.email = false;
         }
         if (data.tags.includes(MailTags.SIGNALS) && oldNotifications.signals.email !== false) {
             updated = true;

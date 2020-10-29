@@ -50,10 +50,10 @@ export interface UserSettings {
             telegram: boolean;
             email: boolean;
         };
-    };
-    news: {
-        telegram: boolean;
-        email: boolean;
+        news: {
+            telegram: boolean;
+            email: boolean;
+        };
     };
 }
 
