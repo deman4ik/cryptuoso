@@ -4,7 +4,7 @@ import {
     mailPublisherConfig,
     MailPublisherEventData,
     MailPublisherEvents,
-    TemplateMailData,
+    //TemplateMailData,
     TemplateMailType,
     TemplateMailObject
 } from "@cryptuoso/mail-publisher-events";
@@ -106,7 +106,7 @@ export default class NotificationsService extends BaseService {
                     WHERE id = ${signal.positionId};
                 `);
 
-                if(!position) throw new Error(`Robot position not found (${signal.positionId})`)
+                if (!position) throw new Error(`Robot position not found (${signal.positionId})`);
 
                 const usersSignalPositions: {
                     userId: string;
@@ -126,7 +126,7 @@ export default class NotificationsService extends BaseService {
                 // OR throw
                 if (!usersSignalPositions?.length) return;
 
-                const uspMap = new Map<string, { volume: number; profit: number; }>();
+                const uspMap = new Map<string, { volume: number; profit: number }>();
 
                 usersSignalPositions.forEach((p) => {
                     uspMap.set(p.userId, { volume: p.volume, profit: p.profit });
@@ -162,7 +162,7 @@ export default class NotificationsService extends BaseService {
         }
 
         if (!notifications?.length) return;
-        
+
         // TODO: save by single query
         for (const n of notifications) {
             await this.db.pg.query(this.db.sql`
@@ -182,7 +182,7 @@ export default class NotificationsService extends BaseService {
             `);
 
             // NOTE: types may be different in future
-            if (n.sendEmail && mailPublisherConfig.isNeedToSendImmideately(n.type)) {
+            if (n.sendEmail && mailPublisherConfig.isNeedToSendImmediately(n.type)) {
                 await this.events.emit<MailPublisherEventData[MailPublisherEvents.SEND_NOTIFICATION]>({
                     type: MailPublisherEvents.SEND_NOTIFICATION,
                     data: { notificationId: n.id }

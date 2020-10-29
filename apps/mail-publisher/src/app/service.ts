@@ -108,7 +108,7 @@ class MailPublisherService extends HTTPService {
     }
 
     async checkNotifications() {
-        const timeThreshold = mailPublisherConfig.getThresholdTimeString();
+        const timeThreshold = mailPublisherConfig.getNotificationsThresholdTimeString();
         const users: { id: string; email: string }[] = await this.db.pg.any(this.db.sql`
             SELECT u.id, u.email
             FROM users u, notifications n
@@ -181,7 +181,7 @@ class MailPublisherService extends HTTPService {
 
     async _sendNotificationHandler(data: MailPublisherEventData[MailPublisherEvents.SEND_NOTIFICATION]) {
         try {
-            const timeThreshold = mailPublisherConfig.getThresholdTimeString();
+            const timeThreshold = mailPublisherConfig.getNotificationsThresholdTimeString();
             const { notificationId } = data;
             const notification: {
                 userId: string;

@@ -18,7 +18,7 @@ export function getStringOrFunctionValue(sof: stringOrFunction, data: any, local
 }
 
 export function getArrayOrFunctionValue(aof: arrayOrFunction, data: any) {
-    if (Array.isArray(aof)) return aof;
+    if (Array.isArray(aof)) return Array.from(aof);
     if (typeof aof === "function") return aof(data);
 
     throw new Error(`First argument is bad (${aof})`);
