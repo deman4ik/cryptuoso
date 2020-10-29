@@ -5,6 +5,8 @@ import {
     SendPropsSchema,
     SubscribePropsSchema
 } from "@cryptuoso/mail";
+import { SignalType, TradeAction } from "@cryptuoso/market";
+import { SignalEvents, Signal } from "@cryptuoso/robot-events";
 
 export enum MailTags {
     AUTH = "auth",
@@ -27,7 +29,8 @@ export enum TemplateMailType {
     PASSWORD_RESET = "password_reset",
     PASSWORD_RESET_CONFIRMATION = "password_reset_confirmation",
     CHANGE_EMAIL = "change_email",
-    CHANGE_EMAIL_CONFIRMATION = "change_email_confirmation"
+    CHANGE_EMAIL_CONFIRMATION = "change_email_confirmation",
+    SIGNAL = "signal"
 }
 
 export interface TemplateMailData {
@@ -48,7 +51,64 @@ export interface TemplateMailData {
     [TemplateMailType.CHANGE_EMAIL_CONFIRMATION]: {
         emailNew: string;
     };
+    [TemplateMailType.SIGNAL]: Signal & {
+        robotCode: string;
+        entryAction?: TradeAction;
+        entryPrice?: number;
+        entryDate?: string;
+        barsHeld?: number;
+        profit?: number;
+        volume?: number;
+    }
+    // Retyping problems
+     /* & { robotCode: string } & (
+            | {
+                  type: SignalType.alert;
+              }
+            | {
+                  type: SignalType.trade;
+                  action: TradeAction.long | TradeAction.short;
+              }
+            | {
+                  type: SignalType.trade;
+                  action: TradeAction.closeLong | TradeAction.closeShort;
+                  entryAction: TradeAction;
+                  entryPrice: number;
+                  entryDate: string;
+                  barsHeld: number;
+                  profit: number;
+              }
+        ) */;
 }
+
+export type TemplateMailObject =
+    | {
+          type:
+              | TemplateMailType.USER_ACCOUNT_ACTIVATED
+              | TemplateMailType.PASSWORD_CHANGE_CONFIRMATION
+              | TemplateMailType.PASSWORD_RESET_CONFIRMATION;
+          data?: undefined;
+      }
+    | {
+          type: TemplateMailType.WELCOME;
+          data: TemplateMailData[TemplateMailType.WELCOME];
+      }
+    | {
+          type: TemplateMailType.PASSWORD_RESET;
+          data: TemplateMailData[TemplateMailType.PASSWORD_RESET];
+      }
+    | {
+          type: TemplateMailType.CHANGE_EMAIL;
+          data: TemplateMailData[TemplateMailType.CHANGE_EMAIL];
+      }
+    | {
+          type: TemplateMailType.CHANGE_EMAIL_CONFIRMATION;
+          data: TemplateMailData[TemplateMailType.CHANGE_EMAIL_CONFIRMATION];
+      }
+    | {
+          type: TemplateMailType.SIGNAL;
+          data: TemplateMailData[TemplateMailType.SIGNAL];
+      };
 
 export interface MailPublisherEventData {
     [MailPublisherEvents.SEND_NOTIFICATION]: {
@@ -61,31 +121,7 @@ export interface MailPublisherEventData {
         type: TemplateMailType;
         //data?: TemplateMailData[TemplateMailType];
         //template?: COVER_TEMPLATE_TYPES;
-    } & (
-        | {
-              type:
-                  | TemplateMailType.USER_ACCOUNT_ACTIVATED
-                  | TemplateMailType.PASSWORD_CHANGE_CONFIRMATION
-                  | TemplateMailType.PASSWORD_RESET_CONFIRMATION;
-              data?: undefined;
-          }
-        | {
-              type: TemplateMailType.WELCOME;
-              data: TemplateMailData[TemplateMailType.WELCOME];
-          }
-        | {
-              type: TemplateMailType.PASSWORD_RESET;
-              data: TemplateMailData[TemplateMailType.PASSWORD_RESET];
-          }
-        | {
-              type: TemplateMailType.CHANGE_EMAIL;
-              data: TemplateMailData[TemplateMailType.CHANGE_EMAIL];
-          }
-        | {
-              type: TemplateMailType.CHANGE_EMAIL_CONFIRMATION;
-              data: TemplateMailData[TemplateMailType.CHANGE_EMAIL_CONFIRMATION];
-          }
-    );
+    } & TemplateMailObject;
     [MailPublisherEvents.SEND_MAIL]: SendProps;
     [MailPublisherEvents.SUBSCRIBE_TO_LIST]: SubscribeProps;
 }

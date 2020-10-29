@@ -1,5 +1,5 @@
 const EN = {
-    welcome: ({ username }: { username: string }) =>
+    welcome: ({ username }: { username: any }) =>
         `Welcome ${username} to <b>Cryptuoso Trading Bot!</b>\n\nYou can start <b>Manual trading</b> with our 🚦 Signals or <b>Automated Trading</b> with our 🤖 Robots.\n\nWe advise to divide your trading capital between different robots to maximize the diversification effect and don't borrow margin (credit) money, because cryptocurrency markets are very volatile.\n\nBy starting this bot you confirm that you have read and accept our <a href='https://support.cryptuoso.com/terms-of-use'>terms of use</a>.\n\n⚠️ Use all signals and robots at your own risk!`,
     failed: "❌ Failed to process your request. Please try again later!",
     keyboards: {
@@ -29,9 +29,9 @@ const EN = {
         },
         searchSignals: {
             selectExchange: "🔎 Searching Signal Robots\n\nSelect available <b>exchange</b>",
-            selectAsset: ({ exchange }: { exchange: string }) =>
+            selectAsset: ({ exchange }: { exchange: any }) =>
                 `🔎 Searching Signal Robots\n\nSelect available  <b>${exchange}</b> <b>cryptocurrency</b> pair`,
-            selectRobot: ({ exchange, asset }: { exchange: string; asset: string }) =>
+            selectRobot: ({ exchange, asset }: { exchange: any; asset: any }) =>
                 `🔎 Searching Signal Robots\n\nSelect available <b>${exchange}</b> <b>${asset}</b> robot`
         },
         topSignals: {
@@ -51,16 +51,16 @@ const EN = {
             subscribeSignals: "🚥 Subscribe to Signals",
             unsubscribeSignals: "❌ Unsubscribe from Signals",
             changeVolume: "⚙️ Change Amount",
-            unsubscribedSignals: ({ code }: { code: string }) => `You unsubsribed from <b>#${code}</b> signals =(`,
-            unsubscribedFailed: ({ code, error }: { code: string; error: string }) =>
+            unsubscribedSignals: ({ code }: { code: any }) => `You unsubsribed from <b>#${code}</b> signals =(`,
+            unsubscribedFailed: ({ code, error }: { code: any; error: any }) =>
                 `Failed to unsubscribe from <b>#${code}</b> signals - ${error}`
         },
         subscribeSignals: {
-            enterVolume: ({ code, asset, minVolume }: { code: string; asset: string; minVolume: string }) =>
+            enterVolume: ({ code, asset, minVolume }: { code: any; asset: any; minVolume: any }) =>
                 `🚥 Subscribing to #${code} robot.\n\n<b>Please enter desired trading amount in ${asset}.</b>\n\nMinimum value is ${minVolume} ${asset}`,
-            wrongVolume: ({ code, minVolume, asset }: { code: string; minVolume: string; asset: string }) =>
+            wrongVolume: ({ code, minVolume, asset }: { code: any; minVolume: any; asset: any }) =>
                 `🚥 Subscribing to #${code} robot.\n\nWrong amount format.\nMinimum value is ${minVolume} ${asset}`,
-            subscribedSignals: ({ code, volume, asset }: { code: string; volume: string; asset: string }) =>
+            subscribedSignals: ({ code, volume, asset }: { code: any; volume: any; asset: any }) =>
                 `🚥 Succesfully subsribed to <b>#${code}</b> signals with amount ${volume} ${asset}!\n\n⚠️ Use all signals at your own risk!`
         },
         robots: {
@@ -81,9 +81,9 @@ const EN = {
         },
         searchRobots: {
             selectExchange: "🔎 Searching Robots\n\nSelect available <b>exchange</b>",
-            selectAsset: ({ exchange }: { exchange: string }) =>
+            selectAsset: ({ exchange }: { exchange: any }) =>
                 `🔎 Searching Robots\n\nSelect available  <b>${exchange}</b> <b>cryptocurrency</b> pair`,
-            selectRobot: ({ exchange, asset }: { exchange: string; asset: string }) =>
+            selectRobot: ({ exchange, asset }: { exchange: any; asset: any }) =>
                 `🔎 Searching Robots\n\nSelect available <b>${exchange}</b> <b>${asset}</b> robot`
         },
         topRobots: {
@@ -98,44 +98,42 @@ const EN = {
             stop: "⛔ Stop Robot"
         },
         addUserRobot: {
-            selectExAcc: ({ code, exchange }: { code: string; exchange: string }) =>
+            selectExAcc: ({ code, exchange }: { code: any; exchange: any }) =>
                 `✅ Adding robot #${code}.\n\nSelect your ${exchange} API Key:`,
-            noneExAccs: ({ code, exchange }: { code: string; exchange: string }) =>
+            noneExAccs: ({ code, exchange }: { code: any; exchange: any }) =>
                 `✅ Adding robot #${code}.\n\nYou have not registered any ${exchange} API Keys.`,
-            enterVolume: ({ code, asset, minVolume }: { code: string; asset: string; minVolume: string }) =>
+            enterVolume: ({ code, asset, minVolume }: { code: any; asset: any; minVolume: any }) =>
                 `✅ Adding robot #${code}.\n\n<b>Please enter desired trading amount in ${asset}.</b>\n\nMinimum value is ${minVolume} ${asset}`,
-            wrongVolume: ({ code, minVolume, asset }: { code: string; minVolume: string; asset: string }) =>
+            wrongVolume: ({ code, minVolume, asset }: { code: any; minVolume: any; asset: any }) =>
                 `✅ Adding robot #${code}.\n\nWrong amount format.\nMinimum value is ${minVolume} ${asset}`,
-            success: ({ code, volume, asset }: { code: string; volume: string; asset: string }) =>
+            success: ({ code, volume, asset }: { code: any; volume: any; asset: any }) =>
                 `✅ Succesfully added <b>#${code}</b> robot with trading amount ${volume} ${asset}!`
         },
         editUserRobot: {
-            enterVolume: ({ code, asset, minVolume }: { code: string; asset: string; minVolume: string }) =>
+            enterVolume: ({ code, asset, minVolume }: { code: any; asset: any; minVolume: any }) =>
                 `⚙️ Editing robot #${code} settings.\n\n<b>Please enter desired trading amount in ${asset}.</b>\n\nMinimum value is ${minVolume} ${asset}`,
-            wrongVolume: ({ code, minVolume, asset }: { code: string; minVolume: string; asset: string }) =>
+            wrongVolume: ({ code, minVolume, asset }: { code: any; minVolume: any; asset: any }) =>
                 `⚙️ Editing robot #${code} settings.\n\nWrong amount format.\nMinimum value is ${minVolume} ${asset}`,
-            success: ({ code, volume, asset }: { code: string; volume: string; asset: string }) =>
+            success: ({ code, volume, asset }: { code: any; volume: any; asset: any }) =>
                 `⚙️ Succesfully edited <b>#${code}</b> robot. New trading amount ${volume} ${asset}!`
         },
         deleteUserRobot: {
-            confirm: ({ code }: { code: string }) =>
+            confirm: ({ code }: { code: any }) =>
                 `❌ Deleting <b>#${code}</b> robot...\n\n⚠️ Are you sure you want to delete <b>#${code}</b> robot?\n\n You will lost all your trading history for this robot!`,
-            failed: ({ code, error }: { code: string; error: string }) =>
-                `❌ Failed to delele robot #${code} - ${error}`,
-            success: ({ code }: { code: string }) => `✅ Succesfully deleted <b>#${code}</b> robot.`
+            failed: ({ code, error }: { code: any; error: any }) => `❌ Failed to delele robot #${code} - ${error}`,
+            success: ({ code }: { code: any }) => `✅ Succesfully deleted <b>#${code}</b> robot.`
         },
         startUserRobot: {
-            confirm: ({ code }: { code: string }) =>
+            confirm: ({ code }: { code: any }) =>
                 `🟢 Starting <b>#${code}</b> robot...\n\n⚠️ Are you sure you want to start <b>#${code}</b> robot now?\n\n It is a realtime automated trading mode using your exchange account and you use it at your own risk!`,
-            failed: ({ code, error }: { code: string; error: string }) =>
-                `❌ Failed to start robot #${code} - ${error}`,
-            success: ({ code }: { code: string }) => `🟢 <b>#${code}</b> robot is starting now...`
+            failed: ({ code, error }: { code: any; error: any }) => `❌ Failed to start robot #${code} - ${error}`,
+            success: ({ code }: { code: any }) => `🟢 <b>#${code}</b> robot is starting now...`
         },
         stopUserRobot: {
-            confirm: ({ code }: { code: string }) =>
+            confirm: ({ code }: { code: any }) =>
                 `⛔ Stopping <b>#${code}</b> robot...\n\n⚠️ Are you sure you want to stop <b>#${code}</b> robot now?\n\n If there is any <b>open positions</b> created by this robot they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!`,
-            failed: ({ code, error }: { code: string; error: string }) => `❌ Failed to stop robot #${code} - ${error}`,
-            success: ({ code }: { code: string }) => `⛔ <b>#${code}</b> robot is stopping now...`
+            failed: ({ code, error }: { code: any; error: any }) => `❌ Failed to stop robot #${code} - ${error}`,
+            success: ({ code }: { code: any }) => `⛔ <b>#${code}</b> robot is stopping now...`
         },
         settings: {
             info: ({
@@ -143,9 +141,9 @@ const EN = {
                 telegramSignalsNotif,
                 telegramTradingNotif
             }: {
-                email: string;
-                telegramSignalsNotif: string;
-                telegramTradingNotif: string;
+                email: any;
+                telegramSignalsNotif: any;
+                telegramTradingNotif: any;
             }) =>
                 `<b>👤 Account info</b>\n\n<b>📨 Email:</b> ${email}\n\n${telegramSignalsNotif}\n${telegramTradingNotif}`,
             emailNotSet: "Not set",
@@ -168,32 +166,32 @@ const EN = {
         addUserExAcc: {
             chooseExchange:
                 "🔑 Adding New Exchange API Key\n\nYou can learn how to configure keys in our <a href='https://support.cryptuoso.com/exchange-accounts'>docs</a>.\n\n<b>Choose one of available exchanges:</b>",
-            enterAPIKey: ({ exchange }: { exchange: string }) =>
+            enterAPIKey: ({ exchange }: { exchange: any }) =>
                 `🔑 Adding New Exchange API Key\n\nYou can learn how to configure keys in our <a href='https://support.cryptuoso.com/exchange-accounts'>docs</a>.\n\nEnter your ${exchange} <b>API KEY</b>`,
-            enterAPISecret: ({ exchange }: { exchange: string }) =>
+            enterAPISecret: ({ exchange }: { exchange: any }) =>
                 `🔑 Adding New Exchange API Key\n\nYou can learn how to configure keys in our <a href='https://support.cryptuoso.com/exchange-accounts'>docs</a>.\n\nEnter your ${exchange} <b>API Key Secret (Private Key)</b>`,
-            check: ({ exchange }: { exchange: string }) =>
+            check: ({ exchange }: { exchange: any }) =>
                 `🔑 Adding New Exchange API Key\n\n🌀 Checking your ${exchange} API Key...\n\n⏳ Please wait...`,
-            success: ({ name }: { name: string }) => `🔑 New ${name} API Key succesfully added!`,
-            failed: ({ exchange, error }: { exchange: string; error: string }) =>
+            success: ({ name }: { name: any }) => `🔑 New ${name} API Key succesfully added!`,
+            failed: ({ exchange, error }: { exchange: any; error: any }) =>
                 `❌ Failed to add new ${exchange} API Key.\n\n<b>${error}</b>\n\nPlease try again!\n\nYou can learn how to configure keys in our <a href='https://support.cryptuoso.com/exchange-accounts'>docs</a>.`
         },
         editUserExAcc: {
-            enterAPIKey: ({ name, exchange }: { name: string; exchange: string }) =>
+            enterAPIKey: ({ name, exchange }: { name: any; exchange: any }) =>
                 `🔑 Editing ${name} API Key\n\n<b>Enter your ${exchange} API Key</b>`,
-            enterAPISecret: ({ name, exchange }: { name: string; exchange: string }) =>
+            enterAPISecret: ({ name, exchange }: { name: any; exchange: any }) =>
                 `🔑 Editing ${name} API Key\n\n<b>Enter your ${exchange} API Secret</b>`,
-            success: ({ name }: { name: string }) => `🔑 ${name} API Key succesfully edited!`,
-            failed: ({ name, error }: { name: string; error: string }) =>
+            success: ({ name }: { name: any }) => `🔑 ${name} API Key succesfully edited!`,
+            failed: ({ name, error }: { name: any; error: any }) =>
                 `❌ Failed to edit ${name} API Key.\n\n<b>${error}</b>\n\nPlease try again!`
         },
         userExAcc: {
-            info: ({ name, status }: { name: string; status: string }) =>
+            info: ({ name, status }: { name: any; status: any }) =>
                 `🔐 <b>${name} API Key</b>\n\n<b>Status:</b> ${status}`,
             edit: "🔑 Edit",
             delete: "❌ Delete",
-            deleteSuccess: ({ name }: { name: string }) => `🔑 ${name} API Key deleted successfully`,
-            deleteFailed: ({ name, error }: { name: string; error: string }) =>
+            deleteSuccess: ({ name }: { name: any }) => `🔑 ${name} API Key deleted successfully`,
+            deleteFailed: ({ name, error }: { name: any; error: any }) =>
                 `❌ Failed to delete ${name} API Key.\n\n<b>${error}</b>\n\nPlease try again!`
         },
         support: {
@@ -207,16 +205,16 @@ const EN = {
                 "Also you can <b>type and send your message right now ⬇️ to this bot</b>\n\n(works only while you in Support section)",
             success:
                 "✅ Your support request have been received.\n\nIf you have any additional information regarding your issue\n\n you can use <b>❓Support</b> section again!",
-            reply: ({ message }: { message: string }) =>
+            reply: ({ message }: { message: any }) =>
                 `❓New Message from <b>Support Team</b>:\n\n${message}\n\nYou can reply to us in <b>❓Support</b> section.`
         }
     },
     signal: {
-        alert: ({ code }: { code: string }) => `🚨 New Signal!\n\n🤖 Robot: <b>#${code}</b>\n\n`,
-        trade: ({ code }: { code: string }) => `🚨✅ New Signal Trade!\n\n🤖 Robot: <b>#${code}</b>\n\n`
+        alert: ({ code }: { code: any }) => `🚨 New Signal!\n\n🤖 Robot: <b>#${code}</b>\n\n`,
+        trade: ({ code }: { code: any }) => `🚨✅ New Signal Trade!\n\n🤖 Robot: <b>#${code}</b>\n\n`
     },
     userTrade: {
-        new: ({ code }: { code: string }) => `🤖✅ New Robot Trade!\n\n🤖 Robot: <b>#${code}</b>\n\n`,
+        new: ({ code }: { code: any }) => `🤖✅ New Robot Trade!\n\n🤖 Robot: <b>#${code}</b>\n\n`,
         open: ({
             code,
             entryAction,
@@ -225,12 +223,12 @@ const EN = {
             volume,
             asset
         }: {
-            code: string;
-            entryAction: string;
-            entryDate: string;
-            entryPrice: string;
-            volume: string;
-            asset: string;
+            code: any;
+            entryAction: any;
+            entryDate: any;
+            entryPrice: any;
+            volume: any;
+            asset: any;
         }) =>
             `-------\n<b>Position:</b> ${code}\n\n<b>Entry:</b> ${entryAction}\n<b>Entry Date:</b> ${entryDate}\n<b>Entry Price:</b> ${entryPrice}$\n<b>Amount:</b> ${volume} ${asset}`,
         closed: ({
@@ -246,17 +244,17 @@ const EN = {
             barsHeld,
             profit
         }: {
-            code: string;
-            entryAction: string;
-            entryDate: string;
-            entryPrice: string;
-            exitAction: string;
-            exitDate: string;
-            exitPrice: string;
-            volume: string;
-            asset: string;
-            barsHeld: string;
-            profit: string;
+            code: any;
+            entryAction: any;
+            entryDate: any;
+            entryPrice: any;
+            exitAction: any;
+            exitDate: any;
+            exitPrice: any;
+            volume: any;
+            asset: any;
+            barsHeld: any;
+            profit: any;
         }) =>
             `-------\n<b>Position:</b> ${code}\n\n<b>Entry:</b> ${entryAction}\n<b>Entry Date:</b> ${entryDate}\n<b>Entry Price:</b> ${entryPrice}$\n\n<b>Exit:</b> ${exitAction}\n<b>Exit Date:</b> ${exitDate}\n<b>Exit Price:</b> ${exitPrice}$\n\n<b>Amount:</b> ${volume} ${asset}\n\n<b>Bars Held:</b> ${barsHeld}\n<b>Profit:</b> ${profit}$\n`
     },
@@ -265,31 +263,30 @@ const EN = {
         menuPublStats: "📉 Public Statistics",
         menuMyStats: "📈 My Statistics",
         menuPositions: "🗃 Latest positions",
-        name: ({ code, subscribed }: { code: string; subscribed: string }) =>
-            `🤖\nRobot: <b>#${code}</b> ${subscribed}\n\n`,
+        name: ({ code, subscribed }: { code: any; subscribed: any }) => `🤖\nRobot: <b>#${code}</b> ${subscribed}\n\n`,
         info: ({
             code,
             subscribed,
             description,
             signalsCount
         }: {
-            code: string;
-            subscribed: string;
-            description: string;
-            signalsCount: string;
+            code: any;
+            subscribed: any;
+            description: any;
+            signalsCount: any;
         }) =>
             `🤖\nRobot: <b>#${code}</b> ${subscribed}\n<b>Description:</b> ${description}\n<b>Maximum signals:</b> ${signalsCount} per day\n\n`,
-        profit: ({ profit, lastProfit }: { profit: string; lastProfit: string }) =>
+        profit: ({ profit, lastProfit }: { profit: any; lastProfit: any }) =>
             `<b>Performance:</b> ${profit}$ / ${lastProfit}$\n\n`,
-        volume: ({ volume, asset }: { volume: string; asset: string }) => `<b>Amount:</b> ${volume} ${asset}\n\n`,
-        subscribedAt: ({ subscribedAt }: { subscribedAt: string }) => `<b>Subscribed at:</b> ${subscribedAt}\n\n`,
-        startedAt: ({ startedAt }: { startedAt: string }) => `<b>Started at:</b> ${startedAt}\n\n`,
-        stoppedAt: ({ stoppedAt }: { stoppedAt: string }) => `<b>Stopped at:</b> ${stoppedAt}\n\n`,
-        lastInfoUpdatedAt: ({ lastInfoUpdatedAt }: { lastInfoUpdatedAt: string }) =>
+        volume: ({ volume, asset }: { volume: any; asset: any }) => `<b>Amount:</b> ${volume} ${asset}\n\n`,
+        subscribedAt: ({ subscribedAt }: { subscribedAt: any }) => `<b>Subscribed at:</b> ${subscribedAt}\n\n`,
+        startedAt: ({ startedAt }: { startedAt: any }) => `<b>Started at:</b> ${startedAt}\n\n`,
+        stoppedAt: ({ stoppedAt }: { stoppedAt: any }) => `<b>Stopped at:</b> ${stoppedAt}\n\n`,
+        lastInfoUpdatedAt: ({ lastInfoUpdatedAt }: { lastInfoUpdatedAt: any }) =>
             `Info updated: ${lastInfoUpdatedAt}\n`,
-        status: ({ status }: { status: string }) => `<b>Status:</b> ${status}\n`,
-        userExAcc: ({ name }: { name: string }) => `<b>Exchange API Key:</b> ${name}\n\n`,
-        signals: ({ signals }: { signals: string }) => `<b>Latest signals:</b>\n${signals}`,
+        status: ({ status }: { status: any }) => `<b>Status:</b> ${status}\n`,
+        userExAcc: ({ name }: { name: any }) => `<b>Exchange API Key:</b> ${name}\n\n`,
+        signals: ({ signals }: { signals: any }) => `<b>Latest signals:</b>\n${signals}`,
         signal: ({
             code,
             action,
@@ -297,29 +294,29 @@ const EN = {
             timestamp,
             price
         }: {
-            code: string;
-            action: string;
-            orderType: string;
-            timestamp: string;
-            price: string;
+            code: any;
+            action: any;
+            orderType: any;
+            timestamp: any;
+            price: any;
         }) =>
             `<b>Position:</b> ${code}\n<b>Action:</b> ${action}\n<b>Order type:</b> ${orderType}\n<b>Signal time:</b> ${timestamp}\n<b>Price:</b> ${price}$\n`,
         signalsNone: "\n\nRobot hasn't current signals",
-        positionsOpen: ({ openPositions }: { openPositions: string }) => `<b>📬 Open positions:</b> ${openPositions}`,
+        positionsOpen: ({ openPositions }: { openPositions: any }) => `<b>📬 Open positions:</b> ${openPositions}`,
         positionOpen: ({
             code,
             entryAction,
             entryDate,
             entryPrice
         }: {
-            code: string;
-            entryAction: string;
-            entryDate: string;
-            entryPrice: string;
+            code: any;
+            entryAction: any;
+            entryDate: any;
+            entryPrice: any;
         }) =>
             `-------\n<b>Position:</b> ${code}\n\n<b>Entry:</b> ${entryAction}\n<b>Entry Date:</b> ${entryDate}\n<b>Entry Price:</b> ${entryPrice}$\n`,
-        positionSignals: ({ signals }: { signals: string }) => `<b>Exit signals:</b> ${signals}`,
-        positionsClosed: ({ closedPositions }: { closedPositions: string }) =>
+        positionSignals: ({ signals }: { signals: any }) => `<b>Exit signals:</b> ${signals}`,
+        positionsClosed: ({ closedPositions }: { closedPositions: any }) =>
             `<b>📪 Closed positions:</b> ${closedPositions}\n`,
         positionClosed: ({
             code,
@@ -332,19 +329,19 @@ const EN = {
             barsHeld,
             profit
         }: {
-            code: string;
-            entryAction: string;
-            entryDate: string;
-            entryPrice: string;
-            exitAction: string;
-            exitDate: string;
-            exitPrice: string;
-            barsHeld: string;
-            profit: string;
+            code: any;
+            entryAction: any;
+            entryDate: any;
+            entryPrice: any;
+            exitAction: any;
+            exitDate: any;
+            exitPrice: any;
+            barsHeld: any;
+            profit: any;
         }) =>
             `-------\n<b>Position:</b> ${code}\n\n<b>Entry:</b> ${entryAction}\n<b>Entry Date:</b> ${entryDate}\n<b>Entry Price:</b> ${entryPrice}$\n\n<b>Exit:</b> ${exitAction}\n<b>Exit Date:</b> ${exitDate}\n<b>Exit Price:</b> ${exitPrice}$\n\n<b>Bars Held:</b> ${barsHeld}\n<b>Profit:</b> ${profit}$\n`,
         positionsNone: "Robot has no positions yet...",
-        statsLastUpdatedAt: ({ lastUpdatedAt }: { lastUpdatedAt: string }) =>
+        statsLastUpdatedAt: ({ lastUpdatedAt }: { lastUpdatedAt: any }) =>
             `<b>Stats last updated at:</b> ${lastUpdatedAt}\n`,
         statsProfit: ({
             netProfit,
@@ -357,15 +354,15 @@ const EN = {
             maxDrawdown,
             maxDrawdownDate
         }: {
-            netProfit: { all: string };
-            tradesCount: { all: string };
-            avgNetProfit: { all: string };
-            avgBarsHeld: { all: string };
-            profitFactor: { all: string };
-            recoveryFactor: { all: string };
-            payoffRatio: { all: string };
-            maxDrawdown: { all: string };
-            maxDrawdownDate: { all: string };
+            netProfit: { all: any };
+            tradesCount: { all: any };
+            avgNetProfit: { all: any };
+            avgBarsHeld: { all: any };
+            profitFactor: { all: any };
+            recoveryFactor: { all: any };
+            payoffRatio: { all: any };
+            maxDrawdown: { all: any };
+            maxDrawdownDate: { all: any };
         }) =>
             `<b>💰 Profit</b> \n\n<b>Net Profit:</b> ${netProfit.all}$ \n<b>Number of Trades:</b> ${tradesCount.all} \n<b>Average Profit:</b> ${avgNetProfit.all}$ \n<b>Average Bars held:</b> ${avgBarsHeld.all} \n<b>Profit Factor:</b> ${profitFactor.all} \n<b>Recovery Factor:</b> ${recoveryFactor.all} \n<b>Payoff Ratio:</b> ${payoffRatio.all} \n<b>Maximum Drawdown:</b> ${maxDrawdown.all}$ \n<b>Maximum Drawdown Date:</b> ${maxDrawdownDate.all} \n\n`,
         statsWinners: ({
@@ -375,11 +372,11 @@ const EN = {
             avgBarsHeldWinning,
             maxConnsecWins
         }: {
-            winRate: { all: string };
-            grossProfit: { all: string };
-            avgProfit: { all: string };
-            avgBarsHeldWinning: { all: string };
-            maxConnsecWins: { all: string };
+            winRate: { all: any };
+            grossProfit: { all: any };
+            avgProfit: { all: any };
+            avgBarsHeldWinning: { all: any };
+            maxConnsecWins: { all: any };
         }) =>
             `<b>🏆 Winners</b> \n\n<b>Win Rate:</b> ${winRate.all}%\n<b>Gross Profit:</b> ${grossProfit.all}$ \n<b>Average Profit:</b> ${avgProfit.all}$ \n<b>Average Bars held:</b> ${avgBarsHeldWinning.all} \n<b>Max. Consecutive Winners:</b> ${maxConnsecWins.all} \n\n`,
         statsLosses: ({
@@ -389,11 +386,11 @@ const EN = {
             avgBarsHeldLosing,
             maxConsecLosses
         }: {
-            lossRate: { all: string };
-            grossLoss: { all: string };
-            avgLoss: { all: string };
-            avgBarsHeldLosing: { all: string };
-            maxConsecLosses: { all: string };
+            lossRate: { all: any };
+            grossLoss: { all: any };
+            avgLoss: { all: any };
+            avgBarsHeldLosing: { all: any };
+            maxConsecLosses: { all: any };
         }) =>
             `<b>🌋 Losses</b> \n\n<b>Loss Rate:</b> ${lossRate.all}%\n<b>Gross Loss:</b> ${grossLoss.all}$ \n<b>Average Loss:</b> ${avgLoss.all}$ \n<b>Average Bars held:</b> ${avgBarsHeldLosing.all} \n<b>Max. Consecutive Losses:</b> ${maxConsecLosses.all} \n\n`,
         statsNone: "Robot has no statistics yet..."
@@ -422,17 +419,17 @@ const EN = {
         stop: "Stop ⛔"
     },
     userExAcc: {
-        error: ({ name, error }: { name: string; error: string }) =>
+        error: ({ name, error }: { name: any; error: any }) =>
             `❌ Your API Key 🔐 ${name} is invalid!\n\n ${error}\n\nPlease update your API Key information in settings.`
     },
     userRobot: {
         description:
             "The trend is your friend. Breakout trading is used by active investors to take a position within a trend's early stages. This strategy can be the starting point for major price moves, expansions in volatility and, when managed properly, can offer limited downside risk.",
-        error: ({ jobType, error, code, id }: { jobType: string; error: string; code: string; id: string }) =>
+        error: ({ jobType, error, code, id }: { jobType: any; error: any; code: any; id: any }) =>
             `❌ Error occurred while processing robot job <b>${jobType}</b>.\n\n${error} \n\n🤖 <b>#${code}</b> (${id})\n\n Please contact support.`,
-        orderError: ({ exId, error, code, id }: { exId: string; error: string; code: string; id: string }) =>
+        orderError: ({ exId, error, code, id }: { exId: any; error: any; code: any; id: any }) =>
             `❌ Error occurred while processing order <b>${exId}</b>.\n\n${error} \n\n🤖 <b>#${code}</b> (${id})\n\n Please check your API Keys and Robot settings or contact support.`,
-        status: ({ code, status, message }: { code: string; status: string; message: string }) =>
+        status: ({ code, status, message }: { code: any; status: any; message: any }) =>
             `🤖 Robot <b>#${code}</b> is ${status} now!\n\n${message}`
     },
     unknownError: "Unknown error",
@@ -445,3 +442,15 @@ const EN = {
     donation:
         "If you like what we do, please donate some coins. 💸\n\nBitcoin Address:\n14JMUUDpCqfKxGn3LLh5ViHAegdP2N1C8c\nEthereum Address:\n0xD80E764751424cF71BAa83C0fB6afbECE753Cf68\nBitcoin Cash Address:\nbitcoincash:qzuuv8fm3us85yse474cs4wspjfm00e5n5c93cmu78\nLitecoin Address:\nLhHPygdGkQt6q1sNFc1b3mVKVhxJ53cQVH\nDash Address:\nXemAGkD2eY3hV5T87X46pJEX2qhEsdJt7c"
 };
+
+export enum LOCALES_NAMES {
+    EN = "en"
+}
+
+const LOCALES: {
+    [N in LOCALES_NAMES]: typeof EN;
+} = {
+    [LOCALES_NAMES.EN]: EN
+};
+
+export default LOCALES;

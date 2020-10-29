@@ -1,23 +1,30 @@
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import { SignalEvents, Signal, SignalSchema } from "@cryptuoso/robot-events";
-import { mailPublisherConfig, MailPublisherEventData, MailPublisherEvents, TemplateMailData, TemplateMailType } from "@cryptuoso/mail-publisher-events";
-import { UserSettings } from '@cryptuoso/user-state';
+import {
+    mailPublisherConfig,
+    MailPublisherEventData,
+    MailPublisherEvents,
+    TemplateMailData,
+    TemplateMailType,
+    TemplateMailObject
+} from "@cryptuoso/mail-publisher-events";
+import { UserSettings } from "@cryptuoso/user-state";
 import dayjs from "@cryptuoso/dayjs";
-import { v4 as uuid } from 'uuid';
-import { TradeAction } from '@cryptuoso/market';
+import { v4 as uuid } from "uuid";
+import { SignalType, TradeAction } from "@cryptuoso/market";
 
-interface Notification {
+type Notification = TemplateMailObject & {
     id: string;
     userId: string;
     timestamp: string;
-    type: TemplateMailType;
-    data: TemplateMailData;
+    //type: TemplateMailType;
+    //data: TemplateMailData;
     sendTelegram: boolean;
     sendEmail: boolean;
     //readed: boolean;
     robotId?: string;
     positionId?: string;
-}
+};
 
 export type NotificationsServiceConfig = BaseServiceConfig;
 
@@ -37,8 +44,18 @@ export default class NotificationsService extends BaseService {
         });
     }
 
-    async handleSignal(type: SignalEvents, signal: Signal) {
-        const { robotId, action } = signal;
+    async handleSignal(signal: Signal) {
+        const { robotId } = signal;
+
+        const robot: { code: string } = await this.db.pg.maybeOne(this.db.sql`
+            SELECT code
+            FROM robots
+            WHERE robot_id = ${robotId};
+        `);
+
+        if (!robot) throw new Error(`Robot not found (${robotId})`);
+
+        const { code: robotCode } = robot;
 
         const subscriptions: {
             telegramId?: number;
@@ -58,89 +75,95 @@ export default class NotificationsService extends BaseService {
         `);
 
         if (!subscriptions?.length) return;
-        
+
         let notifications: Notification[];
 
-        if (type === SignalEvents.ALERT) {
+        if (signal.type === SignalType.alert) {
+            const data = { ...signal, robotCode };
             notifications = subscriptions
-                .filter(sub =>
-                    dayjs.utc(signal.candleTimestamp).valueOf() >=
-                    dayjs.utc(sub.subscribedAt).valueOf()
-                )
-                .map(sub => ({
+                .filter((sub) => dayjs.utc(signal.candleTimestamp).valueOf() >= dayjs.utc(sub.subscribedAt).valueOf())
+                .map((sub) => ({
                     id: uuid(),
                     userId: sub.userId,
                     timestamp: signal.timestamp,
-                    type: TemplateMailType.CHANGE_EMAIL,
-                    data: signal as any,
+                    type: TemplateMailType.SIGNAL,
+                    data,
                     robotId: signal.robotId,
                     positionId: signal.positionId,
-                    sendTelegram:
-                      sub.telegramId && sub.settings.notifications.signals.telegram,
+                    sendTelegram: sub.telegramId && sub.settings.notifications.signals.telegram,
                     sendEmail: sub.email && sub.settings.notifications.signals.email
                 }));
-        }
-        else if (type === SignalEvents.TRADE) {
-            if (
-                action === TradeAction.closeLong ||
-                action === TradeAction.closeShort
-            ) {
-                const positionEntryDate: string = await this.db.pg.maybeOneFirst(this.db.sql`
-                    SELECT entryDate
+        } else if (signal.type === SignalType.trade) {
+            if (signal.action === TradeAction.closeLong || signal.action === TradeAction.closeShort) {
+                const position: {
+                    entryAction: TradeAction;
+                    entryPrice: number;
+                    entryDate: string;
+                    barsHeld: number;
+                } = await this.db.pg.maybeOne(this.db.sql`
+                    SELECT entry_action, entry_price, entry_date, bars_held
                     FROM robot_positions
                     WHERE id = ${signal.positionId};
-                `) as any;
-                
-                const res: [{ [key: string]: number }] = this.db.pg.maybeOneFirst(this.db.sql`
-                    select json_agg(json_build_object(user_id, profit))
-                    from v_user_signal_positions
+                `);
+
+                if(!position) throw new Error(`Robot position not found (${signal.positionId})`)
+
+                const usersSignalPositions: {
+                    userId: string;
+                    volume: number;
+                    profit: number;
+                }[] = this.db.pg.any(this.db.sql`
+                    SELECT user_id, volume, profit
+                    FROM v_user_signal_positions
                     WHERE id = ${signal.positionId}
                         AND robot_id = ${signal.robotId}
-                        AND user_id IN (${this.db.sql.array(subscriptions.map((sub)=>sub.userId), "uuid")});
+                        AND user_id IN (${this.db.sql.array(
+                            subscriptions.map((sub) => sub.userId),
+                            "uuid"
+                        )});
                 `) as any;
 
-                if (!res || res[0]) return;
+                // OR throw
+                if (!usersSignalPositions?.length) return;
 
-                const [profits] = res;
-                
+                const uspMap = new Map<string, { volume: number; profit: number; }>();
+
+                usersSignalPositions.forEach((p) => {
+                    uspMap.set(p.userId, { volume: p.volume, profit: p.profit });
+                });
+
                 notifications = subscriptions
-                    .filter(
-                        sub =>
-                            dayjs.utc(positionEntryDate).valueOf() >=
-                            dayjs.utc(sub.subscribedAt).valueOf()
-                    )
-                    .map(sub => ({
+                    .filter((sub) => dayjs.utc(position.entryDate).valueOf() >= dayjs.utc(sub.subscribedAt).valueOf())
+                    .map((sub) => ({
                         id: uuid(),
                         userId: sub.userId,
                         timestamp: signal.timestamp,
-                        type: TemplateMailType.CHANGE_EMAIL,
-                        data: { ...signal, profit: profits[sub.userId] } as any,
+                        type: TemplateMailType.SIGNAL,
+                        data: { ...signal, robotCode, ...uspMap.get(sub.userId), ...position },
                         robotId: signal.robotId,
                         positionId: signal.positionId,
-                        sendTelegram:
-                          sub.telegramId &&
-                          sub.settings.notifications.signals.telegram,
-                        sendEmail:
-                          sub.email && sub.settings.notifications.signals.email
+                        sendTelegram: sub.telegramId && sub.settings.notifications.signals.telegram,
+                        sendEmail: sub.email && sub.settings.notifications.signals.email
                     }));
             } else {
-                notifications = subscriptions.map(sub => ({
-                  id: uuid(),
-                  userId: sub.userId,
-                  timestamp: signal.timestamp,
-                  type: TemplateMailType.CHANGE_EMAIL,
-                  data: signal as any,
-                  robotId: signal.robotId,
-                  positionId: signal.positionId,
-                  sendTelegram:
-                    sub.telegramId && sub.settings.notifications.signals.telegram,
-                  sendEmail: sub.email && sub.settings.notifications.signals.email
+                const data = { ...signal, robotCode };
+                notifications = subscriptions.map((sub) => ({
+                    id: uuid(),
+                    userId: sub.userId,
+                    timestamp: signal.timestamp,
+                    type: TemplateMailType.SIGNAL,
+                    data: data,
+                    robotId: signal.robotId,
+                    positionId: signal.positionId,
+                    sendTelegram: sub.telegramId && sub.settings.notifications.signals.telegram,
+                    sendEmail: sub.email && sub.settings.notifications.signals.email
                 }));
             }
         }
 
         if (!notifications?.length) return;
-
+        
+        // TODO: save by single query
         for (const n of notifications) {
             await this.db.pg.query(this.db.sql`
                 INSERT INTO notifications (
@@ -158,7 +181,8 @@ export default class NotificationsService extends BaseService {
                 );
             `);
 
-            if (true) {
+            // NOTE: types may be different in future
+            if (n.sendEmail && mailPublisherConfig.isNeedToSendImmideately(n.type)) {
                 await this.events.emit<MailPublisherEventData[MailPublisherEvents.SEND_NOTIFICATION]>({
                     type: MailPublisherEvents.SEND_NOTIFICATION,
                     data: { notificationId: n.id }

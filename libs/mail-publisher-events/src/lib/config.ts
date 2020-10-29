@@ -74,6 +74,10 @@ class Config {
 
         return !!(userSettings.notifications as any)[tag].email;
     }
+    
+    isNeedToSendImmideately(type: TemplateMailType) {
+        return this.tagByType.has(type);
+    }
 }
 
 export const mailPublisherConfig = new Config(DAY, {
