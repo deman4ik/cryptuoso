@@ -7,13 +7,13 @@ import { createSocksProxyAgent } from "@cryptuoso/ccxt-public";
 import { BaseError } from "@cryptuoso/errors";
 import { ExchangePrice, Market, Order, OrderDirection, OrderJobType, OrderStatus, OrderType } from "@cryptuoso/market";
 import { pg, sql } from "@cryptuoso/postgres";
-import { UserExchangeAccountState } from "@cryptuoso/user-state";
+import { UserExchangeAccBalances, UserExchangeAccount } from "@cryptuoso/user-state";
 import { Priority } from "@cryptuoso/connector-state";
 
 export class PrivateConnector {
     log: Logger;
     #orderCheckTimeout = 5;
-    connectors: { [key: string]: Exchange } = {};
+    connector: Exchange;
     retryOptions = {
         retries: 100,
         minTimeout: 0,
@@ -32,6 +32,10 @@ export class PrivateConnector {
 
     getSymbol(asset: string, currency: string): string {
         return `${asset}/${currency}`;
+    }
+
+    get ordersCache() {
+        return this.connector.orders;
     }
 
     getOrderParams(exchange: string, id: string, params: GenericObject<any>, type: OrderType) {
@@ -60,7 +64,7 @@ export class PrivateConnector {
         return {};
     }
 
-    getErrorMessage(error: Error) {
+    static getErrorMessage(error: Error) {
         let message = error.message;
         if (error instanceof ccxt.BaseError) {
             try {
@@ -154,8 +158,9 @@ export class PrivateConnector {
                     bail(e);
                 }
             };
+            let balances: ccxt.Balances;
             try {
-                const balances: ccxt.Balances = await retry(getBalanceCall, this.retryOptions);
+                balances = await retry(getBalanceCall, this.retryOptions);
                 if (!balances && !balances.info)
                     throw new BaseError(
                         "Wrong response from exchange while checking balance",
@@ -163,7 +168,7 @@ export class PrivateConnector {
                         "WRONG_RESPONSE"
                     );
             } catch (err) {
-                throw Error(`Failed to check balance. ${this.getErrorMessage(err)}`);
+                throw Error(`Failed to check balance. ${PrivateConnector.getErrorMessage(err)}`);
             }
             const asset = "BTC";
             const currency = exchange === "binance_futures" ? "USDT" : "USD";
@@ -209,7 +214,7 @@ export class PrivateConnector {
                     );
             } catch (err) {
                 this.log.warn(err);
-                throw Error(`Failed to create test order. ${this.getErrorMessage(err)}`);
+                throw Error(`Failed to create test order. ${PrivateConnector.getErrorMessage(err)}`);
             }
 
             const cancelOrderCall = async (bail: (e: Error) => void) => {
@@ -233,64 +238,81 @@ export class PrivateConnector {
             } catch (err) {
                 this.log.warn(err);
                 throw Error(
-                    `Failed to cancel test order. ${this.getErrorMessage(err)} Please cancel ${order.id} order manualy.`
+                    `Failed to cancel test order. ${PrivateConnector.getErrorMessage(err)} Please cancel ${
+                        order.id
+                    } order manualy.`
                 );
             }
-            return { success: true };
+            return { success: true, balances: { balances, updatedAt: dayjs.utc().toISOString() } };
         } catch (err) {
             this.log.warn(err);
 
-            return { success: false, error: this.getErrorMessage(err) };
+            return { success: false, error: PrivateConnector.getErrorMessage(err) };
         }
     }
 
     async initConnector({
-        id,
         exchange,
         keys,
         ordersCache
     }: {
-        id: UserExchangeAccountState["id"];
-        exchange: UserExchangeAccountState["exchange"];
+        exchange: UserExchangeAccount["exchange"];
         keys: {
             apiKey: string;
             secret: string;
             password?: string;
         };
-        ordersCache: UserExchangeAccountState["ordersCache"];
+        ordersCache: UserExchangeAccount["ordersCache"];
     }): Promise<void> {
-        if (!(id in this.connectors)) {
-            const { apiKey, secret, password } = keys;
+        const { apiKey, secret, password } = keys;
 
-            const config: { [key: string]: any } = {
-                apiKey,
-                secret,
-                password,
-                orders: ordersCache,
-                enableRateLimit: true,
-                agent: this.agent,
-                timeout: 30000,
-                nonce() {
-                    return this.milliseconds();
-                }
+        const config: { [key: string]: any } = {
+            apiKey,
+            secret,
+            password,
+            orders: ordersCache,
+            enableRateLimit: true,
+            agent: this.agent,
+            timeout: 30000,
+            nonce() {
+                return this.milliseconds();
+            }
+        };
+
+        if (exchange === "bitfinex" || exchange === "kraken") {
+            this.connector = new ccxt[exchange](config);
+        } else if (exchange === "binance_futures") {
+            config.options = {
+                defaultType: "future",
+                adjustForTimeDifference: true,
+                recvWindow: 10000000
             };
+            this.connector = new ccxt.binance(config);
+        } else if (exchange === "binance_spot") {
+            config.options = {
+                adjustForTimeDifference: true,
+                recvWindow: 10000000
+            };
+            this.connector = new ccxt.binance(config);
+        } else throw new Error("Unsupported exchange");
+    }
 
-            if (exchange === "bitfinex" || exchange === "kraken") {
-                this.connectors[id] = new ccxt[exchange](config);
-            } else if (exchange === "binance_futures") {
-                config.options = {
-                    defaultType: "future",
-                    adjustForTimeDifference: true,
-                    recvWindow: 10000000
-                };
-                this.connectors[id] = new ccxt.binance(config);
-            } else if (exchange === "binance_spot") {
-                config.options = {
-                    adjustForTimeDifference: true,
-                    recvWindow: 10000000
-                };
-                this.connectors[id] = new ccxt.binance(config);
-            } else throw new Error("Unsupported exchange");
+    async getBalances(): Promise<UserExchangeAccBalances> {
+        const getBalanceCall = async (bail: (e: Error) => void) => {
+            try {
+                return await this.connector.fetchBalance();
+            } catch (e) {
+                if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) throw e;
+                bail(e);
+            }
+        };
+        try {
+            const balances: ccxt.Balances = await retry(getBalanceCall, this.retryOptions);
+            if (!balances && !balances.info)
+                throw new BaseError("Wrong response from exchange while checking balance", balances, "WRONG_RESPONSE");
+            return { balances, updatedAt: dayjs.utc().toISOString() };
+        } catch (err) {
+            throw Error(`Failed to check balance. ${PrivateConnector.getErrorMessage(err)}`);
         }
     }
 
@@ -306,11 +328,11 @@ export class PrivateConnector {
     }> {
         const creationDate = dayjs.utc().valueOf();
         try {
-            const { userExAccId, exchange, asset, currency, direction } = order;
+            const { exchange, asset, currency, direction } = order;
 
             const type =
                 (order.type === OrderType.market || order.type === OrderType.forceMarket) &&
-                this.connectors[userExAccId].has.createMarketOrder
+                this.connector.has.createMarketOrder
                     ? OrderType.market
                     : OrderType.limit;
 
@@ -322,7 +344,7 @@ export class PrivateConnector {
                 signalPrice = order.signalPrice;
             } else {
                 const currentPrice: ExchangePrice = await this.getCurrentPrice(
-                    this.connectors[userExAccId],
+                    this.connector,
                     exchange,
                     asset,
                     currency
@@ -339,7 +361,7 @@ export class PrivateConnector {
             }
             if (!response) {
                 try {
-                    response = await this.connectors[userExAccId].createOrder(
+                    response = await this.connector.createOrder(
                         this.getSymbol(asset, currency),
                         type,
                         direction,
@@ -372,7 +394,7 @@ export class PrivateConnector {
                                     exId: null,
                                     exTimestamp: dayjs.utc(creationDate).toISOString(),
                                     status: OrderStatus.new,
-                                    error: this.getErrorMessage(err)
+                                    error: PrivateConnector.getErrorMessage(err)
                                 },
                                 nextJob: {
                                     type: OrderJobType.create,
@@ -443,29 +465,20 @@ export class PrivateConnector {
             const { userExAccId, exchange, asset, currency, direction, exId, volume, type } = order;
             if (exId) return null;
             let orders: ccxt.Order[] = [];
-            if (this.connectors[order.userExAccId].has["fetchOrders"]) {
+            if (this.connector.has["fetchOrders"]) {
                 const call = async (bail: (e: Error) => void) => {
                     try {
-                        return await this.connectors[userExAccId].fetchOrders(
-                            this.getSymbol(asset, currency),
-                            creationDate
-                        );
+                        return await this.connector.fetchOrders(this.getSymbol(asset, currency), creationDate);
                     } catch (e) {
                         if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) throw e;
                         bail(e);
                     }
                 };
                 orders = await retry(call, this.retryOptions);
-            } else if (
-                this.connectors[order.userExAccId].has["fetchOpenOrders"] &&
-                this.connectors[order.userExAccId].has["fetchClosedOrders"]
-            ) {
+            } else if (this.connector.has["fetchOpenOrders"] && this.connector.has["fetchClosedOrders"]) {
                 const callOpen = async (bail: (e: Error) => void) => {
                     try {
-                        return await this.connectors[userExAccId].fetchOpenOrders(
-                            this.getSymbol(asset, currency),
-                            creationDate
-                        );
+                        return await this.connector.fetchOpenOrders(this.getSymbol(asset, currency), creationDate);
                     } catch (e) {
                         if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) throw e;
                         bail(e);
@@ -473,10 +486,7 @@ export class PrivateConnector {
                 };
                 const callClosed = async (bail: (e: Error) => void) => {
                     try {
-                        return await this.connectors[userExAccId].fetchClosedOrders(
-                            this.getSymbol(asset, currency),
-                            creationDate
-                        );
+                        return await this.connector.fetchClosedOrders(this.getSymbol(asset, currency), creationDate);
                     } catch (e) {
                         if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) throw e;
                         bail(e);
@@ -537,10 +547,10 @@ export class PrivateConnector {
         };
     }> {
         try {
-            const { userExAccId, exId, exchange, asset, currency } = order;
+            const { exId, exchange, asset, currency } = order;
             const call = async (bail: (e: Error) => void) => {
                 try {
-                    return await this.connectors[userExAccId].fetchOrder(exId, this.getSymbol(asset, currency));
+                    return await this.connector.fetchOrder(exId, this.getSymbol(asset, currency));
                 } catch (e) {
                     if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) throw e;
                     bail(e);
@@ -631,7 +641,7 @@ export class PrivateConnector {
                 return {
                     order: {
                         ...order,
-                        error: this.getErrorMessage(err)
+                        error: PrivateConnector.getErrorMessage(err)
                     },
                     nextJob: {
                         type: OrderJobType.check,
@@ -658,10 +668,10 @@ export class PrivateConnector {
         };
     }> {
         try {
-            const { userExAccId, exId, asset, currency } = order;
+            const { exId, asset, currency } = order;
             const call = async (bail: (e: Error) => void) => {
                 try {
-                    return await this.connectors[userExAccId].cancelOrder(exId, this.getSymbol(asset, currency));
+                    return await this.connector.cancelOrder(exId, this.getSymbol(asset, currency));
                 } catch (e) {
                     if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) throw e;
                     bail(e);
@@ -685,7 +695,7 @@ export class PrivateConnector {
                 return {
                     order: {
                         ...order,
-                        error: this.getErrorMessage(err)
+                        error: PrivateConnector.getErrorMessage(err)
                     },
                     nextJob: {
                         type: OrderJobType.cancel,

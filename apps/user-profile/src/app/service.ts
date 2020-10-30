@@ -2,9 +2,10 @@ import { HTTPService, HTTPServiceConfig, RequestExtended } from "@cryptuoso/serv
 import {
     User,
     UserRoles,
-    UserExchangeAccountState,
+    UserExchangeAccount,
     UserExchangeKeys,
-    UserExchangeAccStatus
+    UserExchangeAccStatus,
+    UserExchangeAccBalances
 } from "@cryptuoso/user-state";
 import { UserSignalState /* , UserSignalSettings */ } from "@cryptuoso/user-signal-state";
 import { RobotStatus } from "@cryptuoso/robot-state";
@@ -502,7 +503,7 @@ export default class UserProfileService extends HTTPService {
     ) {
         const { id: userId } = user;
 
-        let existed: UserExchangeAccountState;
+        let existed: UserExchangeAccount;
 
         if (id) {
             existed = await this.db.pg.maybeOne(sql`
@@ -541,10 +542,17 @@ export default class UserProfileService extends HTTPService {
         }
 
         const connector = new PrivateConnector();
-        const check: {
-            success: boolean;
-            error?: string;
-        } = await connector.checkAPIKeys({
+        const check:
+            | {
+                  success: boolean;
+                  balances: UserExchangeAccBalances;
+                  error?: undefined;
+              }
+            | {
+                  success: boolean;
+                  error: string;
+                  balances?: undefined;
+              } = await connector.checkAPIKeys({
             exchange,
             key,
             secret,
@@ -589,7 +597,7 @@ export default class UserProfileService extends HTTPService {
             }
         }
 
-        const exchangeAcc: UserExchangeAccountState = {
+        const exchangeAcc: UserExchangeAccount = {
             id: id || uuid(),
             userId,
             exchange,
@@ -597,6 +605,7 @@ export default class UserProfileService extends HTTPService {
             keys: encryptedKeys,
             status: UserExchangeAccStatus.enabled,
             error: null,
+            balances: check.balances,
             ordersCache: {}
         };
 
@@ -607,13 +616,14 @@ export default class UserProfileService extends HTTPService {
                 SET name = ${name},
                     keys = ${sql.json(exchangeAcc.keys)},
                     status = ${exchangeAcc.status},
-                    error = ${exchangeAcc.error}
+                    error = ${exchangeAcc.error},
+                    balances = ${JSON.stringify(exchangeAcc.balances) || null}
                 WHERE id = ${id};
             `);
         } else {
             await this.db.pg.query(sql`
                 INSERT INTO user_exchange_accs(
-                    id, user_id, exchange, "name", "keys", "status", "error", orders_cache
+                    id, user_id, exchange, name, keys, status, error, balances, orders_cache
                 ) VALUES (
                     ${exchangeAcc.id},
                     ${exchangeAcc.userId},
@@ -622,7 +632,8 @@ export default class UserProfileService extends HTTPService {
                     ${sql.json(exchangeAcc.keys)},
                     ${exchangeAcc.status},
                     ${exchangeAcc.error},
-                    ${sql.json(exchangeAcc.ordersCache)}
+                    ${JSON.stringify(exchangeAcc.balances) || null}
+                    ${JSON.stringify(exchangeAcc.ordersCache)}
                 );
             `);
         }
@@ -642,7 +653,7 @@ export default class UserProfileService extends HTTPService {
     ) {
         const { id: userId } = user;
 
-        const userExchangeAcc: UserExchangeAccountState = await this.db.pg.maybeOne(sql`
+        const userExchangeAcc: UserExchangeAccount = await this.db.pg.maybeOne(sql`
             SELECT *
             FROM user_exchange_accs
             WHERE id = ${id};
@@ -685,7 +696,7 @@ export default class UserProfileService extends HTTPService {
     async userExchangeAccDelete(user: User, { id }: { id: string }) {
         const { id: userId } = user;
 
-        const userExchangeAcc: UserExchangeAccountState = await this.db.pg.maybeOne(sql`
+        const userExchangeAcc: UserExchangeAccount = await this.db.pg.maybeOne(sql`
             SELECT *
             FROM user_exchange_accs
             WHERE id = ${id};
@@ -736,7 +747,7 @@ export default class UserProfileService extends HTTPService {
     ) {
         const { id: userId } = user;
 
-        const userExchangeAcc: UserExchangeAccountState = await this.db.pg.maybeOne(sql`
+        const userExchangeAcc: UserExchangeAccount = await this.db.pg.maybeOne(sql`
             SELECT id, status, exchange, user_Id
             FROM user_exchange_accs
             WHERE id = ${userExAccId};

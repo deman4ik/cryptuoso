@@ -13,3 +13,18 @@ export interface ConnectorJob extends OrderJob {
     nextJobAt: string;
     priority: Priority;
 }
+
+export const enum Queues {
+    connector = "connector",
+    connectorRunner = "connector-runner"
+}
+
+export const enum ConnectorJobType {
+    order = "order",
+    balance = "balance"
+}
+
+export const enum ConnectorRunnerJobType {
+    idleOrderJobs = "idleOrderJobs",
+    checkBalance = "checkBalance"
+}
