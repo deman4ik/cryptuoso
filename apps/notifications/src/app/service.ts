@@ -86,7 +86,7 @@ export default class NotificationsService extends BaseService {
                     id: uuid(),
                     userId: sub.userId,
                     timestamp: signal.timestamp,
-                    type: TemplateMailType.SIGNAL,
+                    type: TemplateMailType.SIGNAL_ALERT,
                     data,
                     robotId: signal.robotId,
                     positionId: signal.positionId,
@@ -138,7 +138,7 @@ export default class NotificationsService extends BaseService {
                         id: uuid(),
                         userId: sub.userId,
                         timestamp: signal.timestamp,
-                        type: TemplateMailType.SIGNAL,
+                        type: TemplateMailType.SIGNAL_TRADE,
                         data: { ...signal, robotCode, ...uspMap.get(sub.userId), ...position },
                         robotId: signal.robotId,
                         positionId: signal.positionId,
@@ -151,7 +151,7 @@ export default class NotificationsService extends BaseService {
                     id: uuid(),
                     userId: sub.userId,
                     timestamp: signal.timestamp,
-                    type: TemplateMailType.SIGNAL,
+                    type: TemplateMailType.SIGNAL_TRADE,
                     data: data,
                     robotId: signal.robotId,
                     positionId: signal.positionId,
@@ -181,7 +181,6 @@ export default class NotificationsService extends BaseService {
                 );
             `);
 
-            // NOTE: types may be different in future
             if (n.sendEmail && mailPublisherConfig.isNeedToSendImmediately(n.type)) {
                 await this.events.emit<MailPublisherEventData[MailPublisherEvents.SEND_NOTIFICATION]>({
                     type: MailPublisherEvents.SEND_NOTIFICATION,

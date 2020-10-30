@@ -30,7 +30,8 @@ export enum TemplateMailType {
     PASSWORD_RESET_CONFIRMATION = "password_reset_confirmation",
     CHANGE_EMAIL = "change_email",
     CHANGE_EMAIL_CONFIRMATION = "change_email_confirmation",
-    SIGNAL = "signal"
+    SIGNAL_ALERT = "signal_alert",
+    SIGNAL_TRADE = "signal_trade"
 }
 
 export interface TemplateMailData {
@@ -38,20 +39,23 @@ export interface TemplateMailData {
         urlData: string;
         secretCode: string;
     };
-    [TemplateMailType.USER_ACCOUNT_ACTIVATED]: undefined;
-    [TemplateMailType.PASSWORD_CHANGE_CONFIRMATION]: undefined;
+    [TemplateMailType.USER_ACCOUNT_ACTIVATED]: any;
+    [TemplateMailType.PASSWORD_CHANGE_CONFIRMATION]: any;
     [TemplateMailType.PASSWORD_RESET]: {
         urlData: string;
         secretCode: string;
     };
-    [TemplateMailType.PASSWORD_RESET_CONFIRMATION]: undefined;
+    [TemplateMailType.PASSWORD_RESET_CONFIRMATION]: any;
     [TemplateMailType.CHANGE_EMAIL]: {
         secretCode: string;
     };
     [TemplateMailType.CHANGE_EMAIL_CONFIRMATION]: {
         emailNew: string;
     };
-    [TemplateMailType.SIGNAL]: Signal & {
+    [TemplateMailType.SIGNAL_ALERT]: Signal & {
+        robotCode: string;
+    };
+    [TemplateMailType.SIGNAL_TRADE]: Signal & {
         robotCode: string;
         entryAction?: TradeAction;
         entryPrice?: number;
@@ -59,9 +63,9 @@ export interface TemplateMailData {
         barsHeld?: number;
         profit?: number;
         volume?: number;
-    }
+    };
     // Retyping problems
-     /* & { robotCode: string } & (
+    /* & { robotCode: string } & (
             | {
                   type: SignalType.alert;
               }
@@ -78,7 +82,7 @@ export interface TemplateMailData {
                   barsHeld: number;
                   profit: number;
               }
-        ) */;
+        ) */
 }
 
 export type TemplateMailObject =
@@ -87,7 +91,7 @@ export type TemplateMailObject =
               | TemplateMailType.USER_ACCOUNT_ACTIVATED
               | TemplateMailType.PASSWORD_CHANGE_CONFIRMATION
               | TemplateMailType.PASSWORD_RESET_CONFIRMATION;
-          data?: undefined;
+          data?: any;
       }
     | {
           type: TemplateMailType.WELCOME;
@@ -106,8 +110,12 @@ export type TemplateMailObject =
           data: TemplateMailData[TemplateMailType.CHANGE_EMAIL_CONFIRMATION];
       }
     | {
-          type: TemplateMailType.SIGNAL;
-          data: TemplateMailData[TemplateMailType.SIGNAL];
+          type: TemplateMailType.SIGNAL_ALERT;
+          data: TemplateMailData[TemplateMailType.SIGNAL_ALERT];
+      }
+    | {
+          type: TemplateMailType.SIGNAL_TRADE;
+          data: TemplateMailData[TemplateMailType.SIGNAL_TRADE];
       };
 
 export interface MailPublisherEventData {
