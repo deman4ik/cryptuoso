@@ -5,7 +5,8 @@ import {
     UserExchangeAccount,
     UserExchangeKeys,
     UserExchangeAccStatus,
-    UserExchangeAccBalances
+    UserExchangeAccBalances,
+    UserSettings
 } from "@cryptuoso/user-state";
 import { UserSignalState /* , UserSignalSettings */ } from "@cryptuoso/user-signal-state";
 import { RobotStatus } from "@cryptuoso/robot-state";
@@ -56,6 +57,14 @@ export default class UserProfileService extends HTTPService {
                             optional: true
                         },
                         tradingEmail: {
+                            type: "boolean",
+                            optional: true
+                        },
+                        newsTelegram: {
+                            type: "boolean",
+                            optional: true
+                        },
+                        newsEmail: {
                             type: "boolean",
                             optional: true
                         }
@@ -222,17 +231,21 @@ export default class UserProfileService extends HTTPService {
             signalsTelegram,
             signalsEmail,
             tradingTelegram,
-            tradingEmail
+            tradingEmail,
+            newsTelegram,
+            newsEmail
         }: {
             signalsTelegram?: boolean;
             signalsEmail?: boolean;
             tradingTelegram?: boolean;
             tradingEmail?: boolean;
+            newsTelegram?: boolean;
+            newsEmail?: boolean;
         }
     ) {
         const { settings } = user;
 
-        const newSettings = {
+        const newSettings: UserSettings = {
             ...settings,
             notifications: {
                 signals: {
@@ -254,6 +267,13 @@ export default class UserProfileService extends HTTPService {
                         tradingEmail === true || tradingEmail === false
                             ? tradingEmail
                             : settings.notifications.trading.email
+                },
+                news: {
+                    telegram:
+                        newsTelegram === true || newsTelegram === false
+                            ? newsTelegram
+                            : settings.notifications.news.telegram,
+                    email: newsEmail === true || newsEmail === false ? newsEmail : settings.notifications.news.email
                 }
             }
         };

@@ -24,11 +24,11 @@ const userSettings: UserSettings = {
         trading: {
             telegram: true,
             email: true
+        },
+        news: {
+            telegram: true,
+            email: true
         }
-    },
-    news: {
-        telegram: true,
-        email: true
     }
 };
 
