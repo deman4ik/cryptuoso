@@ -1,16 +1,9 @@
 import { GenericObject } from "@cryptuoso/helpers";
+import { Balances } from "ccxt";
 
 export interface EncryptedData {
     data: string;
     iv: string;
-}
-
-export interface UserExchangeAccountErrorEvent {
-    id: string;
-    userId: string;
-    name: string;
-    exchange: string;
-    error: string;
 }
 
 export const enum UserExchangeAccStatus {
@@ -25,7 +18,12 @@ export interface UserExchangeKeys {
     pass?: EncryptedData;
 }
 
-export interface UserExchangeAccountState {
+export interface UserExchangeAccBalances {
+    balances: Balances;
+    updatedAt: string;
+}
+
+export interface UserExchangeAccount {
     id: string;
     userId: string;
     exchange: string;
@@ -33,5 +31,6 @@ export interface UserExchangeAccountState {
     keys: UserExchangeKeys;
     status: UserExchangeAccStatus;
     ordersCache: GenericObject<any>;
+    balances: UserExchangeAccBalances;
     error?: any;
 }

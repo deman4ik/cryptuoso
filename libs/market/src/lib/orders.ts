@@ -45,7 +45,7 @@ export interface Order {
     id: string;
     userExAccId: string;
     userRobotId: string;
-    positionId: string;
+    positionId?: string;
     userPositionId: string;
     exchange: string;
     asset: string;
