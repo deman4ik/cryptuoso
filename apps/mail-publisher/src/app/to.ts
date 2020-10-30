@@ -8,20 +8,21 @@ function makeSubObjOrGet(obj: Type, prop: string) {
     return obj[prop] as Type;
 }
 
+// TODO: check
 export function toTs(str: string) {
     //str = str.replace(/"/g, "`");
 
     return str.replace(/:\s*"([^"]+)"/g, (full, text: string) => {
-        const entries = text?.match(/\$\{([^\}]+)\}/g)?.map(name => name.slice(2, -1));
-        
+        const entries = text?.match(/\${([^}]+)}/g)?.map((name) => name.slice(2, -1));
+
         if (!entries?.length) return full;
 
         const types: Type = {};
-        
+
         for (const o of entries) {
             let obj = types;
 
-            o.split('.').forEach((prop, i, { length }) => {
+            o.split(".").forEach((prop, i, { length }) => {
                 prop = prop.trim();
 
                 if (i === length - 1) {
@@ -39,15 +40,18 @@ export function toTs(str: string) {
 
 // NOTE: textified objects only
 export function fromTSStringToJSON(str: string) {
-    return str.replace(/:(?!\s*{)[^`"]*`([^`]+)`/g, (full, text: string) => {
-        return `: ${JSON.stringify(text)}`;
-    }).replace(/:\s*"([^"]+)"/g, (full, text) => {
-        return `: "${text}"`;
-    }).replace(/\\\\/g, "\\");
+    return str
+        .replace(/:(?!\s*{)[^`"]*`([^`]+)`/g, (full, text: string) => {
+            return `: ${JSON.stringify(text)}`;
+        })
+        .replace(/:\s*"([^"]+)"/g, (full, text) => {
+            return `: "${text}"`;
+        })
+        .replace(/\\\\/g, "\\");
 }
 
 function _toJSON(obj: any) {
-    let res: any = {};
+    const res: any = {};
 
     for (const [key, val] of obj) {
         let computedVal: any = 0;

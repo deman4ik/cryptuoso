@@ -1,11 +1,8 @@
 import { COVER_TEMPLATE_TYPES } from "@cryptuoso/mail";
 //import { formatHTML } from "@cryptuoso/helpers";
 import { TemplateMailType, TemplateMailData } from "@cryptuoso/mail-publisher-events";
-import {
-    MAIL_TEMPLATES,
-    NOTIFICATIONS_AGGREGATE_SUBJECT
-} from "./mail-templates";
-import { LANGS } from "./locales";
+import { MAIL_TEMPLATES } from "./mail-templates";
+import LOCALES, { LANGS } from "./locales";
 
 function getMaiTemplate(type: string) {
     const mail = MAIL_TEMPLATES[type as TemplateMailType];
@@ -15,21 +12,13 @@ function getMaiTemplate(type: string) {
     return mail;
 }
 
-export function buildEmailBody(
-    type: TemplateMailType,
-    data: TemplateMailData[TemplateMailType],
-    lang = LANGS.EN
-) {
+export function buildEmailBody(type: TemplateMailType, data: TemplateMailData[TemplateMailType], lang = LANGS.EN) {
     const mail = getMaiTemplate(type);
 
     return mail.body(lang, data);
 }
 
-export function buildEmail(
-    type: TemplateMailType,
-    data: TemplateMailData[TemplateMailType],
-    lang = LANGS.EN
-) {
+export function buildEmail(type: TemplateMailType, data: TemplateMailData[TemplateMailType], lang = LANGS.EN) {
     const mail = getMaiTemplate(type);
 
     return {
@@ -65,7 +54,7 @@ export function buildNotificationsEmail(
     }
 
     return {
-        subject: NOTIFICATIONS_AGGREGATE_SUBJECT,
+        subject: LOCALES[lang].subjects.notificationsAggregate,
         tags,
         variables: {
             body

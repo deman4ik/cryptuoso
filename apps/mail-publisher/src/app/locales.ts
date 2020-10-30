@@ -8,8 +8,9 @@ const EN = {
         changeEmail: "🔐 Cryptuoso - Change Email Request.",
         changeEmailConfirmation: "🔐 Cryptuoso - Email Change Confirmation.",
         // TODO: check
-        signalAlert: "🔐 Cryptuoso - Signal Alert.",
-        signalTrade: "🔐 Cryptuoso - Signal Trade."
+        notificationsAggregate: "🔔 Your notifications",
+        signalAlert: "🔔 Signal Alert.",
+        signalTrade: "🔔 Signal Trade."
     },
     bodies: {
         welcome: ({ secretCode, urlData }: { secretCode: any; urlData: any }) => `<p>Greetings!</p>
@@ -23,7 +24,7 @@ const EN = {
         passwordChangeConfirmation: `
             <p>Your password successfully changed!</p>
             <p>If you did not request this change, please contact support <a href="mailto:support@cryptuoso.com">support@cryptuoso.com</a></p>`,
-        passwordReset: ({ secretCode, urlData }: { secretCode: any, urlData: any }) => `
+        passwordReset: ({ secretCode, urlData }: { secretCode: any; urlData: any }) => `
             <p>We received a request to reset your password. Please create a new password by clicking <a href="https://cryptuoso.com/auth/confirm-password-reset/${urlData}">this link</a></p>
             <p>or enter this code <b>${secretCode}</b> manually on reset password confirmation page.</p>
             <p>This request will expire in 1 hour.</p>

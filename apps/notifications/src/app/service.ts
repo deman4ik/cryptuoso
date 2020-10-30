@@ -32,16 +32,20 @@ export default class NotificationsService extends BaseService {
     constructor(config?: NotificationsServiceConfig) {
         super(config);
 
-        this.events.subscribe({
-            [SignalEvents.ALERT]: {
-                schema: SignalSchema[SignalEvents.ALERT],
-                handler: this.handleSignal.bind(this, SignalEvents.ALERT)
-            },
-            [SignalEvents.TRADE]: {
-                schema: SignalSchema[SignalEvents.TRADE],
-                handler: this.handleSignal.bind(this, SignalEvents.TRADE)
-            }
-        });
+        try {
+            this.events.subscribe({
+                [SignalEvents.ALERT]: {
+                    schema: SignalSchema[SignalEvents.ALERT],
+                    handler: this.handleSignal.bind(this)
+                },
+                [SignalEvents.TRADE]: {
+                    schema: SignalSchema[SignalEvents.TRADE],
+                    handler: this.handleSignal.bind(this)
+                }
+            });
+        } catch (err) {
+            this.log.error(err, "While consctructing NotificationsService");
+        }
     }
 
     async handleSignal(signal: Signal) {
@@ -50,7 +54,7 @@ export default class NotificationsService extends BaseService {
         const robot: { code: string } = await this.db.pg.maybeOne(this.db.sql`
             SELECT code
             FROM robots
-            WHERE robot_id = ${robotId};
+            WHERE id = ${robotId};
         `);
 
         if (!robot) throw new Error(`Robot not found (${robotId})`);
@@ -112,16 +116,16 @@ export default class NotificationsService extends BaseService {
                     userId: string;
                     volume: number;
                     profit: number;
-                }[] = this.db.pg.any(this.db.sql`
+                }[] = (await this.db.pg.any(this.db.sql`
                     SELECT user_id, volume, profit
                     FROM v_user_signal_positions
                     WHERE id = ${signal.positionId}
                         AND robot_id = ${signal.robotId}
-                        AND user_id IN (${this.db.sql.array(
+                        AND user_id = ANY(${this.db.sql.array(
                             subscriptions.map((sub) => sub.userId),
                             "uuid"
                         )});
-                `) as any;
+                `)) as any;
 
                 // OR throw
                 if (!usersSignalPositions?.length) return;
@@ -161,6 +165,10 @@ export default class NotificationsService extends BaseService {
             }
         }
 
+        await this.storeNotifications(notifications);
+    }
+
+    async storeNotifications(notifications: Notification[]) {
         if (!notifications?.length) return;
 
         // TODO: save by single query

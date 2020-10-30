@@ -4,9 +4,6 @@ import LOCALES, { LANGS } from "./locales";
 import { TradeAction } from "@cryptuoso/market";
 import dayjs from "@cryptuoso/dayjs";
 
-export const NOTIFICATIONS_AGGREGATE_SUBJECT = "🔔 Your notifications";
-
-// May be used for all bodies if need
 export const formatHTML = (htmlStr: string): string => {
     return htmlStr.replace(/(?:\r\n|\r|\n)/g, "<br />");
 };
@@ -48,7 +45,7 @@ export const MAIL_TEMPLATES: {
     [TemplateMailType.CHANGE_EMAIL]: {
         subject: (lang) => LOCALES[lang].subjects.changeEmail,
         tags: [MailTags.AUTH],
-        body: (lang, data) => LOCALES[lang].bodies.changeEmail(data),
+        body: (lang, data) => LOCALES[lang].bodies.changeEmail(data)
     },
     [TemplateMailType.CHANGE_EMAIL_CONFIRMATION]: {
         subject: (lang) => LOCALES[lang].subjects.changeEmailConfirmation,
@@ -66,7 +63,7 @@ export const MAIL_TEMPLATES: {
             const actionText = LOCALE.tradeAction[signal.action];
             // TODO: forceMarket
             const orderTypeText: string = (LOCALE.orderType as any)[signal.orderType];
-            
+
             const signalText = LOCALE.robot.signal({
                 code: signal.positionCode,
                 timestamp: dayjs.utc(signal.timestamp).format("YYYY-MM-DD HH:mm UTC"),
@@ -107,9 +104,7 @@ export const MAIL_TEMPLATES: {
                     code: signal.positionCode,
                     entryAction: actionText,
                     entryPrice: signal.price,
-                    entryDate: dayjs
-                        .utc(signal.timestamp)
-                        .format("YYYY-MM-DD HH:mm UTC")
+                    entryDate: dayjs.utc(signal.timestamp).format("YYYY-MM-DD HH:mm UTC")
                 });
             }
 
