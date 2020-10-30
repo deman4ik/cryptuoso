@@ -108,7 +108,7 @@ class MailPublisherService extends HTTPService {
     }
 
     async checkNotifications() {
-        const timeThreshold = mailPublisherConfig.getThresholdTimeString();
+        const timeThreshold = mailPublisherConfig.getNotificationsThresholdTimeString();
         const users: { id: string; email: string }[] = await this.db.pg.any(this.db.sql`
             SELECT u.id, u.email
             FROM users u, notifications n
@@ -142,7 +142,7 @@ class MailPublisherService extends HTTPService {
                     AND created_at > ${timeThreshold}
                     ${
                         impossibleTypes?.length
-                            ? this.db.sql`AND "type" NOT IN (${this.db.sql.array(impossibleTypes, "text")})`
+                            ? this.db.sql`AND "type" <> ALL(${this.db.sql.array(impossibleTypes, "text")})`
                             : this.db.sql``
                     }
                 RETURNING id, "type", data;
@@ -154,7 +154,7 @@ class MailPublisherService extends HTTPService {
             await this.db.pg.query(this.db.sql`
                 UPDATE notifications
                 SET mailgun_id = ${mailgunId}
-                WHERE id IN (${this.db.sql.array(
+                WHERE id = ANY(${this.db.sql.array(
                     notifications.map((n) => n.id),
                     "uuid"
                 )};
@@ -181,7 +181,7 @@ class MailPublisherService extends HTTPService {
 
     async _sendNotificationHandler(data: MailPublisherEventData[MailPublisherEvents.SEND_NOTIFICATION]) {
         try {
-            const timeThreshold = mailPublisherConfig.getThresholdTimeString();
+            const timeThreshold = mailPublisherConfig.getNotificationsThresholdTimeString();
             const { notificationId } = data;
             const notification: {
                 userId: string;

@@ -177,6 +177,9 @@
         },
         "webhooks": {
             "tags": []
+        },
+        "notifications": {
+            "tags": []
         }
     },
     "affected": {

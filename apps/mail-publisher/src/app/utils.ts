@@ -1,12 +1,8 @@
 import { COVER_TEMPLATE_TYPES } from "@cryptuoso/mail";
 //import { formatHTML } from "@cryptuoso/helpers";
 import { TemplateMailType, TemplateMailData } from "@cryptuoso/mail-publisher-events";
-import { getStringOrFunctionValue, MAIL_TEMPLATES, NOTIFICATIONS_AGGREGATE_SUBJECT } from "./mail-templates";
-
-// May be used for all bodies if need
-export const formatHTML = (htmlStr: string): string => {
-    return htmlStr.replace(/(?:\r\n|\r|\n)/g, "<br />");
-};
+import { MAIL_TEMPLATES } from "./mail-templates";
+import LOCALES, { LANGS } from "./locales";
 
 function getMaiTemplate(type: string) {
     const mail = MAIL_TEMPLATES[type as TemplateMailType];
@@ -16,33 +12,34 @@ function getMaiTemplate(type: string) {
     return mail;
 }
 
-export function buildEmailBody(type: TemplateMailType, data: TemplateMailData[TemplateMailType]) {
+export function buildEmailBody(type: TemplateMailType, data: TemplateMailData[TemplateMailType], lang = LANGS.EN) {
     const mail = getMaiTemplate(type);
 
-    return getStringOrFunctionValue(mail.body, data);
+    return mail.body(lang, data);
 }
 
-export function buildEmail(type: TemplateMailType, data: TemplateMailData[TemplateMailType]) {
+export function buildEmail(type: TemplateMailType, data: TemplateMailData[TemplateMailType], lang = LANGS.EN) {
     const mail = getMaiTemplate(type);
 
     return {
-        subject: getStringOrFunctionValue(mail.subject, data),
+        subject: mail.subject(lang, data),
         tags: Array.from(mail.tags),
         variables: {
-            body: getStringOrFunctionValue(mail.body, data)
+            body: mail.body(lang, data)
         },
         template: COVER_TEMPLATE_TYPES[mail.cover_template] || COVER_TEMPLATE_TYPES.main
     };
 }
 
 export function buildNotificationsEmail(
-    notifications: { type: TemplateMailType; data: TemplateMailData[TemplateMailType] }[]
+    notifications: { type: TemplateMailType; data: TemplateMailData[TemplateMailType] }[],
+    lang = LANGS.EN
 ) {
     if (!notifications?.length) throw new Error("Empty notifications array");
 
     if (notifications.length === 1) {
         const { type, data } = notifications[0];
-        return buildEmail(type, data);
+        return buildEmail(type, data, lang);
     }
 
     let body = "";
@@ -51,13 +48,13 @@ export function buildNotificationsEmail(
     for (const { type, data } of notifications) {
         const mail = getMaiTemplate(type);
 
-        body += getStringOrFunctionValue(mail.body, data);
+        body += mail.body(lang, data);
 
         if (mail.tags.length) tags.push(...mail.tags);
     }
 
     return {
-        subject: NOTIFICATIONS_AGGREGATE_SUBJECT,
+        subject: LOCALES[lang].subjects.notificationsAggregate,
         tags,
         variables: {
             body

@@ -5,6 +5,8 @@ import {
     SendPropsSchema,
     SubscribePropsSchema
 } from "@cryptuoso/mail";
+import { SignalType, TradeAction } from "@cryptuoso/market";
+import { SignalEvents, Signal } from "@cryptuoso/robot-events";
 
 export enum MailTags {
     AUTH = "auth",
@@ -27,7 +29,9 @@ export enum TemplateMailType {
     PASSWORD_RESET = "password_reset",
     PASSWORD_RESET_CONFIRMATION = "password_reset_confirmation",
     CHANGE_EMAIL = "change_email",
-    CHANGE_EMAIL_CONFIRMATION = "change_email_confirmation"
+    CHANGE_EMAIL_CONFIRMATION = "change_email_confirmation",
+    SIGNAL_ALERT = "signal_alert",
+    SIGNAL_TRADE = "signal_trade"
 }
 
 export interface TemplateMailData {
@@ -35,25 +39,89 @@ export interface TemplateMailData {
         urlData: string;
         secretCode: string;
     };
-    [TemplateMailType.USER_ACCOUNT_ACTIVATED]: undefined;
-    [TemplateMailType.PASSWORD_CHANGE_CONFIRMATION]: undefined;
+    [TemplateMailType.USER_ACCOUNT_ACTIVATED]: any;
+    [TemplateMailType.PASSWORD_CHANGE_CONFIRMATION]: any;
     [TemplateMailType.PASSWORD_RESET]: {
         urlData: string;
         secretCode: string;
     };
-    [TemplateMailType.PASSWORD_RESET_CONFIRMATION]: undefined;
+    [TemplateMailType.PASSWORD_RESET_CONFIRMATION]: any;
     [TemplateMailType.CHANGE_EMAIL]: {
         secretCode: string;
     };
     [TemplateMailType.CHANGE_EMAIL_CONFIRMATION]: {
         emailNew: string;
     };
+    [TemplateMailType.SIGNAL_ALERT]: Signal & {
+        robotCode: string;
+    };
+    [TemplateMailType.SIGNAL_TRADE]: Signal & {
+        robotCode: string;
+        entryAction?: TradeAction;
+        entryPrice?: number;
+        entryDate?: string;
+        barsHeld?: number;
+        profit?: number;
+        volume?: number;
+    };
+    // Retyping problems
+    /* & { robotCode: string } & (
+            | {
+                  type: SignalType.alert;
+              }
+            | {
+                  type: SignalType.trade;
+                  action: TradeAction.long | TradeAction.short;
+              }
+            | {
+                  type: SignalType.trade;
+                  action: TradeAction.closeLong | TradeAction.closeShort;
+                  entryAction: TradeAction;
+                  entryPrice: number;
+                  entryDate: string;
+                  barsHeld: number;
+                  profit: number;
+              }
+        ) */
 }
+
+export type TemplateMailObject =
+    | {
+          type:
+              | TemplateMailType.USER_ACCOUNT_ACTIVATED
+              | TemplateMailType.PASSWORD_CHANGE_CONFIRMATION
+              | TemplateMailType.PASSWORD_RESET_CONFIRMATION;
+          data?: any;
+      }
+    | {
+          type: TemplateMailType.WELCOME;
+          data: TemplateMailData[TemplateMailType.WELCOME];
+      }
+    | {
+          type: TemplateMailType.PASSWORD_RESET;
+          data: TemplateMailData[TemplateMailType.PASSWORD_RESET];
+      }
+    | {
+          type: TemplateMailType.CHANGE_EMAIL;
+          data: TemplateMailData[TemplateMailType.CHANGE_EMAIL];
+      }
+    | {
+          type: TemplateMailType.CHANGE_EMAIL_CONFIRMATION;
+          data: TemplateMailData[TemplateMailType.CHANGE_EMAIL_CONFIRMATION];
+      }
+    | {
+          type: TemplateMailType.SIGNAL_ALERT;
+          data: TemplateMailData[TemplateMailType.SIGNAL_ALERT];
+      }
+    | {
+          type: TemplateMailType.SIGNAL_TRADE;
+          data: TemplateMailData[TemplateMailType.SIGNAL_TRADE];
+      };
 
 export interface MailPublisherEventData {
     [MailPublisherEvents.SEND_NOTIFICATION]: {
         notificationId: string;
-        template?: COVER_TEMPLATE_TYPES;
+        //template?: COVER_TEMPLATE_TYPES;
     };
     [MailPublisherEvents.SEND_TEMPLATE_MAIL]: {
         from?: string;
@@ -61,31 +129,7 @@ export interface MailPublisherEventData {
         type: TemplateMailType;
         //data?: TemplateMailData[TemplateMailType];
         //template?: COVER_TEMPLATE_TYPES;
-    } & (
-        | {
-              type:
-                  | TemplateMailType.USER_ACCOUNT_ACTIVATED
-                  | TemplateMailType.PASSWORD_CHANGE_CONFIRMATION
-                  | TemplateMailType.PASSWORD_RESET_CONFIRMATION;
-              data?: undefined;
-          }
-        | {
-              type: TemplateMailType.WELCOME;
-              data: TemplateMailData[TemplateMailType.WELCOME];
-          }
-        | {
-              type: TemplateMailType.PASSWORD_RESET;
-              data: TemplateMailData[TemplateMailType.PASSWORD_RESET];
-          }
-        | {
-              type: TemplateMailType.CHANGE_EMAIL;
-              data: TemplateMailData[TemplateMailType.CHANGE_EMAIL];
-          }
-        | {
-              type: TemplateMailType.CHANGE_EMAIL_CONFIRMATION;
-              data: TemplateMailData[TemplateMailType.CHANGE_EMAIL_CONFIRMATION];
-          }
-    );
+    } & TemplateMailObject;
     [MailPublisherEvents.SEND_MAIL]: SendProps;
     [MailPublisherEvents.SUBSCRIBE_TO_LIST]: SubscribeProps;
 }

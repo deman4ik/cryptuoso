@@ -12,21 +12,21 @@ const WEEK = 7 * DAY;
     SIGNALS = "signals",
     TRADING = "trading"
 } */
-
+/** Stores types must be sended immediately and notifications time threshold */
 class Config {
     private threshold: number;
     private typesByTag = new Map<MailTags, TemplateMailType[]>();
     private tagByType = new Map<TemplateMailType, MailTags>();
 
-    constructor(
-        threshold: number,
-        typesByTags: {
+    constructor(config: {
+        notificationsThreshold: number;
+        immediatelySendedNotificationsTypesByTags: {
             [key in MailTags]?: TemplateMailType[];
-        }
-    ) {
-        this.threshold = threshold;
+        };
+    }) {
+        this.threshold = config.notificationsThreshold;
 
-        for (const [tag, types] of Object.entries(typesByTags)) {
+        for (const [tag, types] of Object.entries(config.immediatelySendedNotificationsTypesByTags)) {
             this.typesByTag.set(tag as MailTags, Array.from(types));
 
             for (const type of types) {
@@ -36,7 +36,7 @@ class Config {
         }
     }
 
-    getThresholdTimeString() {
+    getNotificationsThresholdTimeString() {
         return dayjs.utc(Date.now() - this.threshold).toISOString();
     }
 
@@ -74,9 +74,16 @@ class Config {
 
         return !!(userSettings.notifications as any)[tag].email;
     }
+
+    isNeedToSendImmediately(type: TemplateMailType) {
+        return this.tagByType.has(type);
+    }
 }
 
-export const mailPublisherConfig = new Config(DAY, {
-    [MailTags.SIGNALS]: [],
-    [MailTags.TRADING]: []
+export const mailPublisherConfig = new Config({
+    notificationsThreshold: DAY,
+    immediatelySendedNotificationsTypesByTags: {
+        [MailTags.SIGNALS]: [],
+        [MailTags.TRADING]: []
+    }
 });
