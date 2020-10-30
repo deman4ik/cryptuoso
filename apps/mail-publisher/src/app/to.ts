@@ -50,10 +50,10 @@ export function fromTSStringToJSON(str: string) {
         .replace(/\\\\/g, "\\");
 }
 
-function _toJSON(obj: any) {
+function _toJSON(obj: { [key: string]: string | { (): string } }) {
     const res: any = {};
 
-    for (const [key, val] of obj) {
+    for (const [key, val] of Object.entries(obj)) {
         let computedVal: any = 0;
 
         if (typeof val === "string") computedVal = val;
