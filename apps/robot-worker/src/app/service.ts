@@ -117,7 +117,8 @@ export default class RobotWorkerService extends BaseService {
         limit: number
     ): Promise<Candle[]> => {
         try {
-            const requiredCandles = Array.from(await this.db.pg.many<DBCandle>(sql`
+            const requiredCandles = Array.from(
+                await this.db.pg.many<DBCandle>(sql`
             SELECT *
             FROM ${sql.identifier([`candles${timeframe}`])}
             WHERE exchange = ${exchange}
@@ -125,7 +126,8 @@ export default class RobotWorkerService extends BaseService {
               AND currency = ${currency}
               AND time <= ${Timeframe.getPrevSince(dayjs.utc().toISOString(), timeframe)}
             ORDER BY time DESC
-            LIMIT ${limit};`));
+            LIMIT ${limit};`)
+            );
             return requiredCandles
                 .sort((a, b) => sortAsc(a.time, b.time))
                 .map((candle: DBCandle) => ({ ...candle, timeframe, id: candle.id }));

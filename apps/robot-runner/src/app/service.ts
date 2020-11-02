@@ -309,14 +309,7 @@ export default class RobotRunnerService extends HTTPService {
     }
 
     async start({ robotId, dateFrom }: RobotRunnerStart): Promise<{ result: string }> {
-        const {
-            status,
-            exchange,
-            asset,
-            currency,
-            timeframe,
-            strategySettings
-        } = await this.db.pg.one<{
+        const { status, exchange, asset, currency, timeframe, strategySettings } = await this.db.pg.one<{
             status: RobotStatus;
             exchange: string;
             asset: string;

@@ -7,7 +7,7 @@ import { OrderType, SignalType, TradeAction } from "@cryptuoso/market";
 import { sleep } from "@cryptuoso/helpers";
 import { Events } from "@cryptuoso/events";
 
-jest.setTimeout(15000);
+jest.setTimeout(25000);
 
 describe("", () => {
     const service = new Service();
@@ -102,10 +102,10 @@ describe("", () => {
 
                 expect(notificationIds.length).toBeGreaterThan(0);
 
-                const notifications: any[] = await service.db.pg.any(service.db.sql`
+                const notifications = await service.db.pg.any(service.db.sql`
                     DELETE
                     FROM notifications
-                    WHERE id = ANY(${service.db.sql.array(notificationIds, "uuid")})
+                    WHERE id = ANY(${service.db.sql.array(notificationIds, service.db.sql`uuid[]`)})
                     RETURNING "type", "data";
                 `);
 
@@ -141,6 +141,7 @@ describe("", () => {
                     positionPrefix: string;
                 } = await service.db.pg.maybeOne(service.db.sql`
                     SELECT u.id as user_id,
+                        us.id AS signal_id, 
                         r.id as robot_id,
                         r.code as robot_code,
                         rp.id as position_id,
@@ -200,10 +201,10 @@ describe("", () => {
 
                 expect(notificationIds.length).toBeGreaterThan(0);
 
-                const notifications: any[] = await service.db.pg.any(service.db.sql`
+                const notifications = await service.db.pg.any<any>(service.db.sql`
                     DELETE
                     FROM notifications
-                    WHERE id = ANY(${service.db.sql.array(notificationIds, "uuid")})
+                    WHERE id = ANY(${service.db.sql.array(notificationIds, service.db.sql`uuid[]`)})
                     RETURNING "type", "data";
                 `);
 
@@ -247,9 +248,9 @@ describe("", () => {
     /* testSimpleSignal({
         type: SignalType.alert,
         action: TradeAction.short
-    });
+    }); */
     
-    testSimpleSignal({
+    /* testSimpleSignal({
         type: SignalType.trade,
         action: TradeAction.short
     }); */
