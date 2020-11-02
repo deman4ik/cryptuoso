@@ -81,7 +81,7 @@ export const AssetDynamicDeltaSettingsSchema = {
         volumeType: { type: "equal", value: VolumeSettingsType.assetDynamicDelta },
         initialVolume: { type: "number" },
         volume: { type: "number", optional: true },
-        delta: { type: "number" }
+        delta: { type: "number", optional: true }
     }
 };
 
