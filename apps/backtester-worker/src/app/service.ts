@@ -99,8 +99,8 @@ export default class BacktesterWorkerService extends BaseService {
         limit: number
     ): Promise<Candle[]> => {
         try {
-            const requiredCandles = <DBCandle[]> await this.db.pg.many<DBCandle>(
-                    sql`select *
+            const requiredCandles = <DBCandle[]>await this.db.pg.many<DBCandle>(
+                sql`select *
                 from ${sql.identifier([`candles${timeframe}`])}
                 where
                 exchange = ${exchange}
@@ -109,7 +109,7 @@ export default class BacktesterWorkerService extends BaseService {
                 and time < ${dayjs.utc(loadFrom).valueOf()}
                     order by time desc
                     limit ${limit};`
-                );
+            );
             return requiredCandles
                 .sort((a, b) => sortAsc(a.time, b.time))
                 .map((candle: DBCandle) => ({ ...candle, timeframe, id: candle.id }));
