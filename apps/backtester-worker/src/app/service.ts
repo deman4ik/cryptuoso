@@ -99,17 +99,17 @@ export default class BacktesterWorkerService extends BaseService {
         limit: number
     ): Promise<Candle[]> => {
         try {
-            const requiredCandles: DBCandle[] = await this.db.pg.many(
+            const requiredCandles = Array.from(await this.db.pg.many<DBCandle>(
                 sql`select *
-            from ${sql.identifier([`candles${timeframe}`])}
-            where
-            exchange = ${exchange}
-            and asset = ${asset}
-            and currency = ${currency}
-            and time < ${dayjs.utc(loadFrom).valueOf()}
-                 order by time desc
-                 limit ${limit};`
-            );
+                from ${sql.identifier([`candles${timeframe}`])}
+                where
+                exchange = ${exchange}
+                and asset = ${asset}
+                and currency = ${currency}
+                and time < ${dayjs.utc(loadFrom).valueOf()}
+                    order by time desc
+                    limit ${limit};`
+            ));
             return requiredCandles
                 .sort((a, b) => sortAsc(a.time, b.time))
                 .map((candle: DBCandle) => ({ ...candle, timeframe, id: candle.id }));
@@ -127,9 +127,9 @@ export default class BacktesterWorkerService extends BaseService {
             this.log.info(`Backtester #${backtester.id} - Starting`);
             try {
                 // Delete previous backtester state if exists
-                const existedBacktest: { id: string } = await this.db.pg.maybeOne(sql`
-            SELECT id FROM backtests WHERE id = ${backtester.id}
-            `);
+                const existedBacktest = await this.db.pg.maybeOne<{ id: string }>(sql`
+                    SELECT id FROM backtests WHERE id = ${backtester.id}
+                `);
                 if (existedBacktest) {
                     this.log.info(`Backtester #${backtester.id} - Found previous backtest. Deleting...`);
                     await this.db.pg.query(sql`DELETE FROM backtests WHERE id = ${backtester.id}`);
@@ -166,11 +166,11 @@ export default class BacktesterWorkerService extends BaseService {
                 backtester.handleHistoryCandles(historyCandles);
 
                 // Load average fee
-                const { averageFee } = await this.db.pg.one(sql`
-                SELECT average_fee FROM markets
-                WHERE exchange = ${backtester.exchange} 
-                  and asset = ${backtester.asset} 
-                  and currency = ${backtester.currency};`);
+                const { averageFee } = await this.db.pg.one<{ averageFee: number }>(sql`
+                    SELECT average_fee FROM markets
+                    WHERE exchange = ${backtester.exchange} 
+                    and asset = ${backtester.asset} 
+                    and currency = ${backtester.currency};`);
                 backtester.averageFee = averageFee;
 
                 await this.#saveState(backtester.state);
@@ -221,38 +221,38 @@ export default class BacktesterWorkerService extends BaseService {
 
             await this.db.pg.query(sql`
         INSERT INTO backtests
-        (id, robot_id, exchange, asset, currency, 
-        timeframe, strategy,
-        date_from, date_to, settings, 
-        total_bars, processed_bars, left_bars, completed_percent, 
-        status, started_at, finished_at, error, robot_state ) 
+            (id, robot_id, exchange, asset, currency, 
+            timeframe, strategy,
+            date_from, date_to, settings, 
+            total_bars, processed_bars, left_bars, completed_percent, 
+            status, started_at, finished_at, error, robot_state ) 
         VALUES (
             ${state.id}, ${state.robotId}, ${state.exchange}, ${state.asset}, ${state.currency}, 
             ${state.timeframe}, ${state.strategy},
-            ${state.dateFrom}, ${state.dateTo}, ${sql.json(state.settings)}, 
+            ${state.dateFrom}, ${state.dateTo}, ${JSON.stringify(state.settings)}, 
             ${state.totalBars}, ${state.processedBars}, ${state.leftBars},${state.completedPercent}, 
-            ${state.status}, ${state.startedAt}, ${state.finishedAt}, ${state.error}, ${sql.json(
+            ${state.status}, ${state.startedAt}, ${state.finishedAt}, ${state.error}, ${JSON.stringify(
                 state.robotState || {}
             )}
         )
         ON CONFLICT ON CONSTRAINT backtests_pkey
         DO UPDATE SET robot_id = ${state.robotId},
-        asset = ${state.asset},
-        currency = ${state.currency},
-        timeframe = ${state.timeframe},
-        strategy = ${state.strategy},
-        date_from = ${state.dateFrom},
-        date_to = ${state.dateTo},
-        settings = ${sql.json(state.settings)},
-        total_bars = ${state.totalBars},
-        processed_bars = ${state.processedBars},
-        left_bars = ${state.leftBars},
-        completed_percent = ${state.completedPercent},
-        status = ${state.status},
-        started_at = ${state.startedAt},
-        finished_at = ${state.finishedAt},
-        error = ${state.error},
-        robot_state = ${sql.json(state.robotState || {})};
+            asset = ${state.asset},
+            currency = ${state.currency},
+            timeframe = ${state.timeframe},
+            strategy = ${state.strategy},
+            date_from = ${state.dateFrom},
+            date_to = ${state.dateTo},
+            settings = ${JSON.stringify(state.settings)},
+            total_bars = ${state.totalBars},
+            processed_bars = ${state.processedBars},
+            left_bars = ${state.leftBars},
+            completed_percent = ${state.completedPercent},
+            status = ${state.status},
+            started_at = ${state.startedAt},
+            finished_at = ${state.finishedAt},
+            error = ${state.error},
+            robot_state = ${JSON.stringify(state.robotState || {})};
         `);
         } catch (err) {
             this.log.error("Failed to save backtester state", err);
@@ -454,7 +454,7 @@ export default class BacktesterWorkerService extends BaseService {
         (backtest_id, robot_id, 
         statistics, equity, equity_avg, 
         last_position_exit_date, last_updated_at) VALUES (
-            ${backtestId}, ${robotId}, ${sql.json(statistics)}, ${sql.json(equity)}, ${sql.json(equityAvg)},
+            ${backtestId}, ${robotId}, ${JSON.stringify(statistics)}, ${JSON.stringify(equity)}, ${JSON.stringify(equityAvg)},
             ${lastPositionExitDate},${lastUpdatedAt}
         )
         `);
@@ -726,7 +726,7 @@ export default class BacktesterWorkerService extends BaseService {
         (robot_id, 
         statistics, equity, equity_avg, 
         last_position_exit_date, last_updated_at) VALUES (
-            ${robotId}, ${sql.json(statistics)}, ${sql.json(equity)}, ${sql.json(equityAvg)},
+            ${robotId}, ${JSON.stringify(statistics)}, ${JSON.stringify(equity)}, ${JSON.stringify(equityAvg)},
             ${lastPositionExitDate},${lastUpdatedAt}
         )
         `);
