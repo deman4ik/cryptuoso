@@ -51,7 +51,7 @@ export default class NotificationsService extends BaseService {
     async handleSignal(signal: Signal) {
         const { robotId } = signal;
 
-        const robot: { code: string } = await this.db.pg.maybeOne(this.db.sql`
+        const robot = await this.db.pg.maybeOne<{ code: string }>(this.db.sql`
             SELECT code
             FROM robots
             WHERE id = ${robotId};
@@ -61,13 +61,13 @@ export default class NotificationsService extends BaseService {
 
         const { code: robotCode } = robot;
 
-        const subscriptions: {
+        const subscriptions = await this.db.pg.any<{
             telegramId?: number;
             email?: string;
             settings: UserSettings;
             userId: string;
             subscribedAt: string;
-        }[] = await this.db.pg.any(this.db.sql`
+        }>(this.db.sql`
             SELECT u.telegram_id,
                 u.email,
                 u.settings,
@@ -112,20 +112,20 @@ export default class NotificationsService extends BaseService {
 
                 if (!position) throw new Error(`Robot position not found (${signal.positionId})`);
 
-                const usersSignalPositions: {
+                const usersSignalPositions = await this.db.pg.any<{
                     userId: string;
                     volume: number;
                     profit: number;
-                }[] = (await this.db.pg.any(this.db.sql`
+                }>(this.db.sql`
                     SELECT user_id, volume, profit
                     FROM v_user_signal_positions
                     WHERE id = ${signal.positionId}
                         AND robot_id = ${signal.robotId}
                         AND user_id = ANY(${this.db.sql.array(
                             subscriptions.map((sub) => sub.userId),
-                            "uuid"
+                            this.db.sql`uuid[]` // TODO: replace with "uuid" after slonik fix
                         )});
-                `)) as any;
+                `);
 
                 // OR throw
                 if (!usersSignalPositions?.length) return;
