@@ -32,7 +32,7 @@ export function buildEmail(type: TemplateMailType, data: TemplateMailData[Templa
 }
 
 export function buildNotificationsEmail(
-    notifications: { type: TemplateMailType; data: TemplateMailData[TemplateMailType] }[],
+    notifications: readonly { type: TemplateMailType; data: TemplateMailData[TemplateMailType] }[],
     lang = LANGS.EN
 ) {
     if (!notifications?.length) throw new Error("Empty notifications array");
