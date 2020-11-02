@@ -172,7 +172,7 @@ export class PrivateConnector {
             }
             const asset = "BTC";
             const currency = exchange === "binance_futures" ? "USDT" : "USD";
-            const market: { limits: Market["limits"] } = await pg.one(sql`SELECT limits 
+            const market = await pg.one<{ limits: Market["limits"] }>(sql`SELECT limits 
             FROM markets 
             WHERE exchange = ${exchange} 
               AND asset =  ${asset}
