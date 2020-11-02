@@ -150,10 +150,10 @@ export default class WebhooksService extends BaseService {
 
     async mailgunUnsubscribedHandler(data: MailGunEventData) {
         // TODO: check list
-        const user: {
+        const user = await this.db.pg.maybeOne<{
             id: string;
             settings: UserSettings;
-        } = await this.db.pg.maybeOne(this.db.sql`
+        }>(this.db.sql`
             SELECT id, settings
             FROM users
             WHERE email = ${data.recipient};
@@ -197,7 +197,7 @@ export default class WebhooksService extends BaseService {
         if (updated) {
             await this.db.pg.query(this.db.sql`
                 UPDATE users
-                SET settings = ${this.db.sql.json(newSettings)}
+                SET settings = ${JSON.stringify(newSettings)}
                 WHERE id = ${user.id};
             `);
         }
