@@ -279,8 +279,10 @@ export class PrivateConnector {
             }
         };
 
-        if (exchange === "bitfinex" || exchange === "kraken") {
-            this.connector = new ccxt[exchange](config);
+        if (exchange === "kraken") {
+            this.connector = new ccxt.kraken(config);
+        } else if (exchange === "bitfinex") {
+            this.connector = new ccxt.bitfinex2(config);
         } else if (exchange === "binance_futures") {
             config.options = {
                 defaultType: "future",
