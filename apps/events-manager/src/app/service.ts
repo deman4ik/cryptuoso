@@ -120,7 +120,7 @@ export default class EventsManager extends HTTPService {
                 ${deadLetter.topic.replace(BASE_REDIS_PREFIX, "")},
                 ${deadLetter.type},
                 ${dayjs.utc(event.time).toISOString()},
-                ${this.db.sql.json(event)}
+                ${JSON.stringify(event)}
             );
         `);
 
@@ -135,7 +135,7 @@ export default class EventsManager extends HTTPService {
                 ${event.id},
                 ${event.type.replace("com.cryptuoso.", "")},
                 ${event.type},
-                ${this.db.sql.json(event.toJSON())},
+                ${JSON.stringify(event.toJSON())},
                 ${dayjs.utc(event.time).toISOString()}
             );
         `);
@@ -184,13 +184,13 @@ export default class EventsManager extends HTTPService {
 
         const conditionEventId = eventId ? this.db.sql`AND event_id = ${eventId}` : this.db.sql``;
         const conditionEventIds = eventIds?.length
-            ? this.db.sql`AND event_id = ANY(${this.db.sql.array(eventIds, this.db.sql`uuid`)})`
+            ? this.db.sql`AND event_id = ANY(${this.db.sql.array(eventIds, this.db.sql`uuid[]`)})` // TODO: replace with "uuid" after slonik fix
             : this.db.sql``;
         const conditionTopic = topic ? this.db.sql`AND topic = ${topic}` : this.db.sql``;
         const conditionType = type ? this.db.sql`AND "type" = ${type}` : this.db.sql``;
         const conditionResend = typeof resend == "boolean" ? this.db.sql`AND resend = ${resend}` : this.db.sql``;
 
-        const deadLetters: StoredDeadLetter[] = await this.db.pg.any(this.db.sql`
+        const deadLetters = await this.db.pg.any<StoredDeadLetter>(this.db.sql`
             SELECT *
             FROM dead_letters
             WHERE processed = false

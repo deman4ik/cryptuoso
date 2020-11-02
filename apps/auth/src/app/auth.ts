@@ -188,7 +188,7 @@ export class Auth {
             SET telegram_id = ${telegramId},
                 telegram_username = ${telegramUsername}
                 status = ${UserStatus.enabled}
-                settings = ${sql.json(newSettings)}
+                settings = ${JSON.stringify(newSettings)}
             WHERE id = ${userId};
         `);
     }
@@ -691,7 +691,7 @@ export class Auth {
     async _dbGetUserByEmail(params: { email: string }): Promise<User> {
         const { email } = params;
 
-        return await pg.maybeOne(sql`
+        return await pg.maybeOne<User>(sql`
             SELECT * FROM users
             WHERE email = ${email}
         `);
@@ -700,7 +700,7 @@ export class Auth {
     async _dbGetUserById(params: { userId: string }): Promise<User> {
         const { userId } = params;
 
-        return await pg.maybeOne(sql`
+        return await pg.maybeOne<User>(sql`
             SELECT * FROM users
             WHERE id = ${userId}
         `);
@@ -709,7 +709,7 @@ export class Auth {
     async _dbGetUserTg(params: { telegramId: number }): Promise<User> {
         const { telegramId } = params;
 
-        return await pg.maybeOne(sql`
+        return await pg.maybeOne<User>(sql`
             SELECT * FROM users
             WHERE telegram_id = ${telegramId};
         `);
@@ -718,7 +718,7 @@ export class Auth {
     async _dbGetUserByToken(params: { refreshToken: string }): Promise<User> {
         const { refreshToken } = params;
 
-        return await pg.maybeOne(sql`
+        return await pg.maybeOne<User>(sql`
             SELECT * FROM users
             WHERE refresh_token = ${refreshToken} AND refresh_token_expire_at > ${dayjs.utc().toISOString()};
         `);
@@ -728,7 +728,7 @@ export class Auth {
         refreshToken: string;
         refreshTokenExpireAt: string;
         userId: string;
-    }): Promise<any> {
+    }): Promise<void> {
         const { refreshToken, refreshTokenExpireAt, userId } = params;
 
         await pg.query(sql`
@@ -738,7 +738,7 @@ export class Auth {
         `);
     }
 
-    async _dbRegisterUserTg(newUser: User): Promise<any> {
+    async _dbRegisterUserTg(newUser: User): Promise<void> {
         await pg.query(sql`
             INSERT INTO users
                 (id, telegram_id, telegram_username, name, status, roles, access, settings)
@@ -748,14 +748,14 @@ export class Auth {
                     ${newUser.telegramUsername},
                     ${newUser.name},
                     ${newUser.status},
-                    ${sql.json(newUser.roles)},
+                    ${JSON.stringify(newUser.roles)},
                     ${newUser.access},
-                    ${sql.json(newUser.settings)}
+                    ${JSON.stringify(newUser.settings)}
                 );
         `);
     }
 
-    async _dbRegisterUser(newUser: User): Promise<any> {
+    async _dbRegisterUser(newUser: User): Promise<void> {
         await pg.query(sql`
             INSERT INTO users
                 (id, name, email, status, password_hash, secret_code, roles, access, settings)
@@ -766,9 +766,9 @@ export class Auth {
                     ${newUser.status},
                     ${newUser.passwordHash},
                     ${newUser.secretCode},
-                    ${sql.json(newUser.roles)},
+                    ${JSON.stringify(newUser.roles)},
                     ${newUser.access},
-                    ${sql.json(newUser.settings)}
+                    ${JSON.stringify(newUser.settings)}
                 );
         `);
     }
@@ -777,7 +777,7 @@ export class Auth {
         refreshToken: string;
         refreshTokenExpireAt: string;
         userId: string;
-    }): Promise<any> {
+    }): Promise<void> {
         const { refreshToken, refreshTokenExpireAt, userId } = params;
 
         await await pg.query(sql`
@@ -795,7 +795,7 @@ export class Auth {
         userId: string;
         secretCode: string;
         secretCodeExpireAt: string;
-    }): Promise<any> {
+    }): Promise<void> {
         const { userId, secretCode, secretCodeExpireAt } = params;
 
         await pg.query(sql`
@@ -810,7 +810,7 @@ export class Auth {
         emailNew: string;
         secretCode: string;
         secretCodeExpireAt: string;
-    }): Promise<any> {
+    }): Promise<void> {
         const { secretCode, secretCodeExpireAt, userId, emailNew } = params;
 
         await pg.query(sql`
@@ -831,7 +831,7 @@ export class Auth {
         refreshToken: string;
         refreshTokenExpireAt: string;
         status: UserStatus;
-    }): Promise<any> {
+    }): Promise<void> {
         const {
             userId,
             email,
@@ -863,7 +863,7 @@ export class Auth {
         newSecretCodeExpireAt: string;
         refreshToken: string;
         refreshTokenExpireAt: string;
-    }): Promise<any> {
+    }): Promise<void> {
         const {
             userId,
             passwordHash,
@@ -884,7 +884,7 @@ export class Auth {
         `);
     }
 
-    async _dbChangeUserPassword(params: { userId: string; passwordHash: string }): Promise<any> {
+    async _dbChangeUserPassword(params: { userId: string; passwordHash: string }): Promise<void> {
         const { userId, passwordHash } = params;
 
         await pg.query(sql`

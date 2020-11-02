@@ -109,7 +109,7 @@ class MailPublisherService extends HTTPService {
 
     async checkNotifications() {
         const timeThreshold = mailPublisherConfig.getNotificationsThresholdTimeString();
-        const users: { id: string; email: string }[] = await this.db.pg.any(this.db.sql`
+        const users = await this.db.pg.any<{ id: string; email: string }>(this.db.sql`
             SELECT u.id, u.email
             FROM users u, notifications n
             WHERE n.send_email = true
@@ -130,11 +130,11 @@ class MailPublisherService extends HTTPService {
 
             if (userSettings?.notifications) impossibleTypes = mailPublisherConfig.getImpossibleTypes(userSettings);
 
-            const notifications: {
+            const notifications = await this.db.pg.any<{
                 id: string;
                 type: TemplateMailType;
                 data: TemplateMailData[TemplateMailType];
-            }[] = await this.db.pg.any(this.db.sql`
+            }>(this.db.sql`
                 UPDATE notifications
                 SET send_mail = false
                 WHERE user_id = ${id}
@@ -156,7 +156,7 @@ class MailPublisherService extends HTTPService {
                 SET mailgun_id = ${mailgunId}
                 WHERE id = ANY(${this.db.sql.array(
                     notifications.map((n) => n.id),
-                    "uuid"
+                    this.db.sql`uuid[]` // TODO: replace with "uuid" after slonik fix
                 )};
             `);
         }
@@ -183,11 +183,11 @@ class MailPublisherService extends HTTPService {
         try {
             const timeThreshold = mailPublisherConfig.getNotificationsThresholdTimeString();
             const { notificationId } = data;
-            const notification: {
+            const notification = await this.db.pg.maybeOne<{
                 userId: string;
                 type: TemplateMailType;
                 data: TemplateMailData[TemplateMailType];
-            } = await this.db.pg.maybeOne(this.db.sql`
+            }>(this.db.sql`
                 UPDATE notifications
                 SET send_email = false
                 WHERE id = ${notificationId}
@@ -200,10 +200,10 @@ class MailPublisherService extends HTTPService {
 
             const { userId, type, data: notificationData } = notification;
 
-            const user: {
+            const user = await this.db.pg.maybeOne<{
                 email: string;
                 settings: UserSettings;
-            } = await this.db.pg.maybeOne(this.db.sql`
+            }>(this.db.sql`
                 SELECT email
                 FROM users
                 WHERE id = ${userId};
@@ -275,7 +275,7 @@ class MailPublisherService extends HTTPService {
     }
 
     private async sendNotificationsMail(
-        notifications: { type: TemplateMailType; data: TemplateMailData[TemplateMailType] }[],
+        notifications: readonly { type: TemplateMailType; data: TemplateMailData[TemplateMailType] }[],
         to: string,
         from?: string
     ) {

@@ -72,7 +72,7 @@ export default class ImporterRunnerService extends HTTPService {
             const params: ImporterParams = {
                 timeframes: timeframes || Timeframe.validArray
             };
-            const market: { loadFrom: string } = await this.db.pg.maybeOne(this.db.sql`
+            const market = await this.db.pg.maybeOne<{ loadFrom: string }>(this.db.sql`
             select load_from from markets 
             where exchange = ${exchange} 
             and asset = ${asset} and currency = ${currency}

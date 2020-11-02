@@ -230,7 +230,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         if (params.id && prevStats && isTradeStats(prevStats)) {
             await this.db.pg.query(sql`
                 UPDATE ${params.table}
-                SET statistics = ${sql.json(stats.statistics)},
+                SET statistics = ${JSON.stringify(stats.statistics)},
                     last_position_exit_date = ${stats.lastPositionExitDate},
                     last_updated_at = ${stats.lastUpdatedAt},
                     equity = ${sql.json(stats.equity)},
@@ -248,7 +248,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     
                     ${params.addFields ? sql`, ${params.addFields}` : sql``}
                 ) VALUES (
-                    ${sql.json(stats.statistics)},
+                    ${JSON.stringify(stats.statistics)},
                     ${stats.lastPositionExitDate},
                     ${stats.lastUpdatedAt},
                     ${sql.json(stats.equity)},
@@ -265,7 +265,7 @@ export default class StatisticCalcWorkerService extends BaseService {
     }
 
     async calcRobot({ robotId, calcAll = false }: { robotId: string; calcAll?: boolean }) {
-        const prevTradeStats: TradeStats = await this.db.pg.maybeOne(sql`
+        const prevTradeStats = await this.db.pg.maybeOne<TradeStats>(sql`
             SELECT rs.*
             FROM robots r
             LEFT JOIN robot_stats rs
@@ -293,10 +293,10 @@ export default class StatisticCalcWorkerService extends BaseService {
             ORDER BY exit_date
         `;
 
-        const positionsCount: number = +(await this.db.pg.oneFirst(sql`
+        const positionsCount = await this.db.pg.oneFirst<number>(sql`
             SELECT COUNT(1)
             ${queryFromAndConditionPart};
-        `));
+        `);
 
         if (positionsCount == 0) return false;
 
@@ -334,7 +334,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         asset?: string;
         calcAll?: boolean;
     }) {
-        const prevRobotsAggrStats: TradeStatsWithId = await this.db.pg.maybeOne(sql`
+        const prevRobotsAggrStats = await this.db.pg.maybeOne<TradeStatsWithId>(sql`
             SELECT id,
                 statistics,
                 last_position_exit_date,
@@ -357,11 +357,11 @@ export default class StatisticCalcWorkerService extends BaseService {
                 WHERE = sql`WHERE asset = ${asset}`;
             }
 
-            const countOfRobots = +(await this.db.pg.oneFirst(sql`
+            const countOfRobots = await this.db.pg.oneFirst<number>(sql`
                 SELECT COUNT(1)
                 FROM robots
                 ${WHERE};
-            `));
+            `);
 
             if (countOfRobots === 0) {
                 await this.db.pg.query(sql`
@@ -397,10 +397,10 @@ export default class StatisticCalcWorkerService extends BaseService {
             ORDER BY p.exit_date
         `;
 
-        const positionsCount: number = +(await this.db.pg.oneFirst(sql`
+        const positionsCount = await this.db.pg.oneFirst<number>(sql`
             SELECT COUNT(1)
             ${queryFromAndConditionPart};
-        `));
+        `);
 
         if (positionsCount == 0) return false;
 
@@ -438,7 +438,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         asset?: string;
         calcAll?: boolean;
     }) {
-        const prevUsersRobotsAggrStats: TradeStatsWithId = await this.db.pg.maybeOne(sql`
+        const prevUsersRobotsAggrStats = await this.db.pg.maybeOne<TradeStatsWithId>(sql`
             SELECT id,
                 statistics,
                 last_position_exit_date,
@@ -451,14 +451,14 @@ export default class StatisticCalcWorkerService extends BaseService {
         `);
 
         if (prevUsersRobotsAggrStats) {
-            const countOfUsersRobots = +(await this.db.pg.oneFirst(sql`
+            const countOfUsersRobots = await this.db.pg.oneFirst<number>(sql`
                 SELECT COUNT(1)
                 FROM user_robots ur,
                     robots r
                 WHERE r.id = ur.robot_id
                     ${!exchange ? sql`` : sql`AND r.exchange = ${exchange}`}
                     ${!asset ? sql`` : sql`AND r.asset = ${asset}`};
-            `));
+            `);
 
             if (countOfUsersRobots === 0) {
                 await this.db.pg.query(sql`
@@ -492,10 +492,10 @@ export default class StatisticCalcWorkerService extends BaseService {
             ORDER BY exit_date
         `;
 
-        const positionsCount: number = +(await this.db.pg.oneFirst(sql`
+        const positionsCount = await this.db.pg.oneFirst<number>(sql`
             SELECT COUNT(1)
             ${queryFromAndConditionPart};
-        `));
+        `);
 
         if (positionsCount == 0) return false;
 
@@ -553,10 +553,10 @@ export default class StatisticCalcWorkerService extends BaseService {
                 ORDER BY exit_date
             `;
 
-            const positionsCount: number = +(await this.db.pg.oneFirst(sql`
+            const positionsCount = await this.db.pg.oneFirst<number>(sql`
                 SELECT COUNT(1)
                 ${queryFromAndConditionPart};
-            `));
+            `);
 
             if (positionsCount == 0) {
                 await locker.unlock();
@@ -595,7 +595,7 @@ export default class StatisticCalcWorkerService extends BaseService {
     }
 
     async calcUserSignal({ userId, robotId, calcAll = false }: { userId: string; robotId: string; calcAll?: boolean }) {
-        const userSignal: UserSignalStats = await this.db.pg.maybeOne(sql`
+        const userSignal = await this.db.pg.maybeOne<UserSignalStats>(sql`
             SELECT us.id, us.user_id, us.robot_id, us.subscribed_at,
                 uss.statistics,
                 uss.last_position_exit_date,
@@ -615,7 +615,7 @@ export default class StatisticCalcWorkerService extends BaseService {
     }
 
     async calcUserSignals({ robotId, calcAll = false }: { robotId: string; calcAll?: boolean }) {
-        const userSignals: UserSignalStats[] = await this.db.pg.any(sql`
+        const userSignals = await this.db.pg.any<UserSignalStats>(sql`
             SELECT us.id, us.user_id, us.robot_id, us.subscribed_at,
                 uss.statistics,
                 uss.last_position_exit_date,
@@ -650,7 +650,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         asset?: string;
         calcAll?: boolean;
     }) {
-        const prevUserAggrStats: TradeStatsWithId = await this.db.pg.maybeOne(sql`
+        const prevUserAggrStats = await this.db.pg.maybeOne<TradeStatsWithId>(sql`
             SELECT id,
                 statistics,
                 last_position_exit_date,
@@ -665,7 +665,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         `);
 
         if (prevUserAggrStats) {
-            const countOfSignals = +(await this.db.pg.oneFirst(sql`
+            const countOfSignals = await this.db.pg.oneFirst<number>(sql`
                 SELECT COUNT(1)
                 FROM user_signals us,
                     robots r
@@ -673,7 +673,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     AND r.id = us.robot_id
                     ${!exchange ? sql`` : sql`AND r.exchange = ${exchange}`}
                     ${!asset ? sql`` : sql`AND r.asset = ${asset}`};
-            `));
+            `);
 
             if (countOfSignals === 0) {
                 await this.db.pg.query(sql`
@@ -715,10 +715,10 @@ export default class StatisticCalcWorkerService extends BaseService {
             ORDER BY p.exit_date
         `;
 
-        const positionsCount: number = +(await this.db.pg.oneFirst(sql`
+        const positionsCount = await this.db.pg.oneFirst<number>(sql`
             SELECT COUNT(1)
             ${queryFromAndConditionPart};
-        `));
+        `);
 
         if (positionsCount == 0) return false;
 
@@ -748,7 +748,7 @@ export default class StatisticCalcWorkerService extends BaseService {
     }
 
     async calcUserRobot({ userRobotId, calcAll = false }: { userRobotId: string; calcAll?: boolean }) {
-        const prevTradeStats: TradeStats = await this.db.pg.maybeOne(sql`
+        const prevTradeStats = await this.db.pg.maybeOne<TradeStats>(sql`
             SELECT urs.statistics,
                 urs.last_position_exit_date,
                 urs.last_updated_at,
@@ -780,10 +780,10 @@ export default class StatisticCalcWorkerService extends BaseService {
             ORDER BY exit_date
         `;
 
-        const positionsCount: number = +(await this.db.pg.oneFirst(sql`
+        const positionsCount = await this.db.pg.oneFirst<number>(sql`
             SELECT COUNT(1)
             ${queryFromAndConditionPart};
-        `));
+        `);
 
         if (positionsCount == 0) return false;
 
@@ -823,7 +823,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         asset?: string;
         calcAll?: boolean;
     }) {
-        const prevUserAggrStats: TradeStatsWithId = await this.db.pg.maybeOne(sql`
+        const prevUserAggrStats = await this.db.pg.maybeOne<TradeStatsWithId>(sql`
             SELECT id,
                 statistics,
                 last_position_exit_date,
@@ -838,7 +838,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         `);
 
         if (prevUserAggrStats) {
-            const countOfUserRobots = +(await this.db.pg.oneFirst(sql`
+            const countOfUserRobots = await this.db.pg.oneFirst<number>(sql`
                 SELECT COUNT(1)
                 FROM user_robots ur,
                     robots r
@@ -846,7 +846,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     AND r.id = ur.robot_id
                     ${!exchange ? sql`` : sql`AND r.exchange = ${exchange}`}
                     ${!asset ? sql`` : sql`AND r.asset = ${asset}`};
-            `));
+            `);
 
             if (countOfUserRobots === 0) {
                 await this.db.pg.query(sql`
@@ -881,10 +881,10 @@ export default class StatisticCalcWorkerService extends BaseService {
             ORDER BY p.exit_date
         `;
 
-        const positionsCount: number = +(await this.db.pg.oneFirst(sql`
+        const positionsCount = await this.db.pg.oneFirst<number>(sql`
             SELECT COUNT(1)
             ${queryFromAndConditionPart};
-        `));
+        `);
 
         if (positionsCount == 0) return false;
 

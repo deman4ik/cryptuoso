@@ -130,7 +130,7 @@ export default class ExwatcherRunnerService extends HTTPService {
     ) {
         try {
             const { exchange } = req.body.input;
-            const count = await this.db.pg.oneFirst(
+            const count = await this.db.pg.oneFirst<number>(
                 sql`SELECT count(1) 
                          FROM markets
                          WHERE exchange = ${exchange};`
@@ -158,7 +158,7 @@ export default class ExwatcherRunnerService extends HTTPService {
     ) {
         try {
             const { exchange } = req.body.input;
-            const count = await this.db.pg.oneFirst(
+            const count = await this.db.pg.oneFirst<number>(
                 sql`SELECT count(1) 
                     FROM markets
                     WHERE exchange = ${exchange};`
@@ -184,7 +184,7 @@ export default class ExwatcherRunnerService extends HTTPService {
 
     async updateMarkets() {
         try {
-            const markets: { exchange: string; asset: string; currency: string }[] = await this.db.pg.any(
+            const markets = await this.db.pg.any<{ exchange: string; asset: string; currency: string }>(
                 sql`SELECT exchange, asset, currency FROM markets where available >= 5;`
             );
             this.log.info(
@@ -231,7 +231,7 @@ export default class ExwatcherRunnerService extends HTTPService {
                     ${asset},
                     ${currency},
                     ${sql.json(precision)},
-                    ${sql.json(limits)},
+                    ${JSON.stringify(limits)},
                     ${averageFee},
                     ${loadFrom},
                     ${available}

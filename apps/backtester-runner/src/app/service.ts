@@ -94,7 +94,7 @@ export default class BacktesterRunnerService extends HTTPService {
         loadFrom: string,
         limit: number
     ): Promise<number> =>
-        +(await this.db.pg.query(
+        +(await this.db.pg.query<string>(
             sql`SELECT count(1) FROM (SELECT id
             FROM ${sql.identifier([`candles${timeframe}`])}
             WHERE exchange = ${exchange}
@@ -146,7 +146,7 @@ export default class BacktesterRunnerService extends HTTPService {
             let strategySettings: StrategySettings;
             let robotSettings: RobotSettings;
             if (params.robotId) {
-                const robot: {
+                const robot = await this.db.pg.one<{
                     exchange: string;
                     asset: string;
                     currency: string;
@@ -155,7 +155,7 @@ export default class BacktesterRunnerService extends HTTPService {
                     status: RobotStatus;
                     strategySettings?: StrategySettings;
                     robotSettings?: RobotSettings;
-                } = await this.db.pg.one(
+                }>(
                     sql`SELECT r.exchange, r.asset, r.currency,
                                r.timeframe, r.strategy, 
                                r.status,

@@ -298,7 +298,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
     async handleCalcUserSignalsEvent(params: { calcAll?: boolean; userId: string }) {
         const { calcAll, userId } = params;
 
-        const userSignals: { robotId: string }[] = await this.db.pg.any(this.db.sql`
+        const userSignals = await this.db.pg.any<{ robotId: string }>(this.db.sql`
             SELECT robot_id
             FROM user_signals
             WHERE user_id = ${userId};
@@ -313,10 +313,10 @@ export default class StatisticCalcRunnerService extends HTTPService {
             });
         }
 
-        const exchangesAssets: {
+        const exchangesAssets = await this.db.pg.any<{
             exchange: string;
             asset: string;
-        }[] = await this.db.pg.any(this.db.sql`
+        }>(this.db.sql`
             SELECT r.exchange, r.asset
             FROM user_signals us, robots r 
             WHERE us.user_id = ${userId}
@@ -374,7 +374,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
 
         this.log.info(`New ${StatsCalcRunnerEvents.ROBOT} event - ${robotId}`);
 
-        const robot: { exchange: string; asset: string } = await this.db.pg.maybeOne(this.db.sql`
+        const robot = await this.db.pg.maybeOne<{ exchange: string; asset: string }>(this.db.sql`
             SELECT exchange, asset
             FROM robots
             WHERE id = ${robotId};
@@ -390,11 +390,11 @@ export default class StatisticCalcRunnerService extends HTTPService {
             await this.queueJobWithExchangeAssetOption(StatsCalcJobType.robotsAggr, { calcAll }, exchange, asset);
         }
 
-        const usersByRobotId: {
+        const usersByRobotId = await this.db.pg.any<{
             userId: string;
             exchange: string;
             asset: string;
-        }[] = await this.db.pg.any(this.db.sql`
+        }>(this.db.sql`
             SELECT us.user_id, r.exchange, r.asset
             FROM user_signals us, robots r
             WHERE us.robot_id = ${robotId}
@@ -414,9 +414,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
     async handleStatsCalcRobotsEvent(params: { calcAll?: boolean }) {
         const { calcAll } = params;
 
-        const startedRobots: {
-            id: string;
-        }[] = await this.db.pg.any(this.db.sql`
+        const startedRobots = await this.db.pg.any<{ id: string }>(this.db.sql`
             SELECT id
             FROM robots
             WHERE status = ${RobotStatus.started};
@@ -437,11 +435,11 @@ export default class StatisticCalcRunnerService extends HTTPService {
         const { calcAll, userRobotId } = params;
 
         this.log.info(`New ${StatsCalcRunnerEvents.USER_ROBOT} event - ${userRobotId}`);
-        const userRobot: {
+        const userRobot = await this.db.pg.maybeOne<{
             userId: string;
             exchange: string;
             asset: string;
-        } = await this.db.pg.maybeOne(this.db.sql`
+        }>(this.db.sql`
             SELECT ur.user_id, r.exchange, r.asset
             FROM user_robots ur,
                     robots r
@@ -505,9 +503,9 @@ export default class StatisticCalcRunnerService extends HTTPService {
         const conditionCurrency = !currency ? this.db.sql`` : this.db.sql`AND r.currency=${currency}`;
         const conditionStrategy = !strategy ? this.db.sql`` : this.db.sql`AND r.strategy=${strategy}`;
 
-        const startedRobots: {
+        const startedRobots = await this.db.pg.any<{
             id: string;
-        }[] = await this.db.pg.any(this.db.sql`
+        }>(this.db.sql`
             SELECT r.id
             FROM robots r
             WHERE r.status = ${RobotStatus.started}
@@ -522,10 +520,10 @@ export default class StatisticCalcRunnerService extends HTTPService {
 
         await this.queueJobWithExchangeAssetOption(StatsCalcJobType.robotsAggr, { calcAll: true }, exchange, asset);
 
-        const startedSignals: {
+        const startedSignals = await this.db.pg.any<{
             robotId: string;
             userId: string;
-        }[] = await this.db.pg.any(this.db.sql`
+        }>(this.db.sql`
             SELECT us.robot_id, us.user_id
             FROM user_signals us, robots r
             WHERE r.status = ${RobotStatus.started}
@@ -557,10 +555,10 @@ export default class StatisticCalcRunnerService extends HTTPService {
         const conditionCurrency = !currency ? this.db.sql`` : this.db.sql`AND r.currency=${currency}`;
         const conditionStrategy = !strategy ? this.db.sql`` : this.db.sql`AND r.strategy=${strategy}`;
 
-        const startedSignals: {
+        const startedSignals = await this.db.pg.any<{
             robotId: string;
             userId: string;
-        }[] = await this.db.pg.any(this.db.sql`
+        }>(this.db.sql`
             SELECT us.robot_id, us.user_id
             FROM user_signals us, robots r
             WHERE r.status = ${RobotStatus.started}
@@ -594,9 +592,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
         const conditionCurrency = !currency ? this.db.sql`` : this.db.sql`AND r.currency=${currency}`;
         const conditionStrategy = !strategy ? this.db.sql`` : this.db.sql`AND r.strategy=${strategy}`;
 
-        const startedUserRobots: {
-            id: string;
-        }[] = await this.db.pg.any(this.db.sql`
+        const startedUserRobots = await this.db.pg.any<{ id: string }>(this.db.sql`
             SELECT ur.id
             FROM user_robots ur, robots r
             WHERE r.status = ${RobotStatus.started}

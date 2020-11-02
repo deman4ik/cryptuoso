@@ -126,7 +126,7 @@ export interface MailPublisherEventData {
     [MailPublisherEvents.SEND_TEMPLATE_MAIL]: {
         from?: string;
         to: string;
-        type: TemplateMailType;
+        //type: TemplateMailType;
         //data?: TemplateMailData[TemplateMailType];
         //template?: COVER_TEMPLATE_TYPES;
     } & TemplateMailObject;

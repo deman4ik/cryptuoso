@@ -192,7 +192,7 @@ export default class RobotRunnerService extends HTTPService {
 
     async create({ entities }: RobotRunnerCreate): Promise<{ result: string }> {
         //TODO: check market
-        const strategiesList: { id: string; code: string }[] = await this.db.pg.many(sql`
+        const strategiesList = await this.db.pg.many<{ id: string; code: string }>(sql`
         SELECT id, code FROM strategies;
         `);
         const strategies: { [key: string]: string } = {};
@@ -215,12 +215,12 @@ export default class RobotRunnerService extends HTTPService {
             robotSettings
         } of entities) {
             let mode = mod || "1";
-            const robotsExists: {
+            const robotsExists = await this.db.pg.any<{
                 id: string;
                 mod: string;
                 createdAt: string;
                 strategySettings: StrategySettings;
-            }[] = await this.db.pg.any(sql`
+            }>(sql`
             SELECT r.id, r.mod, r.created_at, rs.strategy_settings 
             FROM robots r, v_robot_settings rs 
             WHERE rs.robot_id = r.id 
@@ -309,21 +309,14 @@ export default class RobotRunnerService extends HTTPService {
     }
 
     async start({ robotId, dateFrom }: RobotRunnerStart): Promise<{ result: string }> {
-        const {
-            status,
-            exchange,
-            asset,
-            currency,
-            timeframe,
-            strategySettings
-        }: {
+        const { status, exchange, asset, currency, timeframe, strategySettings } = await this.db.pg.one<{
             status: RobotStatus;
             exchange: string;
             asset: string;
             currency: string;
             timeframe: ValidTimeframe;
             strategySettings: StrategySettings;
-        } = await this.db.pg.one(sql`
+        }>(sql`
         SELECT r.status, r.exchange, r.asset, r.currency, r.timeframe, rs.strategy_settings 
         FROM robots r, v_robot_settings rs
         WHERE rs.robot_id = r.id
@@ -344,7 +337,7 @@ export default class RobotRunnerService extends HTTPService {
 
         let historyDateFrom;
 
-        const firstCandle: { timestamp: string } = await this.db.pg.maybeOne(sql`
+        const firstCandle = await this.db.pg.maybeOne<{ timestamp: string }>(sql`
             SELECT timestamp 
             FROM ${sql.identifier([`candles${timeframe}`])}
             WHERE exchange = ${exchange}
@@ -358,7 +351,7 @@ export default class RobotRunnerService extends HTTPService {
 
         if (firstCandle) historyDateFrom = firstCandle.timestamp;
         else {
-            const lastCandle: { timestamp: string } = await this.db.pg.maybeOne(sql`
+            const lastCandle = await this.db.pg.maybeOne<{ timestamp: string }>(sql`
             SELECT timestamp 
             FROM ${sql.identifier([`candles${timeframe}`])}
             WHERE exchange = ${exchange}
@@ -446,7 +439,7 @@ export default class RobotRunnerService extends HTTPService {
 
     async checkAlerts() {
         try {
-            const entities: {
+            const entities = await this.db.pg.any<{
                 robotId: string;
                 exchange: string;
                 asset: string;
@@ -454,7 +447,7 @@ export default class RobotRunnerService extends HTTPService {
                 status: RobotStatus;
                 alerts: { [key: string]: AlertInfo };
                 timeframe: ValidTimeframe;
-            }[] = await this.db.pg.any(sql`
+            }>(sql`
             SELECT rp.robot_id, rp.alerts, r.exchange, r.asset, r.currency, r.timeframe, r.status
             FROM robot_positions rp, robots r
             WHERE rp.robot_id = r.id
@@ -487,7 +480,7 @@ export default class RobotRunnerService extends HTTPService {
                                 e.timeframe === timeframe
                         );
                         const currentTime = Timeframe.getCurrentSince(1, timeframe);
-                        const candle: DBCandle = await this.db.pg.maybeOne(sql`
+                        const candle = await this.db.pg.maybeOne<DBCandle>(sql`
                             SELECT * 
                             FROM ${sql.identifier([`candles${timeframe}`])}
                             WHERE exchange = ${exchange}
@@ -555,14 +548,14 @@ export default class RobotRunnerService extends HTTPService {
 
             if (currentTimeframes.length) {
                 this.log.info(`Handling new ${currentTimeframes.join(", ")} candles`);
-                const robots: {
+                const robots = await this.db.pg.any<{
                     id: string;
                     status: RobotStatus;
                     exchange: string;
                     asset: string;
                     currency: string;
                     timeframe: ValidTimeframe;
-                }[] = await this.db.pg.any(sql`
+                }>(sql`
                 SELECT id, status, exchange, asset, currency, timeframe 
                   FROM robots
                  WHERE timeframe in (${sql.join(currentTimeframes, sql`, `)}) 
@@ -589,7 +582,7 @@ export default class RobotRunnerService extends HTTPService {
                         await Promise.all(
                             markets.map(async ({ exchange, asset, currency, timeframe }) => {
                                 const prevTime = Timeframe.getPrevSince(currentDate, timeframe);
-                                const candle: DBCandle = await this.db.pg.maybeOne(sql`
+                                const candle = await this.db.pg.maybeOne<DBCandle>(sql`
                             SELECT * 
                             FROM ${sql.identifier([`candles${timeframe}`])}
                             WHERE exchange = ${exchange}
@@ -642,7 +635,7 @@ export default class RobotRunnerService extends HTTPService {
     }
 
     async checkIdleRobotJobs() {
-        const robotsWithJobs: { robotId: string }[] = await this.db.pg.any(sql`
+        const robotsWithJobs = await this.db.pg.any<{ robotId: string }>(sql`
         SELECT distinct robot_id 
         FROM robot_jobs rj, robots r
         WHERE rj.robot_id = r.id 

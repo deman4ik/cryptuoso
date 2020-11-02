@@ -162,7 +162,7 @@ export class HTTPService extends BaseService {
             }
 
             if (!user) {
-                user = await this.db.pg.maybeOne(sql`
+                user = await this.db.pg.maybeOne<BaseUser>(sql`
                     SELECT id, status, roles, access, settings, last_active_at
                     FROM users
                     WHERE id = ${userId};
