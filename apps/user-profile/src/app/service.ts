@@ -495,7 +495,7 @@ export default class UserProfileService extends HTTPService {
                 exchange: UserExchangeAccount["exchange"];
                 status: UserExchangeAccount["status"];
             }>(sql`
-                SELECT id, user_id, exchange, status
+                SELECT id, name, user_id, exchange, status
                 FROM user_exchange_accs
                 WHERE id = ${id};
             `);
@@ -546,7 +546,7 @@ export default class UserProfileService extends HTTPService {
             secret,
             pass
         });
-        if (!check.success) return check;
+        if (!check.success) throw new ActionsHandlerError(check.error, null, "VALIDATION", 400);
 
         const encryptedKeys: UserExchangeKeys = {
             key: await this.encrypt(userId, key),
