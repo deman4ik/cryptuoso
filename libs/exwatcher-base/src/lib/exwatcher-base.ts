@@ -241,7 +241,7 @@ export class ExwatcherBaseService extends BaseService {
 
     async resubscribe() {
         try {
-            const subscriptions: Exwatcher[] = await this.db.pg.many(
+            const subscriptions = await this.db.pg.many<Exwatcher>(
                 sql`select * from exwatchers where exchange = ${this.exchange}`
             );
             if (subscriptions && Array.isArray(subscriptions) && subscriptions.length > 0) {
@@ -266,7 +266,7 @@ export class ExwatcherBaseService extends BaseService {
     async subscribeAll({ exchange }: ExwatcherSubscribeAll) {
         try {
             if (exchange !== this.exchange) return;
-            const markets: { asset: string; currency: string }[] = await this.db.pg.many(sql`
+            const markets = await this.db.pg.many<{ asset: string; currency: string }>(sql`
             SELECT asset, currency 
             FROM markets
             WHERE exchange = ${this.exchange} AND available > 0;
