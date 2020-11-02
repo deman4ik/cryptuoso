@@ -1605,7 +1605,8 @@
                         "outputPath": "dist/apps/connector-worker",
                         "main": "apps/connector-worker/src/main.ts",
                         "tsConfig": "apps/connector-worker/tsconfig.app.json",
-                        "assets": ["apps/connector-worker/src/assets"]
+                        "assets": ["apps/connector-worker/src/assets"],
+                        "webpackConfig": "apps/connector-worker/webpack.config.js"
                     },
                     "configurations": {
                         "production": {
