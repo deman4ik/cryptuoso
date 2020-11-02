@@ -142,7 +142,7 @@ export default class ConnectorRunnerService extends BaseService {
             this.log.info(`Connector #${userExAccId} started processing jobs`);
             let updateBalances = false;
             if (job.name === ConnectorJobType.order) {
-                let nextJobs: ConnectorJob[] = await this.#getNextJobs(userExAccId);
+                let nextJobs = Array.from(await this.#getNextJobs(userExAccId));
                 if (!nextJobs || !Array.isArray(nextJobs) || nextJobs.length === 0) return;
 
                 const exchangeAcc: UserExchangeAccount = await this.#getUserExAcc(userExAccId);
@@ -165,7 +165,7 @@ export default class ConnectorRunnerService extends BaseService {
                         })
                     );
 
-                    nextJobs = await this.#getNextJobs(userExAccId);
+                    nextJobs = Array.from(await this.#getNextJobs(userExAccId));
                 }
 
                 await this.db.pg.query(sql`
