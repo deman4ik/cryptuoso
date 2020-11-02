@@ -280,7 +280,7 @@ export default class UserProfileService extends HTTPService {
 
         await this.db.pg.query(sql`
             UPDATE users
-            SET settings = ${sql.json(newSettings)}
+            SET settings = ${JSON.stringify(newSettings)}
             WHERE id = ${user.id};
         `);
 
@@ -300,8 +300,12 @@ export default class UserProfileService extends HTTPService {
     //#region "User Signals"
 
     async userSignalSubscribe(user: User, { robotId, settings }: { robotId: string; settings: UserSignalSettings }) {
-        const robot: { exchange: string; asset: string; currency: string; available: number } = await this.db.pg
-            .maybeOne(sql`
+        const robot = await this.db.pg.maybeOne<{
+            exchange: string;
+            asset: string;
+            currency: string;
+            available: number;
+        }>(sql`
             SELECT exchange, asset, currency, available
             FROM robots
             WHERE id = ${robotId};
@@ -322,7 +326,7 @@ export default class UserProfileService extends HTTPService {
 
         if (available < user.access) throw new ActionsHandlerError("Robot unavailable.", { robotId }, "FORBIDDEN", 403);
 
-        const { limits: marketLimits }: { limits: UserMarketState["limits"] } = await this.db.pg.one(sql`
+        const { limits: marketLimits } = await this.db.pg.one<{ limits: UserMarketState["limits"] }>(sql`
             SELECT limits
             FROM v_user_markets
             WHERE user_id = ${user.id}
@@ -386,7 +390,7 @@ export default class UserProfileService extends HTTPService {
                 user_signal_id, user_signal_settings, active_from
             ) VALUES (
                 ${userSignalId},
-                ${sql.json(newSettings)},
+                ${JSON.stringify(newSettings)},
                 ${subscribedAt}
             );
         `);
@@ -395,7 +399,7 @@ export default class UserProfileService extends HTTPService {
     }
 
     async userSignalEdit(user: User, { robotId, settings }: { robotId: string; settings: UserSignalSettings }) {
-        const userSignal: UserSignalState = await this.db.pg.maybeOne(sql`
+        const userSignal = await this.db.pg.maybeOne<UserSignalState>(sql`
             SELECT id
             FROM user_signals
             WHERE robot_id = ${robotId}
@@ -404,8 +408,9 @@ export default class UserProfileService extends HTTPService {
 
         if (!userSignal) throw new ActionsHandlerError("Subscription not found.", null, "NOT_FOUND", 404);
 
-        const { signalSettings: currentUserSignalSettings }: { signalSettings: UserSignalSettings } = await this.db.pg
-            .one(sql`
+        const { signalSettings: currentUserSignalSettings } = await this.db.pg.one<{
+            signalSettings: UserSignalSettings;
+        }>(sql`
             SELECT signal_settings
             FROM v_user_signal_settings
             WHERE user_signal_id = ${userSignal.id};
@@ -421,7 +426,7 @@ export default class UserProfileService extends HTTPService {
         )
             throw new ActionsHandlerError("This volume value is already set.", null, "FORBIDDEN", 403);
 
-        const { limits: marketLimits }: { limits: UserMarketState["limits"] } = await this.db.pg.one(sql`
+        const { limits: marketLimits } = await this.db.pg.one<{ limits: UserMarketState["limits"] }>(sql`
             SELECT vm.limits
             FROM robots r, v_user_markets vm
             WHERE r.id = ${robotId}
@@ -473,13 +478,13 @@ export default class UserProfileService extends HTTPService {
                 user_signal_id, user_signal_settings
             ) VALUES (
                 ${userSignal.id},
-                ${sql.json(newSettings)}
+                ${JSON.stringify(newSettings)}
             );
         `);
     }
 
     async userSignalUnsubscribe(user: User, { robotId }: { robotId: string }) {
-        const userSignal: UserSignalState = await this.db.pg.maybeOne(sql`
+        const userSignal = await this.db.pg.maybeOne<UserSignalState>(sql`
             SELECT id
             FROM user_signals
             WHERE robot_id = ${robotId}
@@ -526,7 +531,7 @@ export default class UserProfileService extends HTTPService {
         let existed: UserExchangeAccount;
 
         if (id) {
-            existed = await this.db.pg.maybeOne(sql`
+            existed = await this.db.pg.maybeOne<UserExchangeAccount>(sql`
                 SELECT *
                 FROM user_exchange_accs
                 WHERE id = ${id};
@@ -544,12 +549,12 @@ export default class UserProfileService extends HTTPService {
                 if (existed.exchange !== exchange)
                     throw new ActionsHandlerError("Invalid exchange", null, "FORBIDDEN", 403);
 
-                const startedUserRobotsCount = +(await this.db.pg.oneFirst(sql`
+                const startedUserRobotsCount = await this.db.pg.oneFirst<number>(sql`
                     SELECT COUNT(1)
                     FROM user_robots
                     WHERE user_ex_acc_id = ${existed.id}
                         AND status = ${RobotStatus.started};
-                `));
+                `);
 
                 if (existed.status === UserExchangeAccStatus.enabled && startedUserRobotsCount > 0)
                     throw new ActionsHandlerError(
@@ -588,7 +593,7 @@ export default class UserProfileService extends HTTPService {
 
         if (!existed) {
             if (!name || name === "") {
-                const { name: sameExchangeName }: { name: string } = await this.db.pg.maybeOne(sql`
+                const { name: sameExchangeName } = await this.db.pg.maybeOne<{ name: string }>(sql`
                     SELECT name
                     FROM user_exchange_accs
                     WHERE exchange = ${exchange}
@@ -634,7 +639,7 @@ export default class UserProfileService extends HTTPService {
             await this.db.pg.query(sql`
                 UPDATE user_exchange_accs
                 SET name = ${name},
-                    keys = ${sql.json(exchangeAcc.keys)},
+                    keys = ${JSON.stringify(exchangeAcc.keys)},
                     status = ${exchangeAcc.status},
                     error = ${exchangeAcc.error},
                     balances = ${JSON.stringify(exchangeAcc.balances) || null}
@@ -649,7 +654,7 @@ export default class UserProfileService extends HTTPService {
                     ${exchangeAcc.userId},
                     ${exchangeAcc.exchange},
                     ${exchangeAcc.name},
-                    ${sql.json(exchangeAcc.keys)},
+                    ${JSON.stringify(exchangeAcc.keys)},
                     ${exchangeAcc.status},
                     ${exchangeAcc.error},
                     ${JSON.stringify(exchangeAcc.balances) || null}
@@ -716,7 +721,7 @@ export default class UserProfileService extends HTTPService {
     async userExchangeAccDelete(user: User, { id }: { id: string }) {
         const { id: userId } = user;
 
-        const userExchangeAcc: UserExchangeAccount = await this.db.pg.maybeOne(sql`
+        const userExchangeAcc = await this.db.pg.maybeOne<UserExchangeAccount>(sql`
             SELECT *
             FROM user_exchange_accs
             WHERE id = ${id};
@@ -733,11 +738,11 @@ export default class UserProfileService extends HTTPService {
                 403
             );
 
-        const userRobotsCount = +(await this.db.pg.oneFirst(sql`
+        const userRobotsCount = await this.db.pg.oneFirst<number>(sql`
             SELECT COUNT(1)
             FROM user_robots
             WHERE user_ex_acc_id = ${id};
-        `));
+        `);
 
         if (userExchangeAcc.status === UserExchangeAccStatus.enabled && userRobotsCount > 0)
             throw new ActionsHandlerError("You can't delete API Keys with added Robots", null, "FORBIDDEN", 403);
@@ -767,7 +772,7 @@ export default class UserProfileService extends HTTPService {
     ) {
         const { id: userId } = user;
 
-        const userExchangeAcc: UserExchangeAccount = await this.db.pg.maybeOne(sql`
+        const userExchangeAcc = await this.db.pg.maybeOne<UserExchangeAccount>(sql`
             SELECT id, status, exchange, user_Id
             FROM user_exchange_accs
             WHERE id = ${userExAccId};
@@ -795,8 +800,12 @@ export default class UserProfileService extends HTTPService {
 
         if (userRobotExists) throw new ActionsHandlerError("User Robot already exists", null, "FORBIDDEN", 403);
 
-        const robot: { exchange: string; asset: string; currency: string; available: number } = await this.db.pg
-            .maybeOne(sql`
+        const robot = await this.db.pg.maybeOne<{
+            exchange: string;
+            asset: string;
+            currency: string;
+            available: number;
+        }>(sql`
             SELECT id, exchange, asset, currency, available
             FROM robots
             WHERE id = ${robotId};
@@ -810,7 +819,7 @@ export default class UserProfileService extends HTTPService {
         if (robot.available < user.access) throw new ActionsHandlerError("Robot unavailable.", null, "FORBIDDEN", 403);
 
         // TODO: do something if volumeType == balancePercent
-        const { limits: marketLimits }: { limits: UserMarketState["limits"] } = await this.db.pg.one(sql`
+        const { limits: marketLimits } = await this.db.pg.one<{ limits: UserMarketState["limits"] }>(sql`
             SELECT limits
             FROM v_user_markets
             WHERE user_id = ${user.id}
@@ -880,7 +889,7 @@ export default class UserProfileService extends HTTPService {
                     user_robot_id, user_robot_settings
                 ) VALUES (
                     ${userRobotId},
-                    ${sql.json(newUserRobotSettings)}
+                    ${JSON.stringify(newUserRobotSettings)}
                 );
         `);
 
@@ -890,7 +899,7 @@ export default class UserProfileService extends HTTPService {
     async userRobotEdit(user: User, { id, settings }: { id: string; settings: UserRobotSettings }) {
         const { id: userId } = user;
 
-        const userRobotExists: UserRobotDB = await this.db.pg.maybeOne(sql`
+        const userRobotExists = await this.db.pg.maybeOne<UserRobotDB>(sql`
             SELECT *
             FROM user_robots
             WHERE id = ${id};
@@ -910,8 +919,9 @@ export default class UserProfileService extends HTTPService {
         // Not need
         //if (userRobotExists.status !== RobotStatus.stopped)
 
-        const { userRobotSettings: currentUserRobotSettings }: { userRobotSettings: UserRobotSettings } = await this.db
-            .pg.one(sql`
+        const { userRobotSettings: currentUserRobotSettings } = await this.db.pg.one<{
+            userRobotSettings: UserRobotSettings;
+        }>(sql`
             SELECT user_robot_settings
             FROM v_user_robot_settings
             WHERE user_robot_id = ${id};
@@ -931,7 +941,7 @@ export default class UserProfileService extends HTTPService {
             throw new ActionsHandlerError("This volume value is already set.", null, "FORBIDDEN", 403);
 
         // TODO: do something if volumeType == balancePercent
-        const { limits: marketLimits }: { limits: UserMarketState["limits"] } = await this.db.pg.one(sql`
+        const { limits: marketLimits } = await this.db.pg.one<{ limits: UserMarketState["limits"] }>(sql`
             SELECT vm.limits
             FROM robots r, v_user_markets vm
             WHERE r.id = ${userRobotExists.robotId}
@@ -988,7 +998,7 @@ export default class UserProfileService extends HTTPService {
                 user_robot_id, user_robot_settings
             ) VALUES (
                 ${id},
-                ${sql.json(newUserRobotSettings)}
+                ${JSON.stringify(newUserRobotSettings)}
             );
         `);
     }
@@ -996,7 +1006,7 @@ export default class UserProfileService extends HTTPService {
     async userRobotDelete(user: User, { id }: { id: string }) {
         const { id: userId } = user;
 
-        const userRobotExists: UserRobotDB = await this.db.pg.maybeOne(sql`
+        const userRobotExists = await this.db.pg.maybeOne<UserRobotDB>(sql`
             SELECT *
             FROM user_robots
             WHERE id = ${id};
