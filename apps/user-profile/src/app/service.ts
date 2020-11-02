@@ -430,7 +430,6 @@ export default class UserProfileService extends HTTPService {
 
         const newSettings: UserSignalSettings = this.getNewUserSignalSettings(settings, limits);
 
-        // active_from = now() // default
         await this.db.pg.query(sql`
             INSERT INTO user_signal_settings(
                 user_signal_id, user_signal_settings
@@ -486,11 +485,17 @@ export default class UserProfileService extends HTTPService {
     ) {
         const { id: userId } = user;
 
-        let existed: UserExchangeAccount;
+        let existed;
 
         if (id) {
-            existed = await this.db.pg.maybeOne<UserExchangeAccount>(sql`
-                SELECT *
+            existed = await this.db.pg.maybeOne<{
+                id: UserExchangeAccount["id"];
+                name: UserExchangeAccount["name"];
+                userId: UserExchangeAccount["userId"];
+                exchange: UserExchangeAccount["exchange"];
+                status: UserExchangeAccount["status"];
+            }>(sql`
+                SELECT id, user_id, exchange, status
                 FROM user_exchange_accs
                 WHERE id = ${id};
             `);
@@ -636,8 +641,11 @@ export default class UserProfileService extends HTTPService {
     ) {
         const { id: userId } = user;
 
-        const userExchangeAcc: UserExchangeAccount = await this.db.pg.maybeOne(sql`
-            SELECT *
+        const userExchangeAcc = await this.db.pg.maybeOne<{
+            id: UserExchangeAccount["id"];
+            userId: UserExchangeAccount["userId"];
+        }>(sql`
+            SELECT id, user_id
             FROM user_exchange_accs
             WHERE id = ${id};
         `);
@@ -679,8 +687,12 @@ export default class UserProfileService extends HTTPService {
     async userExchangeAccDelete(user: User, { id }: { id: string }) {
         const { id: userId } = user;
 
-        const userExchangeAcc = await this.db.pg.maybeOne<UserExchangeAccount>(sql`
-            SELECT *
+        const userExchangeAcc = await this.db.pg.maybeOne<{
+            id: UserExchangeAccount["id"];
+            userId: UserExchangeAccount["userId"];
+            status: UserExchangeAccount["status"];
+        }>(sql`
+            SELECT id, user_id, status
             FROM user_exchange_accs
             WHERE id = ${id};
         `);
@@ -854,10 +866,16 @@ export default class UserProfileService extends HTTPService {
     async userRobotEdit(user: User, { id, settings }: { id: string; settings: UserRobotSettings }) {
         const { id: userId } = user;
 
-        const userRobotExists = await this.db.pg.maybeOne<UserRobotDB>(sql`
-            SELECT *
-            FROM user_robots
-            WHERE id = ${id};
+        const userRobotExists = await this.db.pg.maybeOne<{
+            id: UserRobotDB["id"];
+            userId: UserRobotDB["userId"];
+            robotId: UserRobotDB["robotId"];
+            userRobotSettings: UserRobotSettings;
+        }>(sql`
+            SELECT ur.id, ur.user_id, ur.robot_id, s.user_robot_settings
+            FROM user_robots ur, v_user_robot_settings s
+            WHERE user_robot_id = ur.id
+              AND ur.id = ${id};
         `);
 
         if (!userRobotExists)
@@ -870,14 +888,7 @@ export default class UserProfileService extends HTTPService {
                 "FORBIDDEN",
                 403
             );
-
-        const { userRobotSettings: currentUserRobotSettings } = await this.db.pg.one<{
-            userRobotSettings: UserRobotSettings;
-        }>(sql`
-            SELECT user_robot_settings
-            FROM v_user_robot_settings
-            WHERE user_robot_id = ${id};
-        `);
+        const { userRobotSettings: currentUserRobotSettings } = userRobotExists;
 
         if (
             (currentUserRobotSettings?.volumeType === VolumeSettingsType.assetStatic &&
@@ -888,7 +899,10 @@ export default class UserProfileService extends HTTPService {
                 settings.volumeInCurrency === currentUserRobotSettings.volumeInCurrency) ||
             (currentUserRobotSettings?.volumeType === VolumeSettingsType.balancePercent &&
                 settings.volumeType === VolumeSettingsType.balancePercent &&
-                settings.balancePercent === currentUserRobotSettings.balancePercent)
+                settings.balancePercent === currentUserRobotSettings.balancePercent) ||
+            (currentUserRobotSettings?.volumeType === VolumeSettingsType.assetDynamicDelta &&
+                settings.volumeType === VolumeSettingsType.assetDynamicDelta &&
+                settings.initialVolume === currentUserRobotSettings.initialVolume)
         )
             return;
 
@@ -917,8 +931,13 @@ export default class UserProfileService extends HTTPService {
     async userRobotDelete(user: User, { id }: { id: string }) {
         const { id: userId } = user;
 
-        const userRobotExists = await this.db.pg.maybeOne<UserRobotDB>(sql`
-            SELECT *
+        const userRobotExists = await this.db.pg.maybeOne<{
+            id: UserRobotDB["id"];
+            robotId: UserRobotDB["robotId"];
+            userId: UserRobotDB["userId"];
+            status: UserRobotDB["status"];
+        }>(sql`
+            SELECT id, robot_id, user_id, status
             FROM user_robots
             WHERE id = ${id};
         `);
