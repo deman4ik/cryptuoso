@@ -89,7 +89,7 @@ export default class UtilsService extends HTTPService {
     }
 
     async initUserAccess(req: any, res: any) {
-        const users: User[] = await this.db.pg.many(sql`SELECT id, roles from users;`);
+        const users = await this.db.pg.many<User>(sql`SELECT id, roles from users;`);
 
         const usersWithAccess: User[] = users.map((user) => ({
             ...user,
@@ -132,7 +132,7 @@ export default class UtilsService extends HTTPService {
 
         if (robots) {
             await this.db.pg.query(sql`delete from robot_settings;`);
-            const robotsList: {
+            const robotsList = await this.db.pg.many<{
                 id: string;
                 settings: {
                     strategyParameters: { [key: string]: any };
@@ -141,7 +141,7 @@ export default class UtilsService extends HTTPService {
                 };
                 createdAt: string;
                 startedAt: string;
-            }[] = await this.db.pg.many(sql`
+            }>(sql`
             SELECT id, settings, trade_settings, created_at, started_at
             FROM robots;`);
 
@@ -162,7 +162,7 @@ export default class UtilsService extends HTTPService {
                     VALUES 
                     (${id},
                     ${sql.json(strategySettings)},
-                    ${sql.json(robotSettings)},
+                    ${JSON.stringify(robotSettings)},
                     ${startedAt || createdAt})
                     ON CONFLICT ON CONSTRAINT robot_settings_robot_id_active_from_key
                     DO UPDATE SET strategy_settings = excluded.strategy_settings,
@@ -172,11 +172,11 @@ export default class UtilsService extends HTTPService {
 
         if (userSignals) {
             await this.db.pg.query(sql`delete from user_signal_settings;`);
-            const userSignalsList: {
+            const userSignalsList = await this.db.pg.many<{
                 id: string;
                 volume: number;
                 subscribedAt: string;
-            }[] = await this.db.pg.many(sql`
+            }>(sql`
             SELECT id, volume, subscribed_at
             FROM user_signals;`);
 
@@ -192,7 +192,7 @@ export default class UtilsService extends HTTPService {
                     active_from) 
                     VALUES 
                     (${id},
-                    ${sql.json(userSignalSettings)},
+                    ${JSON.stringify(userSignalSettings)},
                     ${subscribedAt})
                     ON CONFLICT ON CONSTRAINT user_signal_settings_user_signal_id_active_from_key
                     DO UPDATE SET user_signal_settings = excluded.user_signal_settings;`);
@@ -201,11 +201,11 @@ export default class UtilsService extends HTTPService {
 
         if (userRobots) {
             await this.db.pg.query(sql`delete from user_robot_settings;`);
-            const userRobotsList: {
+            const userRobotsList = await this.db.pg.many<{
                 id: string;
                 settings: { [key: string]: any };
                 createdAt: string;
-            }[] = await this.db.pg.many(sql`
+            }>(sql`
             SELECT ur.id, ur.settings, ur.created_at
             FROM user_robots ur, robots r
             WHERE ur.robot_id = r.id;`);
