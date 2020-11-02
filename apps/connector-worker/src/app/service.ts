@@ -84,7 +84,7 @@ export default class ConnectorRunnerService extends BaseService {
          WHERE user_ex_acc_id = ${userExAccId}
            AND next_job_at <= ${dayjs.utc().toISOString()}
            ORDER BY priority, next_job_at
-         `);
+         `) as Promise<ConnectorJob[]>;
     };
 
     #getUserExAcc = async (userExAccId: string) => {
@@ -142,7 +142,7 @@ export default class ConnectorRunnerService extends BaseService {
             this.log.info(`Connector #${userExAccId} started processing jobs`);
             let updateBalances = false;
             if (job.name === ConnectorJobType.order) {
-                let nextJobs = Array.from(await this.#getNextJobs(userExAccId));
+                let nextJobs = await this.#getNextJobs(userExAccId);
                 if (!nextJobs || !Array.isArray(nextJobs) || nextJobs.length === 0) return;
 
                 const exchangeAcc: UserExchangeAccount = await this.#getUserExAcc(userExAccId);
@@ -165,7 +165,7 @@ export default class ConnectorRunnerService extends BaseService {
                         })
                     );
 
-                    nextJobs = Array.from(await this.#getNextJobs(userExAccId));
+                    nextJobs = await this.#getNextJobs(userExAccId);
                 }
 
                 await this.db.pg.query(sql`
