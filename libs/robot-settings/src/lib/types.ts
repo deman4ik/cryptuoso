@@ -17,8 +17,8 @@ export interface CurrencyDynamicSettings {
 
 export interface AssetDynamicDeltaSettings {
     volumeType: VolumeSettingsType.assetDynamicDelta;
-    volume?: number;
     initialVolume: number;
+    volume?: number;
     delta: number;
 }
 
@@ -79,8 +79,8 @@ export const AssetDynamicDeltaSettingsSchema = {
     type: "object",
     props: {
         volumeType: { type: "equal", value: VolumeSettingsType.assetDynamicDelta },
-        volume: { type: "number", optional: true },
         initialVolume: { type: "number" },
+        volume: { type: "number", optional: true },
         delta: { type: "number" }
     }
 };
@@ -90,7 +90,7 @@ export const BalancePercentSettingsSchema = {
     type: "object",
     props: {
         volumeType: { type: "equal", value: VolumeSettingsType.balancePercent },
-        balancePercent: { type: "number", integer: true }
+        balancePercent: { type: "number", integer: true, min: 1, max: 100 }
     }
 };
 

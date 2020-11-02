@@ -61,9 +61,32 @@ export default class ConnectorRunnerService extends BaseService {
         if (!(id in this.connectors)) {
             const { key: encryptedKey, secret: encryptedSecret, pass: encryptedPass } = keys;
 
-            const apiKey = await this.decrypt(userId, encryptedKey);
-            const secret = await this.decrypt(userId, encryptedSecret);
-            const password = encryptedPass && (await this.decrypt(userId, encryptedPass));
+            let apiKey;
+            let secret;
+            let password;
+            try {
+                apiKey = await this.decrypt(userId, encryptedKey);
+                secret = await this.decrypt(userId, encryptedSecret);
+                password = encryptedPass && (await this.decrypt(userId, encryptedPass));
+            } catch (e) {
+                this.log.error(`Failed to decrypt #${id} keys`, keys, e);
+                if (e.message.includes("bad decrypt")) {
+                    await this.events.emit<UserExchangeAccountErrorEvent>({
+                        type: ConnectorWorkerEvents.USER_EX_ACC_ERROR,
+                        data: {
+                            userExAccId: id,
+                            error: e.message
+                        }
+                    });
+
+                    await this.db.pg.query(sql`
+                    UPDATE user_exchange_accs SET status = ${UserExchangeAccStatus.disabled},
+                    error = ${e.message || null}
+                    WHERE id = ${id};
+                    `);
+                }
+                throw e;
+            }
 
             this.connectors[id] = new PrivateConnector();
             await this.connectors[id].initConnector({
@@ -205,7 +228,9 @@ export default class ConnectorRunnerService extends BaseService {
                 e instanceof ccxt.InsufficientFunds ||
                 e instanceof ccxt.InvalidNonce ||
                 e.message.includes("Margin is insufficient") ||
-                e.message.includes("EOrder:Insufficient initial margin")
+                e.message.includes("EOrder:Insufficient initial margin") ||
+                e.message.includes("EAPI:Invalid key") ||
+                e.message.includes("Invalid API-key")
             ) {
                 await this.events.emit<UserExchangeAccountErrorEvent>({
                     type: ConnectorWorkerEvents.USER_EX_ACC_ERROR,
