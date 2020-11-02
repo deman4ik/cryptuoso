@@ -40,10 +40,10 @@ export default class RobotWorkerService extends BaseService {
     }
 
     async loadCode() {
-        const strategies: CodeFilesInDB[] = await this.db.pg.many(sql`
+        const strategies = await this.db.pg.many<CodeFilesInDB>(sql`
          SELECT * FROM strategies WHERE available >= 5;`);
 
-        const baseIndicators: CodeFilesInDB[] = await this.db.pg.many(sql`
+        const baseIndicators = await this.db.pg.many<CodeFilesInDB>(sql`
          SELECT * FROM indicators WHERE available >= 5;`);
 
         if (process.env.CODE_FILES_LOCATION === "local") {
@@ -76,7 +76,7 @@ export default class RobotWorkerService extends BaseService {
     }
 
     #getNextJob = (robotId: string): Promise<RobotJob> =>
-        this.db.pg.maybeOne(sql`
+        this.db.pg.maybeOne<RobotJob>(sql`
      SELECT id, robot_id, type, data, retries
       FROM robot_jobs
      WHERE robot_id = ${robotId}
@@ -117,7 +117,7 @@ export default class RobotWorkerService extends BaseService {
         limit: number
     ): Promise<Candle[]> => {
         try {
-            const requiredCandles: DBCandle[] = await this.db.pg.many(sql`
+            const requiredCandles = Array.from(await this.db.pg.many<DBCandle>(sql`
             SELECT *
             FROM ${sql.identifier([`candles${timeframe}`])}
             WHERE exchange = ${exchange}
@@ -125,7 +125,7 @@ export default class RobotWorkerService extends BaseService {
               AND currency = ${currency}
               AND time <= ${Timeframe.getPrevSince(dayjs.utc().toISOString(), timeframe)}
             ORDER BY time DESC
-            LIMIT ${limit};`);
+            LIMIT ${limit};`));
             return requiredCandles
                 .sort((a, b) => sortAsc(a.time, b.time))
                 .map((candle: DBCandle) => ({ ...candle, timeframe, id: candle.id }));
@@ -197,7 +197,7 @@ export default class RobotWorkerService extends BaseService {
         const { id, robotId, type } = job;
         this.log.info(`Robot #${robotId} - Processing ${type} job (${id})...`);
         try {
-            const robotState: RobotState = await this.db.pg.one(sql`
+            const robotState = await this.db.pg.one<RobotState>(sql`
              SELECT r.id, 
                     r.exchange, 
                     r.asset, 
