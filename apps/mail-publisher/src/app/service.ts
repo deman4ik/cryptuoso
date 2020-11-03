@@ -181,6 +181,7 @@ class MailPublisherService extends HTTPService {
 
     async _sendNotificationHandler(data: MailPublisherEventData[MailPublisherEvents.SEND_NOTIFICATION]) {
         try {
+            this.log.info(`Sending #${data.notificationId} mail notification`);
             const timeThreshold = mailPublisherConfig.getNotificationsThresholdTimeString();
             const { notificationId } = data;
             const notification = await this.db.pg.maybeOne<{
@@ -242,6 +243,7 @@ class MailPublisherService extends HTTPService {
 
     async _sendTemplateMailHandler(data: MailPublisherEventData[MailPublisherEvents.SEND_TEMPLATE_MAIL]) {
         try {
+            this.log.info(`Sending template mail`, data);
             // TODO: validate
             await this.sendTemplateMail(data.type, data.data, data.to, data.from);
         } catch (err) {
@@ -255,6 +257,7 @@ class MailPublisherService extends HTTPService {
 
     async _sendMailHandler(data: MailPublisherEventData[MailPublisherEvents.SEND_MAIL]) {
         try {
+            this.log.info(`Sending mail`, data);
             await this.mailUtilInstance.send(data);
         } catch (err) {
             this.log.error(`Failed to handle '${MailPublisherEvents.SEND_MAIL}' event (${JSON.stringify(data)})`, err);
@@ -264,6 +267,7 @@ class MailPublisherService extends HTTPService {
 
     async _subscribeToListHandler(data: MailPublisherEventData[MailPublisherEvents.SUBSCRIBE_TO_LIST]) {
         try {
+            this.log.info(`Subscribing to list`, data);
             await this.mailUtilInstance.subscribeToList(data);
         } catch (err) {
             this.log.error(
