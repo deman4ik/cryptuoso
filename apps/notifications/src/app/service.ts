@@ -22,8 +22,8 @@ type Notification = TemplateMailObject & {
     sendTelegram: boolean;
     sendEmail: boolean;
     //readed: boolean;
-    robotId?: string;
-    positionId?: string;
+    robotId: string;
+    //positionId?: string;
 };
 
 export type NotificationsServiceConfig = BaseServiceConfig;
@@ -51,15 +51,11 @@ export default class NotificationsService extends BaseService {
     async handleSignal(signal: Signal) {
         const { robotId } = signal;
 
-        const robot = await this.db.pg.maybeOne<{ code: string }>(this.db.sql`
+        const { code: robotCode } = await this.db.pg.one<{ code: string }>(this.db.sql`
             SELECT code
             FROM robots
             WHERE id = ${robotId};
         `);
-
-        if (!robot) throw new Error(`Robot not found (${robotId})`);
-
-        const { code: robotCode } = robot;
 
         const subscriptions = await this.db.pg.any<{
             telegramId?: number;
@@ -93,31 +89,21 @@ export default class NotificationsService extends BaseService {
                     type: TemplateMailType.SIGNAL_ALERT,
                     data,
                     robotId: signal.robotId,
-                    positionId: signal.positionId,
                     sendTelegram: sub.telegramId && sub.settings.notifications.signals.telegram,
                     sendEmail: sub.email && sub.settings.notifications.signals.email
                 }));
         } else if (signal.type === SignalType.trade) {
             if (signal.action === TradeAction.closeLong || signal.action === TradeAction.closeShort) {
-                const position: {
-                    entryAction: TradeAction;
-                    entryPrice: number;
-                    entryDate: string;
-                    barsHeld: number;
-                } = await this.db.pg.maybeOne(this.db.sql`
-                    SELECT entry_action, entry_price, entry_date, bars_held
-                    FROM robot_positions
-                    WHERE id = ${signal.positionId};
-                `);
-
-                if (!position) throw new Error(`Robot position not found (${signal.positionId})`);
-
                 const usersSignalPositions = await this.db.pg.any<{
                     userId: string;
                     volume: number;
                     profit: number;
+                    entryAction: TradeAction;
+                    entryPrice: number;
+                    entryDate: string;
+                    barsHeld: number;
                 }>(this.db.sql`
-                    SELECT user_id, volume, profit
+                    SELECT user_id, volume, profit, entry_action, entry_price, entry_date, bars_held
                     FROM v_user_signal_positions
                     WHERE id = ${signal.positionId}
                         AND robot_id = ${signal.robotId}
@@ -130,25 +116,35 @@ export default class NotificationsService extends BaseService {
                 // OR throw
                 if (!usersSignalPositions?.length) return;
 
-                const uspMap = new Map<string, { volume: number; profit: number }>();
+                const subsMap = new Map<string, typeof subscriptions[number]>();
 
-                usersSignalPositions.forEach((p) => {
-                    uspMap.set(p.userId, { volume: p.volume, profit: p.profit });
+                subscriptions.forEach((sub) => {
+                    subsMap.set(sub.userId, sub);
                 });
 
-                notifications = subscriptions
-                    .filter((sub) => dayjs.utc(position.entryDate).valueOf() >= dayjs.utc(sub.subscribedAt).valueOf())
-                    .map((sub) => ({
+                notifications = usersSignalPositions.map((usp) => {
+                    const sub = subsMap.get(usp.userId);
+
+                    return {
                         id: uuid(),
-                        userId: sub.userId,
+                        userId: usp.userId,
                         timestamp: signal.timestamp,
                         type: TemplateMailType.SIGNAL_TRADE,
-                        data: { ...signal, robotCode, ...uspMap.get(sub.userId), ...position },
+                        data: {
+                            ...signal,
+                            robotCode,
+                            volume: usp.volume,
+                            profit: usp.profit,
+                            entryAction: usp.entryAction,
+                            entryPrice: usp.entryPrice,
+                            entryDate: usp.entryDate,
+                            barsHeld: usp.barsHeld
+                        },
                         robotId: signal.robotId,
-                        positionId: signal.positionId,
                         sendTelegram: sub.telegramId && sub.settings.notifications.signals.telegram,
                         sendEmail: sub.email && sub.settings.notifications.signals.email
-                    }));
+                    };
+                });
             } else {
                 const data = { ...signal, robotCode };
                 notifications = subscriptions.map((sub) => ({
@@ -158,7 +154,6 @@ export default class NotificationsService extends BaseService {
                     type: TemplateMailType.SIGNAL_TRADE,
                     data: data,
                     robotId: signal.robotId,
-                    positionId: signal.positionId,
                     sendTelegram: sub.telegramId && sub.settings.notifications.signals.telegram,
                     sendEmail: sub.email && sub.settings.notifications.signals.email
                 }));
@@ -175,7 +170,7 @@ export default class NotificationsService extends BaseService {
         for (const n of notifications) {
             await this.db.pg.query(this.db.sql`
                 INSERT INTO notifications (
-                    "id", user_id, "timestamp", "type", data, robot_id, position_id, send_telegram, send_email
+                    "id", user_id, "timestamp", "type", data, robot_id, send_telegram, send_email
                 ) VALUES (
                     ${n.id},
                     ${n.userId},
@@ -183,7 +178,6 @@ export default class NotificationsService extends BaseService {
                     ${n.type},
                     ${this.db.sql.json(n.data)},
                     ${n.robotId},
-                    ${n.positionId},
                     ${n.sendTelegram},
                     ${n.sendEmail}
                 );
