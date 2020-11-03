@@ -44,11 +44,12 @@ export default class NotificationsService extends BaseService {
                 }
             });
         } catch (err) {
-            this.log.error(err, "While consctructing NotificationsService");
+            this.log.error(err, "While constructing NotificationsService");
         }
     }
 
     async handleSignal(signal: Signal) {
+        this.log.info(`Handling #${signal.id} - ${signal.type} event`);
         const { robotId } = signal;
 
         const { code: robotCode } = await this.db.pg.one<{ code: string }>(this.db.sql`

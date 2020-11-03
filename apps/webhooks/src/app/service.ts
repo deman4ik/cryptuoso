@@ -97,7 +97,7 @@ export default class WebhooksService extends BaseService {
             this.addOnStartHandler(this._startServer);
             this.addOnStopHandler(this._stopServer);
         } catch (err) {
-            this.log.error(err, "While consctructing WebhooksService");
+            this.log.error(err, "While constructing WebhooksService");
         }
     }
 

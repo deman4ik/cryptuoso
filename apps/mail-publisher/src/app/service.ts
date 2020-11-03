@@ -74,7 +74,7 @@ class MailPublisherService extends HTTPService {
 
             this.addOnStartHandler(this._onServiceStart);
         } catch (err) {
-            this.log.error(err, "While consctructing MailPublisherService");
+            this.log.error(err, "While constructing MailPublisherService");
         }
     }
 
