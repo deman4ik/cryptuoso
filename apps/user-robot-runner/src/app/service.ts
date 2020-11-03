@@ -139,6 +139,8 @@ export default class UserRobotRunnerService extends HTTPService {
         latest_signal = null
         WHERE id = ${id};
         `);
+
+        return RobotStatus.started;
     }
 
     async stop(user: User, { id }: { id: string }) {
@@ -165,7 +167,7 @@ export default class UserRobotRunnerService extends HTTPService {
             );
 
         if (userRobot.status === RobotStatus.stopped || userRobot.status === RobotStatus.stopping) {
-            return { status: userRobot.status };
+            return userRobot.status;
         }
 
         //TODO: Checks and job
@@ -176,5 +178,7 @@ export default class UserRobotRunnerService extends HTTPService {
         stopped_at =  ${dayjs.utc().toISOString()}
         WHERE id = ${id};
         `);
+
+        return RobotStatus.stopped;
     }
 }
