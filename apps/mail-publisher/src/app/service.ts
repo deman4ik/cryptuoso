@@ -97,6 +97,7 @@ class MailPublisherService extends HTTPService {
 
     async processJob(job: Job) {
         try {
+            this.log.info(`Job ${job.name}`, job.data);
             if (this.lightship.isServerShuttingDown()) throw new Error("Server is shutting down");
 
             if (job.name === JobTypes.checkNotifications) await this.checkNotifications();
@@ -168,6 +169,7 @@ class MailPublisherService extends HTTPService {
         res: any
     ) {
         try {
+            this.log.info(`Http request`, req.body);
             await handler(req.body?.input);
             res.send({ result: "OK" });
             res.end();
