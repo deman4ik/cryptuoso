@@ -305,9 +305,9 @@ export class BaseService {
             concurrency: +this.#workerConcurrency,
             ...opts
         });
-        /* this.#workers[name].on("error", (err) => {
-            this.log.error("Worker error", err);
-        });*/
+        this.#workers[name].on("error", (err) => {
+            this.log.error(`Worker ${name} error`, err);
+        });
     };
 
     get createWorker() {
