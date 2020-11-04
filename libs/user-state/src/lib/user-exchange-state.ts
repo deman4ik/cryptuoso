@@ -31,6 +31,6 @@ export interface UserExchangeAccount {
     keys: UserExchangeKeys;
     status: UserExchangeAccStatus;
     ordersCache: GenericObject<any>;
-    balances: UserExchangeAccBalances;
+    balances?: UserExchangeAccBalances;
     error?: any;
 }

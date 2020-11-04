@@ -1,6 +1,6 @@
 import Service from "../app/service";
 import { getProperty, makeServiceRequest } from "@cryptuoso/test-helpers";
-import { User, UserRoles, UserExchangeAccountState, UserExchangeAccStatus } from "@cryptuoso/user-state";
+import { User, UserRoles, UserExchangeAccount, UserExchangeAccStatus } from "@cryptuoso/user-state";
 import { formatExchange, round, sleep } from "@cryptuoso/helpers";
 import { Events } from "@cryptuoso/events";
 import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
@@ -65,6 +65,10 @@ describe("UserProfile service E2E w/o DB", () => {
                 trading: {
                     email: false,
                     telegram: false
+                },
+                news: {
+                    email: false,
+                    telegram: false
                 }
             }
         },
@@ -81,7 +85,7 @@ describe("UserProfile service E2E w/o DB", () => {
         access: 15
     };
 
-    const userExAcc: UserExchangeAccountState = {
+    const userExAcc: UserExchangeAccount = {
         id: userExAccId,
         userId,
         exchange,

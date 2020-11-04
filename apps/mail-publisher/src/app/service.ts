@@ -11,17 +11,7 @@ import {
 import { buildEmail, buildNotificationsEmail } from "./utils";
 import { Job } from "bullmq";
 import { UserRoles, UserSettings } from "@cryptuoso/user-state";
-//import { v4 as uuid } from "uuid";
-
-/* interface Notification {
-    id: string;
-    type: TemplateMailType;
-    userId: string;
-    data: TemplateMailData;
-    sendTelegram: boolean;
-    sendEmail: boolean;
-    readed: boolean;
-} */
+import { sql } from "@cryptuoso/postgres";
 
 const enum JobTypes {
     checkNotifications = "checkNotifications"
@@ -151,12 +141,12 @@ class MailPublisherService extends HTTPService {
             if (!notifications.length) continue;
 
             const mailgunId = await this.sendNotificationsMail(notifications, email);
-            await this.db.pg.query(this.db.sql`
+            await this.db.pg.query(sql`
                 UPDATE notifications
                 SET mailgun_id = ${mailgunId}
-                WHERE id = ANY(${this.db.sql.array(
+                WHERE id IN (${sql.array(
                     notifications.map((n) => n.id),
-                    this.db.sql`uuid[]` // TODO: replace with "uuid" after slonik fix
+                    "uuid"
                 )};
             `);
         }

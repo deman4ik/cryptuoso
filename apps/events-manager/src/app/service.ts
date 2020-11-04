@@ -184,7 +184,7 @@ export default class EventsManager extends HTTPService {
 
         const conditionEventId = eventId ? this.db.sql`AND event_id = ${eventId}` : this.db.sql``;
         const conditionEventIds = eventIds?.length
-            ? this.db.sql`AND event_id = ANY(${this.db.sql.array(eventIds, this.db.sql`uuid[]`)})` // TODO: replace with "uuid" after slonik fix
+            ? this.db.sql`AND event_id IN(${this.db.sql.array(eventIds, "uuid")})`
             : this.db.sql``;
         const conditionTopic = topic ? this.db.sql`AND topic = ${topic}` : this.db.sql``;
         const conditionType = type ? this.db.sql`AND "type" = ${type}` : this.db.sql``;

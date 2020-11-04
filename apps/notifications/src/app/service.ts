@@ -12,6 +12,7 @@ import { UserSettings } from "@cryptuoso/user-state";
 import dayjs from "@cryptuoso/dayjs";
 import { v4 as uuid } from "uuid";
 import { SignalType, TradeAction } from "@cryptuoso/market";
+import { sql } from "@cryptuoso/postgres";
 
 type Notification = TemplateMailObject & {
     id: string;
@@ -103,15 +104,17 @@ export default class NotificationsService extends BaseService {
                     entryPrice: number;
                     entryDate: string;
                     barsHeld: number;
-                }>(this.db.sql`
+                }>(sql`
                     SELECT user_id, volume, profit, entry_action, entry_price, entry_date, bars_held
                     FROM v_user_signal_positions
                     WHERE id = ${signal.positionId}
                         AND robot_id = ${signal.robotId}
-                        AND user_id = ANY(${this.db.sql.array(
-                            subscriptions.map((sub) => sub.userId),
-                            this.db.sql`uuid[]` // TODO: replace with "uuid" after slonik fix
-                        )});
+                        AND user_id IN (
+                            ${sql.array(
+                                subscriptions.map((sub) => sub.userId),
+                                "uuid"
+                            )}
+                            );
                 `);
 
                 // OR throw
