@@ -1,4 +1,5 @@
-import { STATS_CALC_PREFIX /*, StatsCalcRunnerEvents */ } from "@cryptuoso/stats-calc-events";
+import { STATS_CALC_TOPIC /*, StatsCalcRunnerEvents */ } from "@cryptuoso/stats-calc-events";
+import { SIGNAL_TOPIC } from "@cryptuoso/robot-events";
 import { BASE_REDIS_PREFIX } from "./catalog";
 import { DEAD_LETTER_TOPIC, ERRORS_TOPIC } from "./events";
 
@@ -11,7 +12,7 @@ const DAY = 24 * HOUR;
 const WEEK = 7 * DAY;
 
 class TopicConfig {
-    constructor(public eventTTL: number = WEEK, public consumerIdleTTL: number = WEEK) {}
+    constructor(public eventTTL: number = WEEK, public consumerIdleTTL: number = DAY) {}
 }
 
 interface TopicConfigs {
@@ -35,9 +36,10 @@ export const eventsManagementConfig: {
     common: new TopicConfig(),
     configs: {
         ...modifyConfigEventsNames({
-            [DEAD_LETTER_TOPIC]: new TopicConfig(MINUTE, 2 * MINUTE),
-            [ERRORS_TOPIC]: new TopicConfig(MINUTE, MINUTE),
-            [`${STATS_CALC_PREFIX}.*`]: new TopicConfig(5 * MINUTE, 10 * MINUTE)
+            [DEAD_LETTER_TOPIC]: new TopicConfig(DAY, HOUR),
+            [ERRORS_TOPIC]: new TopicConfig(DAY, HOUR),
+            [`${STATS_CALC_TOPIC}.*`]: new TopicConfig(DAY, HOUR),
+            [`${SIGNAL_TOPIC}.*`]: new TopicConfig(DAY, HOUR)
         })
     }
 };

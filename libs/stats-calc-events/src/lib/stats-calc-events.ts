@@ -1,4 +1,4 @@
-export const STATS_CALC_PREFIX = "stats-calc";
+export const STATS_CALC_TOPIC = "stats-calc";
 
 export const enum StatsCalcRunnerEvents {
     USER_SIGNAL = `stats-calc.user-signal`,
