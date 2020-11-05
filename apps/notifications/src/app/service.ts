@@ -1,7 +1,6 @@
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import { SignalEvents, Signal, SignalSchema } from "@cryptuoso/robot-events";
 import { UserSettings } from "@cryptuoso/user-state";
-import dayjs from "@cryptuoso/dayjs";
 import { v4 as uuid } from "uuid";
 import { SignalType, TradeAction } from "@cryptuoso/market";
 import { sql } from "@cryptuoso/postgres";
@@ -70,19 +69,21 @@ export default class NotificationsService extends BaseService {
 
         if (!subscriptions?.length) return;
 
-        let notifications: Notification[];
-
-        if (signal.action === TradeAction.closeLong || signal.action === TradeAction.closeShort) {
-            const usersSignalPositions = await this.db.pg.any<{
-                userId: string;
-                volume: number;
-                profit: number;
-                entryAction: TradeAction;
-                entryPrice: number;
-                entryDate: string;
-                barsHeld: number;
-            }>(sql`
-                SELECT user_id, volume, profit, entry_action, entry_price, entry_date, bars_held
+        const usersSignalPositions = await this.db.pg.any<{
+            userId: string;
+            volume: number;
+            profit: number;
+            entryAction: TradeAction;
+            entryPrice: number;
+            entryDate: string;
+            exitAction: TradeAction;
+            exitPrice: number;
+            exitDate: string;
+            barsHeld: number;
+        }>(sql`
+                SELECT user_id, volume, profit, entry_action, entry_price, entry_date, 
+                exit_action, exit_price, exit_date,
+                bars_held
                 FROM v_user_signal_positions
                 WHERE id = ${signal.positionId}
                     AND robot_id = ${signal.robotId}
@@ -93,53 +94,41 @@ export default class NotificationsService extends BaseService {
                         )}
                         );
             `);
-            this.log.info(
-                `Signal #${signal.id} - ${signal.type} - ${signal.action} event - ${usersSignalPositions?.length}`
-            );
-            if (!usersSignalPositions?.length) return;
+        this.log.info(
+            `Signal #${signal.id} - ${signal.type} - ${signal.action} event - ${usersSignalPositions?.length}`
+        );
+        if (!usersSignalPositions?.length) return;
 
-            notifications = usersSignalPositions.map((usp) => {
-                const { telegramId, email, settings } = subscriptions.find(({ userId }) => userId === usp.userId);
+        const notifications = usersSignalPositions.map((usp) => {
+            const { telegramId, email, settings } = subscriptions.find(({ userId }) => userId === usp.userId);
 
-                const data: GenericObject<any> = { ...signal, robotCode };
-                if (signal.type === SignalType.trade) {
-                    data.volume = usp.volume;
+            const data: GenericObject<any> = { ...signal, robotCode, volume: usp.volume };
+
+            if (signal.type === SignalType.trade) {
+                data.entryAction = usp.entryAction;
+                data.entryPrice = usp.entryPrice;
+                data.entryDate = usp.entryDate;
+
+                if (signal.action === TradeAction.closeLong || signal.action === TradeAction.closeShort) {
+                    data.exitAction = usp.exitAction;
+                    data.exitPrice = usp.exitPrice;
+                    data.exitDate = usp.exitDate;
                     data.profit = usp.profit;
-                    data.entryAction = usp.entryAction;
-                    data.entryPrice = usp.entryPrice;
-                    data.entryDate = usp.entryDate;
                     data.barsHeld = usp.barsHeld;
                 }
-                return {
-                    id: uuid(),
-                    userId: usp.userId,
-                    timestamp: signal.timestamp,
-                    type: signal.type === SignalType.alert ? SignalEvents.ALERT : SignalEvents.TRADE,
-                    data,
-                    robotId: signal.robotId,
-                    sendTelegram: (telegramId && settings.notifications.signals.telegram) || false,
-                    sendEmail: (email && settings.notifications.signals.email) || false
-                };
-            });
-        } else {
-            const data = { ...signal, robotCode };
-            notifications = subscriptions
-                .filter(
-                    ({ subscribedAt }) =>
-                        dayjs.utc(signal.candleTimestamp).valueOf() >= dayjs.utc(subscribedAt).valueOf()
-                )
-                .map((sub) => ({
-                    id: uuid(),
-                    userId: sub.userId,
-                    timestamp: signal.timestamp,
-                    type: signal.type === SignalType.alert ? SignalEvents.ALERT : SignalEvents.TRADE,
-                    data: data,
-                    robotId: signal.robotId,
-                    sendTelegram: (sub.telegramId && sub.settings.notifications.signals.telegram) || false,
-                    sendEmail: (sub.email && sub.settings.notifications.signals.email) || false
-                }));
-            this.log.info(`Signal #${signal.id} - ${signal.type} - ${signal.action} event - ${notifications?.length}`);
-        }
+            }
+
+            return {
+                id: uuid(),
+                userId: usp.userId,
+                timestamp: signal.timestamp,
+                type: signal.type === SignalType.alert ? SignalEvents.ALERT : SignalEvents.TRADE,
+                data,
+                robotId: signal.robotId,
+                sendTelegram: (telegramId && settings.notifications.signals.telegram) || false,
+                sendEmail: (email && settings.notifications.signals.email) || false
+            };
+        });
 
         await this.saveNotifications(notifications);
     }
