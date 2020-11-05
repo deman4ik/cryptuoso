@@ -146,12 +146,11 @@ export default class NotificationsService extends BaseService {
 
         await this.db.pg.query(sql`
         INSERT INTO notifications (
-                    id, user_id, timestamp, type, data, robot_id, send_telegram, send_email
+            user_id, 'timestamp', 'type', 'data', robot_id, send_telegram, send_email
                 )
         SELECT * FROM 
         ${sql.unnest(
             this.db.util.prepareUnnest(notifications, [
-                "id",
                 "userId",
                 "timestamp",
                 "type",
@@ -160,7 +159,7 @@ export default class NotificationsService extends BaseService {
                 "sendTelegram",
                 "sendEmail"
             ]),
-            ["uuid", "uuid", "timestamp", "varchar", "jsonb", "uuid", "boolean", "boolean"]
+            ["uuid", "timestamp", "varchar", "jsonb", "uuid", "boolean", "boolean"]
         )}        
         `);
     }
