@@ -126,7 +126,7 @@ class MailPublisherService extends HTTPService {
                 data: TemplateMailData[TemplateMailType];
             }>(this.db.sql`
                 UPDATE notifications
-                SET send_mail = false
+                SET send_email = false
                 WHERE user_id = ${id}
                     AND send_email = true
                     AND created_at > ${timeThreshold}

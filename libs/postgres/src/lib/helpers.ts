@@ -4,7 +4,12 @@ export const prepareUnnest = (arr: { [key: string]: any }[], fields: string[]): 
     arr.map((item) => {
         const newItem: { [key: string]: any } = {};
         fields.forEach((field) => {
-            newItem[field] = item[field] === undefined ? null : item[field];
+            newItem[field] =
+                item[field] === undefined
+                    ? null
+                    : typeof item[field] === "object"
+                    ? JSON.stringify(item[field])
+                    : item[field];
         });
         return Object.values(newItem);
     });
