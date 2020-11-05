@@ -15,7 +15,7 @@ export default class AuthService extends HTTPService {
     constructor(config?: AuthServiceConfig) {
         super(config);
         try {
-            this.auth = new Auth(this.events);
+            this.auth = new Auth();
             this.createRoutes({
                 login: {
                     handler: this.login.bind(this),

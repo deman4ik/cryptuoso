@@ -3,26 +3,21 @@ import { v4 as uuid } from "uuid";
 import dayjs from "@cryptuoso/dayjs";
 import { ActionsHandlerError } from "@cryptuoso/errors";
 import logger from "@cryptuoso/logger";
-//import mailUtil from "@cryptuoso/mail";
+import mailUtil from "@cryptuoso/mail";
 import { User, UserStatus, UserRoles, UserAccessValues, UserSettings } from "@cryptuoso/user-state";
 import { formatTgName, checkTgLogin } from "./auth-helper";
 import { Bcrypt } from "./types";
 import bcrypt from "bcrypt";
 import { pg, sql } from "@cryptuoso/postgres";
-import { MailPublisherEvents, MailPublisherEventData, TemplateMailType } from "@cryptuoso/mail-publisher-events";
-import { Events } from "@cryptuoso/events";
-import { NEWS_LIST } from "@cryptuoso/mail";
 
 export class Auth {
     #bcrypt: Bcrypt;
-    #events: Events;
-    //#mailUtil: typeof mailUtil;
+    #mailUtil: typeof mailUtil;
 
-    constructor(events: Events /*, bcrypt: Bcrypt */) {
+    constructor(/*, bcrypt: Bcrypt */) {
         try {
             this.#bcrypt = bcrypt;
-            this.#events = events;
-            //this.#mailUtil = mailUtil;
+            this.#mailUtil = mailUtil;
         } catch (e) {
             logger.error(e, "Failed to init Auth instance!");
         }
@@ -235,18 +230,7 @@ export class Auth {
             secretCode: newUser.secretCode
         });
 
-        await this.#events.emit<MailPublisherEventData[MailPublisherEvents.SEND_TEMPLATE_MAIL]>({
-            type: MailPublisherEvents.SEND_TEMPLATE_MAIL,
-            data: {
-                type: TemplateMailType.WELCOME,
-                to: email,
-                data: {
-                    urlData,
-                    secretCode: newUser.secretCode
-                }
-            }
-        });
-        /* await this.#mailUtil.send({
+        await this.#mailUtil.send({
             to: email,
             subject: "🚀 Welcome to Cryptuoso Platform - Please confirm your email.",
             variables: {
@@ -256,7 +240,7 @@ export class Auth {
                 <p>or enter this code <b>${newUser.secretCode}</b> manually on confirmation page.</p>`
             },
             tags: ["auth"]
-        }); */
+        });
         return newUser.id;
     }
 
@@ -348,28 +332,13 @@ export class Auth {
             userId
         });
 
-        await this.#events.emit<MailPublisherEventData[MailPublisherEvents.SUBSCRIBE_TO_LIST]>({
-            type: MailPublisherEvents.SUBSCRIBE_TO_LIST,
-            data: {
-                list: NEWS_LIST,
-                email: user.email,
-                name: user.name
-            }
-        });
-        /* await this.#mailUtil.subscribeToList({
+        await this.#mailUtil.subscribeToList({
             list: "cpz-beta@mg.cryptuoso.com",
             email: user.email,
             name: user.name
-        }); */
-
-        await this.#events.emit<MailPublisherEventData[MailPublisherEvents.SEND_TEMPLATE_MAIL]>({
-            type: MailPublisherEvents.SEND_TEMPLATE_MAIL,
-            data: {
-                type: TemplateMailType.USER_ACCOUNT_ACTIVATED,
-                to: user.email
-            }
         });
-        /* await this.#mailUtil.send({
+
+        await this.#mailUtil.send({
             to: user.email,
             subject: "🚀 Welcome to Cryptuoso Platform - User Account Activated.",
             variables: {
@@ -379,7 +348,7 @@ export class Auth {
                 <p>Please check out our <b><a href="https://support.cryptuoso.com">Documentation Site</a></b> to get started!</p>`
             },
             tags: ["auth"]
-        }); */
+        });
         return {
             accessToken: this.generateAccessToken(user),
             refreshToken,
@@ -409,14 +378,7 @@ export class Auth {
         await this._dbChangeUserPassword({ userId, passwordHash: newPasswordHash });
 
         if (user.email)
-            await this.#events.emit<MailPublisherEventData[MailPublisherEvents.SEND_TEMPLATE_MAIL]>({
-                type: MailPublisherEvents.SEND_TEMPLATE_MAIL,
-                data: {
-                    type: TemplateMailType.PASSWORD_CHANGE_CONFIRMATION,
-                    to: user.email
-                }
-            });
-        /* await this.#mailUtil.send({
+            await this.#mailUtil.send({
                 to: user.email,
                 subject: "🔐 Cryptuoso - Change Password Confirmation.",
                 variables: {
@@ -425,7 +387,7 @@ export class Auth {
                 <p>If you did not request this change, please contact support <a href="mailto:support@cryptuoso.com">support@cryptuoso.com</a></p>`
                 },
                 tags: ["auth"]
-            }); */
+            });
     }
 
     async passwordReset(params: { email: string }) {
@@ -456,18 +418,7 @@ export class Auth {
             userId: user.id,
             secretCode
         });
-        await this.#events.emit<MailPublisherEventData[MailPublisherEvents.SEND_TEMPLATE_MAIL]>({
-            type: MailPublisherEvents.SEND_TEMPLATE_MAIL,
-            data: {
-                type: TemplateMailType.PASSWORD_RESET,
-                to: user.email,
-                data: {
-                    urlData,
-                    secretCode
-                }
-            }
-        });
-        /* await this.#mailUtil.send({
+        await this.#mailUtil.send({
             to: user.email,
             subject: "🔐 Cryptuoso - Password Reset Request.",
             variables: {
@@ -478,7 +429,7 @@ export class Auth {
                 <p>If you did not request this change, no changes have been made to your user account.</p>`
             },
             tags: ["auth"]
-        }); */
+        });
         return user.id;
     }
 
@@ -515,14 +466,7 @@ export class Auth {
             refreshTokenExpireAt
         });
 
-        await this.#events.emit<MailPublisherEventData[MailPublisherEvents.SEND_TEMPLATE_MAIL]>({
-            type: MailPublisherEvents.SEND_TEMPLATE_MAIL,
-            data: {
-                type: TemplateMailType.PASSWORD_RESET_CONFIRMATION,
-                to: user.email
-            }
-        });
-        /* await this.#mailUtil.send({
+        await this.#mailUtil.send({
             to: user.email,
             subject: "🔐 Cryptuoso - Reset Password Confirmation.",
             variables: {
@@ -531,7 +475,7 @@ export class Auth {
                 <p>If you did not request this change, please contact support <a href="mailto:support@cryptuoso.com">support@cryptuoso.com</a></p>`
             },
             tags: ["auth"]
-        }); */
+        });
 
         return {
             accessToken: this.generateAccessToken(user),
@@ -570,17 +514,7 @@ export class Auth {
             secretCodeExpireAt
         });
 
-        await this.#events.emit<MailPublisherEventData[MailPublisherEvents.SEND_TEMPLATE_MAIL]>({
-            type: MailPublisherEvents.SEND_TEMPLATE_MAIL,
-            data: {
-                type: TemplateMailType.CHANGE_EMAIL,
-                to: email,
-                data: {
-                    secretCode
-                }
-            }
-        });
-        /* await this.#mailUtil.send({
+        await this.#mailUtil.send({
             to: email,
             subject: "🔐 Cryptuoso - Change Email Request.",
             variables: {
@@ -590,7 +524,7 @@ export class Auth {
                 <p>If you did not request this change, no changes have been made to your user account.</p>`
             },
             tags: ["auth"]
-        }); */
+        });
     }
 
     async confirmChangeEmail(params: { userId: string; secretCode: string }) {
@@ -622,18 +556,7 @@ export class Auth {
             status: UserStatus.enabled
         });
 
-        await this.#events.emit<MailPublisherEventData[MailPublisherEvents.SEND_TEMPLATE_MAIL]>({
-            type: MailPublisherEvents.SEND_TEMPLATE_MAIL,
-            data: {
-                type: TemplateMailType.CHANGE_EMAIL_CONFIRMATION,
-                to: user.email || user.emailNew,
-                data: {
-                    emailNew: user.emailNew
-                }
-            }
-        });
-
-        /* await this.#mailUtil.send({
+        await this.#mailUtil.send({
             to: user.email || user.emailNew,
             subject: "🔐 Cryptuoso - Email Change Confirmation.",
             variables: {
@@ -642,7 +565,7 @@ export class Auth {
                 <p>If you did not request this change, please contact support <a href="mailto:support@cryptuoso.com">support@cryptuoso.com</a></p>`
             },
             tags: ["auth"]
-        }); */
+        });
 
         return {
             accessToken: this.generateAccessToken(user),

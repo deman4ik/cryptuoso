@@ -75,10 +75,6 @@
         "serve:connector-runner": "nx serve connector-runner",
         "build:connector-worker": "nx build connector-worker --prod",
         "serve:connector-worker": "nx serve connector-worker",
-        "build:mail-publisher": "nx build mail-publisher --prod",
-        "serve:mail-publisher": "nx serve mail-publisher",
-        "build:webhooks": "nx build webhooks --prod",
-        "serve:webhooks": "nx serve webhooks",
         "build:notifications": "nx build notifications --prod",
         "serve:notifications": "nx serve notifications"
     },

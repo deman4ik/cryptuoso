@@ -169,15 +169,6 @@
         "ccxt-private": {
             "tags": []
         },
-        "mail-publisher-events": {
-            "tags": []
-        },
-        "mail-publisher": {
-            "tags": []
-        },
-        "webhooks": {
-            "tags": []
-        },
         "notifications": {
             "tags": []
         }
