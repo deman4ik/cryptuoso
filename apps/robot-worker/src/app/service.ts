@@ -139,7 +139,7 @@ export default class RobotWorkerService extends BaseService {
         for (const position of positions) {
             await transaction.query(sql`
         INSERT INTO robot_positions
-        ( robot_id, prefix, code, parent_id,
+        ( id, robot_id, prefix, code, parent_id,
          direction, status, 
          entry_status, entry_price, entry_date,
          entry_order_type, entry_action, 
@@ -151,6 +151,7 @@ export default class RobotWorkerService extends BaseService {
          bars_held,
          internal_state
         ) VALUES (
+            ${position.id},
             ${position.robotId}, ${position.prefix}, ${position.code}, ${position.parentId || null},
             ${position.direction || null}, ${position.status}, 
             ${position.entryStatus || null},${position.entryPrice || null}, ${position.entryDate || null}, 
