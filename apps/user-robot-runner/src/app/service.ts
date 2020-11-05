@@ -96,7 +96,7 @@ export default class UserRobotRunnerService extends HTTPService {
             );
 
         if (userRobot.status === RobotStatus.started) {
-            return { status: userRobot.status };
+            return userRobot.status;
         }
 
         const userExchangeAccount = await this.db.pg.maybeOne<{
