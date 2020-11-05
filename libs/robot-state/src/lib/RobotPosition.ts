@@ -268,8 +268,7 @@ export class RobotPosition {
             positionId: this._id,
             positionPrefix: this._prefix,
             positionCode: this._code,
-            positionParentId: this._parentId,
-            positionBarsHeld: this._barsHeld
+            positionParentId: this._parentId
         };
     }
 
