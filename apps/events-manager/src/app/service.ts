@@ -11,6 +11,7 @@ import { UserRoles } from "@cryptuoso/user-state";
 import { JSONParse } from "@cryptuoso/helpers";
 import dayjs from "dayjs";
 import { Job } from "bullmq";
+import { sql } from "@cryptuoso/postgres";
 
 interface StoredDeadLetter {
     id: string;
@@ -112,7 +113,7 @@ export default class EventsManager extends HTTPService {
     #deadLettersHandler = async (deadLetter: DeadLetter) => {
         const event: Event = deadLetter.data;
 
-        await this.db.pg.query(this.db.sql`
+        await this.db.pg.query(sql`
             INSERT INTO dead_letters(
                 event_id, topic, "type", "timestamp", data
             ) VALUES (
@@ -128,7 +129,7 @@ export default class EventsManager extends HTTPService {
     };
 
     #errorHandler = async (event: Event) => {
-        await this.db.pg.query(this.db.sql`
+        await this.db.pg.query(sql`
             INSERT INTO error_events (
                 event_id, topic, "type", data, "timestamp"
             ) VALUES (
@@ -182,15 +183,13 @@ export default class EventsManager extends HTTPService {
         if (!eventId && !eventIds?.length && !topic && !type && typeof resend != "boolean")
             throw new Error("Few arguments provided");
 
-        const conditionEventId = eventId ? this.db.sql`AND event_id = ${eventId}` : this.db.sql``;
-        const conditionEventIds = eventIds?.length
-            ? this.db.sql`AND event_id IN(${this.db.sql.array(eventIds, "uuid")})`
-            : this.db.sql``;
-        const conditionTopic = topic ? this.db.sql`AND topic = ${topic}` : this.db.sql``;
-        const conditionType = type ? this.db.sql`AND "type" = ${type}` : this.db.sql``;
-        const conditionResend = typeof resend == "boolean" ? this.db.sql`AND resend = ${resend}` : this.db.sql``;
+        const conditionEventId = eventId ? sql`AND event_id = ${eventId}` : sql``;
+        const conditionEventIds = eventIds?.length ? sql`AND event_id IN(${sql.join(eventIds, sql`, `)})` : sql``;
+        const conditionTopic = topic ? sql`AND topic = ${topic}` : sql``;
+        const conditionType = type ? sql`AND "type" = ${type}` : sql``;
+        const conditionResend = typeof resend == "boolean" ? sql`AND resend = ${resend}` : sql``;
 
-        const deadLetters = await this.db.pg.any<StoredDeadLetter>(this.db.sql`
+        const deadLetters = await this.db.pg.any<StoredDeadLetter>(sql`
             SELECT *
             FROM dead_letters
             WHERE processed = false
@@ -215,7 +214,7 @@ export default class EventsManager extends HTTPService {
 
                 this.log.info(`Dead letter event: #${dl.eventId} ${dl.type} resend`);
 
-                await this.db.pg.query(this.db.sql`
+                await this.db.pg.query(sql`
                     UPDATE dead_letters
                     SET processed = true
                     WHERE id = ${dl.id};

@@ -42,7 +42,7 @@ export default class NotificationsService extends BaseService {
     }
 
     async handleSignal(signal: Signal) {
-        this.log.info(`Handling #${signal.id} - ${signal.type} event`);
+        this.log.info(`Handling #${signal.id} - ${signal.type} - ${signal.action} event`);
         const { robotId } = signal;
 
         const { code: robotCode } = await this.db.pg.one<{ code: string }>(this.db.sql`
@@ -87,13 +87,15 @@ export default class NotificationsService extends BaseService {
                 WHERE id = ${signal.positionId}
                     AND robot_id = ${signal.robotId}
                     AND user_id IN (
-                        ${sql.array(
+                        ${sql.join(
                             subscriptions.map((sub) => sub.userId),
-                            "uuid"
+                            sql`, `
                         )}
                         );
             `);
-
+            this.log.info(
+                `Signal #${signal.id} - ${signal.type} - ${signal.action} event - ${usersSignalPositions?.length}`
+            );
             if (!usersSignalPositions?.length) return;
 
             notifications = usersSignalPositions.map((usp) => {
@@ -115,8 +117,8 @@ export default class NotificationsService extends BaseService {
                     type: signal.type === SignalType.alert ? SignalEvents.ALERT : SignalEvents.TRADE,
                     data,
                     robotId: signal.robotId,
-                    sendTelegram: telegramId && settings.notifications.signals.telegram,
-                    sendEmail: email && settings.notifications.signals.email
+                    sendTelegram: (telegramId && settings.notifications.signals.telegram) || false,
+                    sendEmail: (email && settings.notifications.signals.email) || false
                 };
             });
         } else {
@@ -133,9 +135,10 @@ export default class NotificationsService extends BaseService {
                     type: signal.type === SignalType.alert ? SignalEvents.ALERT : SignalEvents.TRADE,
                     data: data,
                     robotId: signal.robotId,
-                    sendTelegram: sub.telegramId && sub.settings.notifications.signals.telegram,
-                    sendEmail: sub.email && sub.settings.notifications.signals.email
+                    sendTelegram: (sub.telegramId && sub.settings.notifications.signals.telegram) || false,
+                    sendEmail: (sub.email && sub.settings.notifications.signals.email) || false
                 }));
+            this.log.info(`Signal #${signal.id} - ${signal.type} - ${signal.action} event - ${notifications?.length}`);
         }
 
         await this.saveNotifications(notifications);
@@ -144,9 +147,10 @@ export default class NotificationsService extends BaseService {
     async saveNotifications(notifications: Notification[]) {
         if (!notifications?.length) return;
 
-        await this.db.pg.query(sql`
+        try {
+            await this.db.pg.query(sql`
         INSERT INTO notifications (
-            user_id, 'timestamp', 'type', 'data', robot_id, send_telegram, send_email
+            user_id, timestamp, type, data, robot_id, send_telegram, send_email
                 )
         SELECT * FROM 
         ${sql.unnest(
@@ -159,8 +163,12 @@ export default class NotificationsService extends BaseService {
                 "sendTelegram",
                 "sendEmail"
             ]),
-            ["uuid", "timestamp", "varchar", "jsonb", "uuid", "boolean", "boolean"]
+            ["uuid", "timestamp", "varchar", "jsonb", "uuid", "bool", "bool"]
         )}        
         `);
+        } catch (err) {
+            this.log.error("Failed to save notifications", err);
+            throw err;
+        }
     }
 }
