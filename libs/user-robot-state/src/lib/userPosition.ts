@@ -13,7 +13,7 @@ import {
     TradeInfo,
     ValidTimeframe
 } from "@cryptuoso/market";
-import { UserTradeEvent } from "@cryptuoso/user-robot-events";
+import { UserTradeEvent } from "./types";
 import {
     UserPositionState,
     TradeSettings,

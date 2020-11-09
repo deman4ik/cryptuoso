@@ -135,3 +135,34 @@ export interface UserRobotState extends UserRobotDB {
     settings: UserRobotCurrentSettings;
     positions: UserPositionState[];
 }
+
+interface UserRobotEventData extends GenericObject<any> {
+    userRobotId: string;
+}
+
+export interface UserTradeEvent extends UserRobotEventData {
+    id: string;
+    code: string;
+    exchange: string;
+    asset: string;
+    currency: string;
+    userRobotId: string;
+    userId: string;
+    status: UserPositionStatus;
+    entryAction?: TradeAction;
+    entryStatus?: UserPositionOrderStatus;
+    entrySignalPrice?: number;
+    entryPrice?: number;
+    entryDate?: string;
+    entryCandleTimestamp?: string;
+    entryExecuted?: number;
+    exitAction?: TradeAction;
+    exitStatus?: UserPositionOrderStatus;
+    exitPrice?: number;
+    exitDate?: string;
+    exitCandleTimestamp?: string;
+    exitExecuted?: number;
+    reason?: string; //TODO ENUM
+    profit?: number;
+    barsHeld?: number;
+}

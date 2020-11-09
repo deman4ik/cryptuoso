@@ -1,7 +1,3 @@
-import { GenericObject } from "@cryptuoso/helpers";
-import { TradeAction } from "@cryptuoso/market";
-import { UserPositionOrderStatus, UserPositionStatus } from "@cryptuoso/user-robot-state";
-
 export const enum UserRobotRunnerEvents {
     START = "in-user-robot-runner.start",
     STOP = "in-user-robot-runner.stop",
@@ -26,34 +22,3 @@ export const UserRobotRunnerSchema = {
     [UserRobotRunnerEvents.PAUSE]: RunnerPauseSchema,
     [UserRobotRunnerEvents.RESUME]: RunnerPauseSchema
 };
-
-interface UserRobotEventData extends GenericObject<any> {
-    userRobotId: string;
-}
-
-export interface UserTradeEvent extends UserRobotEventData {
-    id: string;
-    code: string;
-    exchange: string;
-    asset: string;
-    currency: string;
-    userRobotId: string;
-    userId: string;
-    status: UserPositionStatus;
-    entryAction?: TradeAction;
-    entryStatus?: UserPositionOrderStatus;
-    entrySignalPrice?: number;
-    entryPrice?: number;
-    entryDate?: string;
-    entryCandleTimestamp?: string;
-    entryExecuted?: number;
-    exitAction?: TradeAction;
-    exitStatus?: UserPositionOrderStatus;
-    exitPrice?: number;
-    exitDate?: string;
-    exitCandleTimestamp?: string;
-    exitExecuted?: number;
-    reason?: string; //TODO ENUM
-    profit?: number;
-    barsHeld?: number;
-}
