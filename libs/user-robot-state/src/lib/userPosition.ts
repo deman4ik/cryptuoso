@@ -185,6 +185,10 @@ export class UserPosition {
         return this._hasRecentTrade;
     }
 
+    get nextJob() {
+        return this._nextJob;
+    }
+
     cancel() {
         this._nextJob = UserPositionJob.cancel;
         this._nextJobAt = dayjs.utc().toISOString();

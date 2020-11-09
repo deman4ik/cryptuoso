@@ -332,7 +332,72 @@ describe("Test User Robot", () => {
         expect(userRobot.state.ordersToCreate[0].price).toBe(6599.8);
     });
 
-    it("Should force close position after new open signal", () => {
+    it("Should not create new position after new open signal with same direction", () => {
+        const signalOpen: SignalEvent = {
+            id: uuid(),
+            robotId,
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            timestamp: dayjs.utc("2019-10-26T00:05:01.000Z").toISOString(),
+            type: SignalType.trade,
+            positionId: uuid(),
+            positionPrefix: "p",
+            positionCode: "p_1",
+            candleTimestamp: dayjs.utc("2019-10-26T00:05:00.000Z").toISOString(),
+            action: TradeAction.short,
+            orderType: OrderType.market,
+            price: 6500
+        };
+
+        userRobot.handleSignal(signalOpen);
+        const openOrder = {
+            ...userRobot.state.ordersToCreate[0],
+            status: OrderStatus.closed,
+            exId: uuid(),
+            exTimestamp: dayjs.utc().toISOString(),
+            exLastTradeAt: dayjs.utc().toISOString(),
+            executed: userRobot.state.ordersToCreate[0].volume,
+            remaining: 0
+        };
+        const firstUserPositionId = userRobot.state.positions[0].id;
+        userRobot = new UserRobot({
+            ...userRobot.state.userRobot,
+            ...robotParams,
+            positions: [
+                {
+                    ...userRobot.state.positions[0],
+                    entryOrders: [openOrder]
+                }
+            ]
+        });
+        userRobot.handleOrder(openOrder);
+        const signalOpenNew: SignalEvent = {
+            id: uuid(),
+            robotId,
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            timestamp: dayjs.utc("2019-10-26T00:05:01.000Z").toISOString(),
+            type: SignalType.trade,
+            positionId: uuid(),
+            positionPrefix: "p",
+            positionCode: "p_2",
+            candleTimestamp: dayjs.utc("2019-10-26T00:05:00.000Z").toISOString(),
+            action: TradeAction.short,
+            orderType: OrderType.market,
+            price: 6500
+        };
+        userRobot.handleSignal(signalOpenNew);
+        expect(userRobot.state.positions[0].id).toBe(firstUserPositionId);
+        expect(userRobot.state.positions[0].status).toBe(UserPositionStatus.open);
+        expect(userRobot.state.positions[0].nextJob).toBeNull();
+        expect(userRobot.state.positions.length).toBe(1);
+    });
+
+    it("Should force close position after new open signal with different direction", () => {
         const signalOpen: SignalEvent = {
             id: uuid(),
             robotId,
@@ -385,7 +450,7 @@ describe("Test User Robot", () => {
             positionPrefix: "p",
             positionCode: "p_2",
             candleTimestamp: dayjs.utc("2019-10-26T00:05:00.000Z").toISOString(),
-            action: TradeAction.short,
+            action: TradeAction.long,
             orderType: OrderType.market,
             price: 6500
         };
@@ -1099,6 +1164,7 @@ describe("Test User Robot", () => {
                 }
             ]
         });
+
         userRobot.handleOrder(openOrderCanceled);
 
         expect(userRobot.state.positions[0].status).toBe(UserPositionStatus.canceled);
@@ -1445,7 +1511,7 @@ describe("Test User Robot", () => {
             positionCode: "p_2",
             positionParentId: signalOpen.positionId,
             candleTimestamp: dayjs.utc("2019-10-26T01:10:00.000Z").toISOString(),
-            action: TradeAction.short,
+            action: TradeAction.long,
             orderType: OrderType.market,
             price: 7000
         };
@@ -1529,7 +1595,7 @@ describe("Test User Robot", () => {
             positionCode: "p_2",
             positionParentId: signalOpen.positionId,
             candleTimestamp: dayjs.utc("2019-10-26T01:10:00.000Z").toISOString(),
-            action: TradeAction.short,
+            action: TradeAction.long,
             orderType: OrderType.market,
             price: 7000
         };
@@ -1547,7 +1613,7 @@ describe("Test User Robot", () => {
             positionPrefix: "p",
             positionCode: "p_1",
             candleTimestamp: dayjs.utc("2019-10-26T00:05:00.000Z").toISOString(),
-            action: TradeAction.closeShort,
+            action: TradeAction.closeLong,
             orderType: OrderType.market,
             price: 5998
         };

@@ -112,7 +112,7 @@ class UserRobot {
     _setPositions(positions: UserPositionState[]) {
         if (positions && Array.isArray(positions) && positions.length > 0) {
             positions.forEach((position) => {
-                this._positions[position.positionId] = new UserPosition({
+                this._positions[position.id] = new UserPosition({
                     ...position,
                     exchange: this._exchange,
                     asset: this._asset,
@@ -128,7 +128,7 @@ class UserRobot {
 
     _getNextPositionCode(prefix: string) {
         if (!this._internalState.posLastNumb) this._internalState.posLastNumb = {};
-        if (Object.prototype.hasOwnProperty.call(this._internalState.posLastNumb, prefix)) {
+        if (prefix in this._internalState.posLastNumb) {
             this._internalState.posLastNumb[prefix] += 1;
         } else {
             this._internalState.posLastNumb[prefix] = 1;
@@ -171,23 +171,6 @@ class UserRobot {
         }); */
     }
 
-    _cancelPreviousParentPositions(parentId: string) {
-        if (this._positions[parentId] && this._positions[parentId].isActive) {
-            if (this._positions[parentId].status === UserPositionStatus.delayed) {
-                this._positions[parentId].cancel();
-                this._positions[parentId].executeJob();
-            }
-            const previousParentId = this._positions[parentId].parentId;
-            if (previousParentId && this._positions[previousParentId] && this._positions[previousParentId].isActive) {
-                this._positions[previousParentId].cancel();
-                this._positions[previousParentId].executeJob();
-                if (this._positions[previousParentId].parentId) {
-                    this._cancelPreviousParentPositions(this._positions[previousParentId].parentId);
-                }
-            }
-        }
-    }
-
     handleSignal(signal: SignalEvent) {
         if (signal.robotId !== this._robotId)
             throw new BaseError(
@@ -210,95 +193,102 @@ class UserRobot {
             );
         }
 
+        //TODO: check signal timestamp
+
         if (signal.action === TradeAction.long || signal.action === TradeAction.short) {
-            const hasActiveParent =
-                signal.positionParentId &&
-                this._positions[signal.positionParentId] &&
-                this._positions[signal.positionParentId].isActive;
             let hasPreviousActivePositions = false;
-            if (hasActiveParent) {
-                this._positions[signal.positionParentId].handleSignal({
-                    ...signal,
-                    positionId: signal.positionParentId,
-                    action:
-                        this._positions[signal.positionParentId].direction === PositionDirection.long
-                            ? TradeAction.closeLong
-                            : TradeAction.closeShort
-                });
-                this._positions[signal.positionParentId].executeJob();
+
+            if (signal.positionParentId) {
+                const activeParents = Object.values(this._positions).filter(
+                    (pos) =>
+                        pos.isActive &&
+                        pos.prefix === signal.positionPrefix &&
+                        ((pos.direction === PositionDirection.long && signal.action === TradeAction.short) ||
+                            (pos.direction === PositionDirection.short && signal.action === TradeAction.long))
+                );
+                for (const position of activeParents) {
+                    position.handleSignal({
+                        ...signal,
+                        positionId: signal.positionParentId,
+                        action:
+                            position.direction === PositionDirection.long
+                                ? TradeAction.closeLong
+                                : TradeAction.closeShort
+                    });
+                    position.executeJob();
+                }
             } else {
                 const previousActivePositions = Object.values(this._positions).filter(
                     (pos) =>
                         pos.isActive &&
                         pos.prefix === signal.positionPrefix &&
-                        pos.positionNumber < +signal.positionCode.split(`${signal.positionPrefix}_`)[1]
+                        ((pos.direction === PositionDirection.long && signal.action === TradeAction.short) ||
+                            (pos.direction === PositionDirection.short && signal.action === TradeAction.long))
                 );
-                if (
-                    previousActivePositions &&
-                    Array.isArray(previousActivePositions) &&
-                    previousActivePositions.length > 0
-                ) {
+                if (previousActivePositions?.length) {
                     hasPreviousActivePositions = true;
-                    previousActivePositions.forEach((p) => {
-                        this._positions[p.positionId].cancel();
-                        this._positions[p.positionId].executeJob();
-                    });
+                    for (const position of previousActivePositions) {
+                        position.cancel();
+                        position.executeJob();
+                    }
                 }
             }
 
-            const delay = hasPreviousActivePositions;
+            const hasActivePositionWithSameDirection = Object.values(this._positions).filter(
+                (pos) =>
+                    pos.isActive &&
+                    pos.prefix === signal.positionPrefix &&
+                    pos.nextJob === null &&
+                    ((pos.direction === PositionDirection.long && signal.action === TradeAction.long) ||
+                        (pos.direction === PositionDirection.short && signal.action === TradeAction.short))
+            );
 
-            this._positions[signal.positionId] = new UserPosition({
-                id: uuid(),
-                prefix: signal.positionPrefix,
-                code: this._getNextPositionCode(signal.positionPrefix),
-                positionCode: signal.positionCode,
-                positionId: signal.positionId,
-                userRobotId: this._id,
-                userId: this._userId,
-                exchange: this._exchange,
-                asset: this._asset,
-                currency: this._currency,
-                timeframe: this._timeframe,
-                status: delay ? UserPositionStatus.delayed : UserPositionStatus.new,
-                parentId: signal.positionParentId,
-                direction: signal.action === TradeAction.long ? PositionDirection.long : PositionDirection.short,
-                userExAccId: this._userExAccId,
-                settings: this._settings,
-                tradeSettings: this._tradeSettings,
-                internalState: {
-                    entrySlippageCount: 0,
-                    exitSlippageCount: 0,
-                    delayedSignal: delay && signal
+            if (!hasActivePositionWithSameDirection.length) {
+                const delay = hasPreviousActivePositions;
+
+                const newPositionId = uuid();
+                this._positions[newPositionId] = new UserPosition({
+                    id: newPositionId,
+                    prefix: signal.positionPrefix,
+                    code: this._getNextPositionCode(signal.positionPrefix),
+                    positionCode: signal.positionCode,
+                    positionId: signal.positionId,
+                    userRobotId: this._id,
+                    userId: this._userId,
+                    exchange: this._exchange,
+                    asset: this._asset,
+                    currency: this._currency,
+                    timeframe: this._timeframe,
+                    status: delay ? UserPositionStatus.delayed : UserPositionStatus.new,
+                    parentId: signal.positionParentId,
+                    direction: signal.action === TradeAction.long ? PositionDirection.long : PositionDirection.short,
+                    userExAccId: this._userExAccId,
+                    settings: this._settings,
+                    tradeSettings: this._tradeSettings,
+                    internalState: {
+                        entrySlippageCount: 0,
+                        exitSlippageCount: 0,
+                        delayedSignal: delay && signal
+                    }
+                });
+
+                if (!delay) {
+                    this._positions[newPositionId].handleSignal(signal);
+                    this._positions[newPositionId].executeJob();
                 }
-            });
-
-            if (!delay) {
-                this._positions[signal.positionId].handleSignal(signal);
-                this._positions[signal.positionId].executeJob();
             }
         } else {
-            if (!this._positions[signal.positionId]) {
-                const previousPositions = Object.values(this._positions).filter(
-                    (pos) =>
-                        pos.isActive &&
-                        pos.prefix === signal.positionPrefix &&
-                        /*  pos.positionNumber <
-              +signal.positionCode.split(`${signal.positionPrefix}_`)[1] && */
-                        ((pos.direction === PositionDirection.long && signal.action === TradeAction.closeLong) ||
-                            (pos.direction === PositionDirection.short && signal.action === TradeAction.closeShort))
-                );
+            const previousPositions = Object.values(this._positions).filter(
+                (pos) =>
+                    pos.prefix === signal.positionPrefix &&
+                    pos.isActive &&
+                    ((pos.direction === PositionDirection.long && signal.action === TradeAction.closeLong) ||
+                        (pos.direction === PositionDirection.short && signal.action === TradeAction.closeShort))
+            );
 
-                if (previousPositions && Array.isArray(previousPositions) && previousPositions.length > 0) {
-                    const [previousPosition] = previousPositions;
-                    this._positions[previousPosition.positionId].handleSignal(signal);
-                    this._positions[previousPosition.positionId].executeJob();
-                }
-            } else {
-                if (this._positions[signal.positionId].isActive && !this._positions[signal.positionId].exitStatus) {
-                    this._positions[signal.positionId].handleSignal(signal);
-                    this._positions[signal.positionId].executeJob();
-                }
+            for (const previousPosition of previousPositions) {
+                previousPosition.handleSignal(signal);
+                previousPosition.executeJob();
             }
         }
 
@@ -309,13 +299,8 @@ class UserRobot {
         this.positions
             .filter((p) => p.status === UserPositionStatus.delayed)
             .forEach((pos) => {
-                if (
-                    !this._positions[pos.parentId] ||
-                    (this._positions[pos.parentId] && !this._positions[pos.parentId].isActive)
-                ) {
-                    this._positions[pos.positionId].handleDelayedSignal();
-                    this._positions[pos.positionId].executeJob();
-                }
+                this._positions[pos.id].handleDelayedSignal();
+                this._positions[pos.id].executeJob();
             });
     }
 
@@ -330,7 +315,8 @@ class UserRobot {
                 "ERR_WRONG"
             );
 
-        if (!this._positions[order.positionId])
+        const position = this._positions[order.userPositionId] || this._positions[order.positionId]; //TODO: remove positionId option
+        if (!position)
             throw new BaseError(
                 "Position not found",
                 {
@@ -341,7 +327,7 @@ class UserRobot {
             );
 
         // this._positions[order.positionId].handleOrder(order);
-        this._positions[order.positionId].executeJob();
+        position.executeJob();
         this.handleDelayedPositions();
     }
 }
