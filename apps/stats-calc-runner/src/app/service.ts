@@ -1,7 +1,7 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import { QueueEvents } from "bullmq";
 import {
-    STATS_CALC_PREFIX,
+    STATS_CALC_TOPIC,
     StatsCalcJob,
     StatsCalcJobType,
     StatsCalcRunnerEvents,
@@ -177,7 +177,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
             const { name, data } = await this.queues["calcStatistics"].instance.getJob(jobId);
 
             await this.events.emit({
-                type: `errors.${STATS_CALC_PREFIX}.${name}`,
+                type: `errors.${STATS_CALC_TOPIC}.${name}`,
                 data
             });
 
@@ -397,8 +397,8 @@ export default class StatisticCalcRunnerService extends HTTPService {
         }>(this.db.sql`
             SELECT us.user_id, r.exchange, r.asset
             FROM user_signals us, robots r
-            WHERE us.robot_id = ${robotId}
-                AND us.robot_id = r.id;
+            WHERE us.robot_id = r.id
+              AND r.id = ${robotId};
         `);
 
         for (const { userId, exchange: uExchange, asset: uAsset } of usersByRobotId) {

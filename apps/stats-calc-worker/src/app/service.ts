@@ -633,7 +633,8 @@ export default class StatisticCalcWorkerService extends BaseService {
         let res = false;
 
         for (const signal of userSignals) {
-            res = res || (await this._calcDownloadedUserSignal(signal, calcAll));
+            const result = await this._calcDownloadedUserSignal(signal, calcAll);
+            res = res || result;
         }
 
         return res;
