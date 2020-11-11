@@ -136,6 +136,20 @@ export interface UserRobotState extends UserRobotDB {
     positions: UserPositionState[];
 }
 
+export const enum UserRobotJobType {
+    stop = "stop",
+    pause = "pause",
+    signal = "signal",
+    order = "order"
+}
+
+export interface UserRobotJob {
+    id: string;
+    userRobotId: string;
+    type: UserRobotJobType;
+    data?: SignalEvent | { orderId: string } | { message?: string };
+}
+
 interface UserRobotEventData extends GenericObject<any> {
     userRobotId: string;
 }
@@ -147,6 +161,7 @@ export interface UserTradeEvent extends UserRobotEventData {
     asset: string;
     currency: string;
     userRobotId: string;
+    userPositionId: string;
     userId: string;
     status: UserPositionStatus;
     entryAction?: TradeAction;
@@ -165,4 +180,14 @@ export interface UserTradeEvent extends UserRobotEventData {
     reason?: string; //TODO ENUM
     profit?: number;
     barsHeld?: number;
+}
+
+export const enum Queues {
+    userRobot = "user-robot",
+    userRobotRunner = "user-robot-runner"
+}
+
+export const enum UserRobotRunnerJobType {
+    idleUserOrders = "idleUserOrders",
+    idleUserRobotJobs = "idleUserRobotJobs"
 }

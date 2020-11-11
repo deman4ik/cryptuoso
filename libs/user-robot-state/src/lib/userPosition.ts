@@ -383,6 +383,7 @@ export class UserPosition {
             asset: this._asset,
             currency: this._currency,
             userRobotId: this._userRobotId,
+            userPositionId: this._id,
             userId: this._userId,
             status: this._status,
             entryAction: this._entryAction,

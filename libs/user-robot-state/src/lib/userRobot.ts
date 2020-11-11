@@ -14,6 +14,7 @@ import { Order, PositionDirection, SignalEvent, TradeAction, ValidTimeframe } fr
 import { flattenArray, GenericObject } from "@cryptuoso/helpers";
 import { NewEvent } from "@cryptuoso/events";
 import { BaseError } from "@cryptuoso/errors";
+import { UserRobotWorkerEvents } from "@cryptuoso/user-robot-events";
 
 class UserRobot {
     _id: string;
@@ -150,25 +151,27 @@ class UserRobot {
     setStop() {
         this._status = UserRobotStatus.stopped;
         this._stoppedAt = dayjs.utc().toISOString();
-        /*  this._eventsToSend.push({
-            type: Event.USER_ROBOT_STOPPED,
+        this._eventsToSend.push({
+            type: UserRobotWorkerEvents.STOPPED,
             data: {
                 userRobotId: this._id,
+                status: this._status,
                 message: this._message
             }
-        }); */
+        });
     }
 
     pause({ message }: { message?: string } = { message: null }) {
         this._status = UserRobotStatus.paused;
         this._message = message || null;
-        /*   this._eventsToSend.push({
-            type: Event.USER_ROBOT_PAUSED,
+        this._eventsToSend.push({
+            type: UserRobotWorkerEvents.PAUSED,
             data: {
                 userRobotId: this._id,
+                status: this._status,
                 message: this._message
             }
-        }); */
+        });
     }
 
     handleSignal(signal: SignalEvent) {
@@ -182,7 +185,7 @@ class UserRobot {
                 },
                 "ERR_WRONG"
             );
-        if (this._internalState.latestSignal && this._internalState.latestSignal.id === signal.id) {
+        if (this._internalState.latestSignal && this._internalState.latestSignal.id === signal.id)
             throw new BaseError(
                 "Signal already handled",
                 {
@@ -191,9 +194,20 @@ class UserRobot {
                 },
                 "ERR_CONFLICT"
             );
-        }
 
-        //TODO: check signal timestamp
+        if (
+            this._internalState.latestSignal &&
+            dayjs.utc(this._internalState.latestSignal.timestamp).valueOf() > dayjs.utc(signal.timestamp).valueOf()
+        )
+            throw new BaseError(
+                "Wrong signal timestamp",
+                {
+                    signal,
+                    latestSignal: this._internalState.latestSignal,
+                    userRobotId: this._id
+                },
+                "ERR_CONFLICT"
+            );
 
         if (signal.action === TradeAction.long || signal.action === TradeAction.short) {
             let hasPreviousActivePositions = false;

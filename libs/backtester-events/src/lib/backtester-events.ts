@@ -42,8 +42,8 @@ export const BacktesterRunnerSchema = {
                     optional: true
                 },
                 timeframe: {
-                    type: "number",
-                    enum: Timeframe.validArray
+                    type: "enum",
+                    values: Timeframe.validArray
                 },
                 strategy: {
                     type: "string",
