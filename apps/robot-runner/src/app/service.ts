@@ -636,7 +636,7 @@ export default class RobotRunnerService extends HTTPService {
     async checkIdleRobotJobs() {
         try {
             const robotsWithJobs = await this.db.pg.any<{ robotId: string }>(sql`
-        SELECT distinct robot_id 
+        SELECT distinct rj.robot_id 
         FROM robot_jobs rj, robots r
         WHERE rj.robot_id = r.id 
         AND r.status = ${RobotStatus.started}

@@ -4,8 +4,11 @@ import { HTTPService, HTTPServiceConfig, RequestExtended } from "@cryptuoso/serv
 import { User, UserExchangeAccount, UserExchangeAccStatus, UserRoles } from "@cryptuoso/user-state";
 import {
     Queues,
+    UserPositionOrderStatus,
+    UserPositionStatus,
     UserRobotDB,
     UserRobotJob,
+    UserRobotJobType,
     UserRobotRunnerJobType,
     UserRobotStatus
 } from "@cryptuoso/user-robot-state";
@@ -21,11 +24,13 @@ import { ActionsHandlerError } from "@cryptuoso/errors";
 import dayjs from "@cryptuoso/dayjs";
 import { Job } from "bullmq";
 import { Signal, SignalEvents, SignalSchema } from "@cryptuoso/robot-events";
+import { Event } from "@cryptuoso/events";
+import { OrderStatus, TradeAction } from "@cryptuoso/market";
 
 export type UserRobotRunnerServiceConfig = HTTPServiceConfig;
 
 export default class UserRobotRunnerService extends HTTPService {
-    #robotJobRetries = 3;
+    #userRobotJobRetries = 3;
     constructor(config?: UserRobotRunnerServiceConfig) {
         super(config);
         try {
@@ -34,7 +39,7 @@ export default class UserRobotRunnerService extends HTTPService {
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     inputSchema: {
-                        id: "string"
+                        id: "uuid"
                     },
                     handler: this._httpHandler.bind(this, this.start.bind(this))
                 },
@@ -42,28 +47,31 @@ export default class UserRobotRunnerService extends HTTPService {
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     inputSchema: {
-                        id: "string"
+                        id: "uuid"
                     },
                     handler: this._httpHandler.bind(this, this.stop.bind(this))
-                }
-                /* TODO
+                },
                 pause: {
                     auth: true,
-                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
+                    roles: [UserRoles.manager, UserRoles.admin],
                     inputSchema: {
-                        id: "string"
+                        id: { type: "uuid", optional: true },
+                        userExAccId: { type: "uuid", optional: true },
+                        exchange: { type: "string", optional: true },
+                        message: { type: "string", optional: true }
                     },
                     handler: this._httpHandler.bind(this, this.pause.bind(this))
-                } */
-                /* TODO
+                },
                 resume: {
                     auth: true,
-                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
+                    roles: [UserRoles.manager, UserRoles.admin],
                     inputSchema: {
-                        id: "string"
+                        id: { type: "uuid", optional: true },
+                        userExAccId: { type: "uuid", optional: true },
+                        exchange: { type: "string", optional: true }
                     },
                     handler: this._httpHandler.bind(this, this.resume.bind(this))
-                } */
+                }
             });
             this.events.subscribe({
                 [`${USER_ROBOT_WORKER_TOPIC}.*`]: {
@@ -222,16 +230,20 @@ export default class UserRobotRunnerService extends HTTPService {
             );
         if (userExchangeAccount.status !== UserExchangeAccStatus.enabled)
             throw new ActionsHandlerError(
-                `User Exchange Account ${userExchangeAccount.name} is not enabled.`,
+                `Something went wrong with your User Exchange Account ${userExchangeAccount.name}. Please check and update your exchange API keys.`,
                 null,
                 "FORBIDDEN",
                 403
             );
 
-        /* TODO: 
         if (userRobot.status === UserRobotStatus.paused) {
-            return this.resumeRobot(user, { id });
-        } */
+            throw new ActionsHandlerError(
+                `Something went wrong with your robot. It will be started automatically when everything is fixed.`,
+                null,
+                "FORBIDDEN",
+                403
+            );
+        }
 
         await this.db.pg.query(sql`
         UPDATE user_robots 
@@ -270,11 +282,26 @@ export default class UserRobotRunnerService extends HTTPService {
                 403
             );
 
+        if (userRobot.status === UserRobotStatus.paused) {
+            throw new ActionsHandlerError(
+                `Something went wrong with your robot. It will be started automatically when everything is fixed.`,
+                null,
+                "FORBIDDEN",
+                403
+            );
+        }
+
         if (userRobot.status === UserRobotStatus.stopped || userRobot.status === UserRobotStatus.stopping) {
             return userRobot.status;
         }
 
-        //TODO: Checks and job
+        await this.addUserRobotJob(
+            {
+                userRobotId: id,
+                type: UserRobotJobType.stop
+            },
+            userRobot.status
+        );
 
         await this.db.pg.query(sql`
         UPDATE user_robots 
@@ -286,24 +313,188 @@ export default class UserRobotRunnerService extends HTTPService {
         return UserRobotStatus.stopped;
     }
 
+    async pause({
+        id,
+        userExAccId,
+        exchange,
+        message
+    }: {
+        id?: string;
+        userExAccId?: string;
+        exchange?: string;
+        message?: string;
+    }) {
+        let userRobotsToPause: { id: string; status: UserRobotStatus }[] = [];
+        if (id) {
+            const userRobot = await this.db.pg.maybeOne<{ id: string; status: UserRobotStatus }>(sql`
+            SELECT id, status 
+              FROM user_robots 
+              WHERE id = ${id}
+                and status = ${UserRobotStatus.started};
+            `);
+            if (userRobot) userRobotsToPause.push(userRobot);
+        } else if (userExAccId) {
+            const userRobots = await this.db.pg.any<{ id: string; status: UserRobotStatus }>(sql`
+            SELECT id, status
+             FROM user_robots
+            WHERE user_ex_acc_id = ${userExAccId}
+              AND status = ${UserRobotStatus.started};
+            `);
+            userRobotsToPause = [...userRobots];
+        } else if (exchange) {
+            const userRobots = await this.db.pg.any<{ id: string; status: UserRobotStatus }>(sql`
+            SELECT ur.id, ur.status
+             FROM user_robots ur, robots r
+            WHERE ur.robot_id = r.id
+              AND r.exchange = ${exchange}
+              AND ur.status = ${UserRobotStatus.started};
+            `);
+            userRobotsToPause = [...userRobots];
+        } else throw new Error("No User Robots id, userExAccId or exchange was specified");
+
+        await Promise.all(
+            userRobotsToPause.map(async ({ id, status }) =>
+                this.addUserRobotJob(
+                    {
+                        userRobotId: id,
+                        type: UserRobotJobType.pause,
+                        data: {
+                            message
+                        }
+                    },
+                    status
+                )
+            )
+        );
+
+        return userRobotsToPause.length;
+    }
+
+    async resume({ id, userExAccId, exchange }: { id?: string; userExAccId?: string; exchange?: string }) {
+        let userRobotsToResume: { id: string }[] = [];
+        if (id) {
+            const userRobot = await this.db.pg.maybeOne<{ id: string }>(sql`
+            SELECT id 
+              FROM user_robots 
+              WHERE id = ${id}
+                and status = ${UserRobotStatus.paused};
+            `);
+            if (userRobot) userRobotsToResume.push(userRobot);
+        } else if (userExAccId) {
+            const userRobots = await this.db.pg.any<{ id: string }>(sql`
+            SELECT id
+             FROM user_robots
+            WHERE user_ex_acc_id = ${userExAccId}
+              AND status = ${UserRobotStatus.paused};
+            `);
+            userRobotsToResume = [...userRobots];
+        } else if (exchange) {
+            const userRobots = await this.db.pg.any<{ id: string }>(sql`
+            SELECT ur.id
+             FROM user_robots ur, robots r
+            WHERE ur.robot_id = r.id
+              AND r.exchange = ${exchange}
+              AND ur.status = ${UserRobotStatus.paused};
+            `);
+            userRobotsToResume = [...userRobots];
+        } else throw new Error("No User Robots id, userExAccId or exchange was specified");
+
+        for (const { id } of userRobotsToResume) {
+            await this.db.pg.query(sql`
+            UPDATE user_robots 
+            SET status = ${UserRobotStatus.started},
+            message = null
+            WHERE id = ${id};
+            `);
+        }
+
+        return userRobotsToResume.length;
+    }
+
+    #saveUserRobotHistory = async (userRobotId: string, type: string, data: { [key: string]: any }) =>
+        this.db.pg.query(sql`
+            INSERT INTO user_robot_history
+            (user_robot_id, type, data) 
+            VALUES (${userRobotId}, ${type}, ${JSON.stringify(data) || null})
+        `);
+
     async handleUserRobotWorkerEvents(event: Event) {
-        //TODO
+        const { userRobotId } = event.data as { userRobotId: string };
+
+        const type = event.type.replace("com.cryptuoso.", "");
+        const historyType = type.replace(`${USER_ROBOT_WORKER_TOPIC}.`, "");
+        this.log.info(`User Robot's #${userRobotId} ${historyType} event`, JSON.stringify(event.data));
+        await this.#saveUserRobotHistory(userRobotId, historyType, event.data);
     }
 
     async handleSignalTradeEvents(signal: Signal) {
-        //TODO
+        const { id, robotId } = signal;
+        const userRobots = await this.db.pg.any<{ id: string; status: UserRobotStatus }>(
+            sql`
+            SELECT id, status 
+             FROM user_robots
+            WHERE robot_id = ${robotId}
+             AND status IN (${UserRobotStatus.started}, ${UserRobotStatus.paused});
+            `
+        );
+        this.log.info(`New signal #${id} from robot #${robotId} required by ${userRobots.length}`);
+        await Promise.all(
+            userRobots.map(async ({ id, status }) =>
+                this.addUserRobotJob(
+                    {
+                        userRobotId: id,
+                        type: UserRobotJobType.signal,
+                        data: signal
+                    },
+                    status
+                )
+            )
+        );
     }
 
-    async handleOrderStatus(order: OrdersStatusEvent) {
-        //TODO
+    async handleOrderStatus(event: OrdersStatusEvent) {
+        this.log.info(`New ${ConnectorWorkerEvents.ORDER_STATUS} event for User Robot #${event.userRobotId}`);
+        const userRobot = await this.db.pg.one<{ id: string; status: UserRobotStatus }>(sql`
+         SELECT id, status
+          FROM user_robots
+         WHERE id = ${event.userRobotId};
+        `);
+        await this.addUserRobotJob(
+            {
+                userRobotId: userRobot.id,
+                type: UserRobotJobType.order,
+                data: {
+                    orderId: event.orderId
+                }
+            },
+            userRobot.status
+        );
     }
 
-    async handleOrderError(order: OrdersErrorEvent) {
-        //TODO
+    async handleOrderError(event: OrdersErrorEvent) {
+        this.log.info(
+            `New ${ConnectorWorkerEvents.ORDER_ERROR} event for User Robot #${event.userRobotId}. Order #${event.orderId} is invalid - ${event.error}`
+        );
+        await this.pause({
+            id: event.userRobotId,
+            message: `Order #${event.orderId} error - ${event.error}. Please contact support.`
+        });
     }
 
     async handleUserExAccError(event: UserExchangeAccountErrorEvent) {
-        //TODO
+        this.log.error(
+            `New ${ConnectorWorkerEvents.USER_EX_ACC_ERROR} event. User exchange account #${event.userExAccId} is invalid - ${event.userExAccId} Pausing user robots...`
+        );
+        const userExAcc = await this.db.pg.one<{ id: string; name: string }>(sql`
+           SELECT id, name
+            FROM user_exchange_accs
+           WHERE id = ${event.userExAccId};
+          `);
+
+        await this.pause({
+            userExAccId: event.userExAccId,
+            message: `Exchange Account #${userExAcc.name} error - ${event.error}. Please check and update your exchange API Keys or contact support.`
+        });
     }
 
     async process(job: Job) {
@@ -321,17 +512,59 @@ export default class UserRobotRunnerService extends HTTPService {
 
     async checkIdleUserRobotJobs() {
         try {
-            //TODO
+            const userRobotWithJobs = await this.db.pg.any<{ userRobotId: string }>(sql`
+            SELECT distinct user_robot_id
+             FROM user_robot_jobs urj, user_robots ur
+            WHERE urj.user_robot_id = ur.id
+             AND ur.status NOT IN (${UserRobotStatus.paused},${UserRobotStatus.stopped})
+             AND (urj.retries is null OR urj.retries < ${this.#userRobotJobRetries})
+             AND urj.updated_at < ${dayjs.utc().add(-30, "second").toISOString()}
+            `);
+
+            await Promise.all(
+                userRobotWithJobs.map(async ({ userRobotId }) => this.checkAndQueueUserRobotJob(userRobotId))
+            );
         } catch (err) {
-            this.log.error("Failed to idle user robot jobs", err);
+            this.log.error("Failed to check idle user robot jobs", err);
         }
     }
 
     async checkIdleUserOrders() {
         try {
-            //TODO
+            const idleOrders = await this.db.pg.any<{
+                orderId: string;
+                userRobotId: string;
+                status: UserRobotStatus;
+            }>(sql`
+            SELECT uo.id as order_id, uo.user_robot_id, ur.status 
+              FROM user_orders uo, user_positions up, user_robots ur
+             WHERE uo.user_robot_id = ur.id
+               AND uo.user_position_id = up.id
+               AND uo.status IN (${OrderStatus.closed}, ${OrderStatus.canceled})
+               AND ((up.entry_status IN (${UserPositionOrderStatus.new}, ${UserPositionOrderStatus.open})
+               AND uo.action IN (${TradeAction.long}, ${TradeAction.short}))
+                OR (up.exit_status IN (${UserPositionOrderStatus.new}, ${UserPositionOrderStatus.open})
+               AND uo.action IN (${TradeAction.closeLong}, ${TradeAction.closeShort})))
+              AND up.status NOT IN (${UserPositionStatus.closed}, ${UserPositionStatus.closedAuto}, 
+                                    ${UserPositionStatus.canceled})
+              AND up.position_id IS NOT NULL
+              AND ur.status in (${UserRobotStatus.started},${UserRobotStatus.stopping})
+              AND uo.updated_at < ${dayjs.utc().add(-30, "second").toISOString()};
+            `);
+            for (const idleOrder of idleOrders) {
+                await this.addUserRobotJob(
+                    {
+                        userRobotId: idleOrder.userRobotId,
+                        type: UserRobotJobType.order,
+                        data: {
+                            orderId: idleOrder.orderId
+                        }
+                    },
+                    idleOrder.status
+                );
+            }
         } catch (err) {
-            this.log.error("Failed to idle user orders", err);
+            this.log.error("Failed to check idle user orders", err);
         }
     }
 }

@@ -144,10 +144,12 @@ export const enum UserRobotJobType {
 }
 
 export interface UserRobotJob {
-    id: string;
+    id?: string;
     userRobotId: string;
     type: UserRobotJobType;
     data?: SignalEvent | { orderId: string } | { message?: string };
+    retries?: number;
+    error?: string;
 }
 
 interface UserRobotEventData extends GenericObject<any> {
