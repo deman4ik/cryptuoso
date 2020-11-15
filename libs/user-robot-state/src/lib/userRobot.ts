@@ -3,20 +3,23 @@ import { v4 as uuid } from "uuid";
 import dayjs from "@cryptuoso/dayjs";
 import {
     TradeSettings,
+    UserPositionDB,
     UserPositionState,
     UserPositionStatus,
     UserRobotCurrentSettings,
+    UserRobotDB,
     UserRobotInternalState,
     UserRobotState,
-    UserRobotStatus
+    UserRobotStatus,
+    UserTradeEvent
 } from "./types";
 import { Order, PositionDirection, SignalEvent, TradeAction, ValidTimeframe } from "@cryptuoso/market";
 import { flattenArray, GenericObject } from "@cryptuoso/helpers";
-import { NewEvent } from "@cryptuoso/events";
+import { OrdersStatusEvent } from "@cryptuoso/connector-events";
 import { BaseError } from "@cryptuoso/errors";
-import { UserRobotWorkerEvents } from "@cryptuoso/user-robot-events";
+import { ConnectorJob } from "@cryptuoso/connector-state";
 
-class UserRobot {
+export class UserRobot {
     _id: string;
     _userExAccId: string;
     _userId: string;
@@ -32,7 +35,6 @@ class UserRobot {
     _timeframe: ValidTimeframe;
     _tradeSettings: TradeSettings;
     _positions: GenericObject<UserPosition>;
-    _eventsToSend: NewEvent<any>[];
     _message?: string;
 
     constructor(state: UserRobotState) {
@@ -53,7 +55,6 @@ class UserRobot {
         this._internalState = state.internalState || {};
         this._positions = {}; // key -> positionId not id
         this._setPositions(state.positions);
-        this._eventsToSend = [];
     }
 
     get id() {
@@ -64,30 +65,36 @@ class UserRobot {
         return this._status;
     }
 
-    get state() {
-        const positions = Object.values(this._positions);
+    get message() {
+        return this._message;
+    }
+
+    get state(): UserRobotDB {
         return {
-            userRobot: {
-                id: this._id,
-                userExAccId: this._userExAccId,
-                userId: this._userId,
-                robotId: this._robotId,
-                settings: this._settings,
-                internalState: this._internalState,
-                status: this._status,
-                startedAt: this._startedAt,
-                stoppedAt: this._stoppedAt
-            },
-            positions: positions.map((pos) => pos.state),
-            ordersToCreate: flattenArray(positions.map((pos) => pos.ordersToCreate)),
-            connectorJobs: flattenArray(positions.map((pos) => pos.connectorJobs)),
-            recentTrades: positions.filter((pos) => pos.hasRecentTrade).map((pos) => pos.tradeEvent),
-            eventsToSend: this._eventsToSend
+            id: this._id,
+            userExAccId: this._userExAccId,
+            userId: this._userId,
+            robotId: this._robotId,
+            internalState: this._internalState,
+            status: this._status,
+            startedAt: this._startedAt,
+            stoppedAt: this._stoppedAt,
+            message: this._message
         };
     }
 
-    get positions() {
+    get positions(): UserPositionDB[] {
         return Object.values(this._positions).map((pos) => pos.state);
+    }
+
+    get ordersToCreate(): Order[] {
+        return flattenArray(Object.values(this._positions).map((pos) => pos.ordersToCreate));
+    }
+
+    get recentTrades(): UserTradeEvent[] {
+        return Object.values(this._positions)
+            .filter((pos) => pos.hasRecentTrade)
+            .map((pos) => pos.tradeEvent);
     }
 
     get hasActivePositions() {
@@ -108,6 +115,10 @@ class UserRobot {
                 (pos) => pos.status === UserPositionStatus.closed || pos.status === UserPositionStatus.closedAuto
             ).length > 0
         );
+    }
+
+    get connectorJobs(): ConnectorJob[] {
+        return flattenArray(Object.values(this._positions).map((pos) => pos.connectorJobs));
     }
 
     _setPositions(positions: UserPositionState[]) {
@@ -151,27 +162,11 @@ class UserRobot {
     setStop() {
         this._status = UserRobotStatus.stopped;
         this._stoppedAt = dayjs.utc().toISOString();
-        this._eventsToSend.push({
-            type: UserRobotWorkerEvents.STOPPED,
-            data: {
-                userRobotId: this._id,
-                status: this._status,
-                message: this._message
-            }
-        });
     }
 
     pause({ message }: { message?: string } = { message: null }) {
         this._status = UserRobotStatus.paused;
         this._message = message || null;
-        this._eventsToSend.push({
-            type: UserRobotWorkerEvents.PAUSED,
-            data: {
-                userRobotId: this._id,
-                status: this._status,
-                message: this._message
-            }
-        });
     }
 
     handleSignal(signal: SignalEvent) {
@@ -318,7 +313,7 @@ class UserRobot {
             });
     }
 
-    handleOrder(order: Order) {
+    handleOrder(order: OrdersStatusEvent) {
         if (order.userRobotId !== this._id)
             throw new BaseError(
                 "Wrong user robot id",
@@ -340,10 +335,7 @@ class UserRobot {
                 "ERR_NOT_FOUND"
             );
 
-        // this._positions[order.positionId].handleOrder(order);
         position.executeJob();
         this.handleDelayedPositions();
     }
 }
-
-export = UserRobot;

@@ -1,5 +1,8 @@
 import { GenericObject } from "@cryptuoso/helpers";
 import { Order, PositionDirection, SignalEvent, TradeAction, ValidTimeframe } from "@cryptuoso/market";
+import { UserRobotSettings } from "@cryptuoso/robot-settings";
+import { UserMarketState } from "@cryptuoso/market";
+import { OrdersStatusEvent } from "@cryptuoso/connector-events";
 
 export const enum UserPositionStatus {
     delayed = "delayed",
@@ -132,7 +135,9 @@ export interface UserRobotState extends UserRobotDB {
     currency: string;
     timeframe: ValidTimeframe;
     tradeSettings: TradeSettings;
-    settings: UserRobotCurrentSettings;
+    limits?: UserMarketState["limits"]["userRobot"];
+    settings?: UserRobotCurrentSettings;
+    userRobotSettings?: UserRobotSettings;
     positions: UserPositionState[];
 }
 
@@ -147,7 +152,7 @@ export interface UserRobotJob {
     id?: string;
     userRobotId: string;
     type: UserRobotJobType;
-    data?: SignalEvent | { orderId: string } | { message?: string };
+    data?: SignalEvent | OrdersStatusEvent | { message?: string };
     retries?: number;
     error?: string;
 }

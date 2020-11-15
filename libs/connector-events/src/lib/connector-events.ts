@@ -50,6 +50,8 @@ export interface OrdersStatusEvent {
     orderId: string;
     userExAccId: string;
     userRobotId: string;
+    userPositionId: string;
+    positionId?: string;
     status: OrderStatus;
 }
 

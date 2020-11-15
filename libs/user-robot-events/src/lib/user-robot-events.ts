@@ -167,3 +167,15 @@ export const UserTradeSchema = {
         }
     }
 };
+
+export interface UserRobotWorkerError {
+    [key: string]: any;
+    userRobotId: string;
+    error: string;
+}
+
+export interface UserRobotWorkerStatus {
+    [key: string]: any;
+    userRobotId: string;
+    status: string;
+}

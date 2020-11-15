@@ -1,4 +1,4 @@
-import UserRobot from "../lib/userRobot";
+import { UserRobot } from "../lib/userRobot";
 import { v4 as uuid } from "uuid";
 import dayjs from "@cryptuoso/dayjs";
 import {

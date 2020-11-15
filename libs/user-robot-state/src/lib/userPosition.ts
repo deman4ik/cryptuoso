@@ -13,8 +13,8 @@ import {
     TradeInfo,
     ValidTimeframe
 } from "@cryptuoso/market";
-import { UserTradeEvent } from "./types";
 import {
+    UserTradeEvent,
     UserPositionState,
     TradeSettings,
     UserPositionInternalState,

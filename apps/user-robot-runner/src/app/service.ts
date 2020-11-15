@@ -12,7 +12,7 @@ import {
     UserRobotRunnerJobType,
     UserRobotStatus
 } from "@cryptuoso/user-robot-state";
-import { USER_ROBOT_WORKER_TOPIC } from "@cryptuoso/user-robot-events";
+import { UserRobotWorkerEvents, UserRobotWorkerStatus, USER_ROBOT_WORKER_TOPIC } from "@cryptuoso/user-robot-events";
 import {
     ConnectorWorkerEvents,
     ConnectorWorkerSchema,
@@ -256,6 +256,15 @@ export default class UserRobotRunnerService extends HTTPService {
         WHERE id = ${id};
         `);
 
+        await this.events.emit<UserRobotWorkerStatus>({
+            type: UserRobotWorkerEvents.STARTED,
+            data: {
+                userRobotId: id,
+                status: UserRobotStatus.started,
+                message: null
+            }
+        });
+
         return UserRobotStatus.started;
     }
 
@@ -463,9 +472,7 @@ export default class UserRobotRunnerService extends HTTPService {
             {
                 userRobotId: userRobot.id,
                 type: UserRobotJobType.order,
-                data: {
-                    orderId: event.orderId
-                }
+                data: event
             },
             userRobot.status
         );
@@ -531,12 +538,9 @@ export default class UserRobotRunnerService extends HTTPService {
 
     async checkIdleUserOrders() {
         try {
-            const idleOrders = await this.db.pg.any<{
-                orderId: string;
-                userRobotId: string;
-                status: UserRobotStatus;
-            }>(sql`
-            SELECT uo.id as order_id, uo.user_robot_id, ur.status 
+            const idleOrders = await this.db.pg.any<OrdersStatusEvent & { userRobotStatus: UserRobotStatus }>(sql`
+            SELECT uo.id as order_id, uo.user_ex_acc_id, uo.user_robot_id, uo.user_position_id, uo.position_id, uo.status,
+                   ur.status as user_robot_status
               FROM user_orders uo, user_positions up, user_robots ur
              WHERE uo.user_robot_id = ur.id
                AND uo.user_position_id = up.id
@@ -557,10 +561,15 @@ export default class UserRobotRunnerService extends HTTPService {
                         userRobotId: idleOrder.userRobotId,
                         type: UserRobotJobType.order,
                         data: {
-                            orderId: idleOrder.orderId
+                            orderId: idleOrder.orderId,
+                            userExAccId: idleOrder.userExAccId,
+                            userRobotId: idleOrder.userRobotId,
+                            userPositionId: idleOrder.userPositionId,
+                            positionId: idleOrder.positionId,
+                            status: idleOrder.status
                         }
                     },
-                    idleOrder.status
+                    idleOrder.userRobotStatus
                 );
             }
         } catch (err) {
