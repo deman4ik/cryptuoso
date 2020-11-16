@@ -79,7 +79,6 @@ export default class RobotRunnerService extends HTTPService {
     }
 
     async onServiceStart() {
-        // Main robot jobs
         this.createQueue(Queues.robot);
 
         this.createQueue(Queues.robotRunner);
@@ -235,7 +234,7 @@ export default class RobotRunnerService extends HTTPService {
             if (robotsExists && Array.isArray(robotsExists) && robotsExists.length > 0) {
                 const haveSameSettings = robotsExists.find((r) => equals(strategySettings, r.strategySettings));
                 if (haveSameSettings) continue;
-                const lastRobot = robotsExists.sort((a, b) =>
+                const lastRobot = [...robotsExists].sort((a, b) =>
                     sortDesc(dayjs.utc(a.createdAt).valueOf(), dayjs.utc(b.createdAt).valueOf())
                 )[robotsExists.length - 1];
                 const tryNumMod = +lastRobot.mod;
@@ -635,8 +634,9 @@ export default class RobotRunnerService extends HTTPService {
     }
 
     async checkIdleRobotJobs() {
-        const robotsWithJobs = await this.db.pg.any<{ robotId: string }>(sql`
-        SELECT distinct robot_id 
+        try {
+            const robotsWithJobs = await this.db.pg.any<{ robotId: string }>(sql`
+        SELECT distinct rj.robot_id 
         FROM robot_jobs rj, robots r
         WHERE rj.robot_id = r.id 
         AND r.status = ${RobotStatus.started}
@@ -644,8 +644,11 @@ export default class RobotRunnerService extends HTTPService {
         AND rj.updated_at < ${dayjs.utc().add(-1, "minute").toISOString()}
         `);
 
-        if (robotsWithJobs && Array.isArray(robotsWithJobs) && robotsWithJobs.length) {
-            await Promise.all(robotsWithJobs.map(async ({ robotId }) => this.checkAndQueueRobotJob(robotId)));
+            if (robotsWithJobs && Array.isArray(robotsWithJobs) && robotsWithJobs.length) {
+                await Promise.all(robotsWithJobs.map(async ({ robotId }) => this.checkAndQueueRobotJob(robotId)));
+            }
+        } catch (err) {
+            this.log.error("Failed to idle robot jobs", err);
         }
     }
 

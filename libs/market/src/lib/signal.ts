@@ -6,10 +6,13 @@ export const enum SignalType {
     trade = "trade"
 }
 
-export interface AlertInfo {
+export interface TradeInfo {
     action: TradeAction;
     orderType: OrderType;
     price?: number;
+}
+
+export interface AlertInfo extends TradeInfo {
     candleTimestamp: string;
 }
 

@@ -2,6 +2,8 @@ import { Timeframe, ValidTimeframe, TradeAction, OrderType, SignalInfo, SignalTy
 import { CANDLES_RECENT_AMOUNT, ISO_DATE_REGEX } from "@cryptuoso/helpers";
 import { RobotSettings, RobotSettingsSchema, StrategySettings } from "@cryptuoso/robot-settings";
 
+export const ROBOT_RUNNER_TOPIC = "in-robot-runner";
+
 export const enum RobotRunnerEvents {
     CREATE = "in-robot-runner.create",
     START = "in-robot-runner.start",
@@ -33,17 +35,17 @@ const SignalsSchema = {
     exchange: "string",
     asset: "string",
     currency: "string",
-    timeframe: { type: "number", enum: Timeframe.validArray },
+    timeframe: { type: "enum", values: Timeframe.validArray },
     timestamp: {
         type: "string",
         pattern: ISO_DATE_REGEX,
         optional: true
     },
     action: {
-        type: "string",
-        enum: [TradeAction.long, TradeAction.short, TradeAction.closeLong, TradeAction.closeShort]
+        type: "enum",
+        values: [TradeAction.long, TradeAction.short, TradeAction.closeLong, TradeAction.closeShort]
     },
-    orderType: { type: "string", enum: [OrderType.stop, OrderType.limit, OrderType.market] },
+    orderType: { type: "enum", values: [OrderType.stop, OrderType.limit, OrderType.market] },
     price: { type: "number" },
     candleTimestamp: {
         type: "string",
@@ -82,8 +84,8 @@ export const RobotRunnerSchema = {
                         type: "string"
                     },
                     timeframe: {
-                        type: "number",
-                        enum: Timeframe.validArray
+                        type: "enum",
+                        values: Timeframe.validArray
                     },
                     strategy: {
                         type: "string"

@@ -1,6 +1,14 @@
 import { Job } from "bullmq";
 import requireFromString from "require-from-string";
-import { Robot, RobotJob, RobotJobType, RobotPositionState, RobotState, RobotStatus } from "@cryptuoso/robot-state";
+import {
+    Queues,
+    Robot,
+    RobotJob,
+    RobotJobType,
+    RobotPositionState,
+    RobotState,
+    RobotStatus
+} from "@cryptuoso/robot-state";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import { DatabaseTransactionConnectionType, sql } from "slonik";
 import { Candle, DBCandle, Timeframe, ValidTimeframe } from "@cryptuoso/market";
@@ -8,6 +16,7 @@ import { sortAsc } from "@cryptuoso/helpers";
 import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
 import { RobotWorkerError, RobotWorkerEvents } from "@cryptuoso/robot-events";
 import dayjs from "dayjs";
+import { BaseError } from "@cryptuoso/errors";
 
 export type RobotWorkerServiceConfig = BaseServiceConfig;
 
@@ -36,7 +45,7 @@ export default class RobotWorkerService extends BaseService {
     async onServiceStart(): Promise<void> {
         await this.loadCode();
 
-        this.createWorker("robot", this.process);
+        this.createWorker(Queues.robot, this.process);
     }
 
     async loadCode() {
@@ -196,7 +205,7 @@ export default class RobotWorkerService extends BaseService {
 
     async run(job: RobotJob): Promise<RobotStatus> {
         const { id, robotId, type } = job;
-        this.log.info(`Robot #${robotId} - Processing ${type} job (${id})...`);
+        this.log.info(`Robot #${robotId} - Processing ${type} job...`);
         try {
             const robotState = await this.db.pg.one<RobotState>(sql`
              SELECT r.id, 
@@ -271,7 +280,7 @@ export default class RobotWorkerService extends BaseService {
                 }
             } else if (type === RobotJobType.stop) {
                 robot.stop();
-            }
+            } else throw new BaseError(`Unknown robot job type "${type}"`, job);
 
             await this.db.pg.transaction(async (t) => {
                 if (robot.positionsToSave.length > 0) {
@@ -307,7 +316,7 @@ export default class RobotWorkerService extends BaseService {
                         error = ${err.message}
                     WHERE id = ${job.id};`);
             } catch (e) {
-                this.log.error(`Failed to update robot's #${robotId} failed job status`);
+                this.log.error(`Failed to update robot's #${robotId} failed job status`, e);
             }
 
             if (job.retries >= this.#jobRetries) {

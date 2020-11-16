@@ -298,6 +298,8 @@ export default class ConnectorRunnerService extends BaseService {
                         orderId: order.id,
                         userExAccId: order.userExAccId,
                         userRobotId: order.userRobotId,
+                        userPositionId: order.userPositionId,
+                        positionId: order.positionId,
                         status: order.status,
                         error: order.error
                     }
@@ -309,6 +311,8 @@ export default class ConnectorRunnerService extends BaseService {
                         orderId: order.id,
                         userExAccId: order.userExAccId,
                         userRobotId: order.userRobotId,
+                        userPositionId: order.userPositionId,
+                        positionId: order.positionId,
                         status: order.status
                     }
                 });
