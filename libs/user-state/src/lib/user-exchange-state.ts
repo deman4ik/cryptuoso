@@ -19,7 +19,8 @@ export interface UserExchangeKeys {
 }
 
 export interface UserExchangeAccBalances {
-    balances: Balances;
+    info: Balances;
+    totalUSD: number;
     updatedAt: string;
 }
 

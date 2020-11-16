@@ -135,9 +135,10 @@ export interface UserRobotState extends UserRobotDB {
     currency: string;
     timeframe: ValidTimeframe;
     tradeSettings: TradeSettings;
-    limits?: UserMarketState["limits"]["userRobot"];
+    currentPrice: number;
+    limits: UserMarketState["limits"]["userRobot"];
     settings?: UserRobotCurrentSettings;
-    userRobotSettings?: UserRobotSettings;
+    userRobotSettings: UserRobotSettings;
     positions: UserPositionState[];
 }
 

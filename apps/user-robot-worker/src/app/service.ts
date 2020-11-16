@@ -18,6 +18,7 @@ import { BaseError } from "@cryptuoso/errors";
 import { NewEvent } from "@cryptuoso/events";
 import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
 import { DatabaseTransactionConnectionType } from "slonik";
+import { calcAssetDynamicDelta, calcCurrencyDynamic, VolumeSettingsType } from "@cryptuoso/robot-settings";
 
 export type UserRobotRunnerServiceConfig = BaseServiceConfig;
 
@@ -85,6 +86,7 @@ export default class UserRobotRunnerService extends BaseService {
            r.asset,
            r.currency,
            r.timeframe,
+           m.current_price,
            m.limits->'userRobot' as limits,
            m.trade_settings,
            urs.user_robot_settings,
@@ -120,9 +122,30 @@ WHERE p.user_robot_id = ur.id
       AND ur.id = ${userRobotId};                   
   `);
 
-    getCurrentVolume() {
-        //TODO
-    }
+    #getCurrentVolume = async (state: UserRobotState) => {
+        const { userRobotSettings } = state;
+
+        if (userRobotSettings.volumeType === VolumeSettingsType.assetStatic) {
+            return { volume: userRobotSettings.volume };
+        } else if (userRobotSettings.volumeType === VolumeSettingsType.currencyDynamic) {
+            const { volumeInCurrency } = userRobotSettings;
+            return { volume: calcCurrencyDynamic(volumeInCurrency, state.currentPrice) };
+        } else if (userRobotSettings.volumeType === VolumeSettingsType.assetDynamicDelta) {
+            const { initialVolume, delta } = userRobotSettings;
+
+            const stats = await this.db.pg.maybeOne<{ netProfit: number }>(sql`
+            SELECT net_profit 
+              FROM v_user_robot_stats
+             WHERE user_robot_id = ${state.id}; 
+            `);
+
+            return { volume: calcAssetDynamicDelta(initialVolume, delta, stats?.netProfit) };
+        } else if (userRobotSettings.volumeType === VolumeSettingsType.balancePercent) {
+            const { balancePercent } = userRobotSettings;
+            //TODO
+            return { volume: state.limits.min.amount };
+        } else throw new BaseError("Unknown volume type", userRobotSettings);
+    };
 
     #savePositions = async (transaction: DatabaseTransactionConnectionType, positions: UserPositionDB[]) => {
         for (const p of positions) {
@@ -239,9 +262,9 @@ WHERE p.user_robot_id = ur.id
         try {
             const userRobotState = await this.#getUserRobotState(userRobotId);
 
-            //TODO: getCurrentVolume
+            const settings = await this.#getCurrentVolume(userRobotState);
 
-            const userRobot = new UserRobot({ ...userRobotState });
+            const userRobot = new UserRobot({ ...userRobotState, settings });
             const eventsToSend: NewEvent<any>[] = [];
             if (type === UserRobotJobType.signal) {
                 userRobot.handleSignal(data as SignalEvent);

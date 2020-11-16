@@ -11,6 +11,7 @@ import { UserExchangeAccBalances, UserExchangeAccount } from "@cryptuoso/user-st
 import { Priority } from "@cryptuoso/connector-state";
 
 export class PrivateConnector {
+    exchange: string;
     log: Logger;
     #orderCheckTimeout = 5;
     connector: Exchange;
@@ -150,26 +151,7 @@ export class PrivateConnector {
                 connector = new ccxt.binance(config);
             } else throw new Error("Unsupported exchange");
 
-            const getBalanceCall = async (bail: (e: Error) => void) => {
-                try {
-                    return await connector.fetchBalance();
-                } catch (e) {
-                    if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) throw e;
-                    bail(e);
-                }
-            };
-            let balances: ccxt.Balances;
-            try {
-                balances = await retry(getBalanceCall, this.retryOptions);
-                if (!balances && !balances.info)
-                    throw new BaseError(
-                        "Wrong response from exchange while checking balance",
-                        balances,
-                        "WRONG_RESPONSE"
-                    );
-            } catch (err) {
-                throw Error(`Failed to check balance. ${PrivateConnector.getErrorMessage(err)}`);
-            }
+            const balances = await this.getBalances(connector, exchange);
             const asset = "BTC";
             const currency = exchange === "binance_futures" ? "USDT" : "USD";
             const market = await pg.one<{ limits: Market["limits"] }>(sql`SELECT limits 
@@ -243,7 +225,7 @@ export class PrivateConnector {
                     } order manualy.`
                 );
             }
-            return { success: true, balances: { balances, updatedAt: dayjs.utc().toISOString() } };
+            return { success: true, balances };
         } catch (err) {
             this.log.warn(err);
 
@@ -278,7 +260,7 @@ export class PrivateConnector {
                 return this.milliseconds();
             }
         };
-
+        this.exchange = exchange;
         if (exchange === "kraken") {
             this.connector = new ccxt.kraken(config);
         } else if (exchange === "bitfinex") {
@@ -299,10 +281,56 @@ export class PrivateConnector {
         } else throw new Error("Unsupported exchange");
     }
 
-    async getBalances(): Promise<UserExchangeAccBalances> {
+    async calcTotalBalance(connector: Exchange, exchange: string, balances: any): Promise<UserExchangeAccBalances> {
+        if (exchange === "binance_futures") {
+            return {
+                info: balances,
+                totalUSD: balances.info.totalWalletBalance || 0,
+                updatedAt: dayjs.utc().toISOString()
+            };
+        } else if (exchange === "kraken" || exchange === "bitfinex") {
+            let USD = balances.total["USD"] || 0;
+
+            let priceBTC;
+            for (const [c, v] of Object.entries(balances.total as { [key: string]: number }).filter(
+                ([c, v]) => c !== "USD" && v
+            )) {
+                if (connector.markets[`${c}/USD`]) {
+                    const { price } = await this.getCurrentPrice(connector, exchange, c, "USD");
+                    USD += price * v;
+                } else if (connector.markets[`BTC/${c}`]) {
+                    const { price } = await this.getCurrentPrice(connector, exchange, "BTC", c);
+                    if (!priceBTC)
+                        ({ price: priceBTC } = await this.getCurrentPrice(connector, exchange, "BTC", "USD"));
+                    USD += (priceBTC / price) * v;
+                }
+            }
+            return {
+                info: balances,
+                totalUSD: USD || 0,
+                updatedAt: dayjs.utc().toISOString()
+            };
+        }
+    }
+
+    async getBalances(
+        connector: Exchange = this.connector,
+        exchange: string = this.exchange
+    ): Promise<UserExchangeAccBalances> {
+        const call = async (bail: (e: Error) => void) => {
+            try {
+                return connector.loadMarkets();
+            } catch (e) {
+                if (e instanceof ccxt.NetworkError) throw e;
+                bail(e);
+            }
+        };
+        await retry(call, this.retryOptions);
+        let params = {};
+        if (exchange === "bitfinex") params = { type: "margin" };
         const getBalanceCall = async (bail: (e: Error) => void) => {
             try {
-                return await this.connector.fetchBalance();
+                return await connector.fetchBalance(params);
             } catch (e) {
                 if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) throw e;
                 bail(e);
@@ -312,7 +340,7 @@ export class PrivateConnector {
             const balances: ccxt.Balances = await retry(getBalanceCall, this.retryOptions);
             if (!balances && !balances.info)
                 throw new BaseError("Wrong response from exchange while checking balance", balances, "WRONG_RESPONSE");
-            return { balances, updatedAt: dayjs.utc().toISOString() };
+            return this.calcTotalBalance(connector, exchange, balances);
         } catch (err) {
             throw Error(`Failed to check balance. ${PrivateConnector.getErrorMessage(err)}`);
         }
