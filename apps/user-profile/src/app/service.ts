@@ -10,7 +10,7 @@ import {
 } from "@cryptuoso/user-state";
 import { UserSignalState /* , UserSignalSettings */ } from "@cryptuoso/user-signal-state";
 import { RobotStatus } from "@cryptuoso/robot-state";
-import { UserRobotDB } from "@cryptuoso/user-robot-state";
+import { UserRobotDB, UserRobotStatus } from "@cryptuoso/user-robot-state";
 import { UserMarketState } from "@cryptuoso/market";
 import { ActionsHandlerError } from "@cryptuoso/errors";
 import { sql } from "@cryptuoso/postgres";
@@ -953,7 +953,7 @@ export default class UserProfileService extends HTTPService {
                 403
             );
 
-        if (userRobotExists.status !== RobotStatus.stopped)
+        if (userRobotExists.status !== UserRobotStatus.stopped)
             throw new ActionsHandlerError("User Robot is not stopped", null, "FORBIDDEN", 403);
 
         await this.db.pg.query(sql`
