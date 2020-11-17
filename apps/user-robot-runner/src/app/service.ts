@@ -245,11 +245,12 @@ export default class UserRobotRunnerService extends HTTPService {
             );
         }
 
+        const startedAt = dayjs.utc().toISOString();
         await this.db.pg.query(sql`
         UPDATE user_robots 
         SET status = ${UserRobotStatus.started},
         message = null,
-        started_at = ${dayjs.utc().toISOString()},
+        started_at = ${startedAt},
         error = null,
         stopped_at = null,
         latest_signal = null
@@ -260,6 +261,7 @@ export default class UserRobotRunnerService extends HTTPService {
             type: UserRobotWorkerEvents.STARTED,
             data: {
                 userRobotId: id,
+                timestamp: startedAt,
                 status: UserRobotStatus.started,
                 message: null
             }
@@ -562,6 +564,7 @@ export default class UserRobotRunnerService extends HTTPService {
                         type: UserRobotJobType.order,
                         data: {
                             orderId: idleOrder.orderId,
+                            timestamp: idleOrder.timestamp,
                             userExAccId: idleOrder.userExAccId,
                             userRobotId: idleOrder.userRobotId,
                             userPositionId: idleOrder.userPositionId,

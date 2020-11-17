@@ -75,6 +75,7 @@ export default class ConnectorRunnerService extends BaseService {
                         type: ConnectorWorkerEvents.USER_EX_ACC_ERROR,
                         data: {
                             userExAccId: id,
+                            timestamp: dayjs.utc().toISOString(),
                             error: e.message
                         }
                     });
@@ -236,6 +237,7 @@ export default class ConnectorRunnerService extends BaseService {
                     type: ConnectorWorkerEvents.USER_EX_ACC_ERROR,
                     data: {
                         userExAccId: job.id,
+                        timestamp: dayjs.utc().toISOString(),
                         error: e.message
                     }
                 });
@@ -296,6 +298,7 @@ export default class ConnectorRunnerService extends BaseService {
                     type: ConnectorWorkerEvents.ORDER_ERROR,
                     data: {
                         orderId: order.id,
+                        timestamp: dayjs.utc().toISOString(),
                         userExAccId: order.userExAccId,
                         userRobotId: order.userRobotId,
                         userPositionId: order.userPositionId,
@@ -309,6 +312,7 @@ export default class ConnectorRunnerService extends BaseService {
                     type: ConnectorWorkerEvents.ORDER_STATUS,
                     data: {
                         orderId: order.id,
+                        timestamp: dayjs.utc().toISOString(),
                         userExAccId: order.userExAccId,
                         userRobotId: order.userRobotId,
                         userPositionId: order.userPositionId,

@@ -68,6 +68,10 @@ export class UserRobot {
         return this._message;
     }
 
+    get stoppedAt() {
+        return this._stoppedAt;
+    }
+
     get state(): UserRobotDB {
         return {
             id: this._id,

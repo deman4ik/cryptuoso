@@ -24,6 +24,7 @@ import {
     calcCurrencyDynamic,
     VolumeSettingsType
 } from "@cryptuoso/robot-settings";
+import dayjs from "@cryptuoso/dayjs";
 
 export type UserRobotRunnerServiceConfig = BaseServiceConfig;
 
@@ -296,6 +297,7 @@ WHERE p.user_robot_id = ur.id
                     type: UserRobotWorkerEvents.PAUSED,
                     data: {
                         userRobotId,
+                        timestamp: dayjs.utc().toISOString(),
                         status: UserRobotStatus.paused,
                         message: userRobot.message
                     }
@@ -308,6 +310,7 @@ WHERE p.user_robot_id = ur.id
                     type: UserRobotWorkerEvents.STOPPED,
                     data: {
                         userRobotId,
+                        timestamp: userRobot.stoppedAt,
                         status: UserRobotStatus.stopped,
                         message: userRobot.message
                     }
@@ -390,6 +393,7 @@ WHERE p.user_robot_id = ur.id
                     type: UserRobotWorkerEvents.ERROR,
                     data: {
                         userRobotId,
+                        timestamp: dayjs.utc().toISOString(),
                         error: err.message,
                         job
                     }

@@ -1,6 +1,11 @@
 import { ISO_DATE_REGEX } from "@cryptuoso/helpers";
 import { TradeAction } from "@cryptuoso/market";
-import { UserPositionOrderStatus, UserPositionStatus, UserRobotStatus } from "@cryptuoso/user-robot-state";
+import {
+    UserPositionOrderStatus,
+    UserPositionStatus,
+    UserRobotJob,
+    UserRobotStatus
+} from "@cryptuoso/user-robot-state";
 
 export const USER_ROBOT_RUNNER_TOPIC = "in-user-robot-runner";
 
@@ -46,6 +51,7 @@ export const UserRobotRunnerSchema = {
 
 const StatusSchema = {
     userRobotId: "uuid",
+    timestamp: { type: "string", pattern: ISO_DATE_REGEX },
     message: { type: "string", optional: true },
     status: { type: "enum", values: [UserRobotStatus.started, UserRobotStatus.stopped, UserRobotStatus.paused] }
 };
@@ -53,7 +59,13 @@ const StatusSchema = {
 export const UserRobotWorkerSchema = {
     [UserRobotWorkerEvents.STARTED]: StatusSchema,
     [UserRobotWorkerEvents.STOPPED]: StatusSchema,
-    [UserRobotWorkerEvents.PAUSED]: StatusSchema
+    [UserRobotWorkerEvents.PAUSED]: StatusSchema,
+    [UserRobotWorkerEvents.ERROR]: {
+        userRobotId: "uuid",
+        timestamp: { type: "string", pattern: ISO_DATE_REGEX },
+        error: "string",
+        job: { type: "object", optional: true }
+    }
 };
 
 export const UserTradeSchema = {
@@ -171,11 +183,15 @@ export const UserTradeSchema = {
 export interface UserRobotWorkerError {
     [key: string]: any;
     userRobotId: string;
+    timestamp: string;
     error: string;
+    job: UserRobotJob;
 }
 
 export interface UserRobotWorkerStatus {
     [key: string]: any;
     userRobotId: string;
-    status: string;
+    timestamp: string;
+    status: UserRobotStatus;
+    message?: string;
 }

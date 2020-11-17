@@ -24,14 +24,18 @@ export const ConnectorRunnerSchema = {
 
 const OrderSchema = {
     orderId: "uuid",
+    timestamp: { type: "string", pattern: ISO_DATE_REGEX },
     userExAccId: "uuid",
     userRobotId: "uuid",
+    userPositionId: "uuid",
+    positionId: { type: "uuid", optional: true },
     status: { type: "enum", values: ["new", "open", "closed", "canceled"] }
 };
 
 export const ConnectorWorkerSchema = {
     [ConnectorWorkerEvents.USER_EX_ACC_ERROR]: {
         userExAccId: "uuid",
+        timestamp: { type: "string", pattern: ISO_DATE_REGEX },
         error: "string"
     },
     [ConnectorWorkerEvents.ORDER_STATUS]: OrderSchema,
@@ -43,11 +47,13 @@ export const ConnectorWorkerSchema = {
 
 export interface UserExchangeAccountErrorEvent {
     userExAccId: string;
+    timestamp: string;
     error: string;
 }
 
 export interface OrdersStatusEvent {
     orderId: string;
+    timestamp: string;
     userExAccId: string;
     userRobotId: string;
     userPositionId: string;
