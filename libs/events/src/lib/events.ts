@@ -37,12 +37,9 @@ const PENDING_INTERVAL = 15000;
 const PENDING_RETRY_RATE = 30;
 const PENDING_MAX_RETRIES = 3;
 export const DEAD_LETTER_TOPIC = "dead-letter";
-export const ERRORS_TOPIC = "errors";
 
 type StreamMsgVals = string[];
 type StreamMessage = [string, StreamMsgVals];
-
-//TODO: job for deleting dead consumers
 
 export class Events {
     #log: Logger;

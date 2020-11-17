@@ -1,17 +1,17 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
-import {
-    eventsManagementConfig,
-    BASE_REDIS_PREFIX,
-    DEAD_LETTER_TOPIC,
-    ERRORS_TOPIC,
-    DeadLetter,
-    Event
-} from "@cryptuoso/events";
+import { eventsManagementConfig, BASE_REDIS_PREFIX, DEAD_LETTER_TOPIC, DeadLetter, Event } from "@cryptuoso/events";
 import { UserRoles } from "@cryptuoso/user-state";
 import { JSONParse } from "@cryptuoso/helpers";
 import dayjs from "dayjs";
 import { Job } from "bullmq";
 import { sql } from "@cryptuoso/postgres";
+import { BacktesterWorkerEvents } from "@cryptuoso/backtester-events";
+import { ConnectorWorkerEvents } from "@cryptuoso/connector-events";
+import { ExwatcherEvents } from "@cryptuoso/exwatcher-events";
+import { ImporterWorkerEvents } from "@cryptuoso/importer-events";
+import { RobotWorkerEvents } from "@cryptuoso/robot-events";
+import { StatsCalcWorkerEvents } from "@cryptuoso/stats-calc-events";
+import { UserRobotWorkerEvents } from "@cryptuoso/user-robot-events";
 
 interface StoredDeadLetter {
     id: string;
@@ -55,7 +55,39 @@ export default class EventsManager extends HTTPService {
             [`${DEAD_LETTER_TOPIC}.*`]: {
                 handler: this.#deadLettersHandler.bind(this)
             },
-            [`${ERRORS_TOPIC}.*.*`]: {
+            [BacktesterWorkerEvents.FAILED]: {
+                passFullEvent: true,
+                handler: this.#errorHandler.bind(this)
+            },
+            [BacktesterWorkerEvents.FAILED]: {
+                passFullEvent: true,
+                handler: this.#errorHandler.bind(this)
+            },
+            [ConnectorWorkerEvents.ORDER_ERROR]: {
+                passFullEvent: true,
+                handler: this.#errorHandler.bind(this)
+            },
+            [ConnectorWorkerEvents.USER_EX_ACC_ERROR]: {
+                passFullEvent: true,
+                handler: this.#errorHandler.bind(this)
+            },
+            [ExwatcherEvents.ERROR]: {
+                passFullEvent: true,
+                handler: this.#errorHandler.bind(this)
+            },
+            [ImporterWorkerEvents.FAILED]: {
+                passFullEvent: true,
+                handler: this.#errorHandler.bind(this)
+            },
+            [RobotWorkerEvents.ERROR]: {
+                passFullEvent: true,
+                handler: this.#errorHandler.bind(this)
+            },
+            [StatsCalcWorkerEvents.ERROR]: {
+                passFullEvent: true,
+                handler: this.#errorHandler.bind(this)
+            },
+            [UserRobotWorkerEvents.ERROR]: {
                 passFullEvent: true,
                 handler: this.#errorHandler.bind(this)
             }
@@ -91,10 +123,10 @@ export default class EventsManager extends HTTPService {
             }
         });
 
-        this.addOnStartHandler(this._onServiceStart);
+        this.addOnStartHandler(this.onServiceStart);
     }
 
-    async _onServiceStart() {
+    async onServiceStart() {
         const queueKey = this.name;
 
         this.createQueue(queueKey);

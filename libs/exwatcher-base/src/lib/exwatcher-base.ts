@@ -16,6 +16,7 @@ import {
     ImporterWorkerFailed
 } from "@cryptuoso/importer-events";
 import {
+    ExwatcherErrorEvent,
     ExwatcherEvents,
     ExwatcherSchema,
     ExwatcherSubscribe,
@@ -222,7 +223,7 @@ export class ExwatcherBaseService extends BaseService {
 
     async watch(): Promise<void> {
         await Promise.all(
-            this.activeSubscriptions.map(async ({ asset, currency }: Exwatcher) => {
+            this.activeSubscriptions.map(async ({ id, exchange, asset, currency }: Exwatcher) => {
                 const symbol = this.getSymbol(asset, currency);
                 if (this.exchange === "binance_futures") {
                     await Promise.all(
@@ -231,6 +232,17 @@ export class ExwatcherBaseService extends BaseService {
                                 await this.connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
                             } catch (e) {
                                 this.log.warn(symbol, timeframe, e);
+                                await this.events.emit<ExwatcherErrorEvent>({
+                                    type: ExwatcherEvents.ERROR,
+                                    data: {
+                                        exchange,
+                                        asset,
+                                        currency,
+                                        exwatcherId: id,
+                                        timestamp: dayjs.utc().toISOString(),
+                                        error: `${e.message}`
+                                    }
+                                });
                             }
                         })
                     );
@@ -239,6 +251,17 @@ export class ExwatcherBaseService extends BaseService {
                         await this.connector.watchTrades(symbol);
                     } catch (e) {
                         this.log.warn(symbol, e);
+                        await this.events.emit<ExwatcherErrorEvent>({
+                            type: ExwatcherEvents.ERROR,
+                            data: {
+                                exchange,
+                                asset,
+                                currency,
+                                exwatcherId: id,
+                                timestamp: dayjs.utc().toISOString(),
+                                error: `${e.message}`
+                            }
+                        });
                     }
                 }
             })
@@ -382,6 +405,17 @@ export class ExwatcherBaseService extends BaseService {
             }
         } catch (err) {
             this.log.error(`Failed to subscribe ${subscription.id}`, err);
+            await this.events.emit<ExwatcherErrorEvent>({
+                type: ExwatcherEvents.ERROR,
+                data: {
+                    exchange: subscription?.exchange,
+                    asset: subscription?.asset,
+                    currency: subscription?.currency,
+                    exwatcherId: subscription?.id,
+                    timestamp: dayjs.utc().toISOString(),
+                    error: `Failed to subscribe ${subscription?.id} - ${err.message}`
+                }
+            });
         }
     }
 

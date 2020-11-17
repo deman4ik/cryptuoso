@@ -14,6 +14,10 @@ export const enum StatsCalcRunnerEvents {
     USER_ROBOT_DELETED = `stats-calc.user-robot-deleted`
 }
 
+export const enum StatsCalcWorkerEvents {
+    ERROR = `out-stats-calc-worker.error`
+}
+
 export const StatsCalcRunnerSchema = {
     [StatsCalcRunnerEvents.USER_SIGNAL_DELETED]: {
         userId: {
@@ -210,4 +214,10 @@ export interface StatsCalcJob {
     asset?: string;
     currency?: string;
     strategy?: string;
+}
+
+export interface StatsCalcWorkerErrorEvent {
+    [key: string]: any;
+    error: string;
+    timestamp: string;
 }
