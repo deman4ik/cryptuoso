@@ -47,6 +47,7 @@ export interface Exwatcher {
     currency: string;
     status: ExwatcherStatus;
     importerId: string;
+    importStartedAt: string;
     error?: string;
 }
 
@@ -191,6 +192,7 @@ export class ExwatcherBaseService extends BaseService {
         if (subscription && subscription.id) {
             this.log.warn(`Importer ${importerId} failed!`, error);
             this.subscriptions[subscription.id].status = ExwatcherStatus.failed;
+            this.subscriptions[subscription.id].importStartedAt = null;
             this.subscriptions[subscription.id].error = error;
             await this.saveSubscription(this.subscriptions[subscription.id]);
         }
@@ -198,8 +200,12 @@ export class ExwatcherBaseService extends BaseService {
 
     async check(): Promise<void> {
         try {
-            const pendingSubscriptions = Object.values(this.subscriptions).filter(({ status }) =>
-                [ExwatcherStatus.pending, ExwatcherStatus.unsubscribed, ExwatcherStatus.failed].includes(status)
+            const pendingSubscriptions = Object.values(this.subscriptions).filter(
+                ({ status, importStartedAt }) =>
+                    [ExwatcherStatus.pending, ExwatcherStatus.unsubscribed, ExwatcherStatus.failed].includes(status) ||
+                    (status === ExwatcherStatus.importing &&
+                        importStartedAt &&
+                        dayjs.utc().diff(dayjs.utc(importStartedAt), "minute") > 4)
             );
             if (pendingSubscriptions.length > 0)
                 await Promise.all(
@@ -304,7 +310,10 @@ export class ExwatcherBaseService extends BaseService {
                 !this.subscriptions[id] ||
                 [ExwatcherStatus.pending, ExwatcherStatus.unsubscribed, ExwatcherStatus.failed].includes(
                     this.subscriptions[id].status
-                )
+                ) ||
+                (this.subscriptions[id].status === ExwatcherStatus.importing &&
+                    this.subscriptions[id].importStartedAt &&
+                    dayjs.utc().diff(dayjs.utc(this.subscriptions[id].importStartedAt), "minute") > 4)
             ) {
                 this.log.info(`Adding ${id} subscription...`);
                 this.subscriptions[id] = {
@@ -314,6 +323,7 @@ export class ExwatcherBaseService extends BaseService {
                     currency,
                     status: ExwatcherStatus.pending,
                     importerId: null,
+                    importStartedAt: null,
                     error: null
                 };
 
@@ -321,6 +331,7 @@ export class ExwatcherBaseService extends BaseService {
                 if (importerId) {
                     this.subscriptions[id].status = ExwatcherStatus.importing;
                     this.subscriptions[id].importerId = importerId;
+                    this.subscriptions[id].importStartedAt = dayjs.utc().toISOString();
                     await this.saveSubscription(this.subscriptions[id]);
                 }
             }
@@ -355,6 +366,7 @@ export class ExwatcherBaseService extends BaseService {
                         await this.subscribeCCXT(id);
 
                         this.subscriptions[id].status = ExwatcherStatus.subscribed;
+                        this.subscriptions[id].importStartedAt = null;
                         this.subscriptions[id].error = null;
                         this.log.info(`Subscribed ${id}`);
 
@@ -362,6 +374,7 @@ export class ExwatcherBaseService extends BaseService {
                     } catch (e) {
                         this.log.error(e);
                         this.subscriptions[id].status = ExwatcherStatus.failed;
+                        this.subscriptions[id].importStartedAt = null;
                         this.subscriptions[id].error = e.message;
                         await this.saveSubscription(this.subscriptions[id]);
                     }
@@ -451,7 +464,7 @@ export class ExwatcherBaseService extends BaseService {
     } */
 
     async saveSubscription(subscription: Exwatcher): Promise<void> {
-        const { id, exchange, asset, currency, status, importerId, error } = subscription;
+        const { id, exchange, asset, currency, status, importerId, importStartedAt, error } = subscription;
         await this.db.pg.query(sql`INSERT INTO exwatchers 
         ( id, 
             exchange,
@@ -459,6 +472,7 @@ export class ExwatcherBaseService extends BaseService {
             currency,
             status,
             importer_id, 
+            import_started_at,
             error
           )  VALUES
        (
@@ -468,12 +482,14 @@ export class ExwatcherBaseService extends BaseService {
         ${currency},
         ${status},
         ${importerId || null},
+        ${importStartedAt || null}
         ${error || null}
         )
         ON CONFLICT ON CONSTRAINT exwatchers_pkey 
         DO UPDATE SET updated_at = now(),
         status = excluded.status,
         importer_id = excluded.importer_id,
+        import_started_at = excluded.import_started_at,
         error = excluded.error;`);
     }
 

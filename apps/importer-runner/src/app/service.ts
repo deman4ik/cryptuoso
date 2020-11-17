@@ -103,7 +103,8 @@ export default class ImporterRunnerService extends HTTPService {
 
             await this.addJob("importCandles", importer.type, importer.state, {
                 jobId: importer.id,
-                removeOnComplete: true
+                removeOnComplete: true,
+                removeOnFail: 100
             });
             return { result: importer.id };
         } catch (error) {
