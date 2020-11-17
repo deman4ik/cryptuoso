@@ -92,7 +92,7 @@ jobs:
               run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do docker build --build-arg SERVICE_NAME="${i}"  -t registry.digitalocean.com/cpz/$i:$(echo $GITHUB_SHA | head -c7) .; done;
 
             - name: Install doctl
-              uses: digitalocean/action-doctl@v2-experiment
+              uses: digitalocean/action-doctl@v2
               with:
                   token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 
