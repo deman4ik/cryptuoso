@@ -2,7 +2,6 @@ import { UserPosition } from "./userPosition";
 import { v4 as uuid } from "uuid";
 import dayjs from "@cryptuoso/dayjs";
 import {
-    TradeSettings,
     UserPositionDB,
     UserPositionState,
     UserPositionStatus,
@@ -13,7 +12,7 @@ import {
     UserRobotStatus,
     UserTradeEvent
 } from "./types";
-import { Order, PositionDirection, SignalEvent, TradeAction, ValidTimeframe } from "@cryptuoso/market";
+import { Order, PositionDirection, SignalEvent, TradeAction, TradeSettings, ValidTimeframe } from "@cryptuoso/market";
 import { flattenArray, GenericObject } from "@cryptuoso/helpers";
 import { OrdersStatusEvent } from "@cryptuoso/connector-events";
 import { BaseError } from "@cryptuoso/errors";

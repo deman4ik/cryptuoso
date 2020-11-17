@@ -18,7 +18,12 @@ import { BaseError } from "@cryptuoso/errors";
 import { NewEvent } from "@cryptuoso/events";
 import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
 import { DatabaseTransactionConnectionType } from "slonik";
-import { calcAssetDynamicDelta, calcCurrencyDynamic, VolumeSettingsType } from "@cryptuoso/robot-settings";
+import {
+    calcAssetDynamicDelta,
+    calcBalancePercent,
+    calcCurrencyDynamic,
+    VolumeSettingsType
+} from "@cryptuoso/robot-settings";
 
 export type UserRobotRunnerServiceConfig = BaseServiceConfig;
 
@@ -88,6 +93,10 @@ export default class UserRobotRunnerService extends BaseService {
            r.timeframe,
            m.current_price,
            m.limits->'userRobot' as limits,
+           a.used_balance_percent, 
+           ea.total_balance_usd,
+           st.net_profit as profit,
+           m.asset_dynamic_delta,
            m.trade_settings,
            urs.user_robot_settings,
            (SELECT array_to_json(array_agg(pos))
@@ -112,39 +121,44 @@ WHERE p.user_robot_id = ur.id
   AND p.status IN ('delayed',
                    'new',
                    'open')) pos) AS positions
-    FROM user_robots ur, robots r, v_user_markets m, v_user_robot_settings urs
+    FROM user_robots ur, robots r, 
+    v_user_markets m, v_user_robot_settings urs, 
+    v_user_amounts a, v_user_exchange_accs ea
+    LEFT JOIN v_user_robot_stats st
+    ON st.user_robot_id = ur.ud
     WHERE ur.robot_id = r.id  
       AND m.exchange = r.exchange
       AND m.asset = r.asset
       AND m.currency = r.currency
       AND m.user_id = ur.user_id    
 	  AND urs.user_robot_id = ur.id
+      AND a.user_id = ur.user_id
+      AND ea.id = ur.user_ex_acc_id
       AND ur.id = ${userRobotId};                   
   `);
 
-    #getCurrentVolume = async (state: UserRobotState) => {
+    #getCurrentVolume = (state: UserRobotState) => {
         const { userRobotSettings } = state;
+        let volume: number;
 
         if (userRobotSettings.volumeType === VolumeSettingsType.assetStatic) {
-            return { volume: userRobotSettings.volume };
+            volume = userRobotSettings.volume;
         } else if (userRobotSettings.volumeType === VolumeSettingsType.currencyDynamic) {
             const { volumeInCurrency } = userRobotSettings;
-            return { volume: calcCurrencyDynamic(volumeInCurrency, state.currentPrice) };
+            volume = calcCurrencyDynamic(volumeInCurrency, state.currentPrice);
         } else if (userRobotSettings.volumeType === VolumeSettingsType.assetDynamicDelta) {
-            const { initialVolume, delta } = userRobotSettings;
+            const { initialVolume } = userRobotSettings;
 
-            const stats = await this.db.pg.maybeOne<{ netProfit: number }>(sql`
-            SELECT net_profit 
-              FROM v_user_robot_stats
-             WHERE user_robot_id = ${state.id}; 
-            `);
-
-            return { volume: calcAssetDynamicDelta(initialVolume, delta, stats?.netProfit) };
+            volume = calcAssetDynamicDelta(initialVolume, state.assetDynamicDelta, state.profit);
         } else if (userRobotSettings.volumeType === VolumeSettingsType.balancePercent) {
             const { balancePercent } = userRobotSettings;
-            //TODO
-            return { volume: state.limits.min.amount };
+
+            volume = calcBalancePercent(balancePercent, state.totalBalanceUsd, state.currentPrice);
         } else throw new BaseError("Unknown volume type", userRobotSettings);
+
+        if (volume < state.limits.min.amount) volume = state.limits.min.amount;
+        else if (state.limits.max?.amount && volume > state.limits.max?.amount) volume = state.limits.max?.amount;
+        return { volume };
     };
 
     #savePositions = async (transaction: DatabaseTransactionConnectionType, positions: UserPositionDB[]) => {

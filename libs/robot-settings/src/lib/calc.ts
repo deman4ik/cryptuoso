@@ -1,5 +1,5 @@
 import { roundFirstSignificant } from "@cryptuoso/helpers";
-import { RobotSettings, VolumeSettingsType, UserRobotSettings, UserSignalSettings } from "./types";
+import { RobotSettings, VolumeSettingsType, UserSignalSettings } from "./types";
 
 export const calcCurrencyDynamic = (volumeInCurrency: number, price: number) =>
     roundFirstSignificant(volumeInCurrency / price);
@@ -17,6 +17,10 @@ export const calcAssetDynamicDelta = (initialVolume: number, delta: number, prof
     return roundFirstSignificant(baseVolume * (lvl + 1));
 };
 
+export const calcBalancePercent = (percent: number, balance: number, price: number) => {
+    return calcCurrencyDynamic((percent / 100) * balance, price);
+};
+
 export const getRobotPositionVolume = (
     settings: RobotSettings | UserSignalSettings,
     price?: number,
@@ -30,13 +34,6 @@ export const getRobotPositionVolume = (
     } else if (settings.volumeType === VolumeSettingsType.assetDynamicDelta) {
         return calcAssetDynamicDelta(settings.initialVolume, settings.delta, profit);
     } else return null;
-};
-
-export const getUserRobotPositionVolume = (settings: UserRobotSettings, price?: number, profit?: number): number => {
-    if (settings.volumeType === VolumeSettingsType.balancePercent) {
-        //TODO: BalancePercentSettings
-        return null;
-    } else return getRobotPositionVolume(settings, price, profit);
 };
 
 /* with levels down 

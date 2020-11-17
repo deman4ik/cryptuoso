@@ -11,12 +11,12 @@ import {
     Timeframe,
     TradeAction,
     TradeInfo,
+    TradeSettings,
     ValidTimeframe
 } from "@cryptuoso/market";
 import {
     UserTradeEvent,
     UserPositionState,
-    TradeSettings,
     UserPositionInternalState,
     UserPositionJob,
     UserPositionOrderStatus,

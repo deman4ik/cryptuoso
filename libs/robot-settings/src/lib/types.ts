@@ -19,7 +19,7 @@ export interface AssetDynamicDeltaSettings {
     volumeType: VolumeSettingsType.assetDynamicDelta;
     initialVolume: number;
     volume?: number;
-    delta: number;
+    delta?: number;
 }
 
 export interface BalancePercentSettings {
@@ -32,24 +32,6 @@ export type RobotSettings = AssetStaticSettings | CurrencyDynamicSettings | Asse
 export type UserSignalSettings = AssetStaticSettings | CurrencyDynamicSettings;
 
 export type UserRobotSettings = RobotSettings | BalancePercentSettings;
-
-export interface RobotTradeSettings {
-    orderTimeout: number;
-    slippage?: {
-        entry?: {
-            stepPercent: number;
-            count?: number;
-        };
-        exit?: {
-            stepPercent: number;
-            count?: number;
-        };
-    };
-    deviation?: {
-        entry?: number;
-        exit?: number;
-    };
-}
 
 export interface StrategySettings {
     [key: string]: number | string;

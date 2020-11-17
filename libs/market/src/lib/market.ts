@@ -3,6 +3,24 @@ interface MinMax {
     max: number | undefined;
 }
 
+export interface TradeSettings {
+    orderTimeout: number;
+    slippage?: {
+        entry?: {
+            stepPercent: number;
+            count?: number;
+        };
+        exit?: {
+            stepPercent: number;
+            count?: number;
+        };
+    };
+    deviation?: {
+        entry?: number;
+        exit?: number;
+    };
+}
+
 export interface Market {
     exchange: string;
     asset: string;
@@ -33,6 +51,8 @@ export interface UserMarketState {
         userSignal: UserMarketMinMax;
         userRobot: UserMarketMinMax;
     };
+    tradeSettings: TradeSettings;
+    assetDynamicDelta: number;
 }
 
 export interface ExchangePrice {

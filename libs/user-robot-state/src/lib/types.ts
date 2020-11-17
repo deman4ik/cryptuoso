@@ -1,5 +1,5 @@
 import { GenericObject } from "@cryptuoso/helpers";
-import { Order, PositionDirection, SignalEvent, TradeAction, ValidTimeframe } from "@cryptuoso/market";
+import { Order, PositionDirection, SignalEvent, TradeAction, TradeSettings, ValidTimeframe } from "@cryptuoso/market";
 import { UserRobotSettings } from "@cryptuoso/robot-settings";
 import { UserMarketState } from "@cryptuoso/market";
 import { OrdersStatusEvent } from "@cryptuoso/connector-events";
@@ -31,24 +31,6 @@ export interface UserPositionInternalState {
     entrySlippageCount: number;
     exitSlippageCount: number;
     delayedSignal?: SignalEvent;
-}
-
-export interface TradeSettings {
-    orderTimeout: number;
-    slippage?: {
-        entry?: {
-            stepPercent: number;
-            count?: number;
-        };
-        exit?: {
-            stepPercent: number;
-            count?: number;
-        };
-    };
-    deviation?: {
-        entry?: number;
-        exit?: number;
-    };
 }
 
 export interface UserRobotCurrentSettings {
@@ -137,6 +119,10 @@ export interface UserRobotState extends UserRobotDB {
     tradeSettings: TradeSettings;
     currentPrice: number;
     limits: UserMarketState["limits"]["userRobot"];
+    usedBalancePercent?: number;
+    totalBalanceUsd: number;
+    profit?: number;
+    assetDynamicDelta: number;
     settings?: UserRobotCurrentSettings;
     userRobotSettings: UserRobotSettings;
     positions: UserPositionState[];

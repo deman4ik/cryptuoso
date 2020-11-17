@@ -23,6 +23,7 @@ import { formatExchange, GenericObject } from "@cryptuoso/helpers";
 import {
     checkAssetDynamicDelta,
     checkAssetStatic,
+    checkBalancePercent,
     checkCurrencyDynamic,
     UserRobotSettings,
     UserRobotSettingsSchema,
@@ -728,7 +729,12 @@ export default class UserProfileService extends HTTPService {
 
     //#region "User Robots"
 
-    async getNewUserRobotSettings(settings: UserRobotSettings, limits: UserMarketState["limits"]) {
+    async getNewUserRobotSettings(
+        settings: UserRobotSettings,
+        limits: UserMarketState["limits"],
+        usedBalancePercent?: number,
+        totalBalance?: number
+    ) {
         if (!limits?.userRobot?.min?.amount)
             throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
 
@@ -748,8 +754,12 @@ export default class UserProfileService extends HTTPService {
             newUserRobotSettings = { volumeType: VolumeSettingsType.currencyDynamic, volumeInCurrency };
         } else if (settings.volumeType === VolumeSettingsType.balancePercent) {
             const balancePercent = settings.balancePercent;
-            //TODO: check other balance percents
-            //TODO: calc and check balance in USD
+            const volumeInCurrency = (balancePercent / 100) * totalBalance;
+            const amountMin = limits?.userRobot?.min?.amountUSD;
+            const amountMax = limits?.userRobot?.max?.amountUSD;
+
+            checkBalancePercent(balancePercent, usedBalancePercent, volumeInCurrency, amountMin, amountMax);
+
             newUserRobotSettings = { volumeType: VolumeSettingsType.balancePercent, balancePercent };
         } else if (settings.volumeType === VolumeSettingsType.assetDynamicDelta) {
             const initialVolume = settings.initialVolume;
@@ -758,7 +768,6 @@ export default class UserProfileService extends HTTPService {
             checkAssetDynamicDelta(initialVolume, amountMin, amountMax);
             newUserRobotSettings = {
                 volumeType: VolumeSettingsType.assetDynamicDelta,
-                delta: +process.env.ASSET_DYNAMIC_DELTA || 10,
                 initialVolume
             };
         }
@@ -826,16 +835,27 @@ export default class UserProfileService extends HTTPService {
 
         if (robot.available < user.access) throw new ActionsHandlerError("Robot unavailable.", null, "FORBIDDEN", 403);
 
-        const { limits } = await this.db.pg.one<{ limits: UserMarketState["limits"] }>(sql`
-        SELECT limits
-        FROM v_user_markets
-        WHERE user_id = ${user.id}
-            AND exchange = ${robot.exchange}
-            AND asset = ${robot.asset}
-            AND currency = ${robot.currency};
+        const { limits, usedBalancePercent, totalBalanceUsd } = await this.db.pg.one<{
+            limits: UserMarketState["limits"];
+            usedBalancePercent: number;
+            totalBalanceUsd: number;
+        }>(sql`
+        SELECT limits, a.used_balance_percent, ea.total_balance_usd
+        FROM v_user_markets um, v_user_amounts a, v_user_exchange_accs ea
+        WHERE um.user_id = ${user.id}
+            AND um.user_id = a.user_id
+            AND um.exchange = ${robot.exchange}
+            AND um.asset = ${robot.asset}
+            AND um.currency = ${robot.currency}
+            AND ea.id = ${userExAccId} ;
     `);
 
-        const newUserRobotSettings = await this.getNewUserRobotSettings(settings, limits);
+        const newUserRobotSettings = await this.getNewUserRobotSettings(
+            settings,
+            limits,
+            usedBalancePercent,
+            totalBalanceUsd
+        );
 
         const userRobotId = uuid();
 
@@ -870,9 +890,10 @@ export default class UserProfileService extends HTTPService {
             id: UserRobotDB["id"];
             userId: UserRobotDB["userId"];
             robotId: UserRobotDB["robotId"];
+            userExAccId: UserRobotDB["userExAccId"];
             userRobotSettings: UserRobotSettings;
         }>(sql`
-            SELECT ur.id, ur.user_id, ur.robot_id, s.user_robot_settings
+            SELECT ur.id, ur.user_id, ur.robot_id, ur.user_ex_acc_id, s.user_robot_settings
             FROM user_robots ur, v_user_robot_settings s
             WHERE user_robot_id = ur.id
               AND ur.id = ${id};
@@ -906,17 +927,28 @@ export default class UserProfileService extends HTTPService {
         )
             return;
 
-        const { limits } = await this.db.pg.one<{ limits: UserMarketState["limits"] }>(sql`
-            SELECT vm.limits
-            FROM robots r, v_user_markets vm
+        const { limits, usedBalancePercent, totalBalanceUsd } = await this.db.pg.one<{
+            limits: UserMarketState["limits"];
+            usedBalancePercent: number;
+            totalBalanceUsd: number;
+        }>(sql`
+            SELECT um.limits, a.used_balance_percent, ea.total_balance_usd
+            FROM robots r, v_user_markets um, v_user_amounts a, v_user_exchange_accs ea
             WHERE r.id = ${userRobotExists.robotId}
-                AND vm.user_id = ${user.id}
-                AND vm.exchange = r.exchange
-                AND vm.asset = r.asset
-                AND vm.currency = r.currency;
+                AND um.user_id = ${user.id}
+                AND um.user_id = a.user_id
+                AND um.exchange = r.exchange
+                AND um.asset = r.asset
+                AND um.currency = r.currency
+                AND ea.id = ${userRobotExists.userExAccId};
         `);
 
-        const newUserRobotSettings = await this.getNewUserRobotSettings(settings, limits);
+        const newUserRobotSettings = await this.getNewUserRobotSettings(
+            settings,
+            limits,
+            usedBalancePercent,
+            totalBalanceUsd
+        );
 
         await this.db.pg.query(sql`
             INSERT INTO user_robot_settings(
