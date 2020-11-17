@@ -10,7 +10,7 @@ jobs:
 
         strategy:
             matrix:
-                node-version: [12.x]
+                node-version: [14.x]
 
         steps:
             - uses: actions/checkout@v2
@@ -18,7 +18,7 @@ jobs:
               uses: actions/setup-node@v1
               with:
                   node-version: ${{ matrix.node-version }}
-            - uses: webfactory/ssh-agent@v0.2.0
+            - uses: webfactory/ssh-agent@v0.4.1
               with:
                   ssh-private-key: ${{ secrets.GH_SSH_KEY }}
             - run: npm install
