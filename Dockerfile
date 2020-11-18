@@ -1,7 +1,5 @@
 FROM cryptuoso-build:latest as build
 
-RUN apk add --no-cache python postgresql-dev build-base git openssh-client
-
 ARG SERVICE_NAME
 
 RUN npm run build:"$SERVICE_NAME" && npm prune --production && npm cache clean --force
