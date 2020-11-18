@@ -1,5 +1,5 @@
 import Service, { getCalcFromAndInitStats } from "../app/service";
-import { TradeStats, TradeStatsClass, isTradeStats } from "@cryptuoso/stats-calc";
+import { TradeStats, TradeStatsClass, checkTradeStats } from "@cryptuoso/stats-calc";
 import dayjs from "@cryptuoso/dayjs";
 import { pg } from "@cryptuoso/postgres";
 import { setProperty, getProperty } from "@cryptuoso/test-helpers";
@@ -148,7 +148,7 @@ describe("getCalcFromAndInitStats function", () => {
 
             expect(calcFrom).toStrictEqual(rightStats.lastPositionExitDate);
 
-            expect(isTradeStats(initStats)).toBeTruthy();
+            expect(checkTradeStats(initStats)).toBeTruthy();
 
             expect(initStats.equity).toStrictEqual(rightStats.equity);
             expect(initStats.equityAvg).toStrictEqual(rightStats.equityAvg);

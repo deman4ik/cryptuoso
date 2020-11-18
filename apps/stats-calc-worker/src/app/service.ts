@@ -4,7 +4,7 @@ import { Job } from "bullmq";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import { StatisticsUtils } from "./statsWorker";
 import { sql, QueryType, makeChunksGenerator } from "@cryptuoso/postgres";
-import { TradeStats, isTradeStats } from "@cryptuoso/stats-calc";
+import { TradeStats, checkTradeStats } from "@cryptuoso/stats-calc";
 import { UserAggrStatsTypes } from "@cryptuoso/user-state";
 import {
     StatsCalcJob,
@@ -27,7 +27,7 @@ export function getCalcFromAndInitStats(stats?: TradeStats, calcAll?: boolean) {
     let calcFrom: string = null;
     let initStats: TradeStats = null;
 
-    if (!calcAll && stats && isTradeStats(stats)) {
+    if (!calcAll && stats && checkTradeStats(stats) === true) {
         initStats = {
             statistics: stats.statistics,
             lastPositionExitDate: stats.lastPositionExitDate,
@@ -233,7 +233,7 @@ export default class StatisticCalcWorkerService extends BaseService {
     ): Promise<void> {
         /* console.log(params);
         return; */
-        if (params.id && prevStats && isTradeStats(prevStats)) {
+        if (params.id && prevStats && checkTradeStats(prevStats) === true) {
             await this.db.pg.query(sql`
                 UPDATE ${params.table}
                 SET statistics = ${JSON.stringify(stats.statistics)},
