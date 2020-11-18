@@ -19,7 +19,7 @@ import dayjs from "@cryptuoso/dayjs";
 import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
 import { spawn, Pool, Worker as ThreadsWorker } from "threads";
 import { Encrypt } from "./encryptWorker";
-import { formatExchange, GenericObject } from "@cryptuoso/helpers";
+import { formatExchange, GenericObject, round } from "@cryptuoso/helpers";
 import {
     checkAssetDynamicDelta,
     checkAssetStatic,
@@ -310,13 +310,13 @@ export default class UserProfileService extends HTTPService {
         let newUserSignalSettings: UserSignalSettings;
 
         if (settings.volumeType === VolumeSettingsType.assetStatic) {
-            const volume = settings.volume;
+            const volume = round(settings.volume, 6);
             const amountMin = limits?.userRobot?.min?.amount;
             const amountMax = limits?.userRobot?.max?.amount;
             checkAssetStatic(volume, amountMin, amountMax);
             newUserSignalSettings = { volumeType: VolumeSettingsType.assetStatic, volume };
         } else if (settings.volumeType === VolumeSettingsType.currencyDynamic) {
-            const volumeInCurrency = settings.volumeInCurrency;
+            const volumeInCurrency = round(settings.volumeInCurrency, 2);
             const amountMin = limits?.userRobot?.min?.amountUSD;
             const amountMax = limits?.userRobot?.max?.amountUSD;
             checkCurrencyDynamic(volumeInCurrency, amountMin, amountMax);
@@ -741,19 +741,19 @@ export default class UserProfileService extends HTTPService {
         let newUserRobotSettings: UserRobotSettings;
 
         if (settings.volumeType === VolumeSettingsType.assetStatic) {
-            const volume = settings.volume;
+            const volume = round(settings.volume, 6);
             const amountMin = limits?.userRobot?.min?.amount;
             const amountMax = limits?.userRobot?.max?.amount;
             checkAssetStatic(volume, amountMin, amountMax);
             newUserRobotSettings = { volumeType: VolumeSettingsType.assetStatic, volume };
         } else if (settings.volumeType === VolumeSettingsType.currencyDynamic) {
-            const volumeInCurrency = settings.volumeInCurrency;
+            const volumeInCurrency = round(settings.volumeInCurrency, 2);
             const amountMin = limits?.userRobot?.min?.amountUSD;
             const amountMax = limits?.userRobot?.max?.amountUSD;
             checkCurrencyDynamic(volumeInCurrency, amountMin, amountMax);
             newUserRobotSettings = { volumeType: VolumeSettingsType.currencyDynamic, volumeInCurrency };
         } else if (settings.volumeType === VolumeSettingsType.balancePercent) {
-            const balancePercent = settings.balancePercent;
+            const balancePercent = round(settings.balancePercent);
             const volumeInCurrency = (balancePercent / 100) * totalBalance;
             const amountMin = limits?.userRobot?.min?.amountUSD;
             const amountMax = limits?.userRobot?.max?.amountUSD;
@@ -762,7 +762,7 @@ export default class UserProfileService extends HTTPService {
 
             newUserRobotSettings = { volumeType: VolumeSettingsType.balancePercent, balancePercent };
         } else if (settings.volumeType === VolumeSettingsType.assetDynamicDelta) {
-            const initialVolume = settings.initialVolume;
+            const initialVolume = round(settings.initialVolume, 6);
             const amountMin = limits?.userRobot?.min?.amount;
             const amountMax = limits?.userRobot?.max?.amount;
             checkAssetDynamicDelta(initialVolume, amountMin, amountMax);
