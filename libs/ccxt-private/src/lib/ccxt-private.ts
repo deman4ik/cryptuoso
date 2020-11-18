@@ -586,25 +586,7 @@ export class PrivateConnector {
                     bail(e);
                 }
             };
-            const response: {
-                id: string;
-                datetime: string;
-                timestamp: number;
-                lastTradeTimestamp: number;
-                status: "open" | "closed" | "canceled";
-                symbol: string;
-                type: string;
-                side: "buy" | "sell";
-                price: number;
-                average?: number;
-                amount: number;
-                filled: number;
-                remaining: number;
-                cost: number;
-                trades: ccxt.Trade[];
-                fee: ccxt.Fee;
-                info: any;
-            } = await retry(call, this.retryOptions);
+            const response: ccxt.Order = await retry(call, this.retryOptions);
 
             const {
                 datetime: exTimestamp,
