@@ -7,7 +7,8 @@ const loggerConfig: ISettingsParam =
               type: "json",
               exposeErrorCodeFrame: false,
               displayFilePath: "hidden",
-              minLevel: "info"
+              minLevel: "info",
+              maskValuesOfKeys: []
               //maskValuesOfKeys: ["authorization", "password", "refreshToken", "accessToken"]
           }
         : {
@@ -16,8 +17,8 @@ const loggerConfig: ISettingsParam =
               printLogMessageInNewLine: false,
               displayFilePath: "hidden",
               displayFunctionName: false,
-              exposeErrorCodeFrame: true
-              //  maskValuesOfKeys: []
+              exposeErrorCodeFrame: true,
+              maskValuesOfKeys: []
           };
 
 const logger = new Logger(loggerConfig);
