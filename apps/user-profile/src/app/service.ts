@@ -621,7 +621,7 @@ export default class UserProfileService extends HTTPService {
                     ${JSON.stringify(exchangeAcc.keys)},
                     ${exchangeAcc.status},
                     ${exchangeAcc.error},
-                    ${JSON.stringify(exchangeAcc.balances) || null}
+                    ${JSON.stringify(exchangeAcc.balances) || null},
                     ${JSON.stringify(exchangeAcc.ordersCache)}
                 );
             `);
