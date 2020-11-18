@@ -516,7 +516,7 @@ export class ExwatcherBaseService extends BaseService {
         ${currency},
         ${status},
         ${importerId || null},
-        ${importStartedAt || null}
+        ${importStartedAt || null},
         ${error || null}
         )
         ON CONFLICT ON CONSTRAINT exwatchers_pkey 
