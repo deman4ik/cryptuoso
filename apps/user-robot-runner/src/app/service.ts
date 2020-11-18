@@ -251,9 +251,7 @@ export default class UserRobotRunnerService extends HTTPService {
         SET status = ${UserRobotStatus.started},
         message = null,
         started_at = ${startedAt},
-        error = null,
-        stopped_at = null,
-        latest_signal = null
+        stopped_at = null
         WHERE id = ${id};
         `);
 
