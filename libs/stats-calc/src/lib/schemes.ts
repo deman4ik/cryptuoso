@@ -5,7 +5,7 @@ const validator = new Validator();
 export function makeValidateFunc<T>(schema: ValidationSchema) {
     const validate = validator.compile(schema);
 
-    return (obj: T) => validate(obj) === true;
+    return (obj: T) => validate(obj);
 }
 
 export const PositionForStatsSchema: ValidationSchema = {

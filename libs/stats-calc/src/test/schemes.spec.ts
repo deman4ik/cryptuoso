@@ -1,4 +1,4 @@
-import { isPositionForStats, isPositionsForStats } from "../lib/statistics-calculator";
+import { checkPositionForStats, checkPositionsForStats } from "../lib/statistics-calculator";
 import positions from "./testData/positionsForStats";
 
 describe("Test schemes", () => {
@@ -6,15 +6,15 @@ describe("Test schemes", () => {
         test("", async () => {
             const pos = positions[0];
 
-            expect(isPositionForStats({ ...pos, other: 1 } as any)).toBeTruthy();
-            expect(isPositionsForStats(positions)).toBeTruthy();
+            expect(checkPositionForStats({ ...pos, other: 1 } as any)).toBeTruthy();
+            expect(checkPositionsForStats(positions)).toBeTruthy();
 
             positions[10].direction = "123" as any;
 
-            expect(isPositionForStats(positions[10])).toBeFalsy();
-            expect(isPositionsForStats(positions)).toBeFalsy();
+            expect(Array.isArray(checkPositionForStats(positions[10]))).toBeTruthy();
+            expect(Array.isArray(checkPositionsForStats(positions))).toBeTruthy();
 
-            expect(isPositionsForStats([{ o: 1 }] as any)).toBeFalsy();
+            expect(Array.isArray(checkPositionsForStats([{ o: 1 }] as any))).toBeTruthy();
         });
     });
 });

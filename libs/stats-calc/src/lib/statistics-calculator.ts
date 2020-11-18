@@ -9,6 +9,7 @@ import {
     StatisticsSchema,
     TradeStatsSchema
 } from "./schemes";
+import { BaseError } from "@cryptuoso/errors";
 
 function initializeValues(stat: StatsNumberValue): StatsNumberValue {
     const values = { ...stat };
@@ -38,13 +39,13 @@ export function roundRobotStatVals(vals: StatsNumberValue, decimals = 0): StatsN
     return result;
 }
 
-export const isPositionForStats = makeValidateFunc<BasePosition>(PositionForStatsSchema);
+export const checkPositionForStats = makeValidateFunc<BasePosition>(PositionForStatsSchema);
 
-export const isPositionsForStats = makeValidateFunc<BasePosition[]>(PositionsForStatsSchema);
+export const checkPositionsForStats = makeValidateFunc<BasePosition[]>(PositionsForStatsSchema);
 
-export const isStatistics = makeValidateFunc<Statistics>(StatisticsSchema);
+export const checkStatistics = makeValidateFunc<Statistics>(StatisticsSchema);
 
-export const isTradeStats = makeValidateFunc<TradeStats>(TradeStatsSchema);
+export const checkTradeStats = makeValidateFunc<TradeStats>(TradeStatsSchema);
 
 // ignores integers
 function roundStatisticsValues(statistics: Statistics): Statistics {
@@ -107,11 +108,16 @@ export default class StatisticsCalculator {
     public constructor(prevTradeStats: TradeStats, positions: BasePosition[]) {
         if (positions.length < 1) throw new Error("At least 1 position expected");
 
-        if (!isPositionsForStats(positions)) throw new Error("Invalid positions provided");
+        const checkPositions = checkPositionsForStats(positions);
+        if (checkPositions !== true)
+            throw new BaseError(`Invalid positions provided - ${checkPositions.map((e) => e.message).join(" ")}`);
 
         if (prevTradeStats != null) {
-            if (!isTradeStats(prevTradeStats)) {
-                throw new Error("Invalid robotStatistics object provided"); // calculations are allowed if null or valid obj is provided
+            const checkStats = checkTradeStats(prevTradeStats);
+            if (checkStats !== true) {
+                throw new Error(
+                    `Invalid robotStatistics object provided - ${checkStats.map((e) => e.message).join(" ")}`
+                ); // calculations are allowed if null or valid obj is provided
             }
         }
 
