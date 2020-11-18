@@ -35,7 +35,7 @@ export default class UserRobotRunnerService extends HTTPService {
         super(config);
         try {
             this.createRoutes({
-                start: {
+                userRobotStart: {
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     inputSchema: {
@@ -43,7 +43,7 @@ export default class UserRobotRunnerService extends HTTPService {
                     },
                     handler: this._httpHandler.bind(this, this.start.bind(this))
                 },
-                stop: {
+                userRobotStop: {
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     inputSchema: {
@@ -51,7 +51,7 @@ export default class UserRobotRunnerService extends HTTPService {
                     },
                     handler: this._httpHandler.bind(this, this.stop.bind(this))
                 },
-                pause: {
+                userRobotPause: {
                     auth: true,
                     roles: [UserRoles.manager, UserRoles.admin],
                     inputSchema: {
@@ -62,7 +62,7 @@ export default class UserRobotRunnerService extends HTTPService {
                     },
                     handler: this._httpHandler.bind(this, this.pause.bind(this))
                 },
-                resume: {
+                userRobotResume: {
                     auth: true,
                     roles: [UserRoles.manager, UserRoles.admin],
                     inputSchema: {
