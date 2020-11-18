@@ -108,18 +108,18 @@ export default class StatisticsCalculator {
     public constructor(prevTradeStats: TradeStats, positions: BasePosition[]) {
         if (positions.length < 1) throw new Error("At least 1 position expected");
 
-        const checkPositions = checkPositionsForStats(positions);
+        /*  const checkPositions = checkPositionsForStats(positions);
         if (checkPositions !== true)
-            throw new BaseError(`Invalid positions provided - ${checkPositions.map((e) => e.message).join(" ")}`);
+            throw new BaseError(`Invalid positions provided - ${checkPositions.map((e) => e.message).join(" ")}`); */
 
-        if (prevTradeStats != null) {
+        /*  if (prevTradeStats != null) {
             const checkStats = checkTradeStats(prevTradeStats);
             if (checkStats !== true) {
                 throw new Error(
                     `Invalid robotStatistics object provided - ${checkStats.map((e) => e.message).join(" ")}`
                 ); // calculations are allowed if null or valid obj is provided
             }
-        }
+        } */
 
         if (prevTradeStats && prevTradeStats.lastPositionExitDate != "") {
             this.positions = positions.filter(
