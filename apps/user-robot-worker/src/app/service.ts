@@ -126,7 +126,7 @@ WHERE p.user_robot_id = ur.id
     v_user_markets m, v_user_robot_settings urs, 
     v_user_amounts a, v_user_exchange_accs ea
     LEFT JOIN v_user_robot_stats st
-    ON st.user_robot_id = ur.ud
+    ON st.user_robot_id = ur.id
     WHERE ur.robot_id = r.id  
       AND m.exchange = r.exchange
       AND m.asset = r.asset
