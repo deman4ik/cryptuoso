@@ -215,17 +215,14 @@ export class UserRobot {
                     (pos) =>
                         pos.isActive &&
                         pos.prefix === signal.positionPrefix &&
-                        ((pos.direction === PositionDirection.long && signal.action === TradeAction.short) ||
-                            (pos.direction === PositionDirection.short && signal.action === TradeAction.long))
+                        ((pos.direction === "long" && signal.action === TradeAction.short) ||
+                            (pos.direction === "short" && signal.action === TradeAction.long))
                 );
                 for (const position of activeParents) {
                     position.handleSignal({
                         ...signal,
                         positionId: signal.positionParentId,
-                        action:
-                            position.direction === PositionDirection.long
-                                ? TradeAction.closeLong
-                                : TradeAction.closeShort
+                        action: position.direction === "long" ? TradeAction.closeLong : TradeAction.closeShort
                     });
                     position.executeJob();
                 }
@@ -234,8 +231,8 @@ export class UserRobot {
                     (pos) =>
                         pos.isActive &&
                         pos.prefix === signal.positionPrefix &&
-                        ((pos.direction === PositionDirection.long && signal.action === TradeAction.short) ||
-                            (pos.direction === PositionDirection.short && signal.action === TradeAction.long))
+                        ((pos.direction === "long" && signal.action === TradeAction.short) ||
+                            (pos.direction === "short" && signal.action === TradeAction.long))
                 );
                 if (previousActivePositions?.length) {
                     hasPreviousActivePositions = true;
@@ -251,8 +248,8 @@ export class UserRobot {
                     pos.isActive &&
                     pos.prefix === signal.positionPrefix &&
                     pos.nextJob === null &&
-                    ((pos.direction === PositionDirection.long && signal.action === TradeAction.long) ||
-                        (pos.direction === PositionDirection.short && signal.action === TradeAction.short))
+                    ((pos.direction === "long" && signal.action === TradeAction.long) ||
+                        (pos.direction === "short" && signal.action === TradeAction.short))
             );
 
             if (!hasActivePositionWithSameDirection.length) {
@@ -273,7 +270,7 @@ export class UserRobot {
                     timeframe: this._timeframe,
                     status: delay ? UserPositionStatus.delayed : UserPositionStatus.new,
                     parentId: signal.positionParentId,
-                    direction: signal.action === TradeAction.long ? PositionDirection.long : PositionDirection.short,
+                    direction: signal.action === TradeAction.long ? "long" : "short",
                     userExAccId: this._userExAccId,
                     settings: this._settings,
                     tradeSettings: this._tradeSettings,
@@ -294,8 +291,8 @@ export class UserRobot {
                 (pos) =>
                     pos.prefix === signal.positionPrefix &&
                     pos.isActive &&
-                    ((pos.direction === PositionDirection.long && signal.action === TradeAction.closeLong) ||
-                        (pos.direction === PositionDirection.short && signal.action === TradeAction.closeShort))
+                    ((pos.direction === "long" && signal.action === TradeAction.closeLong) ||
+                        (pos.direction === "short" && signal.action === TradeAction.closeShort))
             );
 
             for (const previousPosition of previousPositions) {

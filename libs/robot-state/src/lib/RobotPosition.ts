@@ -282,7 +282,7 @@ export class RobotPosition {
         this._entryOrderType = orderType;
         this._entryAction = action;
         this._entryCandleTimestamp = this._candle.timestamp;
-        this._direction = action === TradeAction.long ? PositionDirection.long : PositionDirection.short;
+        this._direction = action === TradeAction.long ? "long" : "short";
         this._createTradeSignal({
             ...alert,
             candleTimestamp: this._candle.timestamp

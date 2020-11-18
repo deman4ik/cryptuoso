@@ -1,5 +1,4 @@
 import Validator, { ValidationSchema } from "fastest-validator";
-import { PositionDirection } from "@cryptuoso/market";
 
 const validator = new Validator();
 
@@ -16,7 +15,7 @@ export const PositionForStatsSchema: ValidationSchema = {
         id: "uuid",
         direction: {
             type: "enum",
-            values: [PositionDirection.short, PositionDirection.long]
+            values: ["short", "long"]
         },
         exitDate: "string",
         profit: "number",

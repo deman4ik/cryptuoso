@@ -210,7 +210,6 @@ export default class StatisticsCalculator {
             .updatePayoffRatio()
             .updateMaxSequence()
             .updateMaxDrawdown()
-            .updateMaxDrawdownDate()
             .updateEquity()
             .updateRecoveryFactor()
             .validateRating()
@@ -415,19 +414,15 @@ export default class StatisticsCalculator {
     }
 
     private updateMaxDrawdown(): StatisticsCalculator {
-        this.currentStatistics.maxDrawdown = this.calculateMaxDrawdown(
+        const { newDrawdown, newDate } = this.calculateMaxDrawdown(
             this.prevStatistics.maxDrawdown,
+            this.prevStatistics.maxDrawdownDate,
+            this.newPosition.exitDate,
             this.currentStatistics.netProfit,
             this.currentStatistics.localMax
         );
-        return this;
-    }
-
-    private updateMaxDrawdownDate(): StatisticsCalculator {
-        this.currentStatistics.maxDrawdownDate = this.calculateMaxDrawdownDate(
-            this.prevStatistics.maxDrawdownDate,
-            this.newPosition.exitDate
-        );
+        this.currentStatistics.maxDrawdown = newDrawdown;
+        this.currentStatistics.maxDrawdownDate = newDate;
         return this;
     }
 
@@ -634,31 +629,28 @@ export default class StatisticsCalculator {
 
     public calculateMaxDrawdown(
         prevDrawdown: StatsNumberValue,
+        prevDate: StatsStringValue,
+        exitDate: string,
         netProfit: StatsNumberValue,
         localMax: StatsNumberValue
-    ): StatsNumberValue {
+    ): { newDrawdown: StatsNumberValue; newDate: StatsStringValue } {
         validateArguments(netProfit.all, netProfit[this.dir], localMax.all, localMax[this.dir]);
 
         const currentDrawdownAll = netProfit.all - localMax.all;
         const currentDrawdownDir = netProfit[this.dir] - localMax[this.dir];
 
         const newDrawdown = { ...prevDrawdown };
-
-        newDrawdown.all = currentDrawdownAll > prevDrawdown.all ? 0 : currentDrawdownAll;
-        newDrawdown[this.dir] = currentDrawdownDir > prevDrawdown[this.dir] ? 0 : currentDrawdownDir;
-
-        return newDrawdown;
-    }
-
-    public calculateMaxDrawdownDate(prevDate: StatsStringValue, exitDate: string): StatsStringValue {
-        validateArguments(exitDate);
-
         const newDate = { ...prevDate };
+        if (prevDrawdown.all > currentDrawdownAll) {
+            newDrawdown.all = currentDrawdownAll;
+            newDate.all = exitDate;
+        }
 
-        newDate.all = exitDate;
-        newDate[this.dir] = exitDate;
-
-        return newDate;
+        if (prevDrawdown[this.dir] > currentDrawdownDir) {
+            newDrawdown[this.dir] = currentDrawdownDir;
+            newDate[this.dir] = exitDate;
+        }
+        return { newDrawdown, newDate };
     }
 
     public calculateEquity(prevPerformance: PerformanceVals, profit: number, exitDate: string): PerformanceVals {

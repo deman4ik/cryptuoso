@@ -364,7 +364,7 @@ export class UserPosition {
             ),
             6
         );
-        if (this._direction === PositionDirection.long) {
+        if (this._direction === "long") {
             this._profit = +round(exitBalance - entryBalance, 6);
         } else {
             this._profit = +round(entryBalance - exitBalance, 6);
@@ -857,8 +857,7 @@ export class UserPosition {
                 if (!this.hasOpenEntryOrders) {
                     // Creating new exit order to close position
                     this._close({
-                        action:
-                            this._direction === PositionDirection.long ? TradeAction.closeLong : TradeAction.closeShort,
+                        action: this._direction === "long" ? TradeAction.closeLong : TradeAction.closeShort,
                         orderType: OrderType.forceMarket
                     });
                 }
@@ -867,7 +866,7 @@ export class UserPosition {
             // Position is open, but there is no exit signal
             // Creating new exit order to close position
             this._close({
-                action: this._direction === PositionDirection.long ? TradeAction.closeLong : TradeAction.closeShort,
+                action: this._direction === "long" ? TradeAction.closeLong : TradeAction.closeShort,
                 orderType: OrderType.forceMarket
             });
         } else if (this._exitStatus && this._exitStatus !== UserPositionOrderStatus.closed) {
@@ -901,7 +900,7 @@ export class UserPosition {
             if (!this.hasOpenExitOrders) {
                 // Creating new exit order to close position
                 this._close({
-                    action: this._direction === PositionDirection.long ? TradeAction.closeLong : TradeAction.closeShort,
+                    action: this._direction === "long" ? TradeAction.closeLong : TradeAction.closeShort,
                     orderType: OrderType.forceMarket
                 });
             }

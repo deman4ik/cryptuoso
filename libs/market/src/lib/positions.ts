@@ -3,10 +3,7 @@ import { TradeAction } from "./market";
 import { OrderType } from "./orders";
 import { ValidTimeframe } from "./timeframe";
 
-export const enum PositionDirection {
-    long = "long",
-    short = "short"
-}
+export type PositionDirection = "long" | "short";
 
 export const enum RobotPositionStatus {
     new = "new",
@@ -54,7 +51,7 @@ export const calcPositionProfit = (
     fee?: number
 ): number => {
     let profit: number;
-    if (direction === PositionDirection.long) {
+    if (direction === "long") {
         profit = (exitPrice - entryPrice) * volume;
     } else {
         profit = (entryPrice - exitPrice) * volume;

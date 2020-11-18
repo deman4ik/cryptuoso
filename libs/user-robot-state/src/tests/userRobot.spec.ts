@@ -77,7 +77,7 @@ describe("Test User Robot", () => {
 
         userRobot.handleSignal(signal);
         expect(userRobot.state.positions.length).toBe(1);
-        expect(userRobot.state.positions[0].direction).toBe(PositionDirection.long);
+        expect(userRobot.state.positions[0].direction).toBe("long");
         expect(userRobot.state.ordersToCreate[0].signalPrice).toBe(signal.price);
         expect(userRobot.state.ordersToCreate[0].price).toBe(7152);
     });
@@ -103,7 +103,7 @@ describe("Test User Robot", () => {
 
         userRobot.handleSignal(signal);
         expect(userRobot.state.positions.length).toBe(1);
-        expect(userRobot.state.positions[0].direction).toBe(PositionDirection.short);
+        expect(userRobot.state.positions[0].direction).toBe("short");
         expect(userRobot.state.ordersToCreate[0].signalPrice).toBe(signal.price);
         expect(userRobot.state.ordersToCreate[0].price).toBe(5848);
     });
@@ -139,7 +139,7 @@ describe("Test User Robot", () => {
         });
         userRobot.handleSignal(signal);
         expect(userRobot.state.positions.length).toBe(1);
-        expect(userRobot.state.positions[0].direction).toBe(PositionDirection.short);
+        expect(userRobot.state.positions[0].direction).toBe("short");
         expect(userRobot.state.ordersToCreate[0].signalPrice).toBe(signal.price);
         expect(userRobot.state.ordersToCreate[0].price).toBe(signal.price);
     });

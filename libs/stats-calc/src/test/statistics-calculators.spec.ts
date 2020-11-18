@@ -301,24 +301,20 @@ describe("Statistics functions test", () => {
         it("Should calculate maxDrawdown", () => {
             const prevMaxDrawdown = prevStatisticsObject.maxDrawdown,
                 currNetProfit = currentStatisticsObject.netProfit,
-                localMax = currentStatisticsObject.localMax;
-
-            currentStatisticsObject.maxDrawdown = roundRobotStatVals(
-                sc.calculateMaxDrawdown(prevMaxDrawdown, currNetProfit, localMax),
-                2
-            );
-
-            expect(currentStatisticsObject.maxDrawdown).toStrictEqual(referenceStatisticsObject.maxDrawdown);
-        });
-    });
-
-    describe("calculateMaxDrawdownDate test", () => {
-        it("Should update maxDrawdownDate", () => {
-            const prevDate = prevStatisticsObject.maxDrawdownDate,
+                localMax = currentStatisticsObject.localMax,
+                prevDate = prevStatisticsObject.maxDrawdownDate,
                 exitDate = newPos.exitDate;
 
-            currentStatisticsObject.maxDrawdownDate = sc.calculateMaxDrawdownDate(prevDate, exitDate);
-
+            const { newDrawdown, newDate } = sc.calculateMaxDrawdown(
+                prevMaxDrawdown,
+                prevDate,
+                exitDate,
+                currNetProfit,
+                localMax
+            );
+            currentStatisticsObject.maxDrawdown = roundRobotStatVals(newDrawdown, 2);
+            currentStatisticsObject.maxDrawdownDate = newDate;
+            expect(currentStatisticsObject.maxDrawdown).toStrictEqual(referenceStatisticsObject.maxDrawdown);
             expect(currentStatisticsObject.maxDrawdownDate).toStrictEqual(referenceStatisticsObject.maxDrawdownDate);
         });
     });
