@@ -171,6 +171,9 @@
         },
         "notifications": {
             "tags": []
+        },
+        "support": {
+            "tags": []
         }
     },
     "affected": {

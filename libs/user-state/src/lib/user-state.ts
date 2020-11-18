@@ -1,3 +1,4 @@
+import { GenericObject } from "@cryptuoso/helpers";
 import { TradeStats } from "@cryptuoso/stats-calc";
 
 export enum UserAggrStatsTypes {
@@ -77,4 +78,17 @@ export interface User extends BaseUser {
     secretCodeExpireAt?: string;
     refreshToken?: string;
     refreshTokenExpireAt?: string;
+}
+
+export interface Notification {
+    id?: string;
+    userId: string;
+    timestamp: string;
+    type: string;
+    data: GenericObject<any>;
+    sendTelegram: boolean;
+    sendEmail: boolean;
+    readed?: boolean;
+    robotId?: string;
+    userRobotId?: string;
 }

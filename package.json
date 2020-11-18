@@ -76,7 +76,9 @@
         "build:connector-worker": "nx build connector-worker --prod",
         "serve:connector-worker": "nx serve connector-worker",
         "build:notifications": "nx build notifications --prod",
-        "serve:notifications": "nx serve notifications"
+        "serve:notifications": "nx serve notifications",
+        "build:support": "nx build support --prod",
+        "serve:support": "nx serve support"
     },
     "private": true,
     "dependencies": {
