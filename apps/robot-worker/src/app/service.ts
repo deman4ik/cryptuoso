@@ -228,8 +228,9 @@ export default class RobotWorkerService extends BaseService {
 
             const robot = new Robot(robotState);
 
-            if (type === RobotJobType.tick && robot.hasAlerts) {
-                const currentCandle: DBCandle = await this.db.pg.one(sql`
+            if (type === RobotJobType.tick) {
+                if (robot.hasAlerts) {
+                    const currentCandle: DBCandle = await this.db.pg.one(sql`
                 SELECT * 
                 FROM ${sql.identifier([`candles${robot.timeframe}`])}
                 WHERE exchange = ${robot.exchange}
@@ -238,17 +239,18 @@ export default class RobotWorkerService extends BaseService {
                 ORDER BY time DESC
                 LIMIT 1;`);
 
-                robot.setStrategy(null);
-                const { success, error } = robot.handleCurrentCandle({
-                    ...currentCandle,
-                    timeframe: robot.timeframe,
-                    id: currentCandle.id
-                });
+                    robot.setStrategy(null);
+                    const { success, error } = robot.handleCurrentCandle({
+                        ...currentCandle,
+                        timeframe: robot.timeframe,
+                        id: currentCandle.id
+                    });
 
-                if (success) {
-                    robot.checkAlerts();
-                } else {
-                    this.log.error(error);
+                    if (success) {
+                        robot.checkAlerts();
+                    } else {
+                        this.log.error(error);
+                    }
                 }
             } else if (type === RobotJobType.candle) {
                 robot.setStrategy(this.strategiesCode[robot.strategy]);
