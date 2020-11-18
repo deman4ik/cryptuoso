@@ -918,9 +918,6 @@ export default class UserProfileService extends HTTPService {
             (currentUserRobotSettings?.volumeType === VolumeSettingsType.currencyDynamic &&
                 settings.volumeType === VolumeSettingsType.currencyDynamic &&
                 settings.volumeInCurrency === currentUserRobotSettings.volumeInCurrency) ||
-            (currentUserRobotSettings?.volumeType === VolumeSettingsType.balancePercent &&
-                settings.volumeType === VolumeSettingsType.balancePercent &&
-                settings.balancePercent === currentUserRobotSettings.balancePercent) ||
             (currentUserRobotSettings?.volumeType === VolumeSettingsType.assetDynamicDelta &&
                 settings.volumeType === VolumeSettingsType.assetDynamicDelta &&
                 settings.initialVolume === currentUserRobotSettings.initialVolume)
@@ -943,10 +940,15 @@ export default class UserProfileService extends HTTPService {
                 AND ea.id = ${userRobotExists.userExAccId};
         `);
 
+        const currentUsedBalancePercent =
+            currentUserRobotSettings?.volumeType === VolumeSettingsType.balancePercent
+                ? usedBalancePercent - currentUserRobotSettings.balancePercent
+                : usedBalancePercent;
+
         const newUserRobotSettings = await this.getNewUserRobotSettings(
             settings,
             limits,
-            usedBalancePercent,
+            currentUsedBalancePercent,
             totalBalanceUsd
         );
 
