@@ -7,8 +7,8 @@ const loggerConfig: ISettingsParam =
               type: "json",
               exposeErrorCodeFrame: false,
               displayFilePath: "hidden",
-              minLevel: "info",
-              maskValuesOfKeys: ["authorization", "password", "refreshToken", "accessToken"]
+              minLevel: "info"
+              //maskValuesOfKeys: ["authorization", "password", "refreshToken", "accessToken"]
           }
         : {
               name: process.env.SERVICE,
@@ -17,6 +17,7 @@ const loggerConfig: ISettingsParam =
               displayFilePath: "hidden",
               displayFunctionName: false,
               exposeErrorCodeFrame: true
+              //  maskValuesOfKeys: []
           };
 
 const logger = new Logger(loggerConfig);
