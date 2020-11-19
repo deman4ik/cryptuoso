@@ -1,7 +1,6 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import { QueueEvents } from "bullmq";
 import {
-    STATS_CALC_TOPIC,
     StatsCalcJob,
     StatsCalcJobType,
     StatsCalcRunnerEvents,

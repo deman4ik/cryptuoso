@@ -499,12 +499,12 @@ export default class StatisticsCalculator {
         currentTradesRated: StatsNumberValue,
         currentTradesCount: StatsNumberValue
     ): StatsNumberValue {
-        //validateArguments(
+        /*validateArguments(
             currentTradesRated.all,
             currentTradesRated[this.dir],
             currentTradesCount.all,
             currentTradesCount[this.dir]
-        );
+        ); */
 
         const newRate = { ...prevRate };
 
@@ -520,13 +520,13 @@ export default class StatisticsCalculator {
         newTradesCount: StatsNumberValue,
         newBars: number
     ): StatsNumberValue {
-        //validateArguments(
+        /*validateArguments(
             prevTradesCount.all,
             prevTradesCount[this.dir],
             newTradesCount.all,
             newTradesCount[this.dir],
             newBars
-        );
+        ); */
 
         const newAvgBars = { ...prevAvgBars };
 
@@ -556,14 +556,14 @@ export default class StatisticsCalculator {
         currentGrossLoss: StatsNumberValue,
         currentTradesCount: StatsNumberValue
     ): StatsNumberValue {
-        //validateArguments(
+        /*validateArguments(
             currentGrossProfit.all,
             currentGrossProfit[this.dir],
             currentGrossLoss.all,
             currentGrossLoss[this.dir],
             currentTradesCount.all,
             currentTradesCount[this.dir]
-        );
+        ); */
 
         const newAvgProfit = { ...prevAvgProfit };
 
