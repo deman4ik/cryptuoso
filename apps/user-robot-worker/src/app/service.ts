@@ -262,7 +262,7 @@ WHERE p.user_robot_id =${userRobotId}
     #saveState = async (transaction: DatabaseTransactionConnectionType, state: UserRobotDB) => {
         await transaction.query(sql`
             UPDATE user_robots
-               SET internalState = ${JSON.stringify(state.internalState) || null},
+               SET internal_state = ${JSON.stringify(state.internalState) || null},
                    status = ${state.status},
                    started_at = ${state.startedAt || null},
                    stopped_at = ${state.stoppedAt},
