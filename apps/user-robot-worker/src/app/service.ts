@@ -118,7 +118,7 @@ FROM
         AND (o.action = 'closeLong'
              OR o.action = 'closeShort') order by o.created_at asc) eo) AS exit_orders
 FROM user_positions p
-WHERE p.user_robot_id = ur.id
+WHERE p.user_robot_id =${userRobotId}
   AND p.status IN ('delayed',
                    'new',
                    'open')) pos) AS positions
@@ -126,13 +126,13 @@ WHERE p.user_robot_id = ur.id
     v_user_markets m, v_user_robot_settings urs, 
     v_user_amounts a, v_user_exchange_accs ea
     LEFT JOIN v_user_robot_stats st
-    ON st.user_robot_id = ur.id
+    ON st.user_robot_id = ${userRobotId}
     WHERE ur.robot_id = r.id  
       AND m.exchange = r.exchange
       AND m.asset = r.asset
       AND m.currency = r.currency
       AND m.user_id = ur.user_id    
-	  AND urs.user_robot_id = ur.id
+	  AND urs.user_robot_id = ${userRobotId}
       AND a.user_id = ur.user_id
       AND ea.id = ur.user_ex_acc_id
       AND ur.id = ${userRobotId};                   
