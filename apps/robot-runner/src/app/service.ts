@@ -85,26 +85,20 @@ export default class RobotRunnerService extends HTTPService {
             jobId: RobotRunnerJobType.alerts,
             repeat: {
                 every: 1000
-            },
-            removeOnComplete: true,
-            removeOnFail: 100
+            }
         });
         await this.addJob(Queues.robotRunner, RobotRunnerJobType.newCandles, null, {
             jobId: RobotRunnerJobType.newCandles,
             repeat: {
                 cron: "0 */5 * * * *"
-            },
-            removeOnComplete: true,
-            removeOnFail: 100
+            }
         });
 
         await this.addJob(Queues.robotRunner, RobotRunnerJobType.idleRobotJobs, null, {
             jobId: RobotRunnerJobType.idleRobotJobs,
             repeat: {
                 cron: "*/30 * * * * *"
-            },
-            removeOnComplete: true,
-            removeOnFail: 100
+            }
         });
     }
 
@@ -126,20 +120,7 @@ export default class RobotRunnerService extends HTTPService {
         mod: string
     ) => `${strategy}-${mod} ${robotExchangeName(exchange)} ${asset}/${currency} ${Timeframe.toString(timeframe)}`;
 
-    async checkAndQueueRobotJob(robotId: string) {
-        const lastJob = await this.queues[Queues.robot].instance.getJob(robotId);
-        if (lastJob) {
-            const lastJobState = await lastJob.getState();
-            if (["unknown", "completed", "failed"].includes(lastJobState)) {
-                try {
-                    await lastJob.remove();
-                } catch (e) {
-                    this.log.warn(e);
-                    return;
-                }
-            } else return;
-        }
-
+    async queueRobotJob(robotId: string) {
         await this.addJob(
             Queues.robot,
             "job",
@@ -147,7 +128,7 @@ export default class RobotRunnerService extends HTTPService {
             {
                 jobId: robotId,
                 removeOnComplete: true,
-                removeOnFail: 100
+                removeOnFail: true
             }
         );
     }
@@ -171,7 +152,7 @@ export default class RobotRunnerService extends HTTPService {
          retries = null,
          error = null;
         `);
-        if (status === RobotStatus.started) await this.checkAndQueueRobotJob(robotId);
+        if (status === RobotStatus.started) await this.queueRobotJob(robotId);
     }
 
     async createHTTPHandler(
@@ -643,7 +624,7 @@ export default class RobotRunnerService extends HTTPService {
         `);
 
             if (robotsWithJobs && Array.isArray(robotsWithJobs) && robotsWithJobs.length) {
-                await Promise.all(robotsWithJobs.map(async ({ robotId }) => this.checkAndQueueRobotJob(robotId)));
+                await Promise.all(robotsWithJobs.map(async ({ robotId }) => this.queueRobotJob(robotId)));
             }
         } catch (err) {
             this.log.error("Failed to idle robot jobs", err);

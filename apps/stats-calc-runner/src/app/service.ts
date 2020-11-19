@@ -108,11 +108,6 @@ export default class StatisticCalcRunnerService extends HTTPService {
 
     async onServiceStart() {
         this.createQueue("calcStatistics");
-        this.queueEvents = {
-            calcStatistics: new QueueEvents("calcStatistics", { connection: this.redis.duplicate() })
-        };
-
-        this.queueEvents.calcStatistics.on("failed", this._queueFailHandler.bind(this));
     }
 
     async onServiceStop() {
@@ -137,28 +132,6 @@ export default class StatisticCalcRunnerService extends HTTPService {
         res.end();
     }
 
-    async _queueFailHandler(args: { jobId: string; failedReason: string; prev?: string }) {
-        const { jobId } = args;
-
-        const locker = await this.makeLocker(`lock:${this.name}:error.${jobId}`, 5000);
-
-        try {
-            await locker.lock();
-
-            const { name, data } = await this.queues["calcStatistics"].instance.getJob(jobId);
-
-            await this.events.emit({
-                type: `errors.${STATS_CALC_TOPIC}.${name}`,
-                data
-            });
-
-            await locker.unlock();
-        } catch (err) {
-            this.log.error(err);
-            await locker.unlock();
-        }
-    }
-
     async queueJob(type: StatsCalcJobType, job: StatsCalcJob) {
         const paramsKeyPart = Object.keys(job)
             .filter((prop: keyof StatsCalcJob) => prop != "calcAll" && job[prop])
@@ -166,10 +139,11 @@ export default class StatisticCalcRunnerService extends HTTPService {
             .map((prop: keyof StatsCalcJob) => `${prop}:${job[prop]}`)
             .join(",");
         const jobId = `${type}({${paramsKeyPart}})`;
+
         await this.addJob("calcStatistics", type, job, {
             jobId,
             removeOnComplete: true,
-            removeOnFail: 100,
+            removeOnFail: true,
             attempts: 3,
             backoff: { type: "exponential", delay: 10000 }
         });

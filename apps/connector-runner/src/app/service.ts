@@ -33,18 +33,14 @@ export default class ConnectorRunnerService extends HTTPService {
             jobId: ConnectorRunnerJobType.idleOrderJobs,
             repeat: {
                 cron: "*/15 * * * * *"
-            },
-            removeOnComplete: true,
-            removeOnFail: 100
+            }
         });
 
         await this.addJob(Queues.connectorRunner, ConnectorRunnerJobType.checkBalance, null, {
             jobId: ConnectorRunnerJobType.checkBalance,
             repeat: {
                 every: 1000 * 60
-            },
-            removeOnComplete: true,
-            removeOnFail: 100
+            }
         });
     }
 

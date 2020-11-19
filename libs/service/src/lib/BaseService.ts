@@ -290,6 +290,19 @@ export class BaseService {
 
     #addJob = async <T>(queueName: string, jobName: string, data: T, opts?: JobsOptions): Promise<Job<any, any>> => {
         if (!this.#queues[queueName]) throw new Error(`Queue ${queueName} doesn't exists`);
+        if (opts && opts.jobId) {
+            const lastJob = await this.#queues[queueName].instance.getJob(opts.jobId);
+            if (lastJob) {
+                const lastJobState = await lastJob.getState();
+                if (["unknown", "completed", "failed"].includes(lastJobState)) {
+                    try {
+                        await lastJob.remove();
+                    } catch (e) {
+                        this.log.warn(e);
+                    }
+                }
+            }
+        }
         return this.#queues[queueName].instance.add(jobName, data, opts);
     };
 

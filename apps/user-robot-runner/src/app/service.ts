@@ -108,34 +108,17 @@ export default class UserRobotRunnerService extends HTTPService {
             jobId: UserRobotRunnerJobType.idleUserRobotJobs,
             repeat: {
                 every: 15000
-            },
-            removeOnComplete: true,
-            removeOnFail: 100
+            }
         });
         await this.addJob(Queues.userRobotRunner, UserRobotRunnerJobType.idleUserOrders, null, {
             jobId: UserRobotRunnerJobType.idleUserOrders,
             repeat: {
                 every: 60000
-            },
-            removeOnComplete: true,
-            removeOnFail: 100
+            }
         });
     }
 
-    async checkAndQueueUserRobotJob(userRobotId: string) {
-        const lastJob = await this.queues[Queues.userRobot].instance.getJob(userRobotId);
-        if (lastJob) {
-            const lastJobState = await lastJob.getState();
-            if (["unknown", "completed", "failed"].includes(lastJobState)) {
-                try {
-                    await lastJob.remove();
-                } catch (e) {
-                    this.log.warn(e);
-                    return;
-                }
-            } else return;
-        }
-
+    async queueUserRobotJob(userRobotId: string) {
         await this.addJob(
             Queues.userRobot,
             "job",
@@ -167,7 +150,7 @@ export default class UserRobotRunnerService extends HTTPService {
          retries = null,
          error = null;
         `);
-        if (status === UserRobotStatus.started) await this.checkAndQueueUserRobotJob(userRobotId);
+        if (status === UserRobotStatus.started) await this.queueUserRobotJob(userRobotId);
     }
 
     async _httpHandler(
@@ -529,9 +512,7 @@ export default class UserRobotRunnerService extends HTTPService {
              AND urj.updated_at < ${dayjs.utc().add(-30, "second").toISOString()}
             `);
 
-            await Promise.all(
-                userRobotWithJobs.map(async ({ userRobotId }) => this.checkAndQueueUserRobotJob(userRobotId))
-            );
+            await Promise.all(userRobotWithJobs.map(async ({ userRobotId }) => this.queueUserRobotJob(userRobotId)));
         } catch (err) {
             this.log.error("Failed to check idle user robot jobs", err);
         }

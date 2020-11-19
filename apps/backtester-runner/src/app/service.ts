@@ -234,7 +234,8 @@ export default class BacktesterRunnerService extends HTTPService {
 
             await this.addJob("backtest", "backtest", backtester.state, {
                 jobId: backtester.id,
-                removeOnComplete: true
+                removeOnComplete: true,
+                removeOnFail: true
             });
             return { result: backtester.id };
         } catch (error) {
