@@ -9,6 +9,7 @@ import {
 } from "@cryptuoso/exwatcher-events";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { sql } from "slonik";
+import { UserRoles } from "@cryptuoso/user-state";
 
 export type ExwatcherRunnerServiceConfig = HTTPServiceConfig;
 
@@ -25,31 +26,26 @@ export default class ExwatcherRunnerService extends HTTPService {
         this.createRoutes({
             exwatcherSubscribe: {
                 inputSchema: ExwatcherSchema[ExwatcherEvents.SUBSCRIBE],
-                auth: true,
-                roles: ["manager", "admin"],
+                roles: [UserRoles.admin, UserRoles.manager],
                 handler: this.subscribe
             },
             exwatcherSubscribeAll: {
                 inputSchema: ExwatcherSchema[ExwatcherEvents.SUBSCRIBE_ALL],
-                auth: true,
-                roles: ["manager", "admin"],
+                roles: [UserRoles.admin, UserRoles.manager],
                 handler: this.subscribeAll
             },
             exwatcherUnsubscribeAll: {
                 inputSchema: ExwatcherSchema[ExwatcherEvents.SUBSCRIBE_ALL],
-                auth: true,
-                roles: ["manager", "admin"],
+                roles: [UserRoles.admin, UserRoles.manager],
                 handler: this.unsubscribeAll
             },
             addMarket: {
                 inputSchema: ExwatcherSchema[ExwatcherEvents.ADD_MARKET],
-                auth: true,
-                roles: ["manager", "admin"],
+                roles: [UserRoles.admin, UserRoles.manager],
                 handler: this.addMarket
             },
             updateMarkets: {
-                auth: true,
-                roles: ["manager", "admin"],
+                roles: [UserRoles.admin, UserRoles.manager],
                 handler: this.updateMarketsHTTPHandler
             }
         });

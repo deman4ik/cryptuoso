@@ -52,8 +52,7 @@ export default class UserRobotRunnerService extends HTTPService {
                     handler: this._httpHandler.bind(this, this.stop.bind(this))
                 },
                 userRobotPause: {
-                    auth: true,
-                    roles: [UserRoles.manager, UserRoles.admin],
+                    roles: [UserRoles.admin, UserRoles.manager],
                     inputSchema: {
                         id: { type: "uuid", optional: true },
                         userExAccId: { type: "uuid", optional: true },
@@ -63,8 +62,7 @@ export default class UserRobotRunnerService extends HTTPService {
                     handler: this._httpHandler.bind(this, this.pause.bind(this))
                 },
                 userRobotResume: {
-                    auth: true,
-                    roles: [UserRoles.manager, UserRoles.admin],
+                    roles: [UserRoles.admin, UserRoles.manager],
                     inputSchema: {
                         id: { type: "uuid", optional: true },
                         userExAccId: { type: "uuid", optional: true },

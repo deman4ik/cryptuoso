@@ -29,6 +29,7 @@ import {
     ValidTimeframe
 } from "@cryptuoso/market";
 import { Event } from "@cryptuoso/events";
+import { UserRoles } from "@cryptuoso/user-state";
 export type RobotRunnerServiceConfig = HTTPServiceConfig;
 
 export default class RobotRunnerService extends HTTPService {
@@ -39,20 +40,17 @@ export default class RobotRunnerService extends HTTPService {
             this.createRoutes({
                 robotCreate: {
                     inputSchema: RobotRunnerSchema[RobotRunnerEvents.CREATE],
-                    auth: true,
-                    roles: ["manager", "admin"],
+                    roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.createHTTPHandler
                 },
                 robotStart: {
                     inputSchema: RobotRunnerSchema[RobotRunnerEvents.START],
-                    auth: true,
-                    roles: ["manager", "admin"],
+                    roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.startHTTPHandler
                 },
                 robotStop: {
                     inputSchema: RobotRunnerSchema[RobotRunnerEvents.STOP],
-                    auth: true,
-                    roles: ["manager", "admin"],
+                    roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.stopHTTPHandler
                 }
             });

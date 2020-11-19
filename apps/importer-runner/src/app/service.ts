@@ -13,6 +13,7 @@ import {
 } from "@cryptuoso/importer-events";
 import { BaseError } from "@cryptuoso/errors";
 import { Timeframe } from "@cryptuoso/market";
+import { UserRoles } from "@cryptuoso/user-state";
 
 export type ImporterRunnerServiceConfig = HTTPServiceConfig;
 
@@ -23,14 +24,12 @@ export default class ImporterRunnerService extends HTTPService {
             this.createRoutes({
                 importerStart: {
                     inputSchema: ImporterRunnerSchema[ImporterRunnerEvents.START],
-                    auth: true,
-                    roles: ["manager", "admin"],
+                    roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.startHTTPHandler
                 },
                 importerStop: {
                     inputSchema: ImporterRunnerSchema[ImporterRunnerEvents.STOP],
-                    auth: true,
-                    roles: ["manager", "admin"],
+                    roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.stopHTTPHandler
                 }
             });

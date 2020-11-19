@@ -21,56 +21,47 @@ export default class StatisticCalcRunnerService extends HTTPService {
             this.createRoutes({
                 calcUserSignal: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_SIGNAL],
-                    auth: true,
-                    roles: [UserRoles.admin],
+                    roles: [UserRoles.admin, UserRoles.manager],
                     handler: this._HTTPHandler.bind(this, this.handleCalcUserSignalEvent.bind(this))
                 },
                 calcUserSignals: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_SIGNALS],
-                    auth: true,
-                    roles: [UserRoles.admin],
+                    roles: [UserRoles.admin, UserRoles.manager],
                     handler: this._HTTPHandler.bind(this, this.handleCalcUserSignalsEvent.bind(this))
                 },
                 calcRobot: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.ROBOT],
-                    auth: true,
-                    roles: [UserRoles.admin],
+                    roles: [UserRoles.admin, UserRoles.manager],
                     handler: this._HTTPHandler.bind(this, this.handleStatsCalcRobotEvent.bind(this))
                 },
                 calcRobots: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.ROBOTS],
-                    auth: true,
-                    roles: [UserRoles.admin],
+                    roles: [UserRoles.admin, UserRoles.manager],
                     handler: this._HTTPHandler.bind(this, this.handleStatsCalcRobotsEvent.bind(this))
                 },
                 calcUserRobot: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_ROBOT],
-                    auth: true,
-                    roles: [UserRoles.admin],
+                    roles: [UserRoles.admin, UserRoles.manager],
                     handler: this._HTTPHandler.bind(this, this.handleStatsCalcUserRobotEvent.bind(this))
                 },
                 calcUserRobots: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_ROBOTS],
-                    auth: true,
-                    roles: [UserRoles.admin],
+                    roles: [UserRoles.admin, UserRoles.manager],
                     handler: this._HTTPHandler.bind(this, this.handleStatsCalcUserRobotsEvent.bind(this))
                 },
                 recalcAllRobots: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.RECALC_ALL_ROBOTS],
-                    auth: true,
-                    roles: [UserRoles.admin],
+                    roles: [UserRoles.admin, UserRoles.manager],
                     handler: this._HTTPHandler.bind(this, this.handleRecalcAllRobotsEvent.bind(this))
                 },
                 recalcAllUserSignals: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.RECALC_ALL_USER_SIGNALS],
-                    auth: true,
-                    roles: [UserRoles.admin],
+                    roles: [UserRoles.admin, UserRoles.manager],
                     handler: this._HTTPHandler.bind(this, this.handleRecalcAllUserSignalsEvent.bind(this))
                 },
                 recalcAllUserRobots: {
                     inputSchema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.RECALC_ALL_USER_ROBOTS],
-                    auth: true,
-                    roles: [UserRoles.admin],
+                    roles: [UserRoles.admin, UserRoles.manager],
                     handler: this._HTTPHandler.bind(this, this.handleRecalcAllUserRobotsEvent.bind(this))
                 }
             });
