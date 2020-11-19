@@ -4,7 +4,7 @@ import { Job } from "bullmq";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import { StatisticsUtils } from "./statsWorker";
 import { sql, QueryType, makeChunksGenerator } from "@cryptuoso/postgres";
-import { TradeStats } from "@cryptuoso/stats-calc";
+import { checkTradeStats, TradeStats } from "@cryptuoso/stats-calc";
 import { UserAggrStatsTypes } from "@cryptuoso/user-state";
 import {
     StatsCalcJob,
@@ -27,10 +27,7 @@ export function getCalcFromAndInitStats(stats?: TradeStats, calcAll?: boolean) {
     let calcFrom: string = null;
     let initStats: TradeStats = null;
 
-    if (
-        !calcAll &&
-        stats //&& checkTradeStats(stats) === true
-    ) {
+    if (!calcAll && stats && checkTradeStats(stats) === true) {
         initStats = {
             statistics: stats.statistics,
             lastPositionExitDate: stats.lastPositionExitDate,
@@ -234,12 +231,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         stats: TradeStats,
         prevStats?: TradeStats
     ): Promise<void> {
-        /* console.log(params);
-        return; */
-        if (
-            params.id &&
-            prevStats // && checkTradeStats(prevStats) === true
-        ) {
+        if (params.id && prevStats && checkTradeStats(prevStats) === true) {
             await this.db.pg.query(sql`
                 UPDATE ${params.table}
                 SET statistics = ${JSON.stringify(stats.statistics)},
@@ -869,7 +861,6 @@ export default class StatisticCalcWorkerService extends BaseService {
                 ON ur.id = urs.user_robot_id
             WHERE ur.id = ${userRobotId};
         `);
-
             if (!prevTradeStats) throw new Error(`User robot doesn't exists (userRobotId: ${userRobotId})`);
 
             const { calcFrom, initStats } = getCalcFromAndInitStats(prevTradeStats, calcAll);
