@@ -444,7 +444,8 @@ export default class UserRobotRunnerService extends HTTPService {
              FROM user_robots
             WHERE robot_id = ${robotId}
              AND status IN (${UserRobotStatus.started}, ${UserRobotStatus.paused})
-             AND (internal_state->'latestSignal'->>'timestamp')::timestamp < ${timestamp};
+             AND ((internal_state->'latestSignal'->>'timestamp')::timestamp is null 
+              OR (internal_state->'latestSignal'->>'timestamp')::timestamp < ${timestamp});
             `
         );
         this.log.info(`New signal #${id} from robot #${robotId} required by ${userRobots.length}`);

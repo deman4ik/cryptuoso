@@ -5,7 +5,6 @@ import {
     UserRobotDB,
     UserRobotJob,
     UserRobotJobType,
-    UserRobotState,
     UserRobotStatus,
     UserRobot,
     UserPositionDB,
@@ -26,6 +25,7 @@ import {
     VolumeSettingsType
 } from "@cryptuoso/robot-settings";
 import dayjs from "@cryptuoso/dayjs";
+import { datesToISOString, keysToCamelCase } from "@cryptuoso/helpers";
 
 export type UserRobotRunnerServiceConfig = BaseServiceConfig;
 
@@ -78,8 +78,8 @@ export default class UserRobotRunnerService extends BaseService {
         }
     }
 
-    #getUserRobotState = async (userRobotId: string) =>
-        this.db.pg.one<UserRobotStateExt>(sql`
+    #getUserRobotState = async (userRobotId: string) => {
+        const rawData = await this.db.pg.one<UserRobotStateExt>(sql`
     SELECT ur.id,
            ur.user_ex_acc_id,
            ur.user_id,
@@ -138,6 +138,9 @@ WHERE p.user_robot_id =${userRobotId}
       AND ea.id = ur.user_ex_acc_id
       AND ur.id = ${userRobotId};                   
   `);
+
+        return keysToCamelCase(datesToISOString(rawData)) as UserRobotStateExt;
+    };
 
     #getCurrentVolume = (state: UserRobotStateExt) => {
         const { userRobotSettings } = state;

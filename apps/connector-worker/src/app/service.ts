@@ -120,14 +120,14 @@ export default class ConnectorRunnerService extends BaseService {
 
     #getOrder = async (orderId: string) => {
         return this.db.pg.one<Order>(sql`
-        SELECT * from user_oders
+        SELECT * from user_orders
         WHERE id = ${orderId}
         `);
     };
 
     #saveOrder = async (transaction: DatabaseTransactionConnectionType, order: Order) => {
         return transaction.query(sql`
-         UPDATE user_oders SET price = ${order.price || null},
+         UPDATE user_orders SET price = ${order.price || null},
          params = ${JSON.stringify(order.params) || null},
          status = ${order.status},
          ex_id = ${order.exId || null},
@@ -151,10 +151,10 @@ export default class ConnectorRunnerService extends BaseService {
 
     #saveNextJob = async (transaction: DatabaseTransactionConnectionType, nextJob: ConnectorJob) => {
         return transaction.query(sql`
-        INSERT INTO connector_jobs (id, user_ex_acc_id, order_id, next_job_at,priority, type, data )
+        INSERT INTO connector_jobs (id, user_ex_acc_id, order_id, next_job_at, priority, type, data )
         VALUES (${nextJob.id}, ${nextJob.userExAccId}, 
         ${nextJob.orderId}, ${nextJob.nextJobAt}, 
-        ${nextJob.priority},${nextJob.type}, 
+        ${nextJob.priority}, ${nextJob.type}, 
         ${JSON.stringify(nextJob.data) || null});
         `);
     };

@@ -4,7 +4,7 @@ import { Job } from "bullmq";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import { StatisticsUtils } from "./statsWorker";
 import { sql, QueryType, makeChunksGenerator } from "@cryptuoso/postgres";
-import { TradeStats, checkTradeStats } from "@cryptuoso/stats-calc";
+import { TradeStats } from "@cryptuoso/stats-calc";
 import { UserAggrStatsTypes } from "@cryptuoso/user-state";
 import {
     StatsCalcJob,

@@ -9,7 +9,6 @@ import {
     StatisticsSchema,
     TradeStatsSchema
 } from "./schemes";
-import { BaseError } from "@cryptuoso/errors";
 
 function initializeValues(stat: StatsNumberValue): StatsNumberValue {
     const values = { ...stat };
