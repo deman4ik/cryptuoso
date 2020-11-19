@@ -407,7 +407,9 @@ export class PrivateConnector {
                         err instanceof ccxt.InvalidNonce ||
                         err instanceof ccxt.InvalidOrder ||
                         err.message.includes("Margin is insufficient") ||
-                        err.message.includes("EOrder:Insufficient initial margin")
+                        err.message.includes("EOrder:Insufficient initial margin") ||
+                        err.message.includes("EAPI:Invalid key") ||
+                        err.message.includes("Invalid API-key")
                     ) {
                         throw err;
                     }

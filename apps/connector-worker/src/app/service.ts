@@ -266,12 +266,24 @@ export default class ConnectorRunnerService extends BaseService {
             };
             if (order.exchange !== exchange) throw new BaseError("Wrong exchange", { exAcc, job, order });
 
+            let errorToThrow;
             try {
                 const result = await this.processOrder(order, job);
                 order = result.order;
                 nextJob = result.nextJob;
             } catch (err) {
-                this.log.error(err);
+                if (
+                    err instanceof ccxt.AuthenticationError ||
+                    err instanceof ccxt.InsufficientFunds ||
+                    err instanceof ccxt.InvalidNonce ||
+                    err instanceof ccxt.InvalidOrder ||
+                    err.message.includes("Margin is insufficient") ||
+                    err.message.includes("EOrder:Insufficient initial margin") ||
+                    err.message.includes("EAPI:Invalid key") ||
+                    err.message.includes("Invalid API-key")
+                ) {
+                    errorToThrow = err;
+                }
 
                 order = {
                     ...order,
@@ -307,6 +319,8 @@ export default class ConnectorRunnerService extends BaseService {
                         error: order.error
                     }
                 });
+
+                if (errorToThrow) throw errorToThrow;
             } else if (order.status === OrderStatus.closed || order.status === OrderStatus.canceled) {
                 await this.events.emit<OrdersStatusEvent>({
                     type: ConnectorWorkerEvents.ORDER_STATUS,
