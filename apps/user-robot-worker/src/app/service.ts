@@ -200,7 +200,7 @@ WHERE p.user_robot_id =${userRobotId}
              ${JSON.stringify(p.internalState) || null}, ${p.reason || null}, ${p.profit || null}, ${
                 p.barsHeld || null
             },
-             ${p.nextJobAt || null}, ${JSON.stringify(p.nextJob) || null}
+             ${p.nextJobAt || null}, ${p.nextJob || null}
          )
           ON CONFLICT ON CONSTRAINT user_positions_pkey 
           DO UPDATE SET updated_at = now(),
