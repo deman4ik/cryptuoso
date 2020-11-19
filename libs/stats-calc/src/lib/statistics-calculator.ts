@@ -71,14 +71,14 @@ function roundStatisticsValues(statistics: Statistics): Statistics {
     return result;
 }
 
-function validateArguments(...args: any[]) {
+/*function validateArguments(...args: any[]) {
     const reasonMsg = "Updating methods might have been called in wrong order.";
     for (const arg of args) {
         if (arg == null) {
             throw new Error(`Validation error: argument ${args.indexOf(arg)} cannot be null. ` + reasonMsg);
         }
     }
-}
+}*/
 
 export default class StatisticsCalculator {
     private readonly positions: BasePosition[];
@@ -484,7 +484,7 @@ export default class StatisticsCalculator {
 
     //#region Public methods
     public incrementTradesCount(tradesCount: StatsNumberValue): StatsNumberValue {
-        validateArguments(tradesCount.all, tradesCount[this.dir]);
+        //validateArguments(tradesCount.all, tradesCount[this.dir]);
 
         const newTradesCount = { ...tradesCount };
 
@@ -499,7 +499,7 @@ export default class StatisticsCalculator {
         currentTradesRated: StatsNumberValue,
         currentTradesCount: StatsNumberValue
     ): StatsNumberValue {
-        validateArguments(
+        //validateArguments(
             currentTradesRated.all,
             currentTradesRated[this.dir],
             currentTradesCount.all,
@@ -520,7 +520,7 @@ export default class StatisticsCalculator {
         newTradesCount: StatsNumberValue,
         newBars: number
     ): StatsNumberValue {
-        validateArguments(
+        //validateArguments(
             prevTradesCount.all,
             prevTradesCount[this.dir],
             newTradesCount.all,
@@ -540,7 +540,7 @@ export default class StatisticsCalculator {
     }
 
     public calculateProfit(prevProfit: StatsNumberValue, profit: number): StatsNumberValue {
-        validateArguments(profit);
+        //validateArguments(profit);
 
         const newProfit = { ...prevProfit };
 
@@ -556,7 +556,7 @@ export default class StatisticsCalculator {
         currentGrossLoss: StatsNumberValue,
         currentTradesCount: StatsNumberValue
     ): StatsNumberValue {
-        validateArguments(
+        //validateArguments(
             currentGrossProfit.all,
             currentGrossProfit[this.dir],
             currentGrossLoss.all,
@@ -579,7 +579,7 @@ export default class StatisticsCalculator {
         currentMark: StatsNumberValue,
         currentTradesCount: StatsNumberValue
     ): StatsNumberValue {
-        validateArguments(currentMark.all, currentMark[this.dir], currentTradesCount.all, currentTradesCount[this.dir]);
+        //validateArguments(currentMark.all, currentMark[this.dir], currentTradesCount.all, currentTradesCount[this.dir]);
 
         const newAvgProfit = { ...prevAvgProfit };
 
@@ -590,7 +590,7 @@ export default class StatisticsCalculator {
     }
 
     public calculateRatio(profitStat: StatsNumberValue, lossStat: StatsNumberValue): StatsNumberValue {
-        validateArguments(profitStat.all, profitStat[this.dir], lossStat.all, lossStat[this.dir]);
+        //validateArguments(profitStat.all, profitStat[this.dir], lossStat.all, lossStat[this.dir]);
 
         return new StatsNumberValue(
             Math.abs(divide(profitStat.all, lossStat.all)),
@@ -600,7 +600,7 @@ export default class StatisticsCalculator {
     }
 
     public nullifySequence(prevSequence: StatsNumberValue): StatsNumberValue {
-        validateArguments(prevSequence.all, prevSequence[this.dir]);
+        //validateArguments(prevSequence.all, prevSequence[this.dir]);
 
         const newSequence = { ...prevSequence };
 
@@ -611,7 +611,7 @@ export default class StatisticsCalculator {
     }
 
     public incrementSequence(prevSequence: StatsNumberValue): StatsNumberValue {
-        validateArguments(prevSequence.all, prevSequence[this.dir]);
+        //validateArguments(prevSequence.all, prevSequence[this.dir]);
 
         const newSequence = { ...prevSequence };
 
@@ -622,7 +622,7 @@ export default class StatisticsCalculator {
     }
 
     public incrementMaxSequence(prevSequence: StatsNumberValue, maxSequence: StatsNumberValue): StatsNumberValue {
-        validateArguments(prevSequence.all, prevSequence[this.dir], maxSequence.all, maxSequence[this.dir]);
+        //validateArguments(prevSequence.all, prevSequence[this.dir], maxSequence.all, maxSequence[this.dir]);
 
         const newMax = { ...maxSequence };
 
@@ -639,7 +639,7 @@ export default class StatisticsCalculator {
         netProfit: StatsNumberValue,
         localMax: StatsNumberValue
     ): { newDrawdown: StatsNumberValue; newDate: StatsStringValue } {
-        validateArguments(netProfit.all, netProfit[this.dir], localMax.all, localMax[this.dir]);
+        //validateArguments(netProfit.all, netProfit[this.dir], localMax.all, localMax[this.dir]);
 
         const currentDrawdownAll = netProfit.all - localMax.all;
         const currentDrawdownDir = netProfit[this.dir] - localMax[this.dir];
@@ -659,7 +659,7 @@ export default class StatisticsCalculator {
     }
 
     public calculateEquity(prevPerformance: PerformanceVals, profit: number, exitDate: string): PerformanceVals {
-        validateArguments(profit, exitDate);
+        //validateArguments(profit, exitDate);
 
         const newPerformance = [...prevPerformance];
         const prevSum = prevPerformance.length > 0 ? prevPerformance[prevPerformance.length - 1].y : 0;
@@ -674,7 +674,7 @@ export default class StatisticsCalculator {
         netProfit: StatsNumberValue,
         maxDrawdown: StatsNumberValue
     ): StatsNumberValue {
-        validateArguments(netProfit.all, netProfit[this.dir], maxDrawdown.all, maxDrawdown[this.dir]);
+        //validateArguments(netProfit.all, netProfit[this.dir], maxDrawdown.all, maxDrawdown[this.dir]);
 
         const newFactor = { ...prevFactor };
 
@@ -685,7 +685,7 @@ export default class StatisticsCalculator {
     }
 
     public calculateLocalMax(prevMax: StatsNumberValue, netProfit: StatsNumberValue) {
-        validateArguments(prevMax.all, prevMax[this.dir], netProfit);
+        //validateArguments(prevMax.all, prevMax[this.dir], netProfit);
 
         const newMax = { ...prevMax };
 
@@ -703,7 +703,7 @@ export default class StatisticsCalculator {
         recoveryFactorWeight = 0.25,
         payoffRatioWeight = 0.4
     ): StatsNumberValue {
-        validateArguments(profitFactor.all, payoffRatio.all, recoveryFactor.all);
+        //validateArguments(profitFactor.all, payoffRatio.all, recoveryFactor.all);
 
         if (!isFinite(profitFactorWeight) || !isFinite(recoveryFactorWeight) || !isFinite(payoffRatioWeight))
             throw new Error("Arguments must be finite numbers");
