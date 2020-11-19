@@ -109,6 +109,7 @@ export interface UserRobotDB {
     startedAt?: string;
     stoppedAt?: string;
     message?: string;
+    settings?: UserRobotCurrentSettings;
 }
 
 export interface UserRobotState extends UserRobotDB {
@@ -117,15 +118,17 @@ export interface UserRobotState extends UserRobotDB {
     currency: string;
     timeframe: ValidTimeframe;
     tradeSettings: TradeSettings;
+    positions: UserPositionState[];
+}
+
+export interface UserRobotStateExt extends UserRobotState {
     currentPrice: number;
     limits: UserMarketState["limits"]["userRobot"];
     usedBalancePercent?: number;
     totalBalanceUsd: number;
     profit?: number;
     assetDynamicDelta: number;
-    settings?: UserRobotCurrentSettings;
     userRobotSettings: UserRobotSettings;
-    positions: UserPositionState[];
 }
 
 export const enum UserRobotJobType {

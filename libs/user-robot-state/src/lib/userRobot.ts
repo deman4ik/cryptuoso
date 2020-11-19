@@ -12,11 +12,12 @@ import {
     UserRobotStatus,
     UserTradeEvent
 } from "./types";
-import { Order, PositionDirection, SignalEvent, TradeAction, TradeSettings, ValidTimeframe } from "@cryptuoso/market";
+import { Order, SignalEvent, TradeAction, TradeSettings, ValidTimeframe } from "@cryptuoso/market";
 import { flattenArray, GenericObject } from "@cryptuoso/helpers";
 import { OrdersStatusEvent } from "@cryptuoso/connector-events";
 import { BaseError } from "@cryptuoso/errors";
 import { ConnectorJob } from "@cryptuoso/connector-state";
+import logger from "@cryptuoso/logger";
 
 export class UserRobot {
     _id: string;
@@ -82,7 +83,8 @@ export class UserRobot {
             status: this._status,
             startedAt: this._startedAt,
             stoppedAt: this._stoppedAt,
-            message: this._message
+            message: this._message,
+            settings: this._settings
         };
     }
 
@@ -173,6 +175,7 @@ export class UserRobot {
     }
 
     handleSignal(signal: SignalEvent) {
+        logger.info("Handling signal", signal);
         if (signal.robotId !== this._robotId)
             throw new BaseError(
                 "Wrong robot id",

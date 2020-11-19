@@ -1,15 +1,7 @@
 import { UserRobot } from "../lib/userRobot";
 import { v4 as uuid } from "uuid";
 import dayjs from "@cryptuoso/dayjs";
-import {
-    OrderJobType,
-    OrderStatus,
-    OrderType,
-    PositionDirection,
-    SignalEvent,
-    SignalType,
-    TradeAction
-} from "@cryptuoso/market";
+import { OrderJobType, OrderStatus, OrderType, SignalEvent, SignalType, TradeAction } from "@cryptuoso/market";
 import { UserPositionJob, UserPositionOrderStatus, UserPositionStatus, UserRobotStatus } from "../lib/types";
 
 const robotId = uuid();
@@ -18,6 +10,9 @@ const robotParams = {
     asset: "BTC",
     currency: "USD",
     timeframe: 5,
+    settings: {
+        volume: 1
+    },
     tradeSettings: {
         slippage: {
             entry: {
@@ -45,9 +40,6 @@ describe("Test User Robot", () => {
             userExAccId: uuid(),
             userId: uuid(),
             robotId,
-            settings: {
-                volume: 1
-            },
             internalState: {},
             status: UserRobotStatus.started,
             startedAt: dayjs.utc("2019-10-25T00:00:00.000Z").toISOString(),
@@ -76,10 +68,10 @@ describe("Test User Robot", () => {
         };
 
         userRobot.handleSignal(signal);
-        expect(userRobot.state.positions.length).toBe(1);
-        expect(userRobot.state.positions[0].direction).toBe("long");
-        expect(userRobot.state.ordersToCreate[0].signalPrice).toBe(signal.price);
-        expect(userRobot.state.ordersToCreate[0].price).toBe(7152);
+        expect(userRobot.positions.length).toBe(1);
+        expect(userRobot.positions[0].direction).toBe("long");
+        expect(userRobot.ordersToCreate[0].signalPrice).toBe(signal.price);
+        expect(userRobot.ordersToCreate[0].price).toBe(7152);
     });
 
     it("Should create new Short Position", () => {
@@ -102,10 +94,10 @@ describe("Test User Robot", () => {
         };
 
         userRobot.handleSignal(signal);
-        expect(userRobot.state.positions.length).toBe(1);
-        expect(userRobot.state.positions[0].direction).toBe("short");
-        expect(userRobot.state.ordersToCreate[0].signalPrice).toBe(signal.price);
-        expect(userRobot.state.ordersToCreate[0].price).toBe(5848);
+        expect(userRobot.positions.length).toBe(1);
+        expect(userRobot.positions[0].direction).toBe("short");
+        expect(userRobot.ordersToCreate[0].signalPrice).toBe(signal.price);
+        expect(userRobot.ordersToCreate[0].price).toBe(5848);
     });
 
     it("Should set order price without modifications", () => {
@@ -127,7 +119,7 @@ describe("Test User Robot", () => {
             price: 6500
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
 
             exchange: "kraken",
             asset: "BTC",
@@ -138,10 +130,10 @@ describe("Test User Robot", () => {
             }
         });
         userRobot.handleSignal(signal);
-        expect(userRobot.state.positions.length).toBe(1);
-        expect(userRobot.state.positions[0].direction).toBe("short");
-        expect(userRobot.state.ordersToCreate[0].signalPrice).toBe(signal.price);
-        expect(userRobot.state.ordersToCreate[0].price).toBe(signal.price);
+        expect(userRobot.positions.length).toBe(1);
+        expect(userRobot.positions[0].direction).toBe("short");
+        expect(userRobot.ordersToCreate[0].signalPrice).toBe(signal.price);
+        expect(userRobot.ordersToCreate[0].price).toBe(signal.price);
     });
 
     it("Should create order job to cancel position", () => {
@@ -166,17 +158,17 @@ describe("Test User Robot", () => {
         userRobot.handleSignal(signalOpen);
 
         const openOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.open,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString()
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
             ...robotParams,
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder]
                 }
             ]
@@ -201,8 +193,8 @@ describe("Test User Robot", () => {
         };
         userRobot.handleSignal(signalClose);
 
-        expect(userRobot.state.connectorJobs.length).toBe(1);
-        expect(userRobot.state.connectorJobs[0].type).toBe(OrderJobType.cancel);
+        expect(userRobot.connectorJobs.length).toBe(1);
+        expect(userRobot.connectorJobs[0].type).toBe(OrderJobType.cancel);
     });
 
     it("Should create order to close position", () => {
@@ -226,20 +218,20 @@ describe("Test User Robot", () => {
 
         userRobot.handleSignal(signalOpen);
         const openOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.closed,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
             exLastTradeAt: dayjs.utc().toISOString(),
-            executed: userRobot.state.ordersToCreate[0].volume,
+            executed: userRobot.ordersToCreate[0].volume,
             remaining: 0
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
             ...robotParams,
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder]
                 }
             ]
@@ -263,9 +255,9 @@ describe("Test User Robot", () => {
             price: 5998
         };
         userRobot.handleSignal(signalClose);
-        expect(userRobot.state.ordersToCreate.length).toBe(1);
-        expect(userRobot.state.ordersToCreate[0].signalPrice).toBe(signalClose.price);
-        expect(userRobot.state.ordersToCreate[0].price).toBe(6599.8);
+        expect(userRobot.ordersToCreate.length).toBe(1);
+        expect(userRobot.ordersToCreate[0].signalPrice).toBe(signalClose.price);
+        expect(userRobot.ordersToCreate[0].price).toBe(6599.8);
     });
 
     it("Should create order to close previous position", () => {
@@ -289,20 +281,20 @@ describe("Test User Robot", () => {
 
         userRobot.handleSignal(signalOpen);
         const openOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.closed,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
             exLastTradeAt: dayjs.utc().toISOString(),
-            executed: userRobot.state.ordersToCreate[0].volume,
+            executed: userRobot.ordersToCreate[0].volume,
             remaining: 0
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
             ...robotParams,
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder]
                 }
             ]
@@ -326,10 +318,10 @@ describe("Test User Robot", () => {
             price: 5998
         };
         userRobot.handleSignal(signalClose);
-        expect(userRobot.state.ordersToCreate.length).toBe(1);
-        expect(userRobot.state.ordersToCreate[0].positionId).toBe(openOrder.positionId);
-        expect(userRobot.state.ordersToCreate[0].signalPrice).toBe(signalClose.price);
-        expect(userRobot.state.ordersToCreate[0].price).toBe(6599.8);
+        expect(userRobot.ordersToCreate.length).toBe(1);
+        expect(userRobot.ordersToCreate[0].positionId).toBe(openOrder.positionId);
+        expect(userRobot.ordersToCreate[0].signalPrice).toBe(signalClose.price);
+        expect(userRobot.ordersToCreate[0].price).toBe(6599.8);
     });
 
     it("Should not create new position after new open signal with same direction", () => {
@@ -353,21 +345,21 @@ describe("Test User Robot", () => {
 
         userRobot.handleSignal(signalOpen);
         const openOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.closed,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
             exLastTradeAt: dayjs.utc().toISOString(),
-            executed: userRobot.state.ordersToCreate[0].volume,
+            executed: userRobot.ordersToCreate[0].volume,
             remaining: 0
         };
-        const firstUserPositionId = userRobot.state.positions[0].id;
+        const firstUserPositionId = userRobot.positions[0].id;
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
             ...robotParams,
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder]
                 }
             ]
@@ -391,10 +383,10 @@ describe("Test User Robot", () => {
             price: 6500
         };
         userRobot.handleSignal(signalOpenNew);
-        expect(userRobot.state.positions[0].id).toBe(firstUserPositionId);
-        expect(userRobot.state.positions[0].status).toBe(UserPositionStatus.open);
-        expect(userRobot.state.positions[0].nextJob).toBeNull();
-        expect(userRobot.state.positions.length).toBe(1);
+        expect(userRobot.positions[0].id).toBe(firstUserPositionId);
+        expect(userRobot.positions[0].status).toBe(UserPositionStatus.open);
+        expect(userRobot.positions[0].nextJob).toBeNull();
+        expect(userRobot.positions.length).toBe(1);
     });
 
     it("Should force close position after new open signal with different direction", () => {
@@ -418,20 +410,20 @@ describe("Test User Robot", () => {
 
         userRobot.handleSignal(signalOpen);
         const openOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.closed,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
             exLastTradeAt: dayjs.utc().toISOString(),
-            executed: userRobot.state.ordersToCreate[0].volume,
+            executed: userRobot.ordersToCreate[0].volume,
             remaining: 0
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
             ...robotParams,
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder]
                 }
             ]
@@ -455,9 +447,9 @@ describe("Test User Robot", () => {
             price: 6500
         };
         userRobot.handleSignal(signalOpenNew);
-        expect(userRobot.state.positions[0].nextJob).toBe(UserPositionJob.cancel);
-        expect(userRobot.state.ordersToCreate.length).toBe(1);
-        expect(userRobot.state.ordersToCreate[0].type).toBe(OrderType.forceMarket);
+        expect(userRobot.positions[0].nextJob).toBe(UserPositionJob.cancel);
+        expect(userRobot.ordersToCreate.length).toBe(1);
+        expect(userRobot.ordersToCreate[0].type).toBe(OrderType.forceMarket);
     });
 
     it("Should close position", () => {
@@ -481,20 +473,20 @@ describe("Test User Robot", () => {
 
         userRobot.handleSignal(signalOpen);
         const openOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.closed,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
             exLastTradeAt: dayjs.utc().toISOString(),
-            executed: userRobot.state.ordersToCreate[0].volume,
+            executed: userRobot.ordersToCreate[0].volume,
             remaining: 0
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
             ...robotParams,
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder]
                 }
             ]
@@ -519,33 +511,33 @@ describe("Test User Robot", () => {
         };
         userRobot.handleSignal(signalClose);
         const closeOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.closed,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
             exLastTradeAt: null,
-            executed: userRobot.state.ordersToCreate[0].volume,
+            executed: userRobot.ordersToCreate[0].volume,
             remaining: 0
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
             ...robotParams,
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder],
                     exitOrders: [closeOrder]
                 }
             ]
         });
         userRobot.handleOrder(closeOrder);
-        expect(userRobot.state.positions[0].exitDate).toBe(closeOrder.exTimestamp);
-        expect(userRobot.state.positions[0].status).toBe(UserPositionStatus.closed);
+        expect(userRobot.positions[0].exitDate).toBe(closeOrder.exTimestamp);
+        expect(userRobot.positions[0].status).toBe(UserPositionStatus.closed);
     });
 
     it("Should handle entry partial order", () => {
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
 
             exchange: "kraken",
             asset: "BTC",
@@ -575,7 +567,7 @@ describe("Test User Robot", () => {
 
         userRobot.handleSignal(signalOpen);
         const openOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.closed,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
@@ -584,7 +576,7 @@ describe("Test User Robot", () => {
             remaining: 0.8
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
 
             exchange: "kraken",
             asset: "BTC",
@@ -595,21 +587,21 @@ describe("Test User Robot", () => {
             },
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder]
                 }
             ]
         });
         userRobot.handleOrder(openOrder);
-        expect(userRobot.state.positions[0].status).toBe(UserPositionStatus.open);
-        expect(userRobot.state.positions[0].entryStatus).toBe(UserPositionOrderStatus.closed);
-        expect(userRobot.state.positions[0].entryExecuted).toBe(0.2);
-        expect(userRobot.state.connectorJobs.length).toBe(0);
+        expect(userRobot.positions[0].status).toBe(UserPositionStatus.open);
+        expect(userRobot.positions[0].entryStatus).toBe(UserPositionOrderStatus.closed);
+        expect(userRobot.positions[0].entryExecuted).toBe(0.2);
+        expect(userRobot.connectorJobs.length).toBe(0);
     });
 
     it("Should handle exit partial order", () => {
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
 
             exchange: "kraken",
             asset: "BTC",
@@ -639,16 +631,16 @@ describe("Test User Robot", () => {
 
         userRobot.handleSignal(signalOpen);
         const openOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.closed,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
             exLastTradeAt: dayjs.utc().toISOString(),
-            executed: userRobot.state.ordersToCreate[0].volume,
+            executed: userRobot.ordersToCreate[0].volume,
             remaining: 0
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
 
             exchange: "kraken",
             asset: "BTC",
@@ -659,7 +651,7 @@ describe("Test User Robot", () => {
             },
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder]
                 }
             ]
@@ -684,7 +676,7 @@ describe("Test User Robot", () => {
         };
         userRobot.handleSignal(signalClose);
         const closeOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.closed,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
@@ -693,7 +685,7 @@ describe("Test User Robot", () => {
             remaining: 0.5
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
 
             exchange: "kraken",
             asset: "BTC",
@@ -704,17 +696,17 @@ describe("Test User Robot", () => {
             },
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder],
                     exitOrders: [closeOrder]
                 }
             ]
         });
         userRobot.handleOrder(closeOrder);
-        expect(userRobot.state.positions[0].exitStatus).toBe(UserPositionOrderStatus.partial);
-        expect(userRobot.state.positions[0].status).toBe(UserPositionStatus.open);
-        expect(userRobot.state.ordersToCreate[0].type).toBe(OrderType.forceMarket);
-        expect(userRobot.state.ordersToCreate[0].volume).toBe(0.5);
+        expect(userRobot.positions[0].exitStatus).toBe(UserPositionOrderStatus.partial);
+        expect(userRobot.positions[0].status).toBe(UserPositionStatus.open);
+        expect(userRobot.ordersToCreate[0].type).toBe(OrderType.forceMarket);
+        expect(userRobot.ordersToCreate[0].volume).toBe(0.5);
     });
 
     it("Should handle exit partial order with slippage", () => {
@@ -738,20 +730,20 @@ describe("Test User Robot", () => {
 
         userRobot.handleSignal(signalOpen);
         const openOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.closed,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
             exLastTradeAt: dayjs.utc().toISOString(),
-            executed: userRobot.state.ordersToCreate[0].volume,
+            executed: userRobot.ordersToCreate[0].volume,
             remaining: 0
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
             ...robotParams,
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder]
                 }
             ]
@@ -776,7 +768,7 @@ describe("Test User Robot", () => {
         };
         userRobot.handleSignal(signalClose);
         const closeOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.closed,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
@@ -785,26 +777,26 @@ describe("Test User Robot", () => {
             remaining: 0.5
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
             ...robotParams,
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder],
                     exitOrders: [closeOrder]
                 }
             ]
         });
         userRobot.handleOrder(closeOrder);
-        expect(userRobot.state.positions[0].exitStatus).toBe(UserPositionOrderStatus.partial);
-        expect(userRobot.state.positions[0].status).toBe(UserPositionStatus.open);
-        expect(userRobot.state.ordersToCreate[0].type).toBe(OrderType.market);
-        expect(userRobot.state.ordersToCreate[0].volume).toBe(0.5);
+        expect(userRobot.positions[0].exitStatus).toBe(UserPositionOrderStatus.partial);
+        expect(userRobot.positions[0].status).toBe(UserPositionStatus.open);
+        expect(userRobot.ordersToCreate[0].type).toBe(OrderType.market);
+        expect(userRobot.ordersToCreate[0].volume).toBe(0.5);
     });
 
     it("Should handle entry canceled order and cancel position", () => {
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
 
             exchange: "kraken",
             asset: "BTC",
@@ -834,13 +826,13 @@ describe("Test User Robot", () => {
 
         userRobot.handleSignal(signalOpen);
         const openOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.canceled,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString()
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
 
             exchange: "kraken",
             asset: "BTC",
@@ -851,14 +843,14 @@ describe("Test User Robot", () => {
             },
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder]
                 }
             ]
         });
         userRobot.handleOrder(openOrder);
-        expect(userRobot.state.positions[0].status).toBe(UserPositionStatus.canceled);
-        expect(userRobot.state.connectorJobs.length).toBe(0);
+        expect(userRobot.positions[0].status).toBe(UserPositionStatus.canceled);
+        expect(userRobot.connectorJobs.length).toBe(0);
     });
 
     it("Should handle entry canceled order and recreate order", () => {
@@ -882,27 +874,27 @@ describe("Test User Robot", () => {
 
         userRobot.handleSignal(signalOpen);
         const openOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.canceled,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString()
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
             ...robotParams,
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder]
                 }
             ]
         });
         userRobot.handleOrder(openOrder);
-        expect(userRobot.state.positions[0].internalState.entrySlippageCount).toBe(2);
-        expect(userRobot.state.positions[0].status).toBe(UserPositionStatus.new);
-        expect(userRobot.state.connectorJobs.length).toBe(1);
-        expect(userRobot.state.connectorJobs[0].type).toBe(OrderJobType.recreate);
-        expect(userRobot.state.connectorJobs[0].data.price).toBe(5198);
+        expect(userRobot.positions[0].internalState.entrySlippageCount).toBe(2);
+        expect(userRobot.positions[0].status).toBe(UserPositionStatus.new);
+        expect(userRobot.connectorJobs.length).toBe(1);
+        expect(userRobot.connectorJobs[0].type).toBe(OrderJobType.recreate);
+        expect(userRobot.connectorJobs[0].data.price).toBe(5198);
     });
 
     it("Should cancel position after all slippage steps", () => {
@@ -926,17 +918,17 @@ describe("Test User Robot", () => {
 
         userRobot.handleSignal(signalOpen);
         const openOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.canceled,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString()
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
             ...robotParams,
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     internalState: {
                         entrySlippageCount: 5,
                         exitSlippageCount: 0
@@ -947,12 +939,12 @@ describe("Test User Robot", () => {
         });
         userRobot.handleOrder(openOrder);
 
-        expect(userRobot.state.positions[0].status).toBe(UserPositionStatus.canceled);
+        expect(userRobot.positions[0].status).toBe(UserPositionStatus.canceled);
     });
 
     it("Should handle exit canceled order", () => {
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
 
             exchange: "kraken",
             asset: "BTC",
@@ -982,16 +974,16 @@ describe("Test User Robot", () => {
 
         userRobot.handleSignal(signalOpen);
         const openOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.closed,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
             exLastTradeAt: dayjs.utc().toISOString(),
-            executed: userRobot.state.ordersToCreate[0].volume,
+            executed: userRobot.ordersToCreate[0].volume,
             remaining: 0
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
 
             exchange: "kraken",
             asset: "BTC",
@@ -1002,7 +994,7 @@ describe("Test User Robot", () => {
             },
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder]
                 }
             ]
@@ -1027,7 +1019,7 @@ describe("Test User Robot", () => {
         };
         userRobot.handleSignal(signalClose);
         const closeOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.canceled,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
@@ -1036,7 +1028,7 @@ describe("Test User Robot", () => {
             remaining: openOrder.volume
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
 
             exchange: "kraken",
             asset: "BTC",
@@ -1047,20 +1039,20 @@ describe("Test User Robot", () => {
             },
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder],
                     exitOrders: [closeOrder]
                 }
             ]
         });
         userRobot.handleOrder(closeOrder);
-        expect(userRobot.state.ordersToCreate.length).toBe(1);
-        expect(userRobot.state.ordersToCreate[0].type).toBe(OrderType.forceMarket);
+        expect(userRobot.ordersToCreate.length).toBe(1);
+        expect(userRobot.ordersToCreate[0].type).toBe(OrderType.forceMarket);
     });
 
     it("Should cancel position with canceled order in history", () => {
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
 
             exchange: "kraken",
             asset: "BTC",
@@ -1090,7 +1082,7 @@ describe("Test User Robot", () => {
 
         userRobot.handleSignal(signalOpen);
         const openOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.open,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
@@ -1102,7 +1094,7 @@ describe("Test User Robot", () => {
             }
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
 
             exchange: "kraken",
             asset: "BTC",
@@ -1113,7 +1105,7 @@ describe("Test User Robot", () => {
             },
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder]
                 }
             ]
@@ -1138,14 +1130,14 @@ describe("Test User Robot", () => {
         };
         userRobot.handleSignal(signalOpen2);
 
-        expect(userRobot.state.connectorJobs[0].type).toBe(OrderJobType.cancel);
+        expect(userRobot.connectorJobs[0].type).toBe(OrderJobType.cancel);
         const openOrderCanceled = {
             ...openOrder,
             status: OrderStatus.canceled,
             nextJob: null
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
 
             exchange: "kraken",
             asset: "BTC",
@@ -1156,23 +1148,23 @@ describe("Test User Robot", () => {
             },
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrderCanceled]
                 },
                 {
-                    ...userRobot.state.positions[1]
+                    ...userRobot.positions[1]
                 }
             ]
         });
 
         userRobot.handleOrder(openOrderCanceled);
 
-        expect(userRobot.state.positions[0].status).toBe(UserPositionStatus.canceled);
+        expect(userRobot.positions[0].status).toBe(UserPositionStatus.canceled);
     });
 
     it("Should close position with exit canceled order in history", () => {
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
 
             exchange: "kraken",
             asset: "BTC",
@@ -1202,16 +1194,16 @@ describe("Test User Robot", () => {
 
         userRobot.handleSignal(signalOpen);
         const openOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.closed,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
             exLastTradeAt: dayjs.utc().toISOString(),
-            executed: userRobot.state.ordersToCreate[0].volume,
+            executed: userRobot.ordersToCreate[0].volume,
             remaining: 0
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
 
             exchange: "kraken",
             asset: "BTC",
@@ -1222,7 +1214,7 @@ describe("Test User Robot", () => {
             },
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder]
                 }
             ]
@@ -1247,7 +1239,7 @@ describe("Test User Robot", () => {
         };
         userRobot.handleSignal(signalClose);
         const canceledCloseOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.canceled,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
@@ -1256,7 +1248,7 @@ describe("Test User Robot", () => {
             remaining: openOrder.volume
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
 
             exchange: "kraken",
             asset: "BTC",
@@ -1267,7 +1259,7 @@ describe("Test User Robot", () => {
             },
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder],
                     exitOrders: [canceledCloseOrder]
                 }
@@ -1276,7 +1268,7 @@ describe("Test User Robot", () => {
         userRobot.handleOrder(canceledCloseOrder);
 
         const closeOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.closed,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
@@ -1285,7 +1277,7 @@ describe("Test User Robot", () => {
             remaining: 0
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
 
             exchange: "kraken",
             asset: "BTC",
@@ -1296,14 +1288,14 @@ describe("Test User Robot", () => {
             },
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder],
                     exitOrders: [canceledCloseOrder, closeOrder]
                 }
             ]
         });
         userRobot.handleOrder(closeOrder);
-        expect(userRobot.state.positions[0].status).toBe(UserPositionStatus.closed);
+        expect(userRobot.positions[0].status).toBe(UserPositionStatus.closed);
     });
 
     it("Should create new position and close parent if open signal first", () => {
@@ -1327,20 +1319,20 @@ describe("Test User Robot", () => {
 
         userRobot.handleSignal(signalOpen);
         const openOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.closed,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
             exLastTradeAt: dayjs.utc().toISOString(),
-            executed: userRobot.state.ordersToCreate[0].volume,
+            executed: userRobot.ordersToCreate[0].volume,
             remaining: 0
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
             ...robotParams,
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder]
                 }
             ]
@@ -1365,14 +1357,14 @@ describe("Test User Robot", () => {
             price: 7000
         };
         userRobot.handleSignal(signalOpenNew);
-        expect(userRobot.state.positions.length).toBe(2);
-        expect(userRobot.state.positions[0].exitAction).toBe(TradeAction.closeShort);
-        expect(userRobot.state.positions[1].status).toBe(UserPositionStatus.new);
-        expect(userRobot.state.connectorJobs.length).toBe(2);
-        expect(userRobot.state.connectorJobs[0].type).toBe(OrderJobType.create);
-        expect(userRobot.state.ordersToCreate[0].price).toBe(7702);
-        expect(userRobot.state.connectorJobs[1].type).toBe(OrderJobType.create);
-        expect(userRobot.state.ordersToCreate[1].price).toBe(7702);
+        expect(userRobot.positions.length).toBe(2);
+        expect(userRobot.positions[0].exitAction).toBe(TradeAction.closeShort);
+        expect(userRobot.positions[1].status).toBe(UserPositionStatus.new);
+        expect(userRobot.connectorJobs.length).toBe(2);
+        expect(userRobot.connectorJobs[0].type).toBe(OrderJobType.create);
+        expect(userRobot.ordersToCreate[0].price).toBe(7702);
+        expect(userRobot.connectorJobs[1].type).toBe(OrderJobType.create);
+        expect(userRobot.ordersToCreate[1].price).toBe(7702);
     });
 
     it("Should create new position after close signal", () => {
@@ -1396,20 +1388,20 @@ describe("Test User Robot", () => {
 
         userRobot.handleSignal(signalOpen);
         const openOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.closed,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
             exLastTradeAt: dayjs.utc().toISOString(),
-            executed: userRobot.state.ordersToCreate[0].volume,
+            executed: userRobot.ordersToCreate[0].volume,
             remaining: 0
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
             ...robotParams,
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder]
                 }
             ]
@@ -1452,9 +1444,9 @@ describe("Test User Robot", () => {
             price: 7000
         };
         userRobot.handleSignal(signalOpenNew);
-        expect(userRobot.state.positions[0].status).toBe(UserPositionStatus.open);
-        expect(userRobot.state.positions.length).toBe(2);
-        expect(userRobot.state.positions[1].status).toBe(UserPositionStatus.new);
+        expect(userRobot.positions[0].status).toBe(UserPositionStatus.open);
+        expect(userRobot.positions.length).toBe(2);
+        expect(userRobot.positions[1].status).toBe(UserPositionStatus.new);
     });
 
     it("Should cancel previous parent positions", () => {
@@ -1478,20 +1470,20 @@ describe("Test User Robot", () => {
 
         userRobot.handleSignal(signalOpen);
         const openOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.closed,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
             exLastTradeAt: dayjs.utc().toISOString(),
-            executed: userRobot.state.ordersToCreate[0].volume,
+            executed: userRobot.ordersToCreate[0].volume,
             remaining: 0
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
             ...robotParams,
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder]
                 }
             ]
@@ -1535,10 +1527,10 @@ describe("Test User Robot", () => {
             price: 7000
         };
         userRobot.handleSignal(signalOpenNew3);
-        expect(userRobot.state.positions.length).toBe(3);
-        expect(userRobot.state.positions[0].nextJob).toBe(UserPositionJob.close);
-        expect(userRobot.state.positions[1].nextJob).toBe(UserPositionJob.cancel);
-        expect(userRobot.state.positions[2].status).toBe(UserPositionStatus.new);
+        expect(userRobot.positions.length).toBe(3);
+        expect(userRobot.positions[0].nextJob).toBe(UserPositionJob.close);
+        expect(userRobot.positions[1].nextJob).toBe(UserPositionJob.cancel);
+        expect(userRobot.positions[2].status).toBe(UserPositionStatus.new);
     });
 
     it("Should process delayed position", () => {
@@ -1562,20 +1554,20 @@ describe("Test User Robot", () => {
 
         userRobot.handleSignal(signalOpen);
         const openOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.closed,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
             exLastTradeAt: dayjs.utc().toISOString(),
-            executed: userRobot.state.ordersToCreate[0].volume,
+            executed: userRobot.ordersToCreate[0].volume,
             remaining: 0
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
             ...robotParams,
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder]
                 }
             ]
@@ -1620,31 +1612,31 @@ describe("Test User Robot", () => {
         userRobot.handleSignal(signalClose);
 
         const closeOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.closed,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
             exLastTradeAt: dayjs.utc().toISOString(),
-            executed: userRobot.state.ordersToCreate[0].volume,
+            executed: userRobot.ordersToCreate[0].volume,
             remaining: 0
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
             ...robotParams,
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder],
                     exitOrders: [closeOrder]
                 },
                 {
-                    ...userRobot.state.positions[1]
+                    ...userRobot.positions[1]
                 }
             ]
         });
         userRobot.handleOrder(closeOrder);
-        expect(userRobot.state.positions.length).toBe(2);
-        expect(userRobot.state.positions[1].status).toBe(UserPositionStatus.new);
+        expect(userRobot.positions.length).toBe(2);
+        expect(userRobot.positions[1].status).toBe(UserPositionStatus.new);
     });
 
     it("Should force close position after Robot stop", () => {
@@ -1668,20 +1660,20 @@ describe("Test User Robot", () => {
 
         userRobot.handleSignal(signalOpen);
         const openOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.closed,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
             exLastTradeAt: dayjs.utc().toISOString(),
-            executed: userRobot.state.ordersToCreate[0].volume,
+            executed: userRobot.ordersToCreate[0].volume,
             remaining: 0
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
             ...robotParams,
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder]
                 }
             ]
@@ -1690,35 +1682,35 @@ describe("Test User Robot", () => {
 
         userRobot.stop();
         expect(userRobot.hasActivePositions).toBe(true);
-        expect(userRobot.state.userRobot.status).toBe(UserRobotStatus.stopping);
-        expect(userRobot.state.ordersToCreate.length).toBe(1);
-        expect(userRobot.state.ordersToCreate[0].type).toBe(OrderType.forceMarket);
-        expect(userRobot.state.ordersToCreate[0].action).toBe(TradeAction.closeShort);
+        expect(userRobot.state.status).toBe(UserRobotStatus.stopping);
+        expect(userRobot.ordersToCreate.length).toBe(1);
+        expect(userRobot.ordersToCreate[0].type).toBe(OrderType.forceMarket);
+        expect(userRobot.ordersToCreate[0].action).toBe(TradeAction.closeShort);
         const closeOrder = {
-            ...userRobot.state.ordersToCreate[0],
+            ...userRobot.ordersToCreate[0],
             status: OrderStatus.closed,
             exId: uuid(),
             exTimestamp: dayjs.utc().toISOString(),
             exLastTradeAt: dayjs.utc().toISOString(),
-            executed: userRobot.state.ordersToCreate[0].volume,
+            executed: userRobot.ordersToCreate[0].volume,
             remaining: 0
         };
         userRobot = new UserRobot({
-            ...userRobot.state.userRobot,
+            ...userRobot.state,
             ...robotParams,
             positions: [
                 {
-                    ...userRobot.state.positions[0],
+                    ...userRobot.positions[0],
                     entryOrders: [openOrder],
                     exitOrders: [closeOrder]
                 }
             ]
         });
         userRobot.handleOrder(closeOrder);
-        expect(userRobot.state.positions[0].status).toBe(UserPositionStatus.closedAuto);
+        expect(userRobot.positions[0].status).toBe(UserPositionStatus.closedAuto);
         expect(userRobot.hasClosedPositions).toBe(true);
         expect(userRobot.hasActivePositions).toBe(false);
         if (userRobot.status === UserRobotStatus.stopping && !userRobot.hasActivePositions) userRobot.setStop();
-        expect(userRobot.state.userRobot.status).toBe(UserRobotStatus.stopped);
+        expect(userRobot.state.status).toBe(UserRobotStatus.stopped);
     });
 });

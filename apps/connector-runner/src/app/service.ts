@@ -14,7 +14,7 @@ export default class ConnectorRunnerService extends HTTPService {
             this.events.subscribe({
                 [ConnectorRunnerEvents.ADD_JOB]: {
                     schema: ConnectorRunnerSchema[ConnectorRunnerEvents.ADD_JOB],
-                    handler: this.addConnectorJob
+                    handler: this.addConnectorJob.bind(this)
                 }
             });
             this.addOnStartHandler(this.onServiceStart);

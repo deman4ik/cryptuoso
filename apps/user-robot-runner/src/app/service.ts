@@ -83,15 +83,15 @@ export default class UserRobotRunnerService extends HTTPService {
                     schema: SignalSchema[SignalEvents.TRADE]
                 },
                 [ConnectorWorkerEvents.ORDER_STATUS]: {
-                    handler: this.handleOrderStatus,
+                    handler: this.handleOrderStatus.bind(this),
                     schema: ConnectorWorkerSchema[ConnectorWorkerEvents.ORDER_STATUS]
                 },
                 [ConnectorWorkerEvents.ORDER_ERROR]: {
-                    handler: this.handleOrderError,
+                    handler: this.handleOrderError.bind(this),
                     schema: ConnectorWorkerSchema[ConnectorWorkerEvents.ORDER_ERROR]
                 },
                 [ConnectorWorkerEvents.USER_EX_ACC_ERROR]: {
-                    handler: this.handleUserExAccError,
+                    handler: this.handleUserExAccError.bind(this),
                     schema: ConnectorWorkerSchema[ConnectorWorkerEvents.USER_EX_ACC_ERROR]
                 }
             });
@@ -437,13 +437,14 @@ export default class UserRobotRunnerService extends HTTPService {
     }
 
     async handleSignalTradeEvents(signal: Signal) {
-        const { id, robotId } = signal;
+        const { id, robotId, timestamp } = signal;
         const userRobots = await this.db.pg.any<{ id: string; status: UserRobotStatus }>(
             sql`
             SELECT id, status 
              FROM user_robots
             WHERE robot_id = ${robotId}
-             AND status IN (${UserRobotStatus.started}, ${UserRobotStatus.paused});
+             AND status IN (${UserRobotStatus.started}, ${UserRobotStatus.paused})
+             AND (internal_state->'latestSignal'->>'timestamp')::timestamp < ${timestamp};
             `
         );
         this.log.info(`New signal #${id} from robot #${robotId} required by ${userRobots.length}`);

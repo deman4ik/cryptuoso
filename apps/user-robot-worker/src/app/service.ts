@@ -8,7 +8,8 @@ import {
     UserRobotState,
     UserRobotStatus,
     UserRobot,
-    UserPositionDB
+    UserPositionDB,
+    UserRobotStateExt
 } from "@cryptuoso/user-robot-state";
 import { UserRobotWorkerError, UserRobotWorkerEvents, UserTradeEvents } from "@cryptuoso/user-robot-events";
 import { Job } from "bullmq";
@@ -78,7 +79,7 @@ export default class UserRobotRunnerService extends BaseService {
     }
 
     #getUserRobotState = async (userRobotId: string) =>
-        this.db.pg.one<UserRobotState>(sql`
+        this.db.pg.one<UserRobotStateExt>(sql`
     SELECT ur.id,
            ur.user_ex_acc_id,
            ur.user_id,
@@ -138,7 +139,7 @@ WHERE p.user_robot_id =${userRobotId}
       AND ur.id = ${userRobotId};                   
   `);
 
-    #getCurrentVolume = (state: UserRobotState) => {
+    #getCurrentVolume = (state: UserRobotStateExt) => {
         const { userRobotSettings } = state;
         let volume: number;
 
@@ -164,6 +165,7 @@ WHERE p.user_robot_id =${userRobotId}
 
     #savePositions = async (transaction: DatabaseTransactionConnectionType, positions: UserPositionDB[]) => {
         for (const p of positions) {
+            this.log.info(p);
             await transaction.query(sql`
             INSERT INTO user_positions
       ( id, prefix, code,
@@ -230,6 +232,7 @@ WHERE p.user_robot_id =${userRobotId}
 
     #saveOrders = async (transaction: DatabaseTransactionConnectionType, orders: Order[]) => {
         for (const order of orders) {
+            this.log.info(order);
             await transaction.query(sql`
             INSERT INTO user_orders
             (
@@ -260,13 +263,14 @@ WHERE p.user_robot_id =${userRobotId}
     };
 
     #saveState = async (transaction: DatabaseTransactionConnectionType, state: UserRobotDB) => {
+        this.log.info(state);
         await transaction.query(sql`
             UPDATE user_robots
                SET internal_state = ${JSON.stringify(state.internalState) || null},
                    status = ${state.status},
                    started_at = ${state.startedAt || null},
-                   stopped_at = ${state.stoppedAt},
-                   message = ${state.message}
+                   stopped_at = ${state.stoppedAt || null},
+                   message = ${state.message || null}
              WHERE id = ${state.id};
         `);
     };
@@ -276,7 +280,7 @@ WHERE p.user_robot_id =${userRobotId}
 
         try {
             const userRobotState = await this.#getUserRobotState(userRobotId);
-
+            this.log.info(userRobotState);
             const settings = await this.#getCurrentVolume(userRobotState);
 
             const userRobot = new UserRobot({ ...userRobotState, settings });
