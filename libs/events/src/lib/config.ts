@@ -1,5 +1,5 @@
 import { STATS_CALC_TOPIC /*, StatsCalcRunnerEvents */ } from "@cryptuoso/stats-calc-events";
-import { SIGNAL_TOPIC } from "@cryptuoso/robot-events";
+import { ALERT_TOPIC, SIGNAL_TOPIC } from "@cryptuoso/robot-events";
 import { BASE_REDIS_PREFIX } from "./catalog";
 import { DEAD_LETTER_TOPIC } from "./events";
 
@@ -38,6 +38,7 @@ export const eventsManagementConfig: {
         ...modifyConfigEventsNames({
             [DEAD_LETTER_TOPIC]: new TopicConfig(DAY, HOUR),
             [`${STATS_CALC_TOPIC}.*`]: new TopicConfig(DAY, HOUR),
+            [`${ALERT_TOPIC}.*`]: new TopicConfig(DAY, HOUR),
             [`${SIGNAL_TOPIC}.*`]: new TopicConfig(DAY, HOUR)
         })
     }

@@ -22,11 +22,12 @@ export const enum RobotWorkerEvents {
     ERROR = "out-robot-worker.error"
 }
 
-export const SIGNAL_TOPIC = "signal";
+export const ALERT_TOPIC = "signal-alert";
+export const SIGNAL_TOPIC = "signal-trade";
 
 export const enum SignalEvents {
-    ALERT = "signal.alert",
-    TRADE = "signal.trade"
+    ALERT = "signal-alert.new",
+    TRADE = "signal-trade.new"
 }
 
 const SignalsSchema = {
