@@ -25,7 +25,7 @@ import {
     VolumeSettingsType
 } from "@cryptuoso/robot-settings";
 import dayjs from "@cryptuoso/dayjs";
-import { datesToISOString, keysToCamelCase } from "@cryptuoso/helpers";
+import { datesToISOString, keysToCamelCase, round } from "@cryptuoso/helpers";
 
 export type UserRobotRunnerServiceConfig = BaseServiceConfig;
 
@@ -95,6 +95,7 @@ export default class UserRobotRunnerService extends BaseService {
            r.timeframe,
            m.current_price,
            m.limits->'userRobot' as limits,
+           m.precision,
            a.used_balance_percent, 
            ea.total_balance_usd,
            st.net_profit as profit,
@@ -163,7 +164,7 @@ WHERE p.user_robot_id =${userRobotId}
 
         if (volume < state.limits.min.amount) volume = state.limits.min.amount;
         else if (state.limits.max?.amount && volume > state.limits.max?.amount) volume = state.limits.max?.amount;
-        return { volume };
+        return { volume: round(volume, state.precision?.amount || 6) };
     };
 
     #savePositions = async (transaction: DatabaseTransactionConnectionType, positions: UserPositionDB[]) => {

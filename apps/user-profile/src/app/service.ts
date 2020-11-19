@@ -303,22 +303,25 @@ export default class UserProfileService extends HTTPService {
 
     //#region "User Signals"
 
-    getNewUserSignalSettings(settings: UserSignalSettings, limits: UserMarketState["limits"]) {
-        if (!limits?.userRobot?.min?.amount)
-            throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
+    getNewUserSignalSettings(
+        settings: UserSignalSettings,
+        limits: UserMarketState["limits"]["userSignal"],
+        precision: UserMarketState["precision"]
+    ) {
+        if (!limits?.min?.amount) throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
 
         let newUserSignalSettings: UserSignalSettings;
 
         if (settings.volumeType === VolumeSettingsType.assetStatic) {
-            const volume = round(settings.volume, 6);
-            const amountMin = limits?.userRobot?.min?.amount;
-            const amountMax = limits?.userRobot?.max?.amount;
+            const volume = round(settings.volume, precision?.amount || 6);
+            const amountMin = limits?.min?.amount;
+            const amountMax = limits?.max?.amount;
             checkAssetStatic(volume, amountMin, amountMax);
             newUserSignalSettings = { volumeType: VolumeSettingsType.assetStatic, volume };
         } else if (settings.volumeType === VolumeSettingsType.currencyDynamic) {
-            const volumeInCurrency = round(settings.volumeInCurrency, 2);
-            const amountMin = limits?.userRobot?.min?.amountUSD;
-            const amountMax = limits?.userRobot?.max?.amountUSD;
+            const volumeInCurrency = round(settings.volumeInCurrency, precision?.price || 2);
+            const amountMin = limits?.min?.amountUSD;
+            const amountMax = limits?.max?.amountUSD;
             checkCurrencyDynamic(volumeInCurrency, amountMin, amountMax);
 
             newUserSignalSettings = { volumeType: VolumeSettingsType.currencyDynamic, volumeInCurrency };
@@ -354,8 +357,11 @@ export default class UserProfileService extends HTTPService {
 
         if (available < user.access) throw new ActionsHandlerError("Robot unavailable.", { robotId }, "FORBIDDEN", 403);
 
-        const { limits } = await this.db.pg.one<{ limits: UserMarketState["limits"] }>(sql`
-            SELECT limits
+        const { limits, precision } = await this.db.pg.one<{
+            limits: UserMarketState["limits"]["userSignal"];
+            precision: UserMarketState["precision"];
+        }>(sql`
+            SELECT  m.limits->'userSignal' as limits,, precision
             FROM v_user_markets
             WHERE user_id = ${user.id}
                 AND exchange = ${exchange}
@@ -363,7 +369,7 @@ export default class UserProfileService extends HTTPService {
                 AND currency = ${currency};
         `);
 
-        const newSettings: UserSignalSettings = this.getNewUserSignalSettings(settings, limits);
+        const newSettings: UserSignalSettings = this.getNewUserSignalSettings(settings, limits, precision);
 
         const userSignalId = uuid();
         const subscribedAt = dayjs.utc().toISOString();
@@ -419,8 +425,11 @@ export default class UserProfileService extends HTTPService {
         )
             return;
 
-        const { limits } = await this.db.pg.one<{ limits: UserMarketState["limits"] }>(sql`
-            SELECT vm.limits
+        const { limits, precision } = await this.db.pg.one<{
+            limits: UserMarketState["limits"]["userSignal"];
+            precision: UserMarketState["precision"];
+        }>(sql`
+            SELECT  vm.limits->'userRobot' as limits, vm.precision
             FROM robots r, v_user_markets vm
             WHERE r.id = ${robotId}
                 AND vm.user_id = ${user.id}
@@ -429,7 +438,7 @@ export default class UserProfileService extends HTTPService {
                 AND vm.currency = r.currency;
         `);
 
-        const newSettings: UserSignalSettings = this.getNewUserSignalSettings(settings, limits);
+        const newSettings: UserSignalSettings = this.getNewUserSignalSettings(settings, limits, precision);
 
         await this.db.pg.query(sql`
             INSERT INTO user_signal_settings(
@@ -731,40 +740,40 @@ export default class UserProfileService extends HTTPService {
 
     async getNewUserRobotSettings(
         settings: UserRobotSettings,
-        limits: UserMarketState["limits"],
+        limits: UserMarketState["limits"]["userRobot"],
+        precision: UserMarketState["precision"],
         usedBalancePercent?: number,
         totalBalance?: number
     ) {
-        if (!limits?.userRobot?.min?.amount)
-            throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
+        if (!limits?.min?.amount) throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
 
         let newUserRobotSettings: UserRobotSettings;
 
         if (settings.volumeType === VolumeSettingsType.assetStatic) {
-            const volume = round(settings.volume, 6);
-            const amountMin = limits?.userRobot?.min?.amount;
-            const amountMax = limits?.userRobot?.max?.amount;
+            const volume = round(settings.volume, precision?.amount || 6);
+            const amountMin = limits?.min?.amount;
+            const amountMax = limits?.max?.amount;
             checkAssetStatic(volume, amountMin, amountMax);
             newUserRobotSettings = { volumeType: VolumeSettingsType.assetStatic, volume };
         } else if (settings.volumeType === VolumeSettingsType.currencyDynamic) {
-            const volumeInCurrency = round(settings.volumeInCurrency, 2);
-            const amountMin = limits?.userRobot?.min?.amountUSD;
-            const amountMax = limits?.userRobot?.max?.amountUSD;
+            const volumeInCurrency = round(settings.volumeInCurrency, precision?.price || 2);
+            const amountMin = limits?.min?.amountUSD;
+            const amountMax = limits?.max?.amountUSD;
             checkCurrencyDynamic(volumeInCurrency, amountMin, amountMax);
             newUserRobotSettings = { volumeType: VolumeSettingsType.currencyDynamic, volumeInCurrency };
         } else if (settings.volumeType === VolumeSettingsType.balancePercent) {
             const balancePercent = round(settings.balancePercent);
-            const volumeInCurrency = (balancePercent / 100) * totalBalance;
-            const amountMin = limits?.userRobot?.min?.amountUSD;
-            const amountMax = limits?.userRobot?.max?.amountUSD;
+            const volumeInCurrency = round((balancePercent / 100) * totalBalance, precision?.price || 2);
+            const amountMin = limits?.min?.amountUSD;
+            const amountMax = limits?.max?.amountUSD;
 
             checkBalancePercent(balancePercent, usedBalancePercent, volumeInCurrency, amountMin, amountMax);
 
             newUserRobotSettings = { volumeType: VolumeSettingsType.balancePercent, balancePercent };
         } else if (settings.volumeType === VolumeSettingsType.assetDynamicDelta) {
-            const initialVolume = round(settings.initialVolume, 6);
-            const amountMin = limits?.userRobot?.min?.amount;
-            const amountMax = limits?.userRobot?.max?.amount;
+            const initialVolume = round(settings.initialVolume, precision?.amount || 6);
+            const amountMin = limits?.min?.amount;
+            const amountMax = limits?.max?.amount;
             checkAssetDynamicDelta(initialVolume, amountMin, amountMax);
             newUserRobotSettings = {
                 volumeType: VolumeSettingsType.assetDynamicDelta,
@@ -835,12 +844,13 @@ export default class UserProfileService extends HTTPService {
 
         if (robot.available < user.access) throw new ActionsHandlerError("Robot unavailable.", null, "FORBIDDEN", 403);
 
-        const { limits, usedBalancePercent, totalBalanceUsd } = await this.db.pg.one<{
-            limits: UserMarketState["limits"];
+        const { limits, precision, usedBalancePercent, totalBalanceUsd } = await this.db.pg.one<{
+            limits: UserMarketState["limits"]["userRobot"];
+            precision: UserMarketState["precision"];
             usedBalancePercent: number;
             totalBalanceUsd: number;
         }>(sql`
-        SELECT limits, a.used_balance_percent, ea.total_balance_usd
+        SELECT  um.limits->'userRobot' as limits, um.precision, a.used_balance_percent, ea.total_balance_usd
         FROM v_user_markets um, v_user_amounts a, v_user_exchange_accs ea
         WHERE um.user_id = ${user.id}
             AND um.user_id = a.user_id
@@ -853,6 +863,7 @@ export default class UserProfileService extends HTTPService {
         const newUserRobotSettings = await this.getNewUserRobotSettings(
             settings,
             limits,
+            precision,
             usedBalancePercent,
             totalBalanceUsd
         );
@@ -924,12 +935,13 @@ export default class UserProfileService extends HTTPService {
         )
             return;
 
-        const { limits, usedBalancePercent, totalBalanceUsd } = await this.db.pg.one<{
-            limits: UserMarketState["limits"];
+        const { limits, precision, usedBalancePercent, totalBalanceUsd } = await this.db.pg.one<{
+            limits: UserMarketState["limits"]["userRobot"];
+            precision: UserMarketState["precision"];
             usedBalancePercent: number;
             totalBalanceUsd: number;
         }>(sql`
-            SELECT um.limits, a.used_balance_percent, ea.total_balance_usd
+            SELECT  um.limits->'userRobot' as limits, um.precision, a.used_balance_percent, ea.total_balance_usd
             FROM robots r, v_user_markets um, v_user_amounts a, v_user_exchange_accs ea
             WHERE r.id = ${userRobotExists.robotId}
                 AND um.user_id = ${user.id}
@@ -948,6 +960,7 @@ export default class UserProfileService extends HTTPService {
         const newUserRobotSettings = await this.getNewUserRobotSettings(
             settings,
             limits,
+            precision,
             currentUsedBalancePercent,
             totalBalanceUsd
         );

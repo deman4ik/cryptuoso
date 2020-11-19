@@ -51,6 +51,7 @@ export interface UserMarketState {
         userSignal: UserMarketMinMax;
         userRobot: UserMarketMinMax;
     };
+    precision: { price: number; amount: number };
     tradeSettings: TradeSettings;
     assetDynamicDelta: number;
 }
