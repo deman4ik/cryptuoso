@@ -361,7 +361,7 @@ export default class UserProfileService extends HTTPService {
             limits: UserMarketState["limits"]["userSignal"];
             precision: UserMarketState["precision"];
         }>(sql`
-            SELECT  m.limits->'userSignal' as limits,, precision
+            SELECT limits->'userSignal' as limits, precision
             FROM v_user_markets
             WHERE user_id = ${user.id}
                 AND exchange = ${exchange}
@@ -429,7 +429,7 @@ export default class UserProfileService extends HTTPService {
             limits: UserMarketState["limits"]["userSignal"];
             precision: UserMarketState["precision"];
         }>(sql`
-            SELECT  vm.limits->'userRobot' as limits, vm.precision
+            SELECT vm.limits->'userRobot' as limits, vm.precision
             FROM robots r, v_user_markets vm
             WHERE r.id = ${robotId}
                 AND vm.user_id = ${user.id}
@@ -850,7 +850,7 @@ export default class UserProfileService extends HTTPService {
             usedBalancePercent: number;
             totalBalanceUsd: number;
         }>(sql`
-        SELECT  um.limits->'userRobot' as limits, um.precision, a.used_balance_percent, ea.total_balance_usd
+        SELECT um.limits->'userRobot' as limits, um.precision, a.used_balance_percent, ea.total_balance_usd
         FROM v_user_markets um, v_user_amounts a, v_user_exchange_accs ea
         WHERE um.user_id = ${user.id}
             AND a.user_ex_acc_id = ${userExAccId}
@@ -941,7 +941,7 @@ export default class UserProfileService extends HTTPService {
             usedBalancePercent: number;
             totalBalanceUsd: number;
         }>(sql`
-            SELECT  um.limits->'userRobot' as limits, um.precision, a.used_balance_percent, ea.total_balance_usd
+            SELECT um.limits->'userRobot' as limits, um.precision, a.used_balance_percent, ea.total_balance_usd
             FROM robots r, v_user_markets um, v_user_amounts a, v_user_exchange_accs ea
             WHERE r.id = ${userRobotExists.robotId}
                 AND um.user_id = ${user.id}
