@@ -853,7 +853,7 @@ export default class UserProfileService extends HTTPService {
         SELECT  um.limits->'userRobot' as limits, um.precision, a.used_balance_percent, ea.total_balance_usd
         FROM v_user_markets um, v_user_amounts a, v_user_exchange_accs ea
         WHERE um.user_id = ${user.id}
-            AND um.user_id = a.user_id
+            AND a.user_ex_acc_id = ${userExAccId}
             AND um.exchange = ${robot.exchange}
             AND um.asset = ${robot.asset}
             AND um.currency = ${robot.currency}
@@ -945,7 +945,7 @@ export default class UserProfileService extends HTTPService {
             FROM robots r, v_user_markets um, v_user_amounts a, v_user_exchange_accs ea
             WHERE r.id = ${userRobotExists.robotId}
                 AND um.user_id = ${user.id}
-                AND um.user_id = a.user_id
+                AND a.user_ex_acc_id = ${userRobotExists.userExAccId}
                 AND um.exchange = r.exchange
                 AND um.asset = r.asset
                 AND um.currency = r.currency

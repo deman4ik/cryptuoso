@@ -135,7 +135,7 @@ WHERE p.user_robot_id =${userRobotId}
       AND m.currency = r.currency
       AND m.user_id = ur.user_id    
 	  AND urs.user_robot_id = ${userRobotId}
-      AND a.user_id = ur.user_id
+      AND a.user_ex_acc_id = ur.user_ex_acc_id
       AND ea.id = ur.user_ex_acc_id
       AND ur.id = ${userRobotId};                   
   `);
