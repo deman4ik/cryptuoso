@@ -47,7 +47,8 @@
             "@cryptuoso/user-robot-events": ["libs/user-robot-events/src/index.ts"],
             "@cryptuoso/connector-events": ["libs/connector-events/src/index.ts"],
             "@cryptuoso/connector-state": ["libs/connector-state/src/index.ts"],
-            "@cryptuoso/ccxt-private": ["libs/ccxt-private/src/index.ts"]
+            "@cryptuoso/ccxt-private": ["libs/ccxt-private/src/index.ts"],
+            "@cryptuoso/graphql-client": ["libs/graphql-client/src/index.ts"]
         }
     },
     "exclude": ["node_modules", "tmp"]

@@ -1884,6 +1884,77 @@
                     }
                 }
             }
+        },
+        "telegram-bot": {
+            "root": "apps/telegram-bot",
+            "sourceRoot": "apps/telegram-bot/src",
+            "projectType": "application",
+            "prefix": "telegram-bot",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/telegram-bot",
+                        "main": "apps/telegram-bot/src/main.ts",
+                        "tsConfig": "apps/telegram-bot/tsconfig.app.json",
+                        "assets": ["apps/telegram-bot/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/telegram-bot/src/environments/environment.ts",
+                                    "with": "apps/telegram-bot/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "telegram-bot:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["apps/telegram-bot/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/telegram-bot/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "graphql-client": {
+            "root": "libs/graphql-client",
+            "sourceRoot": "libs/graphql-client/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["libs/graphql-client/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/graphql-client/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
         }
     },
     "cli": {
