@@ -78,10 +78,14 @@
         "build:notifications": "nx build notifications --prod",
         "serve:notifications": "nx serve notifications",
         "build:support": "nx build support --prod",
-        "serve:support": "nx serve support"
+        "serve:support": "nx serve support",
+        "build:telegram-bot": "nx build telegram-bot --prod",
+        "serve:telegram-bot": "nx serve telegram-bot --watch=false"
     },
     "private": true,
     "dependencies": {
+        "@edjopato/telegraf-i18n": "^0.1.1",
+        "@ivaniuk/telegraf-session-redis": "^2.1.0",
         "@luminati-io/socksv5": "0.0.7",
         "async-retry": "^1.3.1",
         "bcrypt": "^5.0.0",
@@ -111,9 +115,6 @@
         "slonik": "^23.0.2",
         "slonik-interceptor-field-name-transformation": "^1.5.3",
         "telegraf": "^3.38.0",
-        "telegraf-i18n": "^6.6.0",
-        "telegraf-router": "^1.0.7",
-        "telegraf-session-redis": "^5.1.0",
         "threads": "^1.6.3",
         "tslog": "^2.11.1",
         "tulind": "^0.8.18",
