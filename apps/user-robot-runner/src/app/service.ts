@@ -293,15 +293,7 @@ export default class UserRobotRunnerService extends HTTPService {
             userRobot.status
         );
 
-        await this.db.pg.query(sql`
-        UPDATE user_robots 
-        SET status = ${UserRobotStatus.stopped},
-        stopped_at =  ${dayjs.utc().toISOString()},
-        internal_state = ${JSON.stringify({})}
-        WHERE id = ${id};
-        `);
-
-        return UserRobotStatus.stopped;
+        return UserRobotStatus.stopping;
     }
 
     async pause({

@@ -167,6 +167,7 @@ export class UserRobot {
     setStop() {
         this._status = UserRobotStatus.stopped;
         this._stoppedAt = dayjs.utc().toISOString();
+        this._internalState = {};
     }
 
     pause({ message }: { message?: string } = { message: null }) {
