@@ -294,8 +294,7 @@ WHERE p.user_robot_id =${userRobotId}
             } else if (type === UserRobotJobType.order) {
                 userRobot.handleOrder(data as OrdersStatusEvent);
             } else if (type === UserRobotJobType.stop) {
-                if (userRobot.status === UserRobotStatus.stopping || userRobot.status === UserRobotStatus.stopped)
-                    return userRobot.status;
+                if (userRobot.status === UserRobotStatus.stopped) return userRobot.status;
                 userRobot.stop(data as { message?: string });
             } else if (type === UserRobotJobType.pause) {
                 if (userRobot.status === UserRobotStatus.paused || userRobot.status === UserRobotStatus.stopped)
