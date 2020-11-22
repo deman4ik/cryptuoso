@@ -287,7 +287,7 @@ export default class UserRobotRunnerService extends HTTPService {
 
         await this.db.pg.query(sql`
         UPDATE user_robots 
-        SET status = ${UserRobotStatus.stopping},
+        SET status = ${UserRobotStatus.stopping}
         WHERE id = ${id};
         `);
 
