@@ -429,7 +429,7 @@ export default class UserProfileService extends HTTPService {
             limits: UserMarketState["limits"]["userSignal"];
             precision: UserMarketState["precision"];
         }>(sql`
-            SELECT vm.limits->'userRobot' as limits, vm.precision
+            SELECT vm.limits->'userSignal' as limits, vm.precision
             FROM robots r, v_user_markets vm
             WHERE r.id = ${robotId}
                 AND vm.user_id = ${user.id}
