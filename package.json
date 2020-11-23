@@ -115,6 +115,7 @@
         "slonik": "^23.0.2",
         "slonik-interceptor-field-name-transformation": "^1.5.3",
         "telegraf": "^3.38.0",
+        "telegraf-throttler": "^0.2.0",
         "threads": "^1.6.3",
         "tslog": "^2.11.1",
         "tulind": "^0.8.18",

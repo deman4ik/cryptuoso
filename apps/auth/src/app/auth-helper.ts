@@ -30,11 +30,4 @@ async function checkTgLogin(
     }
 }
 
-function formatTgName(userName?: string, firstName?: string, lastName?: string) {
-    let name = "";
-    if (firstName || lastName) name = `${firstName || ""} ${lastName || ""}`.trim();
-    else if (userName) name = userName;
-    return name;
-}
-
-export { checkTgLogin, formatTgName };
+export { checkTgLogin };
