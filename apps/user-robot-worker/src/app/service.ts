@@ -135,7 +135,7 @@ WHERE p.user_robot_id =${userRobotId}
       AND m.currency = r.currency
       AND m.user_id = ur.user_id    
 	  AND urs.user_robot_id = ${userRobotId}
-      AND a.user_id = ur.user_id
+      AND a.user_ex_acc_id = ur.user_ex_acc_id
       AND ea.id = ur.user_ex_acc_id
       AND ur.id = ${userRobotId};                   
   `);
@@ -294,8 +294,7 @@ WHERE p.user_robot_id =${userRobotId}
             } else if (type === UserRobotJobType.order) {
                 userRobot.handleOrder(data as OrdersStatusEvent);
             } else if (type === UserRobotJobType.stop) {
-                if (userRobot.status === UserRobotStatus.stopping || userRobot.status === UserRobotStatus.stopped)
-                    return userRobot.status;
+                if (userRobot.status === UserRobotStatus.stopped) return userRobot.status;
                 userRobot.stop(data as { message?: string });
             } else if (type === UserRobotJobType.pause) {
                 if (userRobot.status === UserRobotStatus.paused || userRobot.status === UserRobotStatus.stopped)

@@ -153,9 +153,8 @@ export class UserRobot {
         return `${prefix}_${this._internalState.posLastNumb[prefix]}`;
     }
 
-    stop({ message }: { message?: string } = { message: null }) {
-        this._status = UserRobotStatus.stopping;
-        this._message = message || null;
+    stop(data?: { message?: string }) {
+        this._message = data?.message || null;
         if (this.hasActivePositions)
             Object.keys(this._positions).forEach((key) => {
                 this._positions[key].cancel();
@@ -167,11 +166,12 @@ export class UserRobot {
     setStop() {
         this._status = UserRobotStatus.stopped;
         this._stoppedAt = dayjs.utc().toISOString();
+        this._internalState = {};
     }
 
-    pause({ message }: { message?: string } = { message: null }) {
+    pause(data?: { message?: string }) {
         this._status = UserRobotStatus.paused;
-        this._message = message || null;
+        this._message = data?.message || null;
     }
 
     handleSignal(signal: SignalEvent) {

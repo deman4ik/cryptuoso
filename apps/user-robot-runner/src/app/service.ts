@@ -259,7 +259,7 @@ export default class UserRobotRunnerService extends HTTPService {
         }>(sql`
             SELECT ur.id, ur.user_id, ur.status
             FROM user_robots ur
-            WHERE  ur.id = ${id};
+            WHERE ur.id = ${id};
         `);
 
         if (!userRobot) throw new ActionsHandlerError("User Robot not found", { userRobotId: id }, "NOT_FOUND", 404);
@@ -285,23 +285,24 @@ export default class UserRobotRunnerService extends HTTPService {
             return userRobot.status;
         }
 
+        await this.db.pg.query(sql`
+        UPDATE user_robots 
+        SET status = ${UserRobotStatus.stopping}
+        WHERE id = ${id};
+        `);
+
         await this.addUserRobotJob(
             {
                 userRobotId: id,
-                type: UserRobotJobType.stop
+                type: UserRobotJobType.stop,
+                data: {
+                    message: null
+                }
             },
             userRobot.status
         );
 
-        await this.db.pg.query(sql`
-        UPDATE user_robots 
-        SET status = ${UserRobotStatus.stopped},
-        stopped_at =  ${dayjs.utc().toISOString()},
-        internal_state = ${JSON.stringify({})}
-        WHERE id = ${id};
-        `);
-
-        return UserRobotStatus.stopped;
+        return UserRobotStatus.stopping;
     }
 
     async pause({
