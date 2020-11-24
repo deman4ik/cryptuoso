@@ -13,14 +13,14 @@ export const checkAssetDynamicDelta = checkAssetStatic;
 
 export const checkBalancePercent = (
     percent: number,
-    percentUsed: number,
+    percentAvailable: number,
     volume: number,
     min: number,
     max?: number
 ) => {
-    if (percentUsed || 0 + percent > 100)
+    if (percent > percentAvailable)
         throw new ActionsHandlerError(
-            `Wrong balance percent! Value must be ${100 - percentUsed || 0} or less.`,
+            `Wrong balance percent! Value must be ${percentAvailable} or less.`,
             null,
             "FORBIDDEN",
             403

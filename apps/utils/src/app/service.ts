@@ -54,6 +54,7 @@ export default class UtilsService extends HTTPService {
                 };
                 userRobot: {
                     minUSD: number;
+                    balancePercent: number;
                 };
             };
         }[] = [
@@ -67,7 +68,8 @@ export default class UtilsService extends HTTPService {
                         minUSD: 10
                     },
                     userRobot: {
-                        minUSD: 20
+                        minUSD: 20,
+                        balancePercent: 200
                     }
                 }
             }
