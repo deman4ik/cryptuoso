@@ -742,7 +742,7 @@ export default class UserProfileService extends HTTPService {
         settings: UserRobotSettings,
         limits: UserMarketState["limits"]["userRobot"],
         precision: UserMarketState["precision"],
-        usedBalancePercent?: number,
+        availableBalancePercent?: number,
         totalBalance?: number
     ) {
         if (!limits?.min?.amount) throw new ActionsHandlerError("Market unavailable.", null, "FORBIDDEN", 403);
@@ -767,7 +767,7 @@ export default class UserProfileService extends HTTPService {
             const amountMin = limits?.min?.amountUSD;
             const amountMax = limits?.max?.amountUSD;
 
-            checkBalancePercent(balancePercent, usedBalancePercent, volumeInCurrency, amountMin, amountMax);
+            checkBalancePercent(balancePercent, availableBalancePercent, volumeInCurrency, amountMin, amountMax);
 
             newUserRobotSettings = { volumeType: VolumeSettingsType.balancePercent, balancePercent };
         } else if (settings.volumeType === VolumeSettingsType.assetDynamicDelta) {
@@ -844,13 +844,13 @@ export default class UserProfileService extends HTTPService {
 
         if (robot.available < user.access) throw new ActionsHandlerError("Robot unavailable.", null, "FORBIDDEN", 403);
 
-        const { limits, precision, usedBalancePercent, totalBalanceUsd } = await this.db.pg.one<{
+        const { limits, precision, availableBalancePercent, totalBalanceUsd } = await this.db.pg.one<{
             limits: UserMarketState["limits"]["userRobot"];
             precision: UserMarketState["precision"];
-            usedBalancePercent: number;
+            availableBalancePercent: number;
             totalBalanceUsd: number;
         }>(sql`
-        SELECT um.limits->'userRobot' as limits, um.precision, a.used_balance_percent, ea.total_balance_usd
+        SELECT um.limits->'userRobot' as limits, um.precision, a.available_balance_percent, ea.total_balance_usd
         FROM v_user_markets um, v_user_amounts a, v_user_exchange_accs ea
         WHERE um.user_id = ${user.id}
             AND a.user_ex_acc_id = ${userExAccId}
@@ -864,7 +864,7 @@ export default class UserProfileService extends HTTPService {
             settings,
             limits,
             precision,
-            usedBalancePercent,
+            availableBalancePercent,
             totalBalanceUsd
         );
 
@@ -935,13 +935,13 @@ export default class UserProfileService extends HTTPService {
         )
             return;
 
-        const { limits, precision, usedBalancePercent, totalBalanceUsd } = await this.db.pg.one<{
+        const { limits, precision, availableBalancePercent, totalBalanceUsd } = await this.db.pg.one<{
             limits: UserMarketState["limits"]["userRobot"];
             precision: UserMarketState["precision"];
-            usedBalancePercent: number;
+            availableBalancePercent: number;
             totalBalanceUsd: number;
         }>(sql`
-            SELECT um.limits->'userRobot' as limits, um.precision, a.used_balance_percent, ea.total_balance_usd
+            SELECT um.limits->'userRobot' as limits, um.precision, a.available_balance_percent, ea.total_balance_usd
             FROM robots r, v_user_markets um, v_user_amounts a, v_user_exchange_accs ea
             WHERE r.id = ${userRobotExists.robotId}
                 AND um.user_id = ${user.id}
@@ -952,16 +952,16 @@ export default class UserProfileService extends HTTPService {
                 AND ea.id = ${userRobotExists.userExAccId};
         `);
 
-        const currentUsedBalancePercent =
+        const currentAvailableBalancePercent =
             currentUserRobotSettings?.volumeType === VolumeSettingsType.balancePercent
-                ? usedBalancePercent - currentUserRobotSettings.balancePercent
-                : usedBalancePercent;
+                ? availableBalancePercent + currentUserRobotSettings.balancePercent
+                : availableBalancePercent;
 
         const newUserRobotSettings = await this.getNewUserRobotSettings(
             settings,
             limits,
             precision,
-            currentUsedBalancePercent,
+            currentAvailableBalancePercent,
             totalBalanceUsd
         );
 

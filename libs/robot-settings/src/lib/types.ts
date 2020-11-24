@@ -72,7 +72,7 @@ export const BalancePercentSettingsSchema = {
     type: "object",
     props: {
         volumeType: { type: "equal", value: VolumeSettingsType.balancePercent },
-        balancePercent: { type: "number", integer: true, min: 1, max: 100 }
+        balancePercent: { type: "number", integer: true, min: 1 }
     }
 };
 
