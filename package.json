@@ -117,7 +117,7 @@
         "telegraf": "^3.38.0",
         "telegraf-throttler": "^0.2.0",
         "threads": "^1.6.3",
-        "tslog": "^2.11.1",
+        "tslog": "^3.0.0-0",
         "tulind": "^0.8.18",
         "uuid": "^8.3.1"
     },

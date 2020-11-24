@@ -6,10 +6,11 @@ const loggerConfig: ISettingsParam =
               name: process.env.SERVICE,
               type: "json",
               exposeErrorCodeFrame: false,
+              ignoreStackLevels: 1,
+              displayRequestId: false,
               displayFilePath: "hidden",
               minLevel: "info",
-              maskValuesOfKeys: []
-              //maskValuesOfKeys: ["authorization", "password", "refreshToken", "accessToken"]
+              maskValuesOfKeys: ["authorization", "password", "refreshToken", "accessToken"]
           }
         : {
               name: process.env.SERVICE,
@@ -17,8 +18,7 @@ const loggerConfig: ISettingsParam =
               printLogMessageInNewLine: false,
               displayFilePath: "hidden",
               displayFunctionName: false,
-              exposeErrorCodeFrame: true,
-              maskValuesOfKeys: []
+              exposeErrorCodeFrame: true
           };
 
 const logger = new Logger(loggerConfig);
