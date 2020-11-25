@@ -65,7 +65,7 @@ export default class SupportService extends HTTPService {
 
     #saveSupportMessage = async (supportMessage: SupportMessage) =>
         this.db.pg.query(sql`
-    INSERT into messages ( timestamp, from, to, data ) VALUES (
+    INSERT into messages ( timestamp, "from", "to", data ) VALUES (
         
         ${supportMessage.timestamp}, ${supportMessage.from}, ${supportMessage.to}, ${JSON.stringify(
             supportMessage.data
