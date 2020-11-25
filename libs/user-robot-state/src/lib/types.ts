@@ -125,7 +125,6 @@ export interface UserRobotStateExt extends UserRobotState {
     currentPrice: number;
     limits: UserMarketState["limits"]["userRobot"];
     precision: { amount: number; price: number };
-    usedBalancePercent?: number;
     totalBalanceUsd: number;
     profit?: number;
     assetDynamicDelta: number;

@@ -96,7 +96,6 @@ export default class UserRobotRunnerService extends BaseService {
            m.current_price,
            m.limits->'userRobot' as limits,
            m.precision,
-           a.used_balance_percent, 
            ea.total_balance_usd,
            st.net_profit as profit,
            m.asset_dynamic_delta,
