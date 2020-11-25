@@ -154,6 +154,7 @@ export class UserRobot {
     }
 
     stop(data?: { message?: string }) {
+        this._status = UserRobotStatus.stopping;
         this._message = data?.message || null;
         if (this.hasActivePositions)
             Object.keys(this._positions).forEach((key) => {
@@ -339,6 +340,6 @@ export class UserRobot {
             );
 
         position.executeJob();
-        this.handleDelayedPositions();
+        if (!this.hasActivePositions) this.handleDelayedPositions();
     }
 }

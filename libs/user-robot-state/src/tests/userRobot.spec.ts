@@ -4,6 +4,8 @@ import dayjs from "@cryptuoso/dayjs";
 import { OrderJobType, OrderStatus, OrderType, SignalEvent, SignalType, TradeAction } from "@cryptuoso/market";
 import { UserPositionJob, UserPositionOrderStatus, UserPositionStatus, UserRobotStatus } from "../lib/types";
 
+jest.mock("@cryptuoso/logger");
+
 const robotId = uuid();
 const robotParams = {
     exchange: "kraken",
