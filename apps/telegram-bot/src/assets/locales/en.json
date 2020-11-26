@@ -19,6 +19,20 @@
         }
     },
     "scenes": {
+        "registration": {
+            "info": "Welcome ${username} to <b>Cryptuoso Trading Bot!</b>\n\nLet's create your Cryptuoso account!\n\nBy registering your account you confirm that you have read and accept our <a href='https://support.cryptuoso.com/terms-of-use'>terms of use</a>.",
+            "create": "🆕 OK, I am first time here!",
+            "login": "✉️  I already registered with email",
+            "requestEmail": "🚀 Creating your Cryptuoso account...\n✉️ Do you want to add your <b>email</b>?",
+            "enterEmail": "✉️ Please enter your <b>email</b> address here:",
+            "wrongEmail": "❌  You entered <b>wrong</b> email address. Please try again",
+            "enterCode": "<b>Secret code</b> was send to your ${email} emaild address.\nPlease enter <b>secret code</b> here:",
+            "accExists": "❌  Cryptuoso account <b>${email}</b> already have another linked Telegram account.\nDo you want to <b>register new</b> Cryptuoso account or enter <b>another email</b>?",
+            "confirmAccReg": "Register Cryptuoso account without email",
+            "confirmReenterEmail": "I'll try another email",
+            "successRegistration": "✅  Your Cryptuoso account is created!",
+            "successLogin": "✅ You successfully logged in!\nYour Telegram account added to your <b>${email}</b> Cryptuoso account"
+        },
         "signals": {
             "info": "🚦 Signals - Manual Trading Mode",
             "my": "🚥 My Signals",

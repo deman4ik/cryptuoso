@@ -10,14 +10,13 @@ import { getBackKeyboard, getMainKeyboard } from "./keyboard";
 import { formatTgName } from "@cryptuoso/user-state";
 import { TelegramScene, TelegramUser } from "./types";
 import { sql } from "@cryptuoso/postgres";
-import { registrationScene } from "./scenes/registration";
-
+import { registrationScene, signalsScene } from "./scenes";
 const { enter, leave } = Stage;
 
 export type TelegramBotServiceConfig = BaseServiceConfig;
 
 export default class TelegramBotService extends BaseService {
-    bot: Telegraf<any>;
+    bot: any;
     i18n: I18n;
     session: TelegrafSessionRedis;
     constructor(config?: TelegramBotServiceConfig) {
@@ -33,11 +32,11 @@ export default class TelegramBotService extends BaseService {
                 }
             });
             this.bot.use(throttler);
-            this.bot.use(async (ctx, next) => {
+            this.bot.use(async (ctx: any, next: any) => {
                 const start = dayjs.utc();
                 await next();
                 const ms = dayjs.utc().diff(start, "millisecond");
-                this.log.debug("Response time %sms", ms);
+                this.log.debug(`Response time ${ms} ms`);
             });
             this.session = new TelegrafSessionRedis({
                 client: this.redis.duplicate()
@@ -52,11 +51,24 @@ export default class TelegramBotService extends BaseService {
             });
             this.bot.use(this.i18n.middleware());
             // Create scene manager
-            const stage = new Stage([registrationScene(this)]);
-            stage.command("cancel", leave());
+            const regStage = new Stage([registrationScene(this)]);
+            regStage.command("cancel", leave());
 
-            this.bot.use(stage.middleware());
+            this.bot.use(regStage.middleware());
             this.bot.use(this.auth.bind(this));
+
+            const mainStage = new Stage([signalsScene(this)]);
+            mainStage.command("cancel", leave());
+            this.bot.use(mainStage.middleware());
+            this.bot.start(this.start.bind(this));
+            this.bot.command("menu", this.mainMenu.bind(this));
+            // Main menu
+            this.bot.command("menu", enter(TelegramScene.SIGNALS));
+            this.bot.hears(match("keyboards.mainKeyboard.signals"), enter(TelegramScene.SIGNALS));
+            this.bot.hears(match("keyboards.mainKeyboard.robots"), enter(TelegramScene.ROBOTS));
+            this.bot.hears(match("keyboards.mainKeyboard.settings"), enter(TelegramScene.SETTINGS));
+            this.bot.hears(match("keyboards.mainKeyboard.support"), enter(TelegramScene.SUPPORT));
+            this.bot.hears(match("keyboards.mainKeyboard.donation"), reply("donation", Extra.HTML()));
             this.bot.hears(/(.*?)/, this.defaultHandler.bind(this));
 
             this.addOnStartHandler(this.onServiceStart);
@@ -95,6 +107,7 @@ export default class TelegramBotService extends BaseService {
 
     async auth(ctx: any, next: () => any) {
         const sessionData = ctx.session;
+        if (ctx.scene.current.id === TelegramScene.REGISTRATION) return;
         if (!sessionData || !sessionData.user) {
             //   const userExists = await this.getUser(ctx.from.id);
 
@@ -103,8 +116,7 @@ export default class TelegramBotService extends BaseService {
             await ctx.scene.leave();
             await ctx.scene.enter(TelegramScene.REGISTRATION);
             //  }
-        }
-        await next();
+        } else await next();
     }
 
     async start(ctx: any) {

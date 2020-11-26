@@ -24,10 +24,10 @@ export async function leaveAction(ctx: any) {
     await ctx.reply(ctx.i18n.t("menu"), getMainKeyboard(ctx));
 }
 
-export async function addBaseActions(scene: BaseScene<any>, service: BaseService) {
+export async function addBaseActions(scene: any, service: BaseService) {
     scene.leave(leaveAction.bind(service));
-    //scene.hears(match("keyboards.backKeyboard.back"), backAction.bind(this));
-    //scene.hears(match("keyboards.backKeyboard.menu"), Stage.leave());
+    scene.hears(match("keyboards.backKeyboard.back"), backAction.bind(this));
+    scene.hears(match("keyboards.backKeyboard.menu"), Stage.leave());
     scene.command("back", backAction.bind(this));
     scene.action(/back/, backAction.bind(this));
     scene.command("menu", Stage.leave());
