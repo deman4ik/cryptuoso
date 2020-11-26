@@ -259,7 +259,7 @@ export default class ConnectorRunnerService extends BaseService {
                 });
 
                 await this.db.pg.query(sql`
-                UPDATE user_exchange_accs SET status = ${UserExchangeAccStatus.disabled},
+                UPDATE user_exchange_accs SET status = ${UserExchangeAccStatus.invalid},
                 error = ${e.message || null}
                 WHERE id = ${job.id};
                 `);

@@ -456,7 +456,9 @@ export class PrivateConnector {
             const status =
                 orderStatus === OrderStatus.canceled && executed && executed > 0
                     ? OrderStatus.closed
-                    : <OrderStatus>orderStatus;
+                    : <OrderStatus>orderStatus || exId
+                    ? OrderStatus.open
+                    : order.status;
             return {
                 order: {
                     ...order,
