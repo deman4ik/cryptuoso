@@ -78,6 +78,10 @@ export default class UserRobotRunnerService extends BaseService {
         }
     }
 
+    get getUserRobotState() {
+        return this.#getUserRobotState;
+    }
+
     #getUserRobotState = async (userRobotId: string) => {
         const rawData = await this.db.pg.one<UserRobotStateExt>(sql`
     SELECT ur.id,
@@ -103,17 +107,107 @@ export default class UserRobotRunnerService extends BaseService {
            urs.user_robot_settings,
            (SELECT array_to_json(array_agg(pos))
 FROM
-(SELECT p.*,
+(SELECT p.id,
+    p.position_id,
+    p.user_robot_id,
+    p.parent_id,
+    p.direction,
+    p.entry_status,
+    p.entry_price,
+    to_char(p.entry_date::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as entry_date,
+    p.exit_status,
+    p.exit_price,
+    to_char(p.exit_date::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as exit_date,
+    p.exit_volume,
+    p.reason,
+    p.profit,
+    p.bars_held,
+    to_char(p.created_at::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as created_at,
+    to_char(p.updated_at::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as updated_at,
+    p.internal_state,
+    p.prefix,
+    p.code,
+    to_char(p.next_job_at::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as next_job_at,
+    p.next_job,
+    p.entry_executed,
+    p.entry_remaining,
+    p.exit_executed,
+    p.exit_remaining,
+    p.entry_signal_price,
+    p.exit_signal_price,
+    p.status,
+    p.entry_volume,
+    p.position_code,
+    p.exchange,
+    p.asset,
+    p.currency,
+    p.user_id,
+    p.entry_action,
+    p.exit_action,
+    to_char(p.entry_candle_timestamp::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as entry_candle_timestamp,
+    to_char(p.exit_candle_timestamp::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as exit_candle_timestamp,
   (SELECT array_to_json(array_agg(eo))
    FROM
-     (SELECT o.*
+     (SELECT o.id,
+    o.user_ex_acc_id,
+    o.user_robot_id,
+    o.position_id,
+    o.user_position_id,
+    o.exchange,
+    o.asset,
+    o.currency,
+    o.action,
+    o.direction,
+    o.type,
+    o.signal_price,
+    o.price,
+    o.volume,
+    o.status,
+    o.ex_id,
+    to_char(o.ex_timestamp::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as ex_timestamp,
+    to_char(o.ex_last_trade_at::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as ex_last_trade_at,
+    o.remaining,
+    o.executed,
+    to_char(o.last_checked_at::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as last_checked_at,
+    o.params,
+    to_char(o.created_at::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as created_at,
+    to_char(o.updated_at::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as updated_at,
+    o.next_job,
+    o.fee,
+    o.error
       FROM user_orders o
       WHERE o.user_position_id = p.id
         AND (o.action = 'long'
              OR o.action = 'short') order by o.created_at asc) eo) AS entry_orders,
   (SELECT array_to_json(array_agg(eo))
    FROM
-     (SELECT o.*
+     (SELECT o.id,
+    o.user_ex_acc_id,
+    o.user_robot_id,
+    o.position_id,
+    o.user_position_id,
+    o.exchange,
+    o.asset,
+    o.currency,
+    o.action,
+    o.direction,
+    o.type,
+    o.signal_price,
+    o.price,
+    o.volume,
+    o.status,
+    o.ex_id,
+    to_char(o.ex_timestamp::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as ex_timestamp,
+    to_char(o.ex_last_trade_at::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as ex_last_trade_at,
+    o.remaining,
+    o.executed,
+    to_char(o.last_checked_at::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as last_checked_at,
+    o.params,
+    to_char(o.created_at::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as created_at,
+    to_char(o.updated_at::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as updated_at,
+    o.next_job,
+    o.fee,
+    o.error
       FROM user_orders o
       WHERE o.user_position_id = p.id
         AND (o.action = 'closeLong'
@@ -139,7 +233,7 @@ WHERE p.user_robot_id =${userRobotId}
       AND ur.id = ${userRobotId};                   
   `);
 
-        return keysToCamelCase(datesToISOString(rawData)) as UserRobotStateExt;
+        return keysToCamelCase(rawData) as UserRobotStateExt;
     };
 
     #getCurrentVolume = (state: UserRobotStateExt) => {
