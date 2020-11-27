@@ -126,7 +126,8 @@ export default class ConnectorRunnerService extends BaseService {
     };
 
     #saveOrder = async (transaction: DatabaseTransactionConnectionType, order: Order) => {
-        return transaction.query(sql`
+        try {
+            return transaction.query(sql`
          UPDATE user_orders SET price = ${order.price || null},
          params = ${JSON.stringify(order.params) || null},
          status = ${order.status},
@@ -141,22 +142,36 @@ export default class ConnectorRunnerService extends BaseService {
          next_job = ${JSON.stringify(order.nextJob) || null}
          WHERE id = ${order.id}
         `);
+        } catch (error) {
+            this.log.error("saveOrder error", error, order);
+            throw error;
+        }
     };
 
     #deleteJobs = async (transaction: DatabaseTransactionConnectionType, orderId: string) => {
-        return transaction.query(sql`
+        try {
+            return transaction.query(sql`
         DELETE FROM connector_jobs WHERE order_id = ${orderId};
         `);
+        } catch (error) {
+            this.log.error("deleteJobs error", error, orderId);
+            throw error;
+        }
     };
 
     #saveNextJob = async (transaction: DatabaseTransactionConnectionType, nextJob: ConnectorJob) => {
-        return transaction.query(sql`
+        try {
+            return transaction.query(sql`
         INSERT INTO connector_jobs (id, user_ex_acc_id, order_id, next_job_at, priority, type, data )
         VALUES (${nextJob.id}, ${nextJob.userExAccId}, 
-        ${nextJob.orderId}, ${nextJob.nextJobAt}, 
+        ${nextJob.orderId}, ${nextJob.nextJobAt || null}, 
         ${nextJob.priority}, ${nextJob.type}, 
         ${JSON.stringify(nextJob.data) || null});
         `);
+        } catch (error) {
+            this.log.error("saveNextJob error", error, nextJob);
+            throw error;
+        }
     };
 
     async process(job: Job) {
@@ -231,7 +246,8 @@ export default class ConnectorRunnerService extends BaseService {
                 e.message.includes("Margin is insufficient") ||
                 e.message.includes("EOrder:Insufficient initial margin") ||
                 e.message.includes("EAPI:Invalid key") ||
-                e.message.includes("Invalid API-key")
+                e.message.includes("Invalid API-key") ||
+                e.message.includes("Failed to save order")
             ) {
                 await this.events.emit<UserExchangeAccountErrorEvent>({
                     type: ConnectorWorkerEvents.USER_EX_ACC_ERROR,
@@ -243,7 +259,7 @@ export default class ConnectorRunnerService extends BaseService {
                 });
 
                 await this.db.pg.query(sql`
-                UPDATE user_exchange_accs SET status = ${UserExchangeAccStatus.disabled},
+                UPDATE user_exchange_accs SET status = ${UserExchangeAccStatus.invalid},
                 error = ${e.message || null}
                 WHERE id = ${job.id};
                 `);
@@ -292,13 +308,18 @@ export default class ConnectorRunnerService extends BaseService {
                 };
             }
 
-            await this.db.pg.transaction(async (t) => {
-                await this.#saveOrder(t, order);
-                await this.#deleteJobs(t, order.id);
-                if (nextJob) {
-                    await this.#saveNextJob(t, { ...nextJob, id: uuid(), userExAccId, orderId });
-                }
-            });
+            try {
+                await this.db.pg.transaction(async (t) => {
+                    await this.#saveOrder(t, order);
+                    await this.#deleteJobs(t, order.id);
+                    if (nextJob) {
+                        await this.#saveNextJob(t, { ...nextJob, id: uuid(), userExAccId, orderId });
+                    }
+                });
+            } catch (error) {
+                this.log.error(`Failed to save order #${order.id}`, error, order, nextJob);
+                throw new BaseError(`Failed to save order #${order.id} - ${error.message}`, { order, nextJob });
+            }
 
             if (order.error) {
                 await this.events.emit<OrdersErrorEvent>({
