@@ -1,6 +1,17 @@
 import { Extra } from "telegraf";
 
 /**
+ * Returns start keyboard and its buttons according to the language
+ * @param ctx - telegram context
+ */
+export const getStartKeyboard = (ctx: any) => {
+    const backKeyboardBack = ctx.i18n.t("keyboards.startKeybord.start");
+    const backKeyboardMenu = ctx.i18n.t("keyboards.startKeybord.info");
+
+    return Extra.HTML().markup((m: any) => m.resize().keyboard([[backKeyboardBack, backKeyboardMenu]]));
+};
+
+/**
  * Returns back keyboard and its buttons according to the language
  * @param ctx - telegram context
  */

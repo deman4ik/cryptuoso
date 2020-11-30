@@ -1,7 +1,16 @@
 import { BaseService } from "@cryptuoso/service";
 import { getMainKeyboard } from "../keyboard";
-import { BaseScene, Stage } from "telegraf";
+import { Extra, Stage } from "telegraf";
 import { match } from "@edjopato/telegraf-i18n";
+
+export function getConfirmMenu(ctx: any) {
+    return Extra.HTML().markup((m: any) => {
+        return m.inlineKeyboard([
+            [m.callbackButton(ctx.i18n.t("keyboards.confirm.yes"), JSON.stringify({ a: "yes" }), false)],
+            [m.callbackButton(ctx.i18n.t("keyboards.confirm.no"), JSON.stringify({ a: "no" }), false)]
+        ]);
+    });
+}
 
 export async function backAction(ctx: any) {
     try {

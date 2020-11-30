@@ -4,9 +4,9 @@ import { getMainKeyboard, getStartKeyboard } from "../keyboard";
 import { TelegramScene } from "../types";
 import { addBaseActions, getConfirmMenu } from "./default";
 
-async function registrationEnter(ctx: any) {
+async function loginEnter(ctx: any) {
     try {
-        return ctx.reply(ctx.i18n.t("scenes.registration.enter"), getConfirmMenu(ctx));
+        return ctx.reply(ctx.i18n.t("scenes.login.enter"), getConfirmMenu(ctx));
     } catch (e) {
         this.log.error(e);
         await ctx.reply(ctx.i18n.t("failed"));
@@ -15,41 +15,10 @@ async function registrationEnter(ctx: any) {
     }
 }
 
-async function registrationEnterEmail(ctx: any) {
+async function loginInput(ctx: any) {
     try {
-        ctx.scene.state.emailRequired = true;
-        return ctx.reply(ctx.i18n.t("scenes.registration.enterEmail"), getStartKeyboard(ctx));
-    } catch (e) {
-        this.log.error(e);
-        await ctx.reply(ctx.i18n.t("failed"));
-        ctx.scene.state.silent = false;
-        await ctx.scene.leave();
-    }
-}
-
-async function registrationConfirm(ctx: any) {
-    try {
-        //TODO: create account
-        await ctx.reply(ctx.i18n.t("scenes.registration.success"), Extra.HTML());
-        return ctx.reply(
-            ctx.i18n.t("welcome", {
-                username: this.formatName(ctx)
-            }),
-            getMainKeyboard(ctx)
-        );
-    } catch (e) {
-        this.log.error(e);
-        await ctx.reply(ctx.i18n.t("failed"));
-        ctx.scene.state.silent = false;
-        await ctx.scene.leave();
-    }
-}
-
-async function registrationInput(ctx: any) {
-    try {
-        const emailRequired = ctx.scene.state.emailRequired;
         const secretCode = ctx.scene.state.secretCode;
-        if (emailRequired && !secretCode) {
+        if (!secretCode) {
             const data = {
                 email: ctx.message.text
             };
@@ -92,10 +61,10 @@ async function registrationInput(ctx: any) {
                     )
                 );
             }
-            //TODO create account and send code
+            //TODO generate and send code
             ctx.scene.state.secretCode = "12345";
             return ctx.reply(ctx.i18n.t("scenes.registration.enterCode", data));
-        } else if (emailRequired && secretCode) {
+        } else if (secretCode) {
             const data = {
                 secretCode: ctx.message.text
             };
@@ -112,7 +81,7 @@ async function registrationInput(ctx: any) {
                 );
             }
             //TODO set account status
-            await ctx.reply(ctx.i18n.t("scenes.registration.success"), Extra.HTML());
+            await ctx.reply(ctx.i18n.t("scenes.login.success"), Extra.HTML());
             return ctx.reply(
                 ctx.i18n.t("welcome", {
                     username: this.formatName(ctx)
@@ -128,14 +97,41 @@ async function registrationInput(ctx: any) {
     }
 }
 
-export function registrationScene(service: BaseService) {
+async function loginEnterEmail(ctx: any) {
+    try {
+        return ctx.reply(ctx.i18n.t("scenes.registration.enterEmail"), getStartKeyboard(ctx));
+    } catch (e) {
+        this.log.error(e);
+        await ctx.reply(ctx.i18n.t("failed"));
+        ctx.scene.state.silent = false;
+        await ctx.scene.leave();
+    }
+}
+
+async function loginConfirm(ctx: any) {
+    try {
+        //TODO: create account without email
+        await ctx.reply(ctx.i18n.t("scenes.registration.success"), Extra.HTML());
+        return ctx.reply(
+            ctx.i18n.t("welcome", {
+                username: this.formatName(ctx)
+            }),
+            getMainKeyboard(ctx)
+        );
+    } catch (e) {
+        this.log.error(e);
+        await ctx.reply(ctx.i18n.t("failed"));
+        ctx.scene.state.silent = false;
+        await ctx.scene.leave();
+    }
+}
+
+export function loginScene(service: BaseService) {
     const scene = new BaseScene(TelegramScene.REGISTRATION);
-    scene.enter(registrationEnter.bind(service));
-    scene.action(/yes/, registrationEnterEmail.bind(service));
-    scene.action(/no/, registrationConfirm.bind(service));
-    scene.action(/woEmail/, registrationConfirm.bind(service));
-    scene.action(/anotherEmail/, registrationEnterEmail.bind(service));
-    scene.hears(/(.*?)/, registrationInput.bind(service));
+    scene.enter(loginEnter.bind(service));
+    scene.action(/woEmail/, loginConfirm.bind(service));
+    scene.action(/anotherEmail/, loginEnterEmail.bind(service));
+    scene.hears(/(.*?)/, loginInput.bind(service));
     addBaseActions(scene, service);
     return scene;
 }

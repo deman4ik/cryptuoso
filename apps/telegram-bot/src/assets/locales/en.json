@@ -6,6 +6,10 @@
             "back": "◀️ Back",
             "menu": "🏠 Main Menu"
         },
+        "startKeybord": {
+            "start": "🚀 Start",
+            "info": "❓ Info"
+        },
         "mainKeyboard": {
             "signals": "🚦 Signals",
             "robots": "🤖 Robots",
@@ -19,19 +23,25 @@
         }
     },
     "scenes": {
+        "start": {
+            "enter": "Greetings ${username}!\n\nLet's create your Cryptuoso account!\n\nBy registering your account you confirm that you have read and accept our <a href='https://support.cryptuoso.com/terms-of-use'>terms of use</a>.",
+            "registration": "🆕 OK, I am first time here!",
+            "login": "✉️  I already registered with email"
+        },
         "registration": {
-            "info": "Welcome ${username} to <b>Cryptuoso Trading Bot!</b>\n\nLet's create your Cryptuoso account!\n\nBy registering your account you confirm that you have read and accept our <a href='https://support.cryptuoso.com/terms-of-use'>terms of use</a>.",
-            "create": "🆕 OK, I am first time here!",
-            "login": "✉️  I already registered with email",
-            "requestEmail": "🚀 Creating your Cryptuoso account...\n✉️ Do you want to add your <b>email</b>?",
+            "enter": "🚀 Creating your Cryptuoso account...\n✉️ Do you want to add your <b>email</b>?",
             "enterEmail": "✉️ Please enter your <b>email</b> address here:",
-            "wrongEmail": "❌  You entered <b>wrong</b> email address. Please try again",
-            "enterCode": "<b>Secret code</b> was send to your ${email} emaild address.\nPlease enter <b>secret code</b> here:",
+            "wrongEmail": "❌  You entered <b>wrong</b> email address (${error}).\nPlease try again",
+            "enterCode": "<b>Secret code</b> was send to your ${email} email address.\nPlease enter <b>secret code</b> here:",
+            "wrongCode": "❌  You entered <b>wrong</b> secret code (${error}).\nPlease try again",
             "accExists": "❌  Cryptuoso account <b>${email}</b> already have another linked Telegram account.\nDo you want to <b>register new</b> Cryptuoso account or enter <b>another email</b>?",
-            "confirmAccReg": "Register Cryptuoso account without email",
-            "confirmReenterEmail": "I'll try another email",
-            "successRegistration": "✅  Your Cryptuoso account is created!",
-            "successLogin": "✅ You successfully logged in!\nYour Telegram account added to your <b>${email}</b> Cryptuoso account"
+            "woEmail": "Register new Cryptuoso account without email",
+            "anotherEmail": "I'll try another email",
+            "success": "✅  Your Cryptuoso account is created!"
+        },
+        "login": {
+            "enter": "🔐  Logging in your Cryptuoso account...\n✉️ Please enter your <b>email</b> here:",
+            "success": "✅ You successfully logged in!\nYour Telegram account added to your <b>${email}</b> Cryptuoso account"
         },
         "signals": {
             "info": "🚦 Signals - Manual Trading Mode",
@@ -170,12 +180,12 @@
             "deleteFailed": "❌ Failed to delete ${name} API Key.\n\n<b>${error}</b>\n\nPlease try again!"
         },
         "support": {
-            "info1": "❓Support\n\n📃 You can learn all about Cryptuoso Platform, how to use and configure signals, robots and exchange accounts in our <a href='https://support.cryptuoso.com'>Documentation site</a>.\n\n",
-            "info2": "❓Having common questions with signals or robots? Ask it in our <a href='https://t.me/joinchat/ACVS-0zaWVBgAYm8gOKYHA'>Telegram Community</a> and we will help you.\n\n",
-            "info3": "❗️Have a personal problem regarding connecting an exchange or billing? You can reach us at <a href='mailto:support@cruptuoso.com'>support@cruptuoso.com</a>.\n\n",
+            "info1": "❓ Support\n\n📃 You can learn all about Cryptuoso Robots, how to use and configure signals, robots and exchange accounts in our <a href='https://support.cryptuoso.com'>Documentation site</a>.\n\n",
+            "info2": "❓ Having common questions with signals or robots? Ask it in our <a href='https://t.me/joinchat/ACVS-0zaWVBgAYm8gOKYHA'>Telegram Community</a> and we will help you.\n\n",
+            "info3": "❗️ Have a personal problem regarding connecting an exchange or billing? You can reach us at <a href='mailto:support@cruptuoso.com'>support@cruptuoso.com</a>.\n\n",
             "info4": "Also you can <b>type and send your message right now ⬇️ to this bot</b>\n\n(works only while you in Support section)",
-            "success": "✅ Your support request have been received.\n\nIf you have any additional information regarding your issue\n\n you can use <b>❓Support</b> section again!",
-            "reply": "❓New Message from <b>Support Team</b>:\n\n${message}\n\nYou can reply to us in <b>❓Support</b> section."
+            "success": "✅ Your support request have been received.\n\nIf you have any additional information regarding your issue\n\n you can use <b>❓ Support</b> section again!",
+            "reply": "❓ New Message from <b>Support Team</b>:\n\n${message}\n\nYou can reply to us in <b>❓ Support</b> section."
         }
     },
     "signal": {

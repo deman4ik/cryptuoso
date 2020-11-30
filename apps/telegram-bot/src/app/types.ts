@@ -25,7 +25,9 @@ export const enum TelegramScene {
     ADD_USER_EX_ACC = "addUserExAcc",
     EDIT_USER_EX_ACC = "editUserExAcc",
     SUPPORT = "support",
-    REGISTRATION = "registration"
+    START = "start",
+    REGISTRATION = "registration",
+    LOGIN = "login"
 }
 
 export interface TelegramUser extends BaseUser {

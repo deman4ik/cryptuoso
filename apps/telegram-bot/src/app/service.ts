@@ -1,7 +1,7 @@
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import dayjs from "@cryptuoso/dayjs";
 import { Telegraf, Extra, Stage, BaseScene } from "telegraf";
-
+import Validator from "fastest-validator";
 import { I18n, match, reply } from "@edjopato/telegraf-i18n";
 import { TelegrafSessionRedis } from "@ivaniuk/telegraf-session-redis";
 import telegrafThrottler from "telegraf-throttler";
@@ -10,7 +10,7 @@ import { getBackKeyboard, getMainKeyboard } from "./keyboard";
 import { formatTgName } from "@cryptuoso/user-state";
 import { TelegramScene, TelegramUser } from "./types";
 import { sql } from "@cryptuoso/postgres";
-import { registrationScene, signalsScene } from "./scenes";
+import { registrationScene, loginScene, signalsScene } from "./scenes";
 const { enter, leave } = Stage;
 
 export type TelegramBotServiceConfig = BaseServiceConfig;
@@ -19,9 +19,11 @@ export default class TelegramBotService extends BaseService {
     bot: any;
     i18n: I18n;
     session: TelegrafSessionRedis;
+    validator: Validator;
     constructor(config?: TelegramBotServiceConfig) {
         super(config);
         try {
+            this.validator = new Validator();
             this.bot = new Telegraf(process.env.BOT_TOKEN);
             this.bot.catch((err: any) => {
                 this.log.error(err);
@@ -51,7 +53,7 @@ export default class TelegramBotService extends BaseService {
             });
             this.bot.use(this.i18n.middleware());
             // Create scene manager
-            const regStage = new Stage([registrationScene(this)]);
+            const regStage = new Stage([registrationScene(this), loginScene(this)]);
             regStage.command("cancel", leave());
 
             this.bot.use(regStage.middleware());
