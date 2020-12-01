@@ -1,9 +1,8 @@
 import { BaseService } from "@cryptuoso/service";
 import { BaseScene, Extra, Stage } from "telegraf";
-import { getMainKeyboard } from "../keyboard";
 import { TelegramScene } from "../types";
 import { addBaseActions } from "./default";
-const { enter, leave } = Stage;
+const { enter } = Stage;
 
 function getStartMenu(ctx: any) {
     return Extra.HTML().markup((m: any) => {
@@ -27,48 +26,7 @@ async function startEnter(ctx: any) {
     }
 }
 
-async function registerCreateEnterEmail(ctx: any) {
-    try {
-        return ctx.reply(ctx.i18n.t("scenes.registration.enterEmail"), Extra.HTML());
-    } catch (e) {
-        this.log.error(e);
-        await ctx.reply(ctx.i18n.t("failed"));
-        ctx.scene.state.silent = false;
-        await ctx.scene.leave();
-    }
-}
-
-async function registerSuccess(ctx: any) {
-    try {
-        //TODO: create account
-        await ctx.reply(ctx.i18n.t("scenes.registration.successRegistration"), Extra.HTML());
-        return ctx.reply(
-            ctx.i18n.t("welcome", {
-                username: this.formatName(ctx)
-            }),
-            getMainKeyboard(ctx)
-        );
-    } catch (e) {
-        this.log.error(e);
-        await ctx.reply(ctx.i18n.t("failed"));
-        ctx.scene.state.silent = false;
-        await ctx.scene.leave();
-    }
-}
-
-async function registerLogin(ctx: any) {
-    try {
-        ctx.scene.state.mode = "login";
-        return ctx.reply(ctx.i18n.t("scenes.registration.enterEmail"), Extra.HTML());
-    } catch (e) {
-        this.log.error(e);
-        await ctx.reply(ctx.i18n.t("failed"));
-        ctx.scene.state.silent = false;
-        await ctx.scene.leave();
-    }
-}
-
-export function registrationScene(service: BaseService) {
+export function startScene(service: BaseService) {
     const scene = new BaseScene(TelegramScene.START);
     scene.enter(startEnter.bind(service));
     scene.action(/registration/, enter(TelegramScene.REGISTRATION));

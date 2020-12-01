@@ -1,3 +1,4 @@
+import { sql } from "@cryptuoso/postgres";
 import { BaseService } from "@cryptuoso/service";
 import { BaseScene, Extra } from "telegraf";
 import { getMainKeyboard, getStartKeyboard } from "../keyboard";
@@ -29,11 +30,18 @@ async function registrationEnterEmail(ctx: any) {
 
 async function registrationConfirm(ctx: any) {
     try {
-        //TODO: create account
+        const name = this.formatName(ctx);
+        const { user, accessToken } = await this.registerTg({
+            telegramId: ctx.from.id,
+            telegramUsername: ctx.from.username,
+            name
+        });
+        ctx.session.user = user;
+        ctx.session.accessToken = accessToken;
         await ctx.reply(ctx.i18n.t("scenes.registration.success"), Extra.HTML());
         return ctx.reply(
             ctx.i18n.t("welcome", {
-                username: this.formatName(ctx)
+                username: name
             }),
             getMainKeyboard(ctx)
         );
@@ -48,8 +56,8 @@ async function registrationConfirm(ctx: any) {
 async function registrationInput(ctx: any) {
     try {
         const emailRequired = ctx.scene.state.emailRequired;
-        const secretCode = ctx.scene.state.secretCode;
-        if (emailRequired && !secretCode) {
+        const secretCodeSent = ctx.scene.state.secretCodeSent;
+        if (emailRequired && !secretCodeSent) {
             const data = {
                 email: ctx.message.text
             };
@@ -65,7 +73,10 @@ async function registrationInput(ctx: any) {
                     )
                 );
             }
-            const accountExists = false;
+            const accountExists = await this.db.pg.maybeOne(sql`
+            SELECT id FROM users
+            WHERE email = ${data.email}
+        `);
             if (accountExists) {
                 return ctx.reply(
                     ctx.i18n.t(
@@ -92,26 +103,18 @@ async function registrationInput(ctx: any) {
                     )
                 );
             }
-            //TODO create account and send code
-            ctx.scene.state.secretCode = "12345";
+            const { user, accessToken } = await this.registerTgWithEmail({
+                email: data.email,
+                telegramId: ctx.from.id,
+                telegramUsername: ctx.from.username,
+                name: this.formatName(ctx)
+            });
+            ctx.session.user = user;
+            ctx.session.accessToken = accessToken;
+            ctx.scene.state.secretCodeSent = true;
             return ctx.reply(ctx.i18n.t("scenes.registration.enterCode", data));
-        } else if (emailRequired && secretCode) {
-            const data = {
-                secretCode: ctx.message.text
-            };
-            const result = this.validator.validate(data, { secretCode: { type: "equal", value: secretCode } });
-            if (result !== true) {
-                return ctx.reply(
-                    ctx.i18n.t(
-                        "scenes.registration.wrongCode",
-                        {
-                            error: result.map((e: { message: string }) => e.message).join(" ")
-                        },
-                        Extra.HTML()
-                    )
-                );
-            }
-            //TODO set account status
+        } else if (emailRequired && secretCodeSent) {
+            await this.authUtils.confirmEmailFromTg({ telegramId: ctx.from.id, secretCode: ctx.message.text });
             await ctx.reply(ctx.i18n.t("scenes.registration.success"), Extra.HTML());
             return ctx.reply(
                 ctx.i18n.t("welcome", {

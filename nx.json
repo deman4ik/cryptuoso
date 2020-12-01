@@ -180,6 +180,9 @@
         },
         "graphql-client": {
             "tags": []
+        },
+        "auth-utils": {
+            "tags": []
         }
     },
     "affected": {

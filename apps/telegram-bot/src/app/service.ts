@@ -1,6 +1,7 @@
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import dayjs from "@cryptuoso/dayjs";
-import { Telegraf, Extra, Stage, BaseScene } from "telegraf";
+import { Auth } from "@cryptuoso/auth-utils";
+import { Telegraf, Extra, Stage } from "telegraf";
 import Validator from "fastest-validator";
 import { I18n, match, reply } from "@edjopato/telegraf-i18n";
 import { TelegrafSessionRedis } from "@ivaniuk/telegraf-session-redis";
@@ -10,7 +11,7 @@ import { getBackKeyboard, getMainKeyboard } from "./keyboard";
 import { formatTgName } from "@cryptuoso/user-state";
 import { TelegramScene, TelegramUser } from "./types";
 import { sql } from "@cryptuoso/postgres";
-import { registrationScene, loginScene, signalsScene } from "./scenes";
+import { startScene, registrationScene, loginScene, signalsScene } from "./scenes";
 const { enter, leave } = Stage;
 
 export type TelegramBotServiceConfig = BaseServiceConfig;
@@ -20,9 +21,11 @@ export default class TelegramBotService extends BaseService {
     i18n: I18n;
     session: TelegrafSessionRedis;
     validator: Validator;
+    authUtils: Auth;
     constructor(config?: TelegramBotServiceConfig) {
         super(config);
         try {
+            this.authUtils = new Auth();
             this.validator = new Validator();
             this.bot = new Telegraf(process.env.BOT_TOKEN);
             this.bot.catch((err: any) => {
@@ -53,7 +56,7 @@ export default class TelegramBotService extends BaseService {
             });
             this.bot.use(this.i18n.middleware());
             // Create scene manager
-            const regStage = new Stage([registrationScene(this), loginScene(this)]);
+            const regStage = new Stage([startScene(this), registrationScene(this), loginScene(this)]);
             regStage.command("cancel", leave());
 
             this.bot.use(regStage.middleware());
@@ -108,16 +111,23 @@ export default class TelegramBotService extends BaseService {
     }
 
     async auth(ctx: any, next: () => any) {
+        if (
+            ctx.scene.current.id === TelegramScene.REGISTRATION ||
+            ctx.scene.current.id === TelegramScene.LOGIN ||
+            ctx.scene.current.id === TelegramScene.START
+        )
+            return;
         const sessionData = ctx.session;
-        if (ctx.scene.current.id === TelegramScene.REGISTRATION) return;
-        if (!sessionData || !sessionData.user) {
-            //   const userExists = await this.getUser(ctx.from.id);
-
-            //*  if (userExists) ctx.session.user = userExists;
-            //  else {
-            await ctx.scene.leave();
-            await ctx.scene.enter(TelegramScene.REGISTRATION);
-            //  }
+        if (!sessionData || !sessionData.user || !sessionData.accessToken) {
+            try {
+                const { user, accessToken } = await this.authUtils.refreshTokenTg({ telegramId: ctx.from.id });
+                ctx.session.user = user;
+                ctx.session.accessToken = accessToken;
+            } catch (err) {
+                this.log.warn("No user", err.message);
+                await ctx.scene.leave();
+                await ctx.scene.enter(TelegramScene.START);
+            }
         } else await next();
     }
 

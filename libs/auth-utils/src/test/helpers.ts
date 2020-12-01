@@ -1,6 +1,6 @@
 import crypto from "crypto";
 
-async function checkTgLogin(
+export function makeTgHash(
     loginData: {
         id: number;
         first_name?: string;
@@ -8,12 +8,10 @@ async function checkTgLogin(
         username?: string;
         photo_url?: string;
         auth_date: number;
-        hash: string;
     },
     token: string
 ) {
     const secret = crypto.createHash("sha256").update(token).digest();
-    const inputHash = loginData.hash;
     const data: { [key: string]: any } = loginData;
     delete data.hash;
     let array = [];
@@ -23,11 +21,6 @@ async function checkTgLogin(
     array = array.sort();
     const checkString = array.join("\n");
     const checkHash = crypto.createHmac("sha256", secret).update(checkString).digest("hex");
-    if (checkHash === inputHash) {
-        return data;
-    } else {
-        return false;
-    }
-}
 
-export { checkTgLogin };
+    return checkHash;
+}

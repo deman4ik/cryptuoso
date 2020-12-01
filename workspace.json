@@ -1955,6 +1955,27 @@
                     }
                 }
             }
+        },
+        "auth-utils": {
+            "root": "libs/auth-utils",
+            "sourceRoot": "libs/auth-utils/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["libs/auth-utils/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/auth-utils/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
         }
     },
     "cli": {
