@@ -590,7 +590,7 @@ export class Auth {
     async refreshTokenTg(params: { telegramId: number }) {
         const { telegramId } = params;
         const user: User = await pg.maybeOne<User>(sql`
-        SELECT id, roles, access, status, settings FROM users
+        SELECT id, telegram_id, roles, access, status, settings FROM users
         WHERE telegram_id = ${telegramId};
     `);
 

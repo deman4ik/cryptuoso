@@ -1,6 +1,7 @@
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import dayjs from "@cryptuoso/dayjs";
 import { Auth } from "@cryptuoso/auth-utils";
+import { GraphQLClient } from "@cryptuoso/graphql-client";
 import { Telegraf, Extra, Stage } from "telegraf";
 import Validator from "fastest-validator";
 import { I18n, match, reply } from "@edjopato/telegraf-i18n";
@@ -22,10 +23,14 @@ export default class TelegramBotService extends BaseService {
     session: TelegrafSessionRedis;
     validator: Validator;
     authUtils: Auth;
+    gqlClient: GraphQLClient;
     constructor(config?: TelegramBotServiceConfig) {
         super(config);
         try {
             this.authUtils = new Auth();
+            this.gqlClient = new GraphQLClient({
+                refreshToken: this.authUtils.refreshTokenTg.bind(this)
+            });
             this.validator = new Validator();
             this.bot = new Telegraf(process.env.BOT_TOKEN);
             this.bot.catch((err: any) => {
