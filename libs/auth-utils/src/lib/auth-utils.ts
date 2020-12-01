@@ -342,7 +342,7 @@ export class Auth {
         };
         await pg.query(sql`
         INSERT INTO users
-            (id, telegram_id, telegram_username, name, status, roles, access, settings)
+            (id, telegram_id, telegram_username, name, status, roles, access, settings, last_active_at)
             VALUES(
                 ${newUser.id},
                 ${newUser.telegramId},
@@ -451,7 +451,7 @@ export class Auth {
             await pg.query(sql`
             INSERT INTO users
                 (id, name, email_new, telegram_id, telegram_username, status, 
-                secret_code, secret_code_expire_at, roles, access, settings)
+                secret_code, secret_code_expire_at, roles, access, settings, last_active_at)
                 VALUES(
                     ${user.id},
                     ${user.name || null},

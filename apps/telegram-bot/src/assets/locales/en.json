@@ -24,23 +24,28 @@
     },
     "scenes": {
         "start": {
-            "enter": "Greetings ${username}!\n\nLet's create your Cryptuoso account!\n\nBy registering your account you confirm that you have read and accept our <a href='https://support.cryptuoso.com/terms-of-use'>terms of use</a>.",
-            "registration": "🆕 OK, I am first time here!",
-            "login": "✉️  I already registered with email"
+            "enter": "Greetings ${username}!\n\nBy starting this bot you confirm that you have read and accept our <a href='https://support.cryptuoso.com/terms-of-use'>terms of use</a>.",
+            "regOrLog": "Would you like to <b>create new</b> Cryptuoso Account or to <b>log in</b> to your account with email?",
+            "registration": "🆕  Create new account",
+            "login": "✉️  Log in with email"
         },
         "registration": {
             "enter": "🚀 Creating your Cryptuoso account...\n✉️ Do you want to add your <b>email</b>?",
             "enterEmail": "✉️ Please enter your <b>email</b> address here:",
             "wrongEmail": "❌  You entered <b>wrong</b> email address (${error}).\nPlease try again",
-            "enterCode": "<b>Secret code</b> was send to your ${email} email address.\nPlease enter <b>secret code</b> here:",
+            "enterCode": "<b>Secret code</b> was sent to your ${email} email address.\nPlease enter <b>secret code</b> here:",
             "wrongCode": "❌  You entered <b>wrong</b> secret code (${error}).\nPlease try again",
-            "accExists": "❌  Cryptuoso account <b>${email}</b> already have another linked Telegram account.\nDo you want to <b>register new</b> Cryptuoso account or enter <b>another email</b>?",
+            "accExists": "❌  Cryptuoso account <b>${email}</b> already exists.\nDo you want to <b>register new</b> Cryptuoso account or <b>log in</b> with your email?",
+            "accLinked": "❌  Cryptuoso account <b>${email}</b> already linked to another Telegram account.\nDo you want to <b>register new</b> Cryptuoso account without email or enter <b>another email</b>?",
             "woEmail": "Register new Cryptuoso account without email",
+            "login": "Login with ${email}",
             "anotherEmail": "I'll try another email",
             "success": "✅  Your Cryptuoso account is created!"
         },
         "login": {
             "enter": "🔐  Logging in your Cryptuoso account...\n✉️ Please enter your <b>email</b> here:",
+            "accNotExists": "❌  Cryptuoso account with <b>${email}</b> does not exists.\nDo you want to <b>register new</b> Cryptuoso account or enter <b>another email</b>?",
+            "register": "Register new Cryptuoso account",
             "success": "✅ You successfully logged in!\nYour Telegram account added to your <b>${email}</b> Cryptuoso account"
         },
         "signals": {
@@ -181,6 +186,7 @@
         },
         "support": {
             "info1": "❓ Support\n\n📃 You can learn all about Cryptuoso Robots, how to use and configure signals, robots and exchange accounts in our <a href='https://support.cryptuoso.com'>Documentation site</a>.\n\n",
+            "info1alt": "📃 You can learn all about Cryptuoso Robots, how to create new account, how to use and configure signals, robots and exchange accounts in our <a href='https://support.cryptuoso.com'>Documentation site</a>.\n\n",
             "info2": "❓ Having common questions with signals or robots? Ask it in our <a href='https://t.me/joinchat/ACVS-0zaWVBgAYm8gOKYHA'>Telegram Community</a> and we will help you.\n\n",
             "info3": "❗️ Have a personal problem regarding connecting an exchange or billing? You can reach us at <a href='mailto:support@cruptuoso.com'>support@cruptuoso.com</a>.\n\n",
             "info4": "Also you can <b>type and send your message right now ⬇️ to this bot</b>\n\n(works only while you in Support section)",

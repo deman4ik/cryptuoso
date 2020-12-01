@@ -7,7 +7,7 @@ import { I18n, match, reply } from "@edjopato/telegraf-i18n";
 import { TelegrafSessionRedis } from "@ivaniuk/telegraf-session-redis";
 import telegrafThrottler from "telegraf-throttler";
 import path from "path";
-import { getBackKeyboard, getMainKeyboard } from "./keyboard";
+import { getBackKeyboard, getMainKeyboard, getStartKeyboard } from "./keyboard";
 import { formatTgName } from "@cryptuoso/user-state";
 import { TelegramScene, TelegramUser } from "./types";
 import { sql } from "@cryptuoso/postgres";
@@ -60,15 +60,16 @@ export default class TelegramBotService extends BaseService {
             regStage.command("cancel", leave());
 
             this.bot.use(regStage.middleware());
+            this.bot.hears(match("keyboards.startKeybord.info"), this.info.bind(this));
             this.bot.use(this.auth.bind(this));
 
             const mainStage = new Stage([signalsScene(this)]);
             mainStage.command("cancel", leave());
             this.bot.use(mainStage.middleware());
             this.bot.start(this.start.bind(this));
+            this.bot.hears(match("keyboards.startKeybord.start"), this.mainMenu.bind(this));
             this.bot.command("menu", this.mainMenu.bind(this));
             // Main menu
-            this.bot.command("menu", enter(TelegramScene.SIGNALS));
             this.bot.hears(match("keyboards.mainKeyboard.signals"), enter(TelegramScene.SIGNALS));
             this.bot.hears(match("keyboards.mainKeyboard.robots"), enter(TelegramScene.ROBOTS));
             this.bot.hears(match("keyboards.mainKeyboard.settings"), enter(TelegramScene.SETTINGS));
@@ -112,11 +113,18 @@ export default class TelegramBotService extends BaseService {
 
     async auth(ctx: any, next: () => any) {
         if (
-            ctx.scene.current.id === TelegramScene.REGISTRATION ||
-            ctx.scene.current.id === TelegramScene.LOGIN ||
-            ctx.scene.current.id === TelegramScene.START
-        )
+            ctx.scene &&
+            (ctx.scene?.current?.id === TelegramScene.REGISTRATION ||
+                ctx.scene?.current?.id === TelegramScene.LOGIN ||
+                ctx.scene?.current?.id === TelegramScene.START)
+        ) {
+            const isStart = match("keyboards.startKeybord.start");
+            if (isStart(ctx.message?.text, ctx)) {
+                await ctx.scene.leave();
+                await ctx.scene.enter(TelegramScene.START);
+            }
             return;
+        }
         const sessionData = ctx.session;
         if (!sessionData || !sessionData.user || !sessionData.accessToken) {
             try {
@@ -124,10 +132,12 @@ export default class TelegramBotService extends BaseService {
                 ctx.session.user = user;
                 ctx.session.accessToken = accessToken;
             } catch (err) {
-                this.log.warn("No user", err.message);
+                this.log.warn("Auth middleware -", err.message);
                 await ctx.scene.leave();
                 await ctx.scene.enter(TelegramScene.START);
+                return;
             }
+            await next();
         } else await next();
     }
 
@@ -135,7 +145,6 @@ export default class TelegramBotService extends BaseService {
         try {
             const params = ctx.update.message.text.replace("/start ", "");
             if (params && params !== "") {
-                //TODO: check registration, save scene, redirect after registration
                 const [scene, robotId] = params.split("_");
                 if (scene && robotId && (scene === TelegramScene.ROBOT_SIGNAL || scene === TelegramScene.USER_ROBOT)) {
                     ctx.scene.state.silent = true;
@@ -149,23 +158,28 @@ export default class TelegramBotService extends BaseService {
                     return ctx.scene.enter(scene, { robotId });
                 }
             }
-            return ctx.reply(
-                ctx.i18n.t("welcome", {
-                    username: this.formatName(ctx)
-                }),
-                getMainKeyboard(ctx)
-            );
+            return this.mainMenu(ctx);
         } catch (e) {
             this.log.error(e);
             return ctx.reply(ctx.i18n.t("failed"));
         }
     }
 
+    async info(ctx: any) {
+        await ctx.reply(`${ctx.i18n.t("scenes.support.info1alt")}${ctx.i18n.t("scenes.support.info2")}`, Extra.HTML());
+    }
+
     async mainMenu(ctx: any) {
-        await ctx.reply(ctx.i18n.t("menu"), getMainKeyboard(ctx));
+        const sessionData = ctx.session;
+        if (!sessionData || !sessionData.user || !sessionData.accessToken) {
+            await ctx.reply(ctx.i18n.t("menu"), getStartKeyboard(ctx));
+        } else {
+            await ctx.reply(ctx.i18n.t("menu"), getMainKeyboard(ctx));
+        }
     }
 
     async defaultHandler(ctx: any) {
+        this.log.info("defaultHandler");
         await ctx.reply(ctx.i18n.t("defaultHandler"), getMainKeyboard(ctx));
     }
 }

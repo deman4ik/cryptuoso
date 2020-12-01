@@ -5,10 +5,10 @@ import { Extra } from "telegraf";
  * @param ctx - telegram context
  */
 export const getStartKeyboard = (ctx: any) => {
-    const backKeyboardBack = ctx.i18n.t("keyboards.startKeybord.start");
-    const backKeyboardMenu = ctx.i18n.t("keyboards.startKeybord.info");
+    const startKeyboardStart = ctx.i18n.t("keyboards.startKeybord.start");
+    const startKeyboardInfo = ctx.i18n.t("keyboards.startKeybord.info");
 
-    return Extra.HTML().markup((m: any) => m.resize().keyboard([[backKeyboardBack, backKeyboardMenu]]));
+    return Extra.HTML().markup((m: any) => m.resize().keyboard([[startKeyboardStart, startKeyboardInfo]]));
 };
 
 /**

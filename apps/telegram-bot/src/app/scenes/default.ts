@@ -1,5 +1,4 @@
 import { BaseService } from "@cryptuoso/service";
-import { getMainKeyboard } from "../keyboard";
 import { Extra, Stage } from "telegraf";
 import { match } from "@edjopato/telegraf-i18n";
 
@@ -14,12 +13,17 @@ export function getConfirmMenu(ctx: any) {
 
 export async function backAction(ctx: any) {
     try {
-        ctx.scene.state.silent = true;
-        await ctx.scene.enter(ctx.scene.state.prevScene, {
-            ...ctx.scene.state.prevState,
-            edit: false,
-            reload: true
-        });
+        if (ctx.scene.state.prevScene) {
+            ctx.scene.state.silent = true;
+            await ctx.scene.enter(ctx.scene.state.prevScene, {
+                ...ctx.scene.state.prevState,
+                edit: false,
+                reload: true
+            });
+        } else {
+            ctx.scene.state.silent = false;
+            await ctx.scene.leave();
+        }
     } catch (e) {
         this.log.error(e);
         await ctx.reply(ctx.i18n.t("failed"));
@@ -30,7 +34,7 @@ export async function backAction(ctx: any) {
 
 export async function leaveAction(ctx: any) {
     if (ctx.scene.state.silent) return;
-    await ctx.reply(ctx.i18n.t("menu"), getMainKeyboard(ctx));
+    await this.mainMenu(ctx);
 }
 
 export async function addBaseActions(scene: any, service: BaseService) {
