@@ -29,7 +29,7 @@ export default class TelegramBotService extends BaseService {
         try {
             this.authUtils = new Auth();
             this.gqlClient = new GraphQLClient({
-                refreshToken: this.authUtils.refreshTokenTg.bind(this)
+                refreshToken: this.authUtils.refreshTokenTg.bind(this.authUtils)
             });
             this.validator = new Validator();
             this.bot = new Telegraf(process.env.BOT_TOKEN);
@@ -131,11 +131,10 @@ export default class TelegramBotService extends BaseService {
             return;
         }
         const sessionData = ctx.session;
-        if (!sessionData || !sessionData.user || !sessionData.accessToken) {
+        if (!sessionData || !sessionData.user) {
             try {
                 const { user, accessToken } = await this.authUtils.refreshTokenTg({ telegramId: ctx.from.id });
-                ctx.session.user = user;
-                ctx.session.accessToken = accessToken;
+                ctx.session.user = { ...user, accessToken };
             } catch (err) {
                 this.log.warn("Auth middleware -", err.message);
                 await ctx.scene.leave();
@@ -176,7 +175,7 @@ export default class TelegramBotService extends BaseService {
 
     async mainMenu(ctx: any) {
         const sessionData = ctx.session;
-        if (!sessionData || !sessionData.user || !sessionData.accessToken) {
+        if (!sessionData || !sessionData.user) {
             await ctx.reply(ctx.i18n.t("menu"), getStartKeyboard(ctx));
         } else {
             await ctx.reply(ctx.i18n.t("menu"), getMainKeyboard(ctx));

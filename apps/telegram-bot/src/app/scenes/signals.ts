@@ -1,3 +1,4 @@
+import { gql } from "@cryptuoso/graphql-client";
 import { sleep } from "@cryptuoso/helpers";
 import { BaseService } from "@cryptuoso/service";
 import { BaseScene, Extra } from "telegraf";
@@ -21,9 +22,29 @@ function getSignalsMenu(ctx: any) {
 
 async function signalsEnter(ctx: any) {
     try {
+        const { stats }: { stats: { profit: number }[] } = await this.gqlClient.request(
+            gql`
+                query UserSignalsProfit($userId: uuid!) {
+                    stats: v_user_aggr_stats(
+                        where: {
+                            _and: [
+                                { user_id: { _eq: $userId } }
+                                { type: { _eq: "signal" } }
+                                { exchange: { _is_null: true } }
+                                { asset: { _is_null: true } }
+                            ]
+                        }
+                    ) {
+                        profit: net_profit
+                    }
+                }
+            `,
+            { userId: ctx.session.user.id },
+            ctx
+        );
         await ctx.reply(ctx.i18n.t("keyboards.mainKeyboard.signals"), getBackKeyboard(ctx));
         await sleep(100);
-        return ctx.reply(ctx.i18n.t("scenes.signals.info"), getSignalsMenu(ctx));
+        return ctx.reply(ctx.i18n.t("scenes.signals.info", { profit: stats[0]?.profit || 0 }), getSignalsMenu(ctx));
     } catch (e) {
         this.log.error(e);
         await ctx.reply(ctx.i18n.t("failed"));

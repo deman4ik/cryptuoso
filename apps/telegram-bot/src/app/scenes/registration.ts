@@ -48,8 +48,7 @@ async function registrationConfirm(ctx: any) {
             telegramUsername: ctx.from.username,
             name
         });
-        ctx.session.user = user;
-        ctx.session.accessToken = accessToken;
+        ctx.session.user = { ...user, accessToken };
         await ctx.reply(ctx.i18n.t("scenes.registration.success"), Extra.HTML());
         return ctx.reply(
             ctx.i18n.t("welcome", {
@@ -146,8 +145,7 @@ async function registrationInput(ctx: any) {
                 telegramUsername: ctx.from.username,
                 name: this.formatName(ctx)
             });
-            ctx.session.user = user;
-            ctx.session.accessToken = accessToken;
+            ctx.session.user = { ...user, accessToken };
             ctx.scene.state.secretCodeSent = true;
             return ctx.reply(ctx.i18n.t("scenes.registration.enterCode", data), Extra.HTML());
         } else if (emailRequired && secretCodeSent) {

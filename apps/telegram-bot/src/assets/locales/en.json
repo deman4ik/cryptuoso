@@ -49,7 +49,7 @@
             "success": "✅ You successfully logged in!\nYour Telegram account added to your <b>${email}</b> Cryptuoso account"
         },
         "signals": {
-            "info": "🚦 Signals - Manual Trading Mode",
+            "info": "🚦 Signals - Manual Trading Mode\n\nMy total signals profit: <b>${profit}$</b>",
             "my": "🚥 My Signals",
             "search": "🔎 Search Signals",
             "top": "🏆 Top Performance Signals",

@@ -108,8 +108,7 @@ async function loginInput(ctx: any) {
                 telegramUsername: ctx.from.username,
                 name: this.formatName(ctx)
             });
-            ctx.session.user = user;
-            ctx.session.accessToken = accessToken;
+            ctx.session.user = { ...user, accessToken };
             await ctx.reply(ctx.i18n.t("scenes.login.success", { email }), Extra.HTML());
             await sleep(100);
             await ctx.reply(
