@@ -37,11 +37,18 @@ export async function leaveAction(ctx: any) {
     await this.mainMenu(ctx);
 }
 
-export async function addBaseActions(scene: any, service: BaseService) {
+export async function menuAction(ctx: any) {
+    ctx.scene.state.silent = false;
+    await ctx.scene.leave();
+}
+
+export async function addBaseActions(scene: any, service: BaseService, handleBackAction = true) {
     scene.leave(leaveAction.bind(service));
-    scene.hears(match("keyboards.backKeyboard.back"), backAction.bind(this));
-    scene.hears(match("keyboards.backKeyboard.menu"), Stage.leave());
-    scene.command("back", backAction.bind(this));
-    scene.action(/back/, backAction.bind(this));
-    scene.command("menu", Stage.leave());
+    scene.hears(match("keyboards.backKeyboard.menu"), menuAction.bind(this));
+    scene.command("menu", menuAction.bind(this));
+    if (handleBackAction) {
+        scene.hears(match("keyboards.backKeyboard.back"), backAction.bind(service));
+        scene.command("back", backAction.bind(service));
+        scene.action(/back/, backAction.bind(service));
+    }
 }

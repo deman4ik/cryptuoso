@@ -1,3 +1,7 @@
+import { PositionDirection, TradeAction, TradeInfo, ValidTimeframe } from "@cryptuoso/market";
+import { RobotSettings, UserRobotSettings, UserSignalSettings } from "@cryptuoso/robot-settings";
+import { BaseStatistics } from "@cryptuoso/stats-calc";
+import { UserRobotStatus } from "@cryptuoso/user-robot-state";
 import { BaseUser } from "@cryptuoso/user-state";
 
 export const enum TelegramScene {
@@ -38,4 +42,90 @@ export interface TelegramUser extends BaseUser {
     telegramUsername?: string;
     secretCode?: string;
     secretCodeExpireAt?: string;
+}
+
+export interface CommonStats {
+    netProfit: number;
+    winRate: number;
+    maxDrawdown: number;
+    tradesCount: number;
+}
+
+export interface OpenPosition {
+    id: string;
+    code: string;
+    direction: PositionDirection;
+    entryAction: TradeAction;
+    entryPrice: number;
+    entryDate: string;
+    volume: number;
+    profit: number;
+}
+
+export interface ClosedPosition extends OpenPosition {
+    exitAction: TradeAction;
+    exitPrice: number;
+    exitDate: string;
+    barsHeld: number;
+}
+
+export interface ActiveSignal extends TradeInfo {
+    code: string;
+    timestamp: string;
+}
+
+export interface UserSignal {
+    id: string;
+    subscribedAt: string;
+    settings: {
+        currentSettings: UserSignalSettings;
+    };
+    stats: BaseStatistics;
+    openPositions: OpenPosition[];
+    closedPositions: ClosedPosition[];
+    activeSignals: ActiveSignal[];
+}
+
+export interface UserRobot {
+    id: string;
+    userExAcc: {
+        userExAccId: string;
+        userExAccName: string;
+    };
+    status: UserRobotStatus;
+    startedAt: string;
+    stoppedAt: string;
+    settings: {
+        currentSettings: UserRobotSettings;
+    };
+    stats: BaseStatistics;
+    openPositions: OpenPosition[];
+    closedPositions: ClosedPosition[];
+}
+
+export interface Robot {
+    id: string;
+    code: string;
+    name: string;
+    mod: string;
+    exchange: string;
+    asset: string;
+    currency: string;
+    timeframe: ValidTimeframe;
+    strategy: {
+        description: string;
+    };
+    startedAt: string;
+    settings: {
+        currentSettings: RobotSettings;
+    };
+    stats: BaseStatistics;
+    openPositions: OpenPosition[];
+    closedPositions: ClosedPosition[];
+    activeSignals: ActiveSignal[];
+    userSignals?: UserSignal[];
+    userRobots?: UserRobot[];
+    userSignal?: UserSignal;
+    userRobot?: UserRobot;
+    lastInfoUpdatedAt: string;
 }

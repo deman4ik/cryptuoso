@@ -17,6 +17,36 @@ export class StatsStringValue implements StatsVals<string> {
     constructor(public all: string = "", public long: string = "", public short: string = "") {}
 }
 
+export interface BaseStatistics {
+    tradesCount: number;
+    tradesWinning: number;
+    tradesLosing: number;
+    winRate: number;
+    lossRate: number;
+    avgBarsHeld: number;
+    avgBarsHeldWinning: number;
+    avgBarsHeldLosing: number;
+    netProfit: number;
+    localMax: number;
+    avgNetProfit: number;
+    grossProfit: number;
+    avgProfit: number;
+    avgProfitWinners: number;
+    grossLoss: number;
+    avgLoss: number;
+    maxConsecWins: number;
+    maxConsecLosses: number;
+    currentWinSequence: number;
+    currentLossSequence: number;
+    maxDrawdown: number;
+    maxDrawdownDate: string;
+    profitFactor: number;
+    recoveryFactor: number;
+    payoffRatio: number;
+    rating: number;
+    lastUpdatedAt: string;
+}
+
 export interface Statistics {
     tradesCount: StatsNumberValue;
     tradesWinning: StatsNumberValue;

@@ -1,7 +1,7 @@
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import dayjs from "@cryptuoso/dayjs";
 import { Auth } from "@cryptuoso/auth-utils";
-import { GraphQLClient } from "@cryptuoso/graphql-client";
+import { gql, GraphQLClient } from "@cryptuoso/graphql-client";
 import { Telegraf, Extra, Stage } from "telegraf";
 import Validator from "fastest-validator";
 import { I18n, match, reply } from "@edjopato/telegraf-i18n";
@@ -10,7 +10,7 @@ import telegrafThrottler from "telegraf-throttler";
 import path from "path";
 import { getBackKeyboard, getMainKeyboard, getStartKeyboard } from "./keyboard";
 import { formatTgName } from "@cryptuoso/user-state";
-import { TelegramScene, TelegramUser } from "./types";
+import { Robot, TelegramScene, TelegramUser } from "./types";
 import { sql } from "@cryptuoso/postgres";
 import { startScene, registrationScene, loginScene, signalsScene } from "./scenes";
 const { enter, leave } = Stage;
@@ -185,5 +185,342 @@ export default class TelegramBotService extends BaseService {
     async defaultHandler(ctx: any) {
         this.log.info("defaultHandler");
         await ctx.reply(ctx.i18n.t("defaultHandler"), getMainKeyboard(ctx));
+    }
+
+    async getSignalRobot(ctx: any): Promise<Robot> {
+        const { robot } = await this.gqlClient.request<{ robot: Robot }, { robotId: string; userId: string }>(
+            gql`
+                query UserSignalsRobot($robotId: uuid!, $userId: uuid!) {
+                    robot: robots_by_pk(id: $robotId) {
+                        id
+                        code
+                        name
+                        mod
+                        exchange
+                        asset
+                        currency
+                        timeframe
+                        strategy: strategyByStrategy {
+                            code
+                            description
+                        }
+                        startedAt: started_at
+                        settings: robot_settings {
+                            currentSettings: robot_settings
+                        }
+                        stats {
+                            netProfit: net_profit
+                            tradesCount: trades_count
+                            avgNetProfit: avg_net_profit
+                            avgBarsHeld: avg_bars_held
+                            profitFactor: profit_factor
+                            recoveryFactor: recovery_factor
+                            payoffRatio: payoff_ratio
+                            maxDrawdown: max_drawdown
+                            maxDrawdownDate: max_drawdown_date
+                            winRate: win_rate
+                            grossProfit: gross_profit
+                            avgProfit: avg_profit
+                            avgBarsHeldWinning: avg_bars_held_winning
+                            maxConsecWins: max_consec_wins
+                            lossRate: loss_rate
+                            grossLoss: gross_loss
+                            avgLoss: avg_loss
+                            avgBarsHeldLosing: avg_bars_held_losing
+                            maxConsecLosses: max_consec_losses
+                            lastUpdatedAt: last_updated_at
+                        }
+                        openPositions: robot_positions(
+                            where: { status: { _eq: "open" } }
+                            order_by: { entry_date: desc_nulls_last }
+                        ) {
+                            id
+                            code
+                            direction
+                            entryAction: entry_action
+                            entryPrice: entry_price
+                            entryDate: entry_date
+                            volume
+                            profit
+                        }
+                        closedPositions: robot_positions(
+                            where: { status: { _eq: "closed" } }
+                            order_by: { entry_date: desc_nulls_last }
+                            limit: 5
+                        ) {
+                            id
+                            code
+                            direction
+                            entryAction: entry_action
+                            entryPrice: entry_price
+                            entryDate: entry_date
+                            exitAction: exit_action
+                            exitPrice: exit_price
+                            exitDate: exit_date
+                            barsHeld: bars_held
+                            volume
+                            profit
+                        }
+                        activeSignals: active_signals(
+                            order_by: { position_code: asc_nulls_last, timestamp: asc_nulls_last }
+                        ) {
+                            code: position_code
+                            action
+                            price
+                            orderType: order_type
+                            timestamp
+                            volume
+                        }
+                        userSignals: user_signals(where: { user_id: { _eq: $userId } }) {
+                            id
+                            subscribedAt: subscribed_at
+                            settings: user_signal_settings {
+                                currentSettings: signal_settings
+                            }
+                            stats {
+                                netProfit: net_profit
+                                tradesCount: trades_count
+                                avgNetProfit: avg_net_profit
+                                avgBarsHeld: avg_bars_held
+                                profitFactor: profit_factor
+                                recoveryFactor: recovery_factor
+                                payoffRatio: payoff_ratio
+                                maxDrawdown: max_drawdown
+                                maxDrawdownDate: max_drawdown_date
+                                winRate: win_rate
+                                grossProfit: gross_profit
+                                avgProfit: avg_profit
+                                avgBarsHeldWinning: avg_bars_held_winning
+                                maxConsecWins: max_consec_wins
+                                lossRate: loss_rate
+                                grossLoss: gross_loss
+                                avgLoss: avg_loss
+                                avgBarsHeldLosing: avg_bars_held_losing
+                                maxConsecLosses: max_consec_losses
+                                lastUpdatedAt: last_updated_at
+                            }
+                            openPositions: user_signal_positions(
+                                where: { status: { _eq: "open" } }
+                                order_by: { entry_date: desc_nulls_last }
+                            ) {
+                                id
+                                code
+                                direction
+                                entryAction: entry_action
+                                entryPrice: entry_price
+                                entryDate: entry_date
+                                volume
+                                profit
+                            }
+                            closedPositions: user_signal_positions(
+                                where: { status: { _eq: "closed" } }
+                                order_by: { entry_date: desc_nulls_last }
+                                limit: 5
+                            ) {
+                                id
+                                code
+                                direction
+                                entryAction: entry_action
+                                entryPrice: entry_price
+                                entryDate: entry_date
+                                exitAction: exit_action
+                                exitPrice: exit_price
+                                exitDate: exit_date
+                                barsHeld: bars_held
+                                volume
+                                profit
+                            }
+                            activeSignals: active_signals(
+                                order_by: { position_code: asc_nulls_last, timestamp: asc_nulls_last }
+                            ) {
+                                code: position_code
+                                action
+                                price
+                                orderType: order_type
+                                timestamp
+                                volume
+                            }
+                        }
+                    }
+                }
+            `,
+            {
+                userId: ctx.session.user.id,
+                robotId: ctx.scene.state.robot.id
+            },
+            ctx
+        );
+        return {
+            ...robot,
+            userSignals: [],
+            userSignal: robot.userSignals[0],
+            lastInfoUpdatedAt: dayjs.utc().format("YYYY-MM-DD HH:mm:ss UTC")
+        };
+    }
+
+    async getUserRobot(ctx: any): Promise<Robot> {
+        const { robot } = await this.gqlClient.request<{ robot: Robot }, { robotId: string; userId: string }>(
+            gql`
+                query UserRobot($robotId: uuid!, $userId: uuid!) {
+                    robot: robots_by_pk(id: $robotId) {
+                        id
+                        code
+                        name
+                        mod
+                        exchange
+                        asset
+                        currency
+                        timeframe
+                        strategy: strategyByStrategy {
+                            code
+                            description
+                        }
+                        startedAt: started_at
+                        settings: robot_settings {
+                            currentSettings: robot_settings
+                        }
+                        stats {
+                            netProfit: net_profit
+                            tradesCount: trades_count
+                            avgNetProfit: avg_net_profit
+                            avgBarsHeld: avg_bars_held
+                            profitFactor: profit_factor
+                            recoveryFactor: recovery_factor
+                            payoffRatio: payoff_ratio
+                            maxDrawdown: max_drawdown
+                            maxDrawdownDate: max_drawdown_date
+                            winRate: win_rate
+                            grossProfit: gross_profit
+                            avgProfit: avg_profit
+                            avgBarsHeldWinning: avg_bars_held_winning
+                            maxConsecWins: max_consec_wins
+                            lossRate: loss_rate
+                            grossLoss: gross_loss
+                            avgLoss: avg_loss
+                            avgBarsHeldLosing: avg_bars_held_losing
+                            maxConsecLosses: max_consec_losses
+                            lastUpdatedAt: last_updated_at
+                        }
+                        openPositions: robot_positions(
+                            where: { status: { _eq: "open" } }
+                            order_by: { entry_date: desc_nulls_last }
+                        ) {
+                            id
+                            code
+                            direction
+                            entryAction: entry_action
+                            entryPrice: entry_price
+                            entryDate: entry_date
+                            volume
+                            profit
+                        }
+                        closedPositions: robot_positions(
+                            where: { status: { _eq: "closed" } }
+                            order_by: { entry_date: desc_nulls_last }
+                            limit: 5
+                        ) {
+                            id
+                            code
+                            direction
+                            entryAction: entry_action
+                            entryPrice: entry_price
+                            entryDate: entry_date
+                            exitAction: exit_action
+                            exitPrice: exit_price
+                            exitDate: exit_date
+                            barsHeld: bars_held
+                            volume
+                            profit
+                        }
+                        activeSignals: active_signals(
+                            order_by: { position_code: asc_nulls_last, timestamp: asc_nulls_last }
+                        ) {
+                            code: position_code
+                            action
+                            price
+                            orderType: order_type
+                            timestamp
+                            volume
+                        }
+                        userRobots: user_robots(where: { user_id: { _eq: $userId } }) {
+                            id
+                            userExAcc: user_exchange_acc {
+                                userExAccId: id
+                                userExAccName: name
+                            }
+                            startedAt: started_at
+                            stoppedAt: stopped_at
+                            settings: user_robot_settings {
+                                currentSettings: user_robot_settings
+                            }
+                            stats {
+                                netProfit: net_profit
+                                tradesCount: trades_count
+                                avgNetProfit: avg_net_profit
+                                avgBarsHeld: avg_bars_held
+                                profitFactor: profit_factor
+                                recoveryFactor: recovery_factor
+                                payoffRatio: payoff_ratio
+                                maxDrawdown: max_drawdown
+                                maxDrawdownDate: max_drawdown_date
+                                winRate: win_rate
+                                grossProfit: gross_profit
+                                avgProfit: avg_profit
+                                avgBarsHeldWinning: avg_bars_held_winning
+                                maxConsecWins: max_consec_wins
+                                lossRate: loss_rate
+                                grossLoss: gross_loss
+                                avgLoss: avg_loss
+                                avgBarsHeldLosing: avg_bars_held_losing
+                                maxConsecLosses: max_consec_losses
+                                lastUpdatedAt: last_updated_at
+                            }
+                            openPositions: user_positions(
+                                where: { status: { _eq: "open" } }
+                                order_by: { entry_date: desc_nulls_last }
+                            ) {
+                                id
+                                code
+                                direction
+                                entryAction: entry_action
+                                entryPrice: entry_price
+                                entryDate: entry_date
+                                volume: entry_executed
+                                profit
+                            }
+                            closedPositions: user_positions(
+                                where: { status: { _in: ["closed", "closedAuto"] } }
+                                order_by: { entry_date: desc_nulls_last }
+                                limit: 5
+                            ) {
+                                id
+                                code
+                                direction
+                                entryAction: entry_action
+                                entryPrice: entry_price
+                                entryDate: entry_date
+                                exitAction: exit_action
+                                exitPrice: exit_price
+                                exitDate: exit_date
+                                barsHeld: bars_held
+                                volume: exit_executed
+                                profit
+                            }
+                        }
+                    }
+                }
+            `,
+            {
+                userId: ctx.session.user.id,
+                robotId: ctx.scene.state.robot.id
+            },
+            ctx
+        );
+        return {
+            ...robot,
+            userRobots: [],
+            userRobot: robot.userRobots[0],
+            lastInfoUpdatedAt: dayjs.utc().format("YYYY-MM-DD HH:mm:ss UTC")
+        };
     }
 }

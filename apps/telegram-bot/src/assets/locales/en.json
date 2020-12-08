@@ -86,7 +86,7 @@
             "subscribedSignals": "🚥 Succesfully subsribed to <b>#${code}</b> signals with amount ${volume} ${asset}!\n\n⚠️ Use all signals at your own risk!"
         },
         "robots": {
-            "info": "🤖 Robots - Automated Trading Mode",
+            "info": "🤖 Robots - Automated Trading Mode\n\nMy total robots profit: <b>${profit}$</b>",
             "my": "🤖 My Robots",
             "search": "🔎 Search Robots",
             "top": "🏆 Top Performance Robots",
@@ -210,8 +210,8 @@
         "menuPositions": "🗃 Latest positions",
         "name": "🤖\nRobot: <b>#${code}</b> ${subscribed}\n\n",
         "info": "🤖\nRobot: <b>#${code}</b> ${subscribed}\n<b>Description:</b> ${description}\n<b>Maximum signals:</b> ${signalsCount} per day\n\n",
-        "profit": "<b>Performance:</b> ${profit}$ / ${lastProfit}$\n\n",
-        "volume": "<b>Amount:</b> ${volume} ${asset}\n\n",
+        "profit": "<b>Performance:</b> ${profit}$\n\n",
+        "volume": "<b>Amount:</b> ${volume}\n${type}\n\n",
         "subscribedAt": "<b>Subscribed at:</b> ${subscribedAt}\n\n",
         "startedAt": "<b>Started at:</b> ${startedAt}\n\n",
         "stoppedAt": "<b>Stopped at:</b> ${stoppedAt}\n\n",
@@ -222,15 +222,14 @@
         "signal": "<b>Position:</b> ${code}\n<b>Action:</b> ${action}\n<b>Order type:</b> ${orderType}\n<b>Signal time:</b> ${timestamp}\n<b>Price:</b> ${price}$\n",
         "signalsNone": "\n\nRobot hasn't current signals",
         "positionsOpen": "<b>📬 Open positions:</b> ${openPositions}",
-        "positionOpen": "-------\n<b>Position:</b> ${code}\n\n<b>Entry:</b> ${entryAction}\n<b>Entry Date:</b> ${entryDate}\n<b>Entry Price:</b> ${entryPrice}$\n",
-        "positionSignals": "<b>Exit signals:</b> ${signals}",
+        "positionOpen": "-------\n<b>Position:</b> ${code}\n\n<b>Entry:</b> ${entryAction}\n<b>Entry Date:</b> ${entryDate}\n<b>Entry Price:</b> ${entryPrice}$<b>Unrealized Profit:</b> ${profit}$\n",
         "positionsClosed": "<b>📪 Closed positions:</b> ${closedPositions}\n",
         "positionClosed": "-------\n<b>Position:</b> ${code}\n\n<b>Entry:</b> ${entryAction}\n<b>Entry Date:</b> ${entryDate}\n<b>Entry Price:</b> ${entryPrice}$\n\n<b>Exit:</b> ${exitAction}\n<b>Exit Date:</b> ${exitDate}\n<b>Exit Price:</b> ${exitPrice}$\n\n<b>Bars Held:</b> ${barsHeld}\n<b>Profit:</b> ${profit}$\n",
         "positionsNone": "Robot has no positions yet...",
         "statsLastUpdatedAt": "<b>Stats last updated at:</b> ${lastUpdatedAt}\n",
-        "statsProfit": "<b>💰 Profit</b> \n\n<b>Net Profit:</b> ${netProfit.all}$ \n<b>Number of Trades:</b> ${tradesCount.all} \n<b>Average Profit:</b> ${avgNetProfit.all}$ \n<b>Average Bars held:</b> ${avgBarsHeld.all} \n<b>Profit Factor:</b> ${profitFactor.all} \n<b>Recovery Factor:</b> ${recoveryFactor.all} \n<b>Payoff Ratio:</b> ${payoffRatio.all} \n<b>Maximum Drawdown:</b> ${maxDrawdown.all}$ \n<b>Maximum Drawdown Date:</b> ${maxDrawdownDate.all} \n\n",
-        "statsWinners": "<b>🏆 Winners</b> \n\n<b>Win Rate:</b> ${winRate.all}%\n<b>Gross Profit:</b> ${grossProfit.all}$ \n<b>Average Profit:</b> ${avgProfit.all}$ \n<b>Average Bars held:</b> ${avgBarsHeldWinning.all} \n<b>Max. Consecutive Winners:</b> ${maxConnsecWins.all} \n\n",
-        "statsLosses": "<b>🌋 Losses</b> \n\n<b>Loss Rate:</b> ${lossRate.all}%\n<b>Gross Loss:</b> ${grossLoss.all}$ \n<b>Average Loss:</b> ${avgLoss.all}$ \n<b>Average Bars held:</b> ${avgBarsHeldLosing.all} \n<b>Max. Consecutive Losses:</b> ${maxConsecLosses.all} \n\n",
+        "statsProfit": "<b>💰 Profit</b> \n\n<b>Net Profit:</b> ${netProfit}$ \n<b>Number of Trades:</b> ${tradesCount} \n<b>Average Profit:</b> ${avgNetProfit}$ \n<b>Average Bars held:</b> ${avgBarsHeld} \n<b>Profit Factor:</b> ${profitFactor} \n<b>Recovery Factor:</b> ${recoveryFactor} \n<b>Payoff Ratio:</b> ${payoffRatio} \n<b>Maximum Drawdown:</b> ${maxDrawdown}$ \n<b>Maximum Drawdown Date:</b> ${maxDrawdownDate} \n\n",
+        "statsWinners": "<b>🏆 Winners</b> \n\n<b>Win Rate:</b> ${winRate}%\n<b>Gross Profit:</b> ${grossProfit}$ \n<b>Average Profit:</b> ${avgProfit}$ \n<b>Average Bars held:</b> ${avgBarsHeldWinning} \n<b>Max. Consecutive Winners:</b> ${maxConsecWins} \n\n",
+        "statsLosses": "<b>🌋 Losses</b> \n\n<b>Loss Rate:</b> ${lossRate}%\n<b>Gross Loss:</b> ${grossLoss}$ \n<b>Average Loss:</b> ${avgLoss}$ \n<b>Average Bars held:</b> ${avgBarsHeldLosing} \n<b>Max. Consecutive Losses:</b> ${maxConsecLosses} \n\n",
         "statsNone": "Robot has no statistics yet..."
     },
     "tradeAction": {
@@ -238,6 +237,12 @@
         "short": "SELL ⬇️ (Short 🔴)",
         "closeLong": "SELL ⬇️ (Close Long ✳️)",
         "closeShort": "BUY ⬆️ (Close Short 🔴)"
+    },
+    "volumeType": {
+        "assetStatic": "Fixed to asset",
+        "currencyDynamic": "Fixed to currency",
+        "assetDynamicDelta": "Dynamic asset",
+        "balancePercent": "Balance percentage"
     },
     "status": {
         "pending": "⏳ Pending",
