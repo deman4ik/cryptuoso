@@ -645,15 +645,12 @@ export class PrivateConnector {
             if (
                 err instanceof ccxt.AuthenticationError ||
                 err instanceof ccxt.InsufficientFunds ||
-                err instanceof ccxt.InvalidNonce
+                err instanceof ccxt.InvalidNonce ||
+                err instanceof ccxt.InvalidOrder
             ) {
                 throw err;
             }
-            if (
-                err instanceof ccxt.ExchangeError ||
-                err instanceof ccxt.NetworkError ||
-                err instanceof ccxt.InvalidOrder
-            ) {
+            if (err instanceof ccxt.ExchangeError || err instanceof ccxt.NetworkError) {
                 return {
                     order: {
                         ...order,
