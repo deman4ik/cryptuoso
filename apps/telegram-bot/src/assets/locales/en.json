@@ -76,14 +76,24 @@
         "robotSignal": {
             "subscribeSignals": "🚥 Subscribe to Signals",
             "unsubscribeSignals": "❌ Unsubscribe from Signals",
-            "changeVolume": "⚙️ Change Amount",
-            "unsubscribedSignals": "You unsubsribed from <b>#${code}</b> signals =(",
-            "unsubscribedFailed": "Failed to unsubscribe from <b>#${code}</b> signals - ${error}"
+            "edit": "⚙️ Change Amount"
         },
         "subscribeSignals": {
+            "chooseType": "🚥 Subscribing to #${code} robot.\n\n<b>Please choose amount type:</b>\n\n<b>Fixed to asset</b> - All positions trading amount will be fixed in ${asset}.\n<b>Fixed to currency</b> - All positions trading amount will be fixed in ${currency}",
             "enterVolume": "🚥 Subscribing to #${code} robot.\n\n<b>Please enter desired trading amount in ${asset}.</b>\n\nMinimum value is ${minVolume} ${asset}",
-            "wrongVolume": "🚥 Subscribing to #${code} robot.\n\nWrong amount format.\nMinimum value is ${minVolume} ${asset}",
+            "wrongVolume": "🚥 Subscribing to #${code} robot.\n\n❌  Error: ${error}",
             "subscribedSignals": "🚥 Succesfully subsribed to <b>#${code}</b> signals with amount ${volume} ${asset}!\n\n⚠️ Use all signals at your own risk!"
+        },
+        "editSignals": {
+            "chooseType": "🚥 Changing #${code} robot settings.\n\n<b>Please choose amount type:</b>\n\n<b>Fixed to asset</b> - All positions trading amount will be fixed in ${asset}.\n<b>Fixed to currency</b> - All positions trading amount will be fixed in ${currency}",
+            "enterVolume": "🚥 Changing #${code} robot settings.\n\n<b>Please enter desired trading amount in ${asset}.</b>\n\nMinimum value is ${minVolume} ${asset}",
+            "wrongVolume": "🚥 Changing #${code} robot settings.\n\n❌  Error: ${error}",
+            "changed": "🚥 <b>#${code}</b> robot settings changed succesfully! New trading amount ${volume} ${asset}!\n\n⚠️ Use all signals at your own risk!"
+        },
+        "unsubscribeSignals": {
+            "confirm": "⚠️ Are you sure you want to unsubscribe <b>#${code}</b> robot signals?\n\n You will lost all your trading history for this robot!",
+            "failed": "❌ Failed to unsubscribe from #${code} signals - ${error}",
+            "success": "✅ Succesfully unsubscribed from <b>#${code}</b> robot signals."
         },
         "robots": {
             "info": "🤖 Robots - Automated Trading Mode\n\nMy total robots profit: <b>${profit}$</b>",
@@ -120,13 +130,19 @@
         "addUserRobot": {
             "selectExAcc": "✅ Adding robot #${code}.\n\nSelect your ${exchange} API Key:",
             "noneExAccs": "✅ Adding robot #${code}.\n\nYou have not registered any ${exchange} API Keys.",
-            "enterVolume": "✅ Adding robot #${code}.\n\n<b>Please enter desired trading amount in ${asset}.</b>\n\nMinimum value is ${minVolume} ${asset}",
-            "wrongVolume": "✅ Adding robot #${code}.\n\nWrong amount format.\nMinimum value is ${minVolume} ${asset}",
+            "chooseType": "✅ Adding robot #${code}.\n\n<b>Please choose amount type:</b>\n\n<b>Fixed to asset</b> - All positions trading amount will be fixed in ${asset}.\n<b>Fixed to currency</b> - All positions trading amount will be fixed in ${currency}\n<b>Dynamic asset</b> - All positions trading amount will be increasing with profit and decreasing with loss\n<b>Balance percentage</b> - All positions trading amount will be calculated in percentages of user's balance",
+            "minVal": "Minimum value is ${minVolume} ${asset}",
+            "avPerc": "Available balance percentage is ${volume} %\n",
+            "enterVolume": "✅ Adding robot #${code}.\n\n<b>Please enter desired trading amount in ${asset}.</b>\n\n${volume}",
+            "wrongVolume": "✅ Adding robot #${code}.\n\n❌  Error: ${error}",
             "success": "✅ Succesfully added <b>#${code}</b> robot with trading amount ${volume} ${asset}!"
         },
         "editUserRobot": {
-            "enterVolume": "⚙️ Editing robot #${code} settings.\n\n<b>Please enter desired trading amount in ${asset}.</b>\n\nMinimum value is ${minVolume} ${asset}",
-            "wrongVolume": "⚙️ Editing robot #${code} settings.\n\nWrong amount format.\nMinimum value is ${minVolume} ${asset}",
+            "chooseType": "⚙️ Editing robot #${code}.\n\n<b>Please choose amount type:</b>\n\n<b>Fixed to asset</b> - All positions trading amount will be fixed in ${asset}.\n<b>Fixed to currency</b> - All positions trading amount will be fixed in ${currency}\n<b>Dynamic asset</b> - All positions trading amount will be increasing with profit and decreasing with loss\n<b>Balance percentage</b> - All positions trading amount will be calculated in percentages of user's balance",
+            "minVal": "Minimum value is ${minVolume} ${asset}",
+            "avPerc": "Available balance percentage is ${volume} %\n",
+            "enterVolume": "⚙️ Editing robot #${code} settings.\n\n<b>Please enter desired trading amount in ${asset}.</b>\n\n${volume}",
+            "wrongVolume": "⚙️ Editing robot #${code} settings.\n\n❌  Error: ${error}",
             "success": "⚙️ Succesfully edited <b>#${code}</b> robot. New trading amount ${volume} ${asset}!"
         },
         "deleteUserRobot": {
@@ -145,19 +161,18 @@
             "success": "⛔ <b>#${code}</b> robot is stopping now..."
         },
         "settings": {
-            "info": "<b>👤 Account info</b>\n\n<b>📨 Email:</b> ${email}\n\n${telegramSignalsNotif}\n${telegramTradingNotif}",
+            "info": "<b>👤 Account info</b>\n\n<b>📨 Email:</b> ${email}",
             "emailNotSet": "Not set",
             "setEmail": "📨 Set Email",
             "changeEmail": "📨 Change Email",
             "userExAccs": "🔐 My Exchange API Keys",
+            "telegramNewsNotifOn": "📰 Telegram signals notifications is <b>ON</b> 🔔",
+            "telegramNewsNotifOff": "📰 Telegram signals notifications is <b>OFF</b> 🔕",
             "telegramSingalsNotifOn": "🚦 Telegram signals notifications is <b>ON</b> 🔔",
             "telegramSingalsNotifOff": "🚦 Telegram signals notifications is <b>OFF</b> 🔕",
-            "TelegramTradingNotifOn": "🤖 Telegram trading notifications is <b>ON</b> 🔔",
-            "TelegramTradingNotifOff": "🤖 Telegram trading notifications is <b>OFF</b> 🔕",
-            "turnTelegramSignalsNotifOff": "🚦 Turn Telegram signals notifications OFF 🔕",
-            "turnTelegramSignalsNotifOn": "🚦 Turn Telegram signals notifications ON 🔔",
-            "turnTelegramTradingNotifOff": "🤖 Turn Telegram trading notifications OFF 🔕",
-            "turnTelegramTradingNotifOn": "🤖 Turn Telegram trading notifications ON 🔔"
+            "telegramTradingNotifOn": "🤖 Telegram trading notifications is <b>ON</b> 🔔",
+            "telegramTradingNotifOff": "🤖 Telegram trading notifications is <b>OFF</b> 🔕",
+            "notifError": "❌ Failed to change notifications - ${error}"
         },
         "userExAccs": {
             "add": "🔑 Add New Exchange API Keys",

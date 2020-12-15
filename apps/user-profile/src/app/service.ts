@@ -394,7 +394,11 @@ export default class UserProfileService extends HTTPService {
             );
         `);
 
-        // TODO: initialize statistics or do nothing
+        const volume =
+            newSettings.volumeType === VolumeSettingsType.assetStatic
+                ? newSettings.volume
+                : newSettings.volumeInCurrency;
+        return volume;
     }
 
     async userSignalEdit(user: User, { robotId, settings }: { robotId: string; settings: UserSignalSettings }) {
@@ -448,6 +452,12 @@ export default class UserProfileService extends HTTPService {
                 ${JSON.stringify(newSettings)}
             );
         `);
+
+        const volume =
+            newSettings.volumeType === VolumeSettingsType.assetStatic
+                ? newSettings.volume
+                : newSettings.volumeInCurrency;
+        return volume;
     }
 
     async userSignalUnsubscribe(user: User, { robotId }: { robotId: string }) {

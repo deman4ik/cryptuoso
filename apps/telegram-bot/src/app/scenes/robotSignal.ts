@@ -3,7 +3,6 @@ import { BaseScene, Extra } from "telegraf";
 import { ClosedPosition, OpenPosition, Robot, TelegramScene } from "../types";
 import { addBaseActions } from "./default";
 import { match } from "@edjopato/telegraf-i18n";
-import { gql } from "@cryptuoso/graphql-client";
 import { round, sortAsc } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
 import { getStatisticsText, getVolumeText } from "../helpers";
@@ -29,13 +28,7 @@ function getSignalRobotMenu(ctx: any) {
             [m.callbackButton(ctx.i18n.t("robot.menuMyStats"), JSON.stringify({ a: "myStat" }), !subscribed)],
             [m.callbackButton(ctx.i18n.t("robot.menuPublStats"), JSON.stringify({ a: "pStat" }), false)],
             [m.callbackButton(ctx.i18n.t("robot.menuPositions"), JSON.stringify({ a: "pos" }), false)],
-            [
-                m.callbackButton(
-                    ctx.i18n.t("scenes.robotSignal.changeVolume"),
-                    JSON.stringify({ a: "changeVolume" }),
-                    !subscribed
-                )
-            ],
+            [m.callbackButton(ctx.i18n.t("scenes.robotSignal.edit"), JSON.stringify({ a: "edit" }), !subscribed)],
             [subscribeToggleButton],
             [m.callbackButton(ctx.i18n.t("keyboards.backKeyboard.back"), JSON.stringify({ a: "back" }), false)]
         ]);
@@ -307,41 +300,38 @@ async function robotSignalSubscribe(ctx: any) {
     }
 }
 
+async function robotSignalEdit(ctx: any) {
+    try {
+        ctx.scene.state.silent = true;
+        await ctx.scene.enter(TelegramScene.EDIT_SIGNALS, {
+            selectedRobot: ctx.scene.state.robot,
+            prevState: {
+                ...ctx.scene.state,
+                page: null,
+                silent: false,
+                reload: true,
+                edit: false
+            }
+        });
+    } catch (e) {
+        this.log.error(e);
+        await ctx.reply(ctx.i18n.t("failed"));
+        await ctx.scene.leave();
+    }
+}
+
 async function robotSignalUnsubscribe(ctx: any) {
     try {
-        const {
-            robot
-        }: {
-            robot: Robot;
-        } = ctx.scene.state;
-
-        //TODO: unsubscribe
-
-        const success = true;
-        const error = "";
-        if (success) {
-            await ctx.reply(
-                ctx.i18n.t("scenes.robotSignal.unsubscribedSignals", {
-                    code: robot.code
-                }),
-                Extra.HTML()
-            );
-        } else {
-            await ctx.reply(
-                ctx.i18n.t("scenes.robotSignal.unsubscribedFailed", {
-                    code: robot.code,
-                    error
-                }),
-                Extra.HTML()
-            );
-        }
         ctx.scene.state.silent = true;
-        await ctx.scene.enter(TelegramScene.ROBOT_SIGNAL, {
-            ...ctx.scene.state,
-            page: null,
-            silent: false,
-            reload: true,
-            edit: false
+        await ctx.scene.enter(TelegramScene.UNSUBSCRIBE_SIGNALS, {
+            selectedRobot: ctx.scene.state.robot,
+            prevState: {
+                ...ctx.scene.state,
+                page: null,
+                silent: false,
+                reload: true,
+                edit: false
+            }
         });
     } catch (e) {
         this.log.error(e);
@@ -399,7 +389,7 @@ export function robotSignalScene(service: BaseService) {
     scene.action(/pos/, robotSignalPositions.bind(service));
     scene.action(/unsubscribe/, robotSignalUnsubscribe.bind(service));
     scene.action(/subscribe/, robotSignalSubscribe.bind(service));
-    scene.action(/changeVolume/, robotSignalSubscribe.bind(service));
+    scene.action(/edit/, robotSignalEdit.bind(service));
     scene.action(/back/, robotSignalBackEdit.bind(service));
     scene.hears(match("keyboards.backKeyboard.back"), robotSignalBack.bind(service));
     scene.command("back", robotSignalBack.bind(service));

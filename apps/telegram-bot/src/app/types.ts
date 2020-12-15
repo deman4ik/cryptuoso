@@ -11,6 +11,8 @@ export const enum TelegramScene {
     TOP_SIGNALS = "topSignals",
     ROBOT_SIGNAL = "robotSignal",
     SUBSCRIBE_SIGNALS = "subscribeSignals",
+    UNSUBSCRIBE_SIGNALS = "unsubscribeSignals",
+    EDIT_SIGNALS = "editSignals",
     PERFORMANCE_SIGNALS = "perfSignals",
     ROBOTS = "robots",
     SEARCH_ROBOTS = "searchRobots",

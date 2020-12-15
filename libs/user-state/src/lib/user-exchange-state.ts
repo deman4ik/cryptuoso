@@ -35,3 +35,10 @@ export interface UserExchangeAccount {
     balances?: UserExchangeAccBalances;
     error?: any;
 }
+
+export interface UserExchangeAccountInfo {
+    id: string;
+    exchange: string;
+    name: string;
+    status: UserExchangeAccStatus;
+}

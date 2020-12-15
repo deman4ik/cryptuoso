@@ -7,10 +7,10 @@ import { gql } from "@cryptuoso/graphql-client";
 import { chunkArray, formatExchange } from "@cryptuoso/helpers";
 
 function getExchangesMenu(ctx: any) {
-    const exchanges: { exchange: string }[] = ctx.scene.state.exchanges;
+    const exchanges: { code: string }[] = ctx.scene.state.exchanges;
     return Extra.HTML().markup((m: any) => {
-        const buttons = exchanges.map(({ exchange }) =>
-            m.callbackButton(formatExchange(exchange), JSON.stringify({ a: "exchange", p: exchange }), false)
+        const buttons = exchanges.map(({ code }) =>
+            m.callbackButton(formatExchange(code), JSON.stringify({ a: "exchange", p: code }), false)
         );
         const chunkedButtons = chunkArray(buttons, 3);
         return m.inlineKeyboard([
@@ -69,20 +69,10 @@ function getSignalsListMenu(ctx: any) {
 
 async function searchSignalsEnter(ctx: any) {
     try {
-        let exchanges: { exchange: string }[];
+        let exchanges: { code: string }[];
         if (ctx.scene.state.exchanges && !ctx.scene.state.reload) exchanges = ctx.scene.state.exchanges;
         else {
-            ({ exchanges } = await this.gqlClient.request(
-                gql`
-                    query Exchanges($available: Int!) {
-                        exchanges(where: { available: { _gte: $available } }) {
-                            code
-                        }
-                    }
-                `,
-                { available: ctx.session.user.available },
-                ctx
-            ));
+            exchanges = await this.getExchanges(ctx);
             ctx.scene.state.exchanges = exchanges;
         }
         if (!exchanges || !Array.isArray(exchanges) || exchanges.length < 0) {

@@ -9,10 +9,40 @@ import { TelegrafSessionRedis } from "@ivaniuk/telegraf-session-redis";
 import telegrafThrottler from "telegraf-throttler";
 import path from "path";
 import { getBackKeyboard, getMainKeyboard, getStartKeyboard } from "./keyboard";
-import { formatTgName } from "@cryptuoso/user-state";
+import { formatTgName, UserExchangeAccountInfo, UserSettings } from "@cryptuoso/user-state";
 import { Robot, TelegramScene, TelegramUser } from "./types";
 import { sql } from "@cryptuoso/postgres";
-import { startScene, registrationScene, loginScene, signalsScene } from "./scenes";
+import {
+    addUserExAccScene,
+    addUserRobotScene,
+    deleteUserRobotScene,
+    editSignalsScene,
+    editUserExAccScene,
+    editUserRobotScene,
+    loginScene,
+    myRobotsScene,
+    perfRobotsScene,
+    perfSignalsScene,
+    registrationScene,
+    robotsScene,
+    robotSignalScene,
+    searchRobotScene,
+    searchSignalsScene,
+    settingsScene,
+    signalsScene,
+    startScene,
+    startUserRobotScene,
+    stopUserRobotScene,
+    subscribeSignalsScene,
+    supportScene,
+    topRobotsScene,
+    topSignalsScene,
+    unsubscribeSignalsScene,
+    userExAccScene,
+    userExAccsScene,
+    userRobotScene
+} from "./scenes";
+import { UserMarketState } from "@cryptuoso/market";
 const { enter, leave } = Stage;
 
 export type TelegramBotServiceConfig = BaseServiceConfig;
@@ -68,7 +98,33 @@ export default class TelegramBotService extends BaseService {
             this.bot.hears(match("keyboards.startKeybord.info"), this.info.bind(this));
             this.bot.use(this.auth.bind(this));
 
-            const mainStage = new Stage([signalsScene(this)]);
+            const mainStage = new Stage([
+                addUserExAccScene(this),
+                addUserRobotScene(this),
+                deleteUserRobotScene(this),
+                editSignalsScene(this),
+                editUserExAccScene(this),
+                editUserRobotScene(this),
+                myRobotsScene(this),
+                perfRobotsScene(this),
+                perfSignalsScene(this),
+                robotsScene(this),
+                robotSignalScene(this),
+                searchRobotScene(this),
+                searchSignalsScene(this),
+                settingsScene(this),
+                signalsScene(this),
+                startUserRobotScene(this),
+                stopUserRobotScene(this),
+                subscribeSignalsScene(this),
+                supportScene(this),
+                topRobotsScene(this),
+                topSignalsScene(this),
+                unsubscribeSignalsScene(this),
+                userExAccScene(this),
+                userExAccsScene(this),
+                userRobotScene(this)
+            ]);
             mainStage.command("cancel", leave());
             this.bot.use(mainStage.middleware());
             this.bot.start(this.start.bind(this));
@@ -185,6 +241,34 @@ export default class TelegramBotService extends BaseService {
     async defaultHandler(ctx: any) {
         this.log.info("defaultHandler");
         await ctx.reply(ctx.i18n.t("defaultHandler"), getMainKeyboard(ctx));
+    }
+
+    async getExchanges(
+        ctx: any
+    ): Promise<
+        {
+            code: string;
+        }[]
+    > {
+        const { exchanges } = await this.gqlClient.request<
+            {
+                exchanges: {
+                    code: string;
+                }[];
+            },
+            { available: number }
+        >(
+            gql`
+                query Exchanges($available: Int!) {
+                    exchanges(where: { available: { _gte: $available } }) {
+                        code
+                    }
+                }
+            `,
+            { available: ctx.session.user.available },
+            ctx
+        );
+        return exchanges;
     }
 
     async getSignalRobot(ctx: any): Promise<Robot> {
@@ -522,5 +606,159 @@ export default class TelegramBotService extends BaseService {
             userRobot: robot.userRobots[0],
             lastInfoUpdatedAt: dayjs.utc().format("YYYY-MM-DD HH:mm:ss UTC")
         };
+    }
+
+    async getUserMarket(
+        ctx: any
+    ): Promise<{
+        limits: UserMarketState["limits"];
+        precision: UserMarketState["precision"];
+    }> {
+        const { markets } = await this.gqlClient.request<
+            {
+                markets: {
+                    limits: UserMarketState["limits"];
+                    precision: UserMarketState["precision"];
+                }[];
+            },
+            { userId: string; exchange: string; asset: string; currency: string }
+        >(
+            gql`
+                query UserMarkets($userId: uuid!, $exchange: String!, $asset: String!, $currency: String!) {
+                    markets: v_user_markets(
+                        where: {
+                            user_id: { _eq: $userId }
+                            exchange: { _eq: $exchange }
+                            asset: { _eq: $asset }
+                            currency: { _eq: $currency }
+                        }
+                    ) {
+                        limits
+                        precision
+                    }
+                }
+            `,
+            {
+                userId: ctx.session.user.id,
+                exchange: ctx.scene.state.robot.exchange,
+                asset: ctx.scene.state.robot.asset,
+                currency: ctx.scene.state.robot.currency
+            },
+            ctx
+        );
+        return markets[0];
+    }
+
+    async getUserAmounts(
+        ctx: any
+    ): Promise<{
+        balance: number;
+        availableBalancePercent: number;
+    }> {
+        const { userExAcc } = await this.gqlClient.request<
+            {
+                userExAcc: {
+                    balance: number;
+                    amounts: {
+                        availableBalancePercent: number;
+                    };
+                };
+            },
+            { userId: string; userExAccId: string }
+        >(
+            gql`
+                query UserAmounts($userId: uuid!, $userExAccId: uuid!) {
+                    userExAcc: v_user_exchange_accs(where: { user_id: { _eq: $userId }, id: { _eq: $userExAccId } }) {
+                        balance: total_balance_usd
+                        amounts {
+                            availableBalancePercent: available_balance_percent
+                        }
+                    }
+                }
+            `,
+            {
+                userId: ctx.session.user.id,
+                userExAccId: ctx.scene.state.userExAccId
+            },
+            ctx
+        );
+        return { balance: userExAcc.balance, availableBalancePercent: userExAcc.amounts.availableBalancePercent };
+    }
+
+    async getUserExchangeAccs(ctx: any): Promise<UserExchangeAccountInfo[]> {
+        const { userExAccs } = await this.gqlClient.request<
+            {
+                userExAccs: UserExchangeAccountInfo[];
+            },
+            { userId: string }
+        >(
+            gql`
+                query UserExchangeAccs($userId: uuid!) {
+                    userExAccs: user_exchange_accs(where: { user_id: { _eq: $userId } }) {
+                        id
+                        exchange
+                        name
+                        status
+                    }
+                }
+            `,
+            {
+                userId: ctx.session.user.id
+            },
+            ctx
+        );
+        return userExAccs;
+    }
+
+    async getUserExchangeAccsByExchange(ctx: any): Promise<UserExchangeAccountInfo[]> {
+        const { userExAccs } = await this.gqlClient.request<
+            {
+                userExAccs: UserExchangeAccountInfo[];
+            },
+            { userId: string; exchange: string }
+        >(
+            gql`
+                query UserExchangeAccs($userId: uuid!, $exchange: String!) {
+                    userExAccs: user_exchange_accs(where: { user_id: { _eq: $userId }, exchange: { _eq: $exchange } }) {
+                        id
+                        exchange
+                        name
+                        status
+                    }
+                }
+            `,
+            {
+                userId: ctx.session.user.id,
+                exchange: ctx.scene.state.robot.exchange
+            },
+            ctx
+        );
+        return userExAccs;
+    }
+
+    async getUserSettings(ctx: any): Promise<UserSettings> {
+        const {
+            user: { settings }
+        } = await this.gqlClient.request<
+            {
+                user: {
+                    settings: UserSettings;
+                };
+            },
+            { userId: string }
+        >(
+            gql`
+                query User($userId: uuid!) {
+                    user: users_by_pk(id: $userId) {
+                        settings
+                    }
+                }
+            `,
+            {
+                userId: ctx.session.user.id
+            },
+            ctx
+        );
+        return settings;
     }
 }
