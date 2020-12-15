@@ -24,3 +24,10 @@ export function getAccessValue(user: User): number {
         return Math.min(...accessValues);
     } else return roleToAccesValue(defaultRole);
 }
+
+export function formatTgName(userName?: string, firstName?: string, lastName?: string) {
+    let name = "";
+    if (firstName || lastName) name = `${firstName || ""} ${lastName || ""}`.trim();
+    else if (userName) name = userName;
+    return name;
+}

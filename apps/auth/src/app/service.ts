@@ -2,7 +2,7 @@ import { HTTPService, HTTPServiceConfig, RequestExtended } from "@cryptuoso/serv
 import { Response, Protocol } from "restana";
 import Cookie, { CookieSerializeOptions } from "cookie";
 import { UserRoles } from "@cryptuoso/user-state";
-import { Auth } from "./auth";
+import { Auth } from "@cryptuoso/auth-utils";
 import { ActionsHandlerError } from "@cryptuoso/errors";
 
 type HttpResponse = Response<Protocol.HTTP>;

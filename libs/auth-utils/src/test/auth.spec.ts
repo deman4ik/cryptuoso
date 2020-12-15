@@ -7,7 +7,7 @@ process.env.BOT_TOKEN = "BOT_TOKEN";
 import bcrypt from "bcrypt";
 import { User, UserStatus, UserRoles, UserSettings } from "@cryptuoso/user-state";
 import { makeTgHash } from "./helpers";
-import { Auth } from "../app/auth";
+import { Auth } from "../lib/auth-utils";
 import { pg } from "@cryptuoso/postgres";
 import dayjs from "@cryptuoso/dayjs";
 

@@ -348,13 +348,15 @@ export default class NotificationsService extends BaseService {
             this.log.info(`Handling user ex acc error event`, event);
             const { userExAccId, timestamp } = event;
 
-            const { userId, telegramId, email } = await this.db.pg.one<{
+            const { userId, name, telegramId, email } = await this.db.pg.one<{
                 userId: string;
+                name: string;
                 telegramId?: number;
                 email?: number;
             }>(sql`
         SELECT 
             u.id as user_id,
+            uea.name,
             u.telegram_id,
             u.email
         FROM users u, user_exchange_accs uea
@@ -365,7 +367,7 @@ export default class NotificationsService extends BaseService {
                 userId,
                 timestamp,
                 type: "user_ex_acc.error",
-                data: event,
+                data: { ...event, name },
                 sendEmail: !!email,
                 sendTelegram: !!telegramId
             };

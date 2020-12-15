@@ -168,7 +168,8 @@ export default class StatisticCalcWorkerService extends BaseService {
 
     private async _onServiceStart(): Promise<void> {
         this.pool = Pool(() => spawn<StatisticsUtils>(new ThreadsWorker("./statsWorker")), {
-            name: "statistics-utils"
+            name: "statistics-utils",
+            concurrency: 10
         });
         this.createWorker("calcStatistics", this.process);
     }
