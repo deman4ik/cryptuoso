@@ -392,6 +392,30 @@ export default class UserRobotRunnerService extends HTTPService {
         } else throw new Error("No User Robots id, userExAccId or exchange was specified");
 
         for (const { id } of userRobotsToResume) {
+            const latestSignal = await this.db.pg.maybeOne(sql`
+            SELECT s.id, s.robot_id, r.exchange, r.asset, r.currency, r.timeframe, 
+                   s.timestamp,  s.candle_timestamp,
+                   s.position_id, s.position_prefix, s.position_code, s.position_parent_id,
+                   s.type, s.action, s.order_type, s.price
+            FROM robot_signals s, robots r, user_robots ur WHERE ur.id = ${id} 
+            AND ur.robot_id = s.robot_id 
+            AND ur.robot_id = r.id 
+            AND s.type = 'trade' 
+            ORDERBY timestamp DESC 
+            LIMIT 1;
+            `);
+
+            if (latestSignal) {
+                await this.addUserRobotJob(
+                    {
+                        userRobotId: id,
+                        type: UserRobotJobType.signal,
+                        data: latestSignal
+                    },
+                    UserRobotStatus.started
+                );
+            }
+
             await this.db.pg.query(sql`
             UPDATE user_robots 
             SET status = ${UserRobotStatus.started},
@@ -426,7 +450,7 @@ export default class UserRobotRunnerService extends HTTPService {
             SELECT id, status 
              FROM user_robots
             WHERE robot_id = ${robotId}
-             AND status IN (${UserRobotStatus.started}, ${UserRobotStatus.paused})
+             AND status = ${UserRobotStatus.started}
              AND ((internal_state->'latestSignal'->>'timestamp')::timestamp is null 
               OR (internal_state->'latestSignal'->>'timestamp')::timestamp < ${timestamp});
             `
