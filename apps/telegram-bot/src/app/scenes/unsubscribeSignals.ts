@@ -7,7 +7,7 @@ import { gql } from "@cryptuoso/graphql-client";
 
 async function unsubscribeSignalsEnter(ctx: any) {
     try {
-        const { robot }: { robot: Robot } = ctx.scene.state.robot;
+        const { robot }: { robot: Robot } = ctx.scene.state;
 
         return ctx.reply(
             ctx.i18n.t("scenes.unsubscribeSignals.confirm", {
@@ -26,24 +26,21 @@ async function unsubscribeSignalsEnter(ctx: any) {
 async function unsubscribeSignalsYes(ctx: any) {
     try {
         const { robot } = ctx.scene.state;
-        const {
-            userRobot: { id }
-        } = robot;
 
         let error;
         let result;
         try {
             ({
-                unsubscribeSignals: { result }
+                userSignalUnsubscribe: { result }
             } = await this.gqlClient.request(
                 gql`
-                    mutation unsubscribeSignals($robotId: uuid!) {
-                        unsubscribeSignals(robotId: $robotId) {
+                    mutation UserSignalUnsubscribe($robotId: uuid!) {
+                        userSignalUnsubscribe(robotId: $robotId) {
                             result
                         }
                     }
                 `,
-                { id },
+                { robotId: robot.id },
                 ctx
             ));
         } catch (err) {

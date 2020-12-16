@@ -114,8 +114,8 @@ async function addUserRobotEnter(ctx: any) {
             ctx.scene.state.silent = true;
             return ctx.scene.enter(TelegramScene.ADD_USER_EX_ACC, {
                 selectedExchange: exchange,
-                prevScene: TelegramScene.USER_ROBOT,
-                prevState: ctx.scene.state.prevState
+                prevScene: TelegramScene.ADD_USER_ROBOT,
+                prevState: { ...ctx.scene.state, edit: false }
             });
         }
     } catch (e) {
@@ -257,8 +257,7 @@ async function addUserRobotConfirm(ctx: any) {
             market: {
                 limits: {
                     userRobot: { min, max }
-                },
-                precision
+                }
             },
             amounts: { balance, availableBalancePercent },
             userExAccId
@@ -281,13 +280,12 @@ async function addUserRobotConfirm(ctx: any) {
         try {
             volume = parseFloat(ctx.message.text);
             if (isNaN(volume)) error = "Volume is not a number";
-            volume = round(volume, precision?.price || 2);
             if (volumeType === VolumeSettingsType.assetStatic || volumeType === VolumeSettingsType.assetDynamicDelta) {
                 checkAssetStatic(volume, min.amount, max.amount);
             } else if (volumeType === VolumeSettingsType.currencyDynamic) {
                 checkCurrencyDynamic(volume, min.amountUSD, max.amountUSD);
             } else if (volumeType === VolumeSettingsType.balancePercent) {
-                const volumeUSD = round((volume / 100) * balance, precision?.price || 2);
+                const volumeUSD = (volume / 100) * balance;
                 checkBalancePercent(volume, availableBalancePercent, volumeUSD, min.amountUSD, max.amountUSD);
             } else throw new BaseError("Unknown amount type", { volumeType });
         } catch (e) {
@@ -413,7 +411,7 @@ export function addUserRobotScene(service: BaseService) {
     const scene = new BaseScene(TelegramScene.ADD_USER_ROBOT);
     scene.enter(addUserRobotEnter.bind(service));
     addBaseActions(scene, service, false);
-    scene.action(/userExAcc/, addUserRobotSelectedAcc.bind(this));
+    scene.action(/userExAcc/, addUserRobotSelectedAcc.bind(service));
     scene.action(/volumeType/, addUserRobotEnterVolume.bind(service));
     scene.hears(match("keyboards.backKeyboard.back"), addUserRobotBack.bind(service));
     scene.command("back", addUserRobotBack.bind(service));

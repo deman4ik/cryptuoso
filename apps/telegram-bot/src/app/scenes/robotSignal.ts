@@ -60,16 +60,19 @@ async function robotSignalInfo(ctx: any) {
 
         let volumeText = "";
 
-        if (robot.userSignal && robot.userSignal.settings) {
-            volumeText = getVolumeText(ctx, robot.userSignal.settings.currentSettings, robot.asset);
+        if (robot.userSignal) {
+            if (robot.userSignal.settings)
+                volumeText = getVolumeText(ctx, robot.userSignal.settings.currentSettings, robot.asset);
         } else {
             volumeText = getVolumeText(ctx, robot.settings.currentSettings, robot.asset);
         }
 
         let profitText = "";
         let netProfit = null;
-        if (robot.userSignal && robot.userSignal.stats) ({ netProfit } = robot.userSignal.stats);
-        else if (robot.stats) ({ netProfit } = robot.stats);
+        if (robot.userSignal) {
+            if (robot.userSignal.stats) ({ netProfit } = robot.userSignal.stats);
+            else netProfit = 0;
+        } else if (robot.stats) ({ netProfit } = robot.stats);
 
         if (netProfit !== null && netProfit !== undefined) {
             profitText = ctx.i18n.t("robot.profit", {
@@ -148,7 +151,7 @@ async function robotSignalPublicStats(ctx: any) {
             ctx.i18n.t("robot.name", {
                 code: robot.code,
                 subscribed: robot.userSignal ? "✅" : ""
-            }) + `${ctx.i18n.t("robot.menuPublStats")}\n\n${message}\n\n${updatedAtText}`,
+            }) + `${ctx.i18n.t("robot.menuPublStats")}\n\n${message}${updatedAtText}`,
             getSignalRobotMenu(ctx)
         );
     } catch (e) {
@@ -188,7 +191,7 @@ async function robotSignalMyStats(ctx: any) {
             ctx.i18n.t("robot.name", {
                 code: robot.code,
                 subscribed: robot.userSignal ? "✅" : ""
-            }) + `${ctx.i18n.t("robot.menuMyStats")}\n\n${message}\n\n${updatedAtText}`,
+            }) + `${ctx.i18n.t("robot.menuMyStats")}\n\n${message}${updatedAtText}`,
             getSignalRobotMenu(ctx)
         );
     } catch (e) {

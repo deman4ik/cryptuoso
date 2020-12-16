@@ -28,15 +28,15 @@ export class GraphQLClient {
             logger.debug("GraphQLClient.request response", response);
             return response;
         } catch (err) {
-            logger.error("GraphQLClient Error:", err);
             if (err.message.includes("JWT")) {
-                logger.info("Retrying to get refresh token");
+                logger.info(`Retrying to get refresh token for ${ctx.session?.user?.telegramId}`);
                 const { user, accessToken } = await this.#refreshToken({ telegramId: ctx.session?.user?.telegramId });
                 ctx.session.user = { ...user, accessToken };
                 return this.#client.request<T, V>(query, variables, {
                     authorization: `Bearer ${accessToken}`
                 });
             }
+            logger.error("GraphQLClient Error:", err);
             throw err;
         }
     }

@@ -174,8 +174,7 @@ async function editUserRobotConfirm(ctx: any) {
             market: {
                 limits: {
                     userRobot: { min, max }
-                },
-                precision
+                }
             },
             amounts: { balance, availableBalancePercent }
         }: {
@@ -200,13 +199,12 @@ async function editUserRobotConfirm(ctx: any) {
         try {
             volume = parseFloat(ctx.message.text);
             if (isNaN(volume)) error = "Volume is not a number";
-            volume = round(volume, precision?.price || 2);
             if (volumeType === VolumeSettingsType.assetStatic || volumeType === VolumeSettingsType.assetDynamicDelta) {
                 checkAssetStatic(volume, min.amount, max.amount);
             } else if (volumeType === VolumeSettingsType.currencyDynamic) {
                 checkCurrencyDynamic(volume, min.amountUSD, max.amountUSD);
             } else if (volumeType === VolumeSettingsType.balancePercent) {
-                const volumeUSD = round((volume / 100) * balance, precision?.price || 2);
+                const volumeUSD = (volume / 100) * balance;
                 checkBalancePercent(volume, availableBalancePercent, volumeUSD, min.amountUSD, max.amountUSD);
             } else throw new BaseError("Unknown amount type", { volumeType });
         } catch (e) {

@@ -95,16 +95,18 @@ async function userRobotInfo(ctx: any) {
 
         let volumeText = "";
 
-        if (userRobot && userRobot.settings) {
-            volumeText = getVolumeText(ctx, userRobot.settings.currentSettings, robot.asset);
+        if (userRobot) {
+            if (userRobot.settings) volumeText = getVolumeText(ctx, userRobot.settings.currentSettings, robot.asset);
         } else {
             volumeText = getVolumeText(ctx, robot.settings.currentSettings, robot.asset);
         }
 
         let profitText = "";
         let netProfit = null;
-        if (userRobot && userRobot.stats) ({ netProfit } = userRobot.stats);
-        else if (robot.stats) ({ netProfit } = robot.stats);
+        if (userRobot) {
+            if (userRobot.stats) ({ netProfit } = userRobot.stats);
+            else netProfit = 0;
+        } else if (robot.stats) ({ netProfit } = robot.stats);
 
         if (netProfit !== null && netProfit !== undefined) {
             profitText = ctx.i18n.t("robot.profit", {
@@ -166,7 +168,7 @@ async function userRobotPublicStats(ctx: any) {
             ctx.i18n.t("robot.name", {
                 code: robot.code,
                 subscribed: userRobot ? "✅" : ""
-            }) + `${ctx.i18n.t("robot.menuPublStats")}\n\n${message}\n\n${updatedAtText}`,
+            }) + `${ctx.i18n.t("robot.menuPublStats")}\n\n${message}${updatedAtText}`,
             getUserRobotMenu(ctx)
         );
     } catch (e) {
@@ -204,7 +206,7 @@ async function userRobotMyStats(ctx: any) {
             ctx.i18n.t("robot.name", {
                 code: robot.code,
                 subscribed: userRobot ? "✅" : ""
-            }) + `${ctx.i18n.t("robot.menuMyStats")}\n\n${message}\n\n${updatedAtText}`,
+            }) + `${ctx.i18n.t("robot.menuMyStats")}\n\n${message}${updatedAtText}`,
             getUserRobotMenu(ctx)
         );
     } catch (e) {
@@ -278,7 +280,7 @@ async function userRobotPositions(ctx: any) {
             `${ctx.i18n.t("robot.name", {
                 code: robot.code,
                 subscribed: userRobot ? "✅" : ""
-            })}${message}\n\n${updatedAtText}`,
+            })}${message}${updatedAtText}`,
             getUserRobotMenu(ctx)
         );
     } catch (e) {

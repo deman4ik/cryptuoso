@@ -1,24 +1,10 @@
 import { BaseService } from "@cryptuoso/service";
 import { BaseScene, Extra } from "telegraf";
 import { TelegramScene } from "../types";
-import { addBaseActions } from "./default";
+import { addBaseActions, getExchangesMenu } from "./default";
 import { match } from "@edjopato/telegraf-i18n";
 import { gql } from "@cryptuoso/graphql-client";
-import { chunkArray, formatExchange, round } from "@cryptuoso/helpers";
-
-function getExchangesMenu(ctx: any) {
-    const exchanges: { exchange: string }[] = ctx.scene.state.exchanges;
-    return Extra.HTML().markup((m: any) => {
-        const buttons = exchanges.map(({ exchange }) =>
-            m.callbackButton(formatExchange(exchange), JSON.stringify({ a: "exchange", p: exchange }), false)
-        );
-        const chunkedButtons = chunkArray(buttons, 3);
-        return m.inlineKeyboard([
-            ...chunkedButtons,
-            [m.callbackButton(ctx.i18n.t("keyboards.backKeyboard.back"), JSON.stringify({ a: "back", p: null }), false)]
-        ]);
-    });
-}
+import { formatExchange, round } from "@cryptuoso/helpers";
 
 function getRobotsListMenu(ctx: any) {
     const robots: {
@@ -38,30 +24,30 @@ function getRobotsListMenu(ctx: any) {
 
         return m.inlineKeyboard([
             ...buttons,
-            [m.callbackButton(ctx.i18n.t("keyboards.backKeyboard.back"), JSON.stringify({ a: "back" }), false)]
+            [
+                m.callbackButton(
+                    ctx.i18n.t("keyboards.backKeyboard.back"),
+                    JSON.stringify({ a: "back", p: "selectExchange" }),
+                    false
+                )
+            ]
         ]);
     });
 }
 
 async function topRobotsEnter(ctx: any) {
     try {
-        let exchanges: { exchange: string }[];
-        if (ctx.scene.state.exchanges && !ctx.scene.state.reload) exchanges = ctx.scene.state.exchanges;
-        else {
-            ({ exchanges } = await this.gqlClient.request(
-                gql`
-                    query Exchanges {
-                        exchanges {
-                            code
-                        }
-                    }
-                `,
-                {},
-                ctx
-            ));
-            ctx.scene.state.exchanges = exchanges;
+        if (ctx.scene.state.stage === "selectRobot") {
+            return topRobotsSelectRobot.call(this, ctx);
         }
-        if (!exchanges || !Array.isArray(exchanges) || exchanges.length < 0) {
+        if (!ctx.scene.state.exchanges || ctx.scene.state.reload) {
+            ctx.scene.state.exchanges = await this.getExchanges(ctx);
+        }
+        if (
+            !ctx.scene.state.exchanges ||
+            !Array.isArray(ctx.scene.state.exchanges) ||
+            ctx.scene.state.exchanges.length < 0
+        ) {
             throw new Error("Failed to load trading exchanges");
         }
         ctx.scene.state.exchange = null;
@@ -124,7 +110,7 @@ async function topRobotsSelectRobot(ctx: any) {
             id,
             name,
             profit: stats?.profit || 0,
-            subscribed: !!userRobots
+            subscribed: !!userRobots[0]?.id
         }));
 
         if (!ctx.scene.state.robots || !Array.isArray(ctx.scene.state.robots) || ctx.scene.state.robots.length === 0) {
@@ -165,15 +151,6 @@ async function topRobotsOpenRobot(ctx: any) {
 
 async function topRobotsBack(ctx: any) {
     try {
-        if (ctx.callbackQuery && ctx.callbackQuery.data) {
-            const data = JSON.parse(ctx.callbackQuery.data);
-            if (data && data.p) {
-                ctx.scene.state.stage = data.p;
-                if (ctx.scene.state.stage === "selectRobot") {
-                    return topRobotsSelectRobot.call(this, ctx);
-                }
-            }
-        }
         ctx.scene.state.silent = true;
         await ctx.scene.enter(TelegramScene.ROBOTS);
     } catch (e) {
@@ -191,6 +168,9 @@ async function topRobotsBackEdit(ctx: any) {
             if (data && data.p) {
                 ctx.scene.state.stage = data.p;
                 ctx.scene.state.edit = true;
+                if (ctx.scene.state.stage === "selectExchange") {
+                    return topRobotsEnter.call(this, ctx);
+                }
                 if (ctx.scene.state.stage === "selectRobot") {
                     return topRobotsSelectRobot.call(this, ctx);
                 }

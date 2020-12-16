@@ -130,8 +130,7 @@ async function editSignalsConfirm(ctx: any) {
             market: {
                 limits: {
                     userSignal: { min, max }
-                },
-                precision
+                }
             }
         }: {
             robot: Robot;
@@ -147,7 +146,6 @@ async function editSignalsConfirm(ctx: any) {
         try {
             volume = parseFloat(ctx.message.text);
             if (isNaN(volume)) error = "Volume is not a number";
-            volume = round(volume, precision?.price || 2);
 
             if (volumeType === VolumeSettingsType.assetStatic) {
                 checkAssetStatic(volume, min.amount, max.amount);

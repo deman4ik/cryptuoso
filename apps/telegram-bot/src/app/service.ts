@@ -154,6 +154,8 @@ export default class TelegramBotService extends BaseService {
             this.bot.hears(/(.*?)/, this.defaultHandler.bind(this));
 
             this.addOnStartHandler(this.onServiceStart);
+
+            this.addOnStopHandler(this.onServiceStop);
         } catch (err) {
             this.log.error("Error in TelegramBotService constructor", err);
         }
@@ -173,6 +175,10 @@ export default class TelegramBotService extends BaseService {
         } else {
             this.log.warn("Bot not started!");
         }
+    }
+
+    async onServiceStop() {
+        await this.bot.stop();
     }
 
     async checkNotifications() {
