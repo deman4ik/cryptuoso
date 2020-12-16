@@ -47,3 +47,5 @@ strategies/*.js
 !strategies/.gitkeep 
 indicators/*.js
 !indicators/.gitkeep 
+
+migrations.json
