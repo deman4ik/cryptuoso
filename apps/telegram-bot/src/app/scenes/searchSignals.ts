@@ -1,51 +1,10 @@
 import { BaseService } from "@cryptuoso/service";
 import { BaseScene, Extra } from "telegraf";
 import { TelegramScene } from "../types";
-import { addBaseActions } from "./default";
+import { addBaseActions, getAssetsMenu, getExchangesMenu } from "./default";
 import { match } from "@edjopato/telegraf-i18n";
 import { gql } from "@cryptuoso/graphql-client";
-import { chunkArray, formatExchange } from "@cryptuoso/helpers";
-
-function getExchangesMenu(ctx: any) {
-    const exchanges: { code: string }[] = ctx.scene.state.exchanges;
-    return Extra.HTML().markup((m: any) => {
-        const buttons = exchanges.map(({ code }) =>
-            m.callbackButton(formatExchange(code), JSON.stringify({ a: "exchange", p: code }), false)
-        );
-        const chunkedButtons = chunkArray(buttons, 3);
-        return m.inlineKeyboard([
-            ...chunkedButtons,
-            [m.callbackButton(ctx.i18n.t("keyboards.backKeyboard.back"), JSON.stringify({ a: "back", p: null }), false)]
-        ]);
-    });
-}
-
-function getAssetsMenu(ctx: any) {
-    const assets: {
-        asset: string;
-        currency: string;
-    }[] = ctx.scene.state.assets;
-    return Extra.HTML().markup((m: any) => {
-        const buttons = assets.map((asset) =>
-            m.callbackButton(
-                `${asset.asset}/${asset.currency}`,
-                JSON.stringify({ a: "asset", p: `${asset.asset}/${asset.currency}` }),
-                false
-            )
-        );
-        const chunkedButtons = chunkArray(buttons, 3);
-        return m.inlineKeyboard([
-            ...chunkedButtons,
-            [
-                m.callbackButton(
-                    ctx.i18n.t("keyboards.backKeyboard.back"),
-                    JSON.stringify({ a: "back", p: "selectExchange" }),
-                    false
-                )
-            ]
-        ]);
-    });
-}
+import { formatExchange } from "@cryptuoso/helpers";
 
 function getSignalsListMenu(ctx: any) {
     const robots: { id: string; name: string }[] = ctx.scene.state.robots;
@@ -69,6 +28,9 @@ function getSignalsListMenu(ctx: any) {
 
 async function searchSignalsEnter(ctx: any) {
     try {
+        if (ctx.scene.state.stage === "selectRobot") {
+            return searchSignalsSelectRobot.call(this, ctx);
+        }
         let exchanges: { code: string }[];
         if (ctx.scene.state.exchanges && !ctx.scene.state.reload) exchanges = ctx.scene.state.exchanges;
         else {
@@ -107,13 +69,9 @@ async function searchSignalsSelectAsset(ctx: any) {
             }[];
         } = await this.gqlClient.request(
             gql`
-                query AvailableAssets($available: Int!, $exchange: String!, $signals: Boolean!) {
+                query AvailableAssets($exchange: String!, $signals: Boolean!) {
                     assets: robots(
-                        where: {
-                            available: { _gte: $available }
-                            exchange: { _eq: $exchange }
-                            signals: { _eq: $signals }
-                        }
+                        where: { exchange: { _eq: $exchange }, signals: { _eq: $signals } }
                         distinct_on: [asset, currency]
                     ) {
                         asset
@@ -121,7 +79,7 @@ async function searchSignalsSelectAsset(ctx: any) {
                     }
                 }
             `,
-            { signals: true, exchange: ctx.scene.state.exchange, available: ctx.session.user.available },
+            { signals: true, exchange: ctx.scene.state.exchange },
             ctx
         );
 
@@ -155,16 +113,9 @@ async function searchSignalsSelectRobot(ctx: any) {
         const [asset, currency] = ctx.scene.state.selectedAsset.split("/");
         const { robots } = await this.gqlClient.request(
             gql`
-                query SignalsRobotsList(
-                    $userId: uuid!
-                    $available: Int!
-                    $exchange: String!
-                    $asset: String!
-                    $currency: String!
-                ) {
+                query SignalsRobotsList($userId: uuid!, $exchange: String!, $asset: String!, $currency: String!) {
                     robots(
                         where: {
-                            available: { _gte: $available }
                             exchange: { _eq: $exchange }
                             asset: { _eq: $asset }
                             currency: { _eq: $currency }
@@ -180,7 +131,6 @@ async function searchSignalsSelectRobot(ctx: any) {
             `,
             {
                 userId: ctx.session.user.id,
-                available: ctx.session.user.available,
                 exchange: ctx.scene.state.exchange,
                 asset,
                 currency
@@ -255,6 +205,9 @@ async function searchSignalsBackEdit(ctx: any) {
             if (data && data.p) {
                 ctx.scene.state.stage = data.p;
                 ctx.scene.state.edit = true;
+                if (ctx.scene.state.stage === "selectExchange") {
+                    return searchSignalsEnter.call(this, ctx);
+                }
                 if (ctx.scene.state.stage === "selectAsset") return searchSignalsSelectAsset.call(this, ctx);
                 if (ctx.scene.state.stage === "selectRobot") {
                     return searchSignalsSelectRobot.call(this, ctx);

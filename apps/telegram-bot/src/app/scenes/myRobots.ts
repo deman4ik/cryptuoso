@@ -192,11 +192,11 @@ export function myRobotsScene(service: BaseService) {
     const scene = new BaseScene(TelegramScene.MY_ROBOTS);
     scene.enter(myRobotsEnter.bind(service));
     addBaseActions(scene, service, false);
-    scene.action(/robot/, myRobotsSelectedRobot.bind(this));
-    scene.action(/add/, myRobotsAdd.bind(this));
-    scene.action(/next/, myRobotsNextPage.bind(this));
-    scene.action(/prev/, myRobotsPrevPage.bind(this));
-    scene.action(/back/, myRobotsBackEdit.bind(this));
+    scene.action(/robot/, myRobotsSelectedRobot.bind(service));
+    scene.action(/add/, myRobotsAdd.bind(service));
+    scene.action(/next/, myRobotsNextPage.bind(service));
+    scene.action(/prev/, myRobotsPrevPage.bind(service));
+    scene.action(/back/, myRobotsBackEdit.bind(service));
     scene.hears(match("keyboards.backKeyboard.back"), myRobotsBack.bind(service));
     scene.command("back", myRobotsBack.bind(service));
     return scene;

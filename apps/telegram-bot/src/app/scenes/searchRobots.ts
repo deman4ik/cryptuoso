@@ -1,51 +1,10 @@
 import { BaseService } from "@cryptuoso/service";
 import { BaseScene, Extra } from "telegraf";
 import { TelegramScene } from "../types";
-import { addBaseActions } from "./default";
+import { addBaseActions, getAssetsMenu, getExchangesMenu } from "./default";
 import { match } from "@edjopato/telegraf-i18n";
 import { gql } from "@cryptuoso/graphql-client";
-import { chunkArray, formatExchange } from "@cryptuoso/helpers";
-
-function getExchangesMenu(ctx: any) {
-    const exchanges: { exchange: string }[] = ctx.scene.state.exchanges;
-    return Extra.HTML().markup((m: any) => {
-        const buttons = exchanges.map(({ exchange }) =>
-            m.callbackButton(formatExchange(exchange), JSON.stringify({ a: "exchange", p: exchange }), false)
-        );
-        const chunkedButtons = chunkArray(buttons, 3);
-        return m.inlineKeyboard([
-            ...chunkedButtons,
-            [m.callbackButton(ctx.i18n.t("keyboards.backKeyboard.back"), JSON.stringify({ a: "back", p: null }), false)]
-        ]);
-    });
-}
-
-function getAssetsMenu(ctx: any) {
-    const assets: {
-        asset: string;
-        currency: string;
-    }[] = ctx.scene.state.assets;
-    return Extra.HTML().markup((m: any) => {
-        const buttons = assets.map((asset) =>
-            m.callbackButton(
-                `${asset.asset}/${asset.currency}`,
-                JSON.stringify({ a: "asset", p: `${asset.asset}/${asset.currency}` }),
-                false
-            )
-        );
-        const chunkedButtons = chunkArray(buttons, 3);
-        return m.inlineKeyboard([
-            ...chunkedButtons,
-            [
-                m.callbackButton(
-                    ctx.i18n.t("keyboards.backKeyboard.back"),
-                    JSON.stringify({ a: "back", p: "selectExchange" }),
-                    false
-                )
-            ]
-        ]);
-    });
-}
+import { formatExchange } from "@cryptuoso/helpers";
 
 function getRobotsListMenu(ctx: any) {
     const robots: { id: string; name: string }[] = ctx.scene.state.robots;
@@ -69,23 +28,15 @@ function getRobotsListMenu(ctx: any) {
 
 async function searchRobotsEnter(ctx: any) {
     try {
-        let exchanges: { exchange: string }[];
-        if (ctx.scene.state.exchanges && !ctx.scene.state.reload) exchanges = ctx.scene.state.exchanges;
-        else {
-            ({ exchanges } = await this.gqlClient.request(
-                gql`
-                    query Exchanges($available: Int!) {
-                        exchanges(where: { available: { _gte: $available } }) {
-                            code
-                        }
-                    }
-                `,
-                { available: ctx.session.user.available },
-                ctx
-            ));
-            ctx.scene.state.exchanges = exchanges;
+        if (ctx.scene.state.stage === "selectRobot") return searchRobotsSelectRobot.call(this, ctx);
+        if (!ctx.scene.state.exchanges || ctx.scene.state.reload) {
+            ctx.scene.state.exchanges = await this.getExchanges(ctx);
         }
-        if (!exchanges || !Array.isArray(exchanges) || exchanges.length < 0) {
+        if (
+            !ctx.scene.state.exchanges ||
+            !Array.isArray(ctx.scene.state.exchanges) ||
+            ctx.scene.state.exchanges.length < 0
+        ) {
             throw new Error("Failed to load trading exchanges");
         }
         ctx.scene.state.exchange = null;
@@ -118,13 +69,9 @@ async function searchRobotsSelectAsset(ctx: any) {
             }[];
         } = await this.gqlClient.request(
             gql`
-                query AvailableAssets($available: Int!, $exchange: String!, $trading: Boolean!) {
+                query AvailableAssets($exchange: String!, $trading: Boolean!) {
                     assets: robots(
-                        where: {
-                            available: { _gte: $available }
-                            exchange: { _eq: $exchange }
-                            trading: { _eq: $trading }
-                        }
+                        where: { exchange: { _eq: $exchange }, trading: { _eq: $trading } }
                         distinct_on: [asset, currency]
                     ) {
                         asset
@@ -132,7 +79,7 @@ async function searchRobotsSelectAsset(ctx: any) {
                     }
                 }
             `,
-            { trading: true, exchange: ctx.scene.state.exchange, available: ctx.session.user.available },
+            { trading: true, exchange: ctx.scene.state.exchange },
             ctx
         );
 
@@ -166,16 +113,9 @@ async function searchRobotsSelectRobot(ctx: any) {
         const [asset, currency] = ctx.scene.state.selectedAsset.split("/");
         const { robots } = await this.gqlClient.request(
             gql`
-                query UserRobotsList(
-                    $userId: uuid!
-                    $available: Int!
-                    $exchange: String!
-                    $asset: String!
-                    $currency: String!
-                ) {
+                query UserRobotsList($userId: uuid!, $exchange: String!, $asset: String!, $currency: String!) {
                     robots(
                         where: {
-                            available: { _gte: $available }
                             exchange: { _eq: $exchange }
                             asset: { _eq: $asset }
                             currency: { _eq: $currency }
@@ -191,7 +131,6 @@ async function searchRobotsSelectRobot(ctx: any) {
             `,
             {
                 userId: ctx.session.user.id,
-                available: ctx.session.user.available,
                 exchange: ctx.scene.state.exchange,
                 asset,
                 currency
@@ -239,15 +178,6 @@ async function searchRobotsOpenRobot(ctx: any) {
 
 async function searchRobotsBack(ctx: any) {
     try {
-        if (ctx.callbackQuery && ctx.callbackQuery.data) {
-            const data = JSON.parse(ctx.callbackQuery.data);
-            if (data && data.p) {
-                ctx.scene.state.stage = data.p;
-                if (ctx.scene.state.stage === "selectAsset") return searchRobotsSelectAsset.call(this, ctx);
-
-                if (ctx.scene.state.stage === "selectRobot") return searchRobotsSelectRobot.call(this, ctx);
-            }
-        }
         ctx.scene.state.silent = true;
         await ctx.scene.enter(TelegramScene.ROBOTS);
     } catch (e) {
@@ -265,6 +195,9 @@ async function searchRobotsBackEdit(ctx: any) {
             if (data && data.p) {
                 ctx.scene.state.stage = data.p;
                 ctx.scene.state.edit = true;
+                if (ctx.scene.state.stage === "selectExchange") {
+                    return searchRobotsEnter.call(this, ctx);
+                }
                 if (ctx.scene.state.stage === "selectAsset") return searchRobotsSelectAsset.call(this, ctx);
 
                 if (ctx.scene.state.stage === "selectRobot") return searchRobotsSelectRobot.call(this, ctx);
@@ -284,10 +217,10 @@ export function searchRobotScene(service: BaseService) {
     const scene = new BaseScene(TelegramScene.SEARCH_ROBOTS);
     scene.enter(searchRobotsEnter.bind(service));
     addBaseActions(scene, service, false);
-    scene.action(/exchange/, searchRobotsSelectAsset.bind(this));
-    scene.action(/asset/, searchRobotsSelectRobot.bind(this));
-    scene.action(/robot/, searchRobotsOpenRobot.bind(this));
-    scene.action(/back/, searchRobotsBackEdit.bind(this));
+    scene.action(/exchange/, searchRobotsSelectAsset.bind(service));
+    scene.action(/asset/, searchRobotsSelectRobot.bind(service));
+    scene.action(/robot/, searchRobotsOpenRobot.bind(service));
+    scene.action(/back/, searchRobotsBackEdit.bind(service));
     scene.hears(match("keyboards.backKeyboard.back"), searchRobotsBack.bind(service));
     scene.command("back", searchRobotsBack.bind(service));
     return scene;

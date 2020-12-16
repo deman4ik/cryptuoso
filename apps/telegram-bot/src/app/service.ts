@@ -9,7 +9,7 @@ import { TelegrafSessionRedis } from "@ivaniuk/telegraf-session-redis";
 import telegrafThrottler from "telegraf-throttler";
 import path from "path";
 import { getBackKeyboard, getMainKeyboard, getStartKeyboard } from "./keyboard";
-import { formatTgName, UserExchangeAccountInfo, UserSettings } from "@cryptuoso/user-state";
+import { formatTgName, UserExchangeAccountInfo, UserSettings, Notification } from "@cryptuoso/user-state";
 import { Robot, TelegramScene, TelegramUser } from "./types";
 import { sql } from "@cryptuoso/postgres";
 import {
@@ -21,6 +21,7 @@ import {
     editUserRobotScene,
     loginScene,
     myRobotsScene,
+    mySignalsScene,
     perfRobotsScene,
     perfSignalsScene,
     registrationScene,
@@ -43,7 +44,19 @@ import {
     userRobotScene
 } from "./scenes";
 import { UserMarketState } from "@cryptuoso/market";
+import { SignalEvents } from "@cryptuoso/robot-events";
 const { enter, leave } = Stage;
+import {
+    handleBroadcastMessage,
+    handleMessageSupportReply,
+    handleOrderError,
+    handleSignal,
+    handleUserExAccError,
+    handleUserRobotError,
+    handleUserRobotStatus,
+    handleUserRobotTrade
+} from "./notifications";
+import { UserRobotStatus } from "@cryptuoso/user-robot-state";
 
 export type TelegramBotServiceConfig = BaseServiceConfig;
 
@@ -54,6 +67,7 @@ export default class TelegramBotService extends BaseService {
     validator: Validator;
     authUtils: Auth;
     gqlClient: GraphQLClient;
+    notificationsTimer: NodeJS.Timer;
     constructor(config?: TelegramBotServiceConfig) {
         super(config);
         try {
@@ -105,6 +119,7 @@ export default class TelegramBotService extends BaseService {
                 editSignalsScene(this),
                 editUserExAccScene(this),
                 editUserRobotScene(this),
+                mySignalsScene(this),
                 myRobotsScene(this),
                 perfRobotsScene(this),
                 perfSignalsScene(this),
@@ -139,6 +154,8 @@ export default class TelegramBotService extends BaseService {
             this.bot.hears(/(.*?)/, this.defaultHandler.bind(this));
 
             this.addOnStartHandler(this.onServiceStart);
+
+            this.addOnStopHandler(this.onServiceStop);
         } catch (err) {
             this.log.error("Error in TelegramBotService constructor", err);
         }
@@ -148,18 +165,157 @@ export default class TelegramBotService extends BaseService {
         if (process.env.NODE_ENV === "production") {
             await this.bot.telegram.setWebhook(process.env.BOT_HOST);
             await this.bot.startWebhook("/", null, +process.env.PORT);
+            this.notificationsTimer = setTimeout(this.checkNotifications.bind(this), 0);
             this.log.warn("Bot in production mode!");
         } else if (process.env.NODE_ENV === "dev" || process.env.NODE_ENV === "development") {
             await this.bot.telegram.deleteWebhook();
             await this.bot.startPolling();
+            this.notificationsTimer = setTimeout(this.checkNotifications.bind(this), 0);
             this.log.warn("Bot in development mode!");
         } else {
             this.log.warn("Bot not started!");
         }
     }
 
+    async onServiceStop() {
+        await this.bot.stop();
+    }
+
+    async checkNotifications() {
+        try {
+            const notifications = await this.getNotifations();
+
+            for (const notification of notifications) {
+                try {
+                    let messageToSend;
+                    switch (notification.type) {
+                        case SignalEvents.ALERT:
+                            messageToSend = handleSignal.call(this, notification);
+                            break;
+                        case SignalEvents.TRADE:
+                            messageToSend = handleSignal.call(this, notification);
+                            break;
+                        case "user-robot.trade":
+                            messageToSend = handleUserRobotTrade.call(this, notification);
+                            break;
+                        case "user_ex_acc.error":
+                            messageToSend = handleUserExAccError.call(this, notification);
+                            break;
+                        case "user-robot.error":
+                            messageToSend = handleUserRobotError.call(this, notification);
+                            break;
+                        case `user-robot.${UserRobotStatus.paused}`:
+                            messageToSend = handleUserRobotStatus.call(this, notification);
+                            break;
+                        case `user-robot.${UserRobotStatus.started}`:
+                            messageToSend = handleUserRobotStatus.call(this, notification);
+                            break;
+                        case `user-robot.${UserRobotStatus.starting}`:
+                            messageToSend = handleUserRobotStatus.call(this, notification);
+                            break;
+                        case `user-robot.${UserRobotStatus.stopped}`:
+                            messageToSend = handleUserRobotStatus.call(this, notification);
+                            break;
+                        case `user-robot.${UserRobotStatus.stopping}`:
+                            messageToSend = handleUserRobotStatus.call(this, notification);
+                            break;
+                        case "order.error":
+                            messageToSend = handleOrderError.call(this, notification);
+                            break;
+                        case "message.broadcast":
+                            messageToSend = handleBroadcastMessage.call(this, notification);
+                            break;
+                        case "message.support-reply":
+                            messageToSend = handleMessageSupportReply.call(this, notification);
+                            break;
+                        default:
+                            continue;
+                    }
+
+                    if (messageToSend) {
+                        const { success } = await this.sendMessage(messageToSend);
+                        if (success) {
+                            await this.db.pg.query(sql`
+                        UPDATE notifications 
+                        SET send_telegram = false 
+                        WHERE id = ${notification.id};`);
+                        }
+                    }
+                } catch (err) {
+                    this.log.error(`Failed to process notification`, err);
+                }
+            }
+        } catch (error) {
+            this.log.error(`Failed to check notifications`, error);
+        } finally {
+            if (!this.lightship.isServerShuttingDown()) {
+                this.notificationsTimer = setTimeout(this.checkNotifications.bind(this), 5000);
+            }
+        }
+    }
+
     formatName(ctx: any) {
         return formatTgName(ctx.from.username, ctx.from.first_name, ctx.from.last_name);
+    }
+
+    async sendMessage({ telegramId, message }: { telegramId: number; message: string }) {
+        try {
+            this.log.debug(`Sending ${message} to ${telegramId}`);
+            await this.bot.telegram.sendMessage(telegramId, message, {
+                parse_mode: "HTML"
+            });
+            return { success: true };
+        } catch (err) {
+            this.log.error(err);
+            return this.blockHandler(telegramId, err.response);
+        }
+    }
+
+    async blockHandler(telegramId: number, error: { ok: boolean; error_code: number; description: string }) {
+        try {
+            this.log.warn(telegramId, error);
+            if (error && error.ok === false && (error.error_code === 403 || error.error_code === 400)) {
+                const user = await this.db.pg.maybeOne<{ id: string; settings: UserSettings }>(sql`
+                                    SELECT id, settings
+                                    FROM users 
+                                    WHERE telegram_id = ${telegramId};`);
+
+                if (user) {
+                    const {
+                        id,
+                        settings: { notifications }
+                    } = user;
+                    const newSettings = {
+                        ...user.settings,
+                        notifications: {
+                            signals: {
+                                ...notifications.signals,
+                                telegram: false
+                            },
+                            trading: {
+                                ...notifications.trading,
+                                telegram: false
+                            },
+                            news: {
+                                ...notifications.news,
+                                telegram: false
+                            }
+                        }
+                    };
+                    await this.db.pg.query(sql`
+                        UPDATE users
+                        SET settings = ${JSON.stringify(newSettings)}
+                        WHERE id = ${id};`);
+
+                    //TODO: set sentTelegram in notifications to false
+                }
+                return { success: true };
+            }
+            return { success: false };
+        } catch (e) {
+            this.log.error(e);
+            return { success: false, error: e.message };
+        }
     }
 
     async getUser(telegramId: number) {
@@ -198,7 +354,9 @@ export default class TelegramBotService extends BaseService {
                 return;
             }
             await next();
-        } else await next();
+        } else {
+            await next();
+        }
     }
 
     async start(ctx: any) {
@@ -243,6 +401,17 @@ export default class TelegramBotService extends BaseService {
         await ctx.reply(ctx.i18n.t("defaultHandler"), getMainKeyboard(ctx));
     }
 
+    async getNotifations() {
+        return this.db.pg.any<Notification & { telegramId: number }[]>(sql`
+        SELECT u.telegram_id, n.* FROM notifications n, users u
+        WHERE n.user_id = u.id 
+        AND n.send_telegram = true
+        AND u.status > 0
+        AND u.telegram_id is not null
+        ORDER BY timestamp; 
+        `);
+    }
+
     async getExchanges(
         ctx: any
     ): Promise<
@@ -250,28 +419,27 @@ export default class TelegramBotService extends BaseService {
             code: string;
         }[]
     > {
-        const { exchanges } = await this.gqlClient.request<
-            {
-                exchanges: {
-                    code: string;
-                }[];
-            },
-            { available: number }
-        >(
+        await ctx.replyWithChatAction("typing");
+        const { exchanges } = await this.gqlClient.request<{
+            exchanges: {
+                code: string;
+            }[];
+        }>(
             gql`
-                query Exchanges($available: Int!) {
-                    exchanges(where: { available: { _gte: $available } }) {
+                query Exchanges {
+                    exchanges {
                         code
                     }
                 }
             `,
-            { available: ctx.session.user.available },
+            {},
             ctx
         );
         return exchanges;
     }
 
     async getSignalRobot(ctx: any): Promise<Robot> {
+        await ctx.replyWithChatAction("typing");
         const { robot } = await this.gqlClient.request<{ robot: Robot }, { robotId: string; userId: string }>(
             gql`
                 query UserSignalsRobot($robotId: uuid!, $userId: uuid!) {
@@ -430,7 +598,7 @@ export default class TelegramBotService extends BaseService {
             `,
             {
                 userId: ctx.session.user.id,
-                robotId: ctx.scene.state.robot.id
+                robotId: ctx.scene.state.robot?.id || ctx.scene.state.robotId
             },
             ctx
         );
@@ -443,6 +611,7 @@ export default class TelegramBotService extends BaseService {
     }
 
     async getUserRobot(ctx: any): Promise<Robot> {
+        await ctx.replyWithChatAction("typing");
         const { robot } = await this.gqlClient.request<{ robot: Robot }, { robotId: string; userId: string }>(
             gql`
                 query UserRobot($robotId: uuid!, $userId: uuid!) {
@@ -596,7 +765,7 @@ export default class TelegramBotService extends BaseService {
             `,
             {
                 userId: ctx.session.user.id,
-                robotId: ctx.scene.state.robot.id
+                robotId: ctx.scene.state.robot?.id || ctx.scene.state.robotId
             },
             ctx
         );
@@ -614,6 +783,7 @@ export default class TelegramBotService extends BaseService {
         limits: UserMarketState["limits"];
         precision: UserMarketState["precision"];
     }> {
+        await ctx.replyWithChatAction("typing");
         const { markets } = await this.gqlClient.request<
             {
                 markets: {
@@ -655,6 +825,7 @@ export default class TelegramBotService extends BaseService {
         balance: number;
         availableBalancePercent: number;
     }> {
+        await ctx.replyWithChatAction("typing");
         const { userExAcc } = await this.gqlClient.request<
             {
                 userExAcc: {
@@ -686,6 +857,7 @@ export default class TelegramBotService extends BaseService {
     }
 
     async getUserExchangeAccs(ctx: any): Promise<UserExchangeAccountInfo[]> {
+        await ctx.replyWithChatAction("typing");
         const { userExAccs } = await this.gqlClient.request<
             {
                 userExAccs: UserExchangeAccountInfo[];
@@ -711,6 +883,7 @@ export default class TelegramBotService extends BaseService {
     }
 
     async getUserExchangeAccsByExchange(ctx: any): Promise<UserExchangeAccountInfo[]> {
+        await ctx.replyWithChatAction("typing");
         const { userExAccs } = await this.gqlClient.request<
             {
                 userExAccs: UserExchangeAccountInfo[];
@@ -737,6 +910,7 @@ export default class TelegramBotService extends BaseService {
     }
 
     async getUserSettings(ctx: any): Promise<UserSettings> {
+        await ctx.replyWithChatAction("typing");
         const {
             user: { settings }
         } = await this.gqlClient.request<

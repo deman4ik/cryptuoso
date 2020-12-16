@@ -7,7 +7,7 @@ import { gql } from "@cryptuoso/graphql-client";
 
 async function startUserRobotEnter(ctx: any) {
     try {
-        const { robot }: { robot: Robot } = ctx.scene.state.robot;
+        const { robot }: { robot: Robot } = ctx.scene.state;
 
         return ctx.reply(
             ctx.i18n.t("scenes.startUserRobot.confirm", {
@@ -43,7 +43,8 @@ async function startUserRobotYes(ctx: any) {
                         }
                     }
                 `,
-                { id }
+                { id },
+                ctx
             ));
         } catch (err) {
             error = err.message;

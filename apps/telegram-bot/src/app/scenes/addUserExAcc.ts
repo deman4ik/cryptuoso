@@ -1,24 +1,10 @@
 import { BaseService } from "@cryptuoso/service";
 import { BaseScene, Extra } from "telegraf";
 import { TelegramScene } from "../types";
-import { addBaseActions } from "./default";
+import { addBaseActions, getExchangesMenu } from "./default";
 import { match } from "@edjopato/telegraf-i18n";
 import { gql } from "@cryptuoso/graphql-client";
-import { chunkArray, formatExchange } from "@cryptuoso/helpers";
-
-function getExchangesMenu(ctx: any) {
-    const exchanges: { code: string }[] = ctx.scene.state.exchanges;
-    return Extra.HTML().markup((m: any) => {
-        const buttons = exchanges.map(({ code }) =>
-            m.callbackButton(formatExchange(code), JSON.stringify({ a: "exchange", p: code }), false)
-        );
-        const chunkedButtons = chunkArray(buttons, 3);
-        return m.inlineKeyboard([
-            ...chunkedButtons,
-            [m.callbackButton(ctx.i18n.t("keyboards.backKeyboard.back"), JSON.stringify({ a: "back", p: null }), false)]
-        ]);
-    });
-}
+import { formatExchange } from "@cryptuoso/helpers";
 
 async function addUserExAccEnter(ctx: any) {
     try {
@@ -48,9 +34,15 @@ async function addUserExAccSelectedExchange(ctx: any) {
         ctx.scene.state.stage = "key";
         if (ctx.scene.state.edit) {
             ctx.scene.state.edit = false;
-            return ctx.editMessageText(ctx.i18n.t("scenes.addUserExAcc.enterAPIKey", { exchange }), Extra.HTML());
+            return ctx.editMessageText(
+                ctx.i18n.t("scenes.addUserExAcc.enterAPIKey", { exchange: formatExchange(exchange) }),
+                Extra.HTML()
+            );
         }
-        return ctx.reply(ctx.i18n.t("scenes.addUserExAcc.enterAPIKey", { exchange }), Extra.HTML());
+        return ctx.reply(
+            ctx.i18n.t("scenes.addUserExAcc.enterAPIKey", { exchange: formatExchange(exchange) }),
+            Extra.HTML()
+        );
     } catch (e) {
         this.log.error(e);
         await ctx.reply(ctx.i18n.t("failed"));
@@ -65,14 +57,17 @@ async function addUserExAccSubmited(ctx: any) {
         if (ctx.scene.state.stage === "key") {
             ctx.scene.state.key = ctx.message.text;
             ctx.scene.state.stage = "secret";
-            return ctx.reply(ctx.i18n.t("scenes.addUserExAcc.enterAPISecret", { exchange }), Extra.HTML());
+            return ctx.reply(
+                ctx.i18n.t("scenes.addUserExAcc.enterAPISecret", { exchange: formatExchange(exchange) }),
+                Extra.HTML()
+            );
         } else if (ctx.scene.state.stage === "secret") {
             ctx.scene.state.secret = ctx.message.text;
         } else {
             return addUserExAccSelectedExchange.call(this, ctx);
         }
 
-        await ctx.reply(ctx.i18n.t("scenes.addUserExAcc.check", { exchange }), Extra.HTML());
+        await ctx.reply(ctx.i18n.t("scenes.addUserExAcc.check", { exchange: formatExchange(exchange) }), Extra.HTML());
 
         const {
             key,
@@ -98,7 +93,8 @@ async function addUserExAccSubmited(ctx: any) {
                 {
                     exchange,
                     keys: { key, secret }
-                }
+                },
+                ctx
             ));
         } catch (err) {
             error = err.message;

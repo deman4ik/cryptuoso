@@ -7,7 +7,7 @@ import { gql } from "@cryptuoso/graphql-client";
 
 async function deleteUserRobotEnter(ctx: any) {
     try {
-        const { robot }: { robot: Robot } = ctx.scene.state.robot;
+        const { robot }: { robot: Robot } = ctx.scene.state;
 
         return ctx.reply(
             ctx.i18n.t("scenes.deleteUserRobot.confirm", {
@@ -43,7 +43,8 @@ async function deleteUserRobotYes(ctx: any) {
                         }
                     }
                 `,
-                { id }
+                { id },
+                ctx
             ));
         } catch (err) {
             error = err.message;

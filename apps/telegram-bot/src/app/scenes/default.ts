@@ -1,12 +1,54 @@
 import { BaseService } from "@cryptuoso/service";
-import { Extra, Stage } from "telegraf";
+import { Extra } from "telegraf";
 import { match } from "@edjopato/telegraf-i18n";
+import { chunkArray, formatExchange } from "@cryptuoso/helpers";
 
 export function getConfirmMenu(ctx: any) {
     return Extra.HTML().markup((m: any) => {
         return m.inlineKeyboard([
             [m.callbackButton(ctx.i18n.t("keyboards.confirm.yes"), JSON.stringify({ a: "yes" }), false)],
             [m.callbackButton(ctx.i18n.t("keyboards.confirm.no"), JSON.stringify({ a: "no" }), false)]
+        ]);
+    });
+}
+
+export function getExchangesMenu(ctx: any) {
+    const exchanges: { code: string }[] = ctx.scene.state.exchanges;
+    return Extra.HTML().markup((m: any) => {
+        const buttons = exchanges.map(({ code }) =>
+            m.callbackButton(formatExchange(code), JSON.stringify({ a: "exchange", p: code }), false)
+        );
+        const chunkedButtons = chunkArray(buttons, 3);
+        return m.inlineKeyboard([
+            ...chunkedButtons,
+            [m.callbackButton(ctx.i18n.t("keyboards.backKeyboard.back"), JSON.stringify({ a: "back", p: null }), false)]
+        ]);
+    });
+}
+
+export function getAssetsMenu(ctx: any) {
+    const assets: {
+        asset: string;
+        currency: string;
+    }[] = ctx.scene.state.assets;
+    return Extra.HTML().markup((m: any) => {
+        const buttons = assets.map((asset) =>
+            m.callbackButton(
+                `${asset.asset}/${asset.currency}`,
+                JSON.stringify({ a: "asset", p: `${asset.asset}/${asset.currency}` }),
+                false
+            )
+        );
+        const chunkedButtons = chunkArray(buttons, 3);
+        return m.inlineKeyboard([
+            ...chunkedButtons,
+            [
+                m.callbackButton(
+                    ctx.i18n.t("keyboards.backKeyboard.back"),
+                    JSON.stringify({ a: "back", p: "selectExchange" }),
+                    false
+                )
+            ]
         ]);
     });
 }

@@ -18,11 +18,17 @@ import { round } from "@cryptuoso/helpers";
 function getChooseAmountTypeMenu(ctx: any) {
     return Extra.HTML().markup((m: any) => {
         return m.inlineKeyboard([
-            [m.callbackButton(ctx.i18n.t("volumeType.assetStatic"), JSON.stringify({ a: "assetStatic" }), false)],
+            [
+                m.callbackButton(
+                    ctx.i18n.t("volumeType.assetStatic"),
+                    JSON.stringify({ a: "volumeType", p: "assetStatic" }),
+                    false
+                )
+            ],
             [
                 m.callbackButton(
                     ctx.i18n.t("volumeType.currencyDynamic"),
-                    JSON.stringify({ a: "currencyDynamic" }),
+                    JSON.stringify({ a: "volumeType", p: "currencyDynamic" }),
                     false
                 )
             ]
@@ -124,8 +130,7 @@ async function editSignalsConfirm(ctx: any) {
             market: {
                 limits: {
                     userSignal: { min, max }
-                },
-                precision
+                }
             }
         }: {
             robot: Robot;
@@ -141,7 +146,6 @@ async function editSignalsConfirm(ctx: any) {
         try {
             volume = parseFloat(ctx.message.text);
             if (isNaN(volume)) error = "Volume is not a number";
-            volume = round(volume, precision?.price || 2);
 
             if (volumeType === VolumeSettingsType.assetStatic) {
                 checkAssetStatic(volume, min.amount, max.amount);
@@ -182,7 +186,8 @@ async function editSignalsConfirm(ctx: any) {
                             }
                         }
                     `,
-                    params
+                    params,
+                    ctx
                 ));
             } catch (err) {
                 error = err.message;
@@ -246,8 +251,7 @@ export function editSignalsScene(service: BaseService) {
     const scene = new BaseScene(TelegramScene.EDIT_SIGNALS);
     scene.enter(editSignalsEnter.bind(service));
     addBaseActions(scene, service, false);
-    scene.action(/assetStatic/, editSignalsEnterVolume.bind(service));
-    scene.action(/currencyDynamic/, editSignalsEnterVolume.bind(service));
+    scene.action(/volumeType/, editSignalsEnterVolume.bind(service));
     scene.hears(match("keyboards.backKeyboard.back"), editSignalsBack.bind(service));
     scene.command("back", editSignalsBack.bind(service));
     scene.hears(/(.*?)/, editSignalsConfirm.bind(service));

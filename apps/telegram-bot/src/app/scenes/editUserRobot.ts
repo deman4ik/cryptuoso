@@ -18,22 +18,34 @@ import { round } from "@cryptuoso/helpers";
 function getChooseAmountTypeMenu(ctx: any) {
     return Extra.HTML().markup((m: any) => {
         return m.inlineKeyboard([
-            [m.callbackButton(ctx.i18n.t("volumeType.assetStatic"), JSON.stringify({ a: "assetStatic" }), false)],
+            [
+                m.callbackButton(
+                    ctx.i18n.t("volumeType.assetStatic"),
+                    JSON.stringify({ a: "volumeType", p: "assetStatic" }),
+                    false
+                )
+            ],
             [
                 m.callbackButton(
                     ctx.i18n.t("volumeType.currencyDynamic"),
-                    JSON.stringify({ a: "currencyDynamic" }),
+                    JSON.stringify({ a: "volumeType", p: "currencyDynamic" }),
                     false
                 )
             ],
             [
                 m.callbackButton(
                     ctx.i18n.t("volumeType.assetDynamicDelta"),
-                    JSON.stringify({ a: "assetDynamicDelta" }),
+                    JSON.stringify({ a: "volumeType", p: "assetDynamicDelta" }),
                     false
                 )
             ],
-            [m.callbackButton(ctx.i18n.t("volumeType.balancePercent"), JSON.stringify({ a: "balancePercent" }), false)]
+            [
+                m.callbackButton(
+                    ctx.i18n.t("volumeType.balancePercent"),
+                    JSON.stringify({ a: "volumeType", p: "balancePercent" }),
+                    false
+                )
+            ]
         ]);
     });
 }
@@ -162,8 +174,7 @@ async function editUserRobotConfirm(ctx: any) {
             market: {
                 limits: {
                     userRobot: { min, max }
-                },
-                precision
+                }
             },
             amounts: { balance, availableBalancePercent }
         }: {
@@ -188,13 +199,12 @@ async function editUserRobotConfirm(ctx: any) {
         try {
             volume = parseFloat(ctx.message.text);
             if (isNaN(volume)) error = "Volume is not a number";
-            volume = round(volume, precision?.price || 2);
             if (volumeType === VolumeSettingsType.assetStatic || volumeType === VolumeSettingsType.assetDynamicDelta) {
                 checkAssetStatic(volume, min.amount, max.amount);
             } else if (volumeType === VolumeSettingsType.currencyDynamic) {
                 checkCurrencyDynamic(volume, min.amountUSD, max.amountUSD);
             } else if (volumeType === VolumeSettingsType.balancePercent) {
-                const volumeUSD = round((volume / 100) * balance, precision?.price || 2);
+                const volumeUSD = (volume / 100) * balance;
                 checkBalancePercent(volume, availableBalancePercent, volumeUSD, min.amountUSD, max.amountUSD);
             } else throw new BaseError("Unknown amount type", { volumeType });
         } catch (e) {
@@ -242,7 +252,8 @@ async function editUserRobotConfirm(ctx: any) {
                             }
                         }
                     `,
-                    params
+                    params,
+                    ctx
                 ));
             } catch (err) {
                 error = err.message;
@@ -310,10 +321,7 @@ export function editUserRobotScene(service: BaseService) {
     const scene = new BaseScene(TelegramScene.EDIT_USER_ROBOT);
     scene.enter(editUserRobotEnter.bind(service));
     addBaseActions(scene, service, false);
-    scene.action(/assetStatic/, editUserRobotEnterVolume.bind(service));
-    scene.action(/currencyDynamic/, editUserRobotEnterVolume.bind(service));
-    scene.action(/assetDynamicDelta/, editUserRobotEnterVolume.bind(service));
-    scene.action(/balancePercent/, editUserRobotEnterVolume.bind(service));
+    scene.action(/volumeType/, editUserRobotEnterVolume.bind(service));
     scene.hears(match("keyboards.backKeyboard.back"), editUserRobotBack.bind(service));
     scene.command("back", editUserRobotBack.bind(service));
     scene.hears(/(.*?)/, editUserRobotConfirm.bind(service));

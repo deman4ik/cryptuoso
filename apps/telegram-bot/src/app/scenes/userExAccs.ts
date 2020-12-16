@@ -35,8 +35,8 @@ function getUserExAccsAddMenu(ctx: any) {
 
 async function userExAccsEnter(ctx: any) {
     try {
-        const userExAccs = this.getUserExchangeAccs(ctx);
-        if (userExAccs.length === 0) {
+        const userExAccs = await this.getUserExchangeAccs(ctx);
+        if (!userExAccs && !Array.isArray(userExAccs) && userExAccs.length === 0) {
             if (ctx.scene.state.edit) {
                 ctx.scene.state.edit = false;
                 return ctx.editMessageText(ctx.i18n.t("scenes.userExAccs.none"), getUserExAccsAddMenu(ctx));

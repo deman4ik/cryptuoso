@@ -257,15 +257,7 @@ export default class NotificationsService extends BaseService {
             this.log.info(`Handling user robot error event`, event);
             const { userRobotId, error, timestamp } = event;
 
-            const {
-                robotCode,
-                telegramId,
-                email,
-                userId,
-                userSettings: {
-                    notifications: { trading }
-                }
-            } = await this.#getUserRobotInfo(userRobotId);
+            const { robotCode, telegramId, email, userId } = await this.#getUserRobotInfo(userRobotId);
 
             const notification: Notification = {
                 userId,
@@ -277,8 +269,8 @@ export default class NotificationsService extends BaseService {
                     robotCode
                 },
                 userRobotId,
-                sendEmail: trading.email && email ? true : false,
-                sendTelegram: trading.telegram && telegramId ? true : false
+                sendEmail: !!email,
+                sendTelegram: !!telegramId
             };
 
             await this.#saveNotifications([notification]);

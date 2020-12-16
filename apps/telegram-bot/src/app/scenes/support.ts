@@ -38,7 +38,8 @@ async function supportMessage(ctx: any) {
             `,
             {
                 message
-            }
+            },
+            ctx
         );
 
         if (result) await ctx.reply(ctx.i18n.t("scenes.support.success"), Extra.HTML());
