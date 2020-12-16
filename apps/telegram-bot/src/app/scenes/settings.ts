@@ -179,7 +179,8 @@ async function settingsNotif(ctx: any) {
                         }
                     }
                 `,
-                params
+                params,
+                ctx
             ));
         } catch (err) {
             error = err.message;

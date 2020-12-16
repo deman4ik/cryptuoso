@@ -18,11 +18,17 @@ import { round } from "@cryptuoso/helpers";
 function getChooseAmountTypeMenu(ctx: any) {
     return Extra.HTML().markup((m: any) => {
         return m.inlineKeyboard([
-            [m.callbackButton(ctx.i18n.t("volumeType.assetStatic"), JSON.stringify({ a: "assetStatic" }), false)],
+            [
+                m.callbackButton(
+                    ctx.i18n.t("volumeType.assetStatic"),
+                    JSON.stringify({ a: "volumeType", p: "assetStatic" }),
+                    false
+                )
+            ],
             [
                 m.callbackButton(
                     ctx.i18n.t("volumeType.currencyDynamic"),
-                    JSON.stringify({ a: "currencyDynamic" }),
+                    JSON.stringify({ a: "volumeType", p: "currencyDynamic" }),
                     false
                 )
             ]
@@ -181,7 +187,8 @@ async function subscribeSignalsConfirm(ctx: any) {
                             }
                         }
                     `,
-                    params
+                    params,
+                    ctx
                 ));
             } catch (err) {
                 error = err.message;
@@ -245,8 +252,7 @@ export function subscribeSignalsScene(service: BaseService) {
     const scene = new BaseScene(TelegramScene.SUBSCRIBE_SIGNALS);
     scene.enter(subscribeSignalsEnter.bind(service));
     addBaseActions(scene, service, false);
-    scene.action(/assetStatic/, subscribeSignalsEnterVolume.bind(service));
-    scene.action(/currencyDynamic/, subscribeSignalsEnterVolume.bind(service));
+    scene.action(/volumeType/, subscribeSignalsEnterVolume.bind(service));
     scene.hears(match("keyboards.backKeyboard.back"), subscribeSignalsBack.bind(service));
     scene.command("back", subscribeSignalsBack.bind(service));
     scene.hears(/(.*?)/, subscribeSignalsConfirm.bind(service));

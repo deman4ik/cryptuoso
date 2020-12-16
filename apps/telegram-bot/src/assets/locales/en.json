@@ -49,7 +49,7 @@
             "success": "✅ You successfully logged in!\nYour Telegram account added to your <b>${email}</b> Cryptuoso account"
         },
         "signals": {
-            "info": "🚦 Signals - Manual Trading Mode\n\nMy total signals profit: <b>${profit}$</b>",
+            "info": "🚦 Signals - Manual Trading Mode\n\nMy total signals profit: <b>${profit} $</b>",
             "my": "🚥 My Signals",
             "search": "🔎 Search Signals",
             "top": "🏆 Top Performance Signals",
@@ -96,7 +96,7 @@
             "success": "✅ Succesfully unsubscribed from <b>#${code}</b> robot signals."
         },
         "robots": {
-            "info": "🤖 Robots - Automated Trading Mode\n\nMy total robots profit: <b>${profit}$</b>",
+            "info": "🤖 Robots - Automated Trading Mode\n\nMy total robots profit: <b>${profit} $</b>",
             "my": "🤖 My Robots",
             "search": "🔎 Search Robots",
             "top": "🏆 Top Performance Robots",
@@ -166,12 +166,12 @@
             "setEmail": "📨 Set Email",
             "changeEmail": "📨 Change Email",
             "userExAccs": "🔐 My Exchange API Keys",
-            "telegramNewsNotifOn": "📰 Telegram signals notifications is <b>ON</b> 🔔",
-            "telegramNewsNotifOff": "📰 Telegram signals notifications is <b>OFF</b> 🔕",
-            "telegramSingalsNotifOn": "🚦 Telegram signals notifications is <b>ON</b> 🔔",
-            "telegramSingalsNotifOff": "🚦 Telegram signals notifications is <b>OFF</b> 🔕",
-            "telegramTradingNotifOn": "🤖 Telegram trading notifications is <b>ON</b> 🔔",
-            "telegramTradingNotifOff": "🤖 Telegram trading notifications is <b>OFF</b> 🔕",
+            "telegramNewsNotifOn": "📰 Telegram news notifications is ON 🔔",
+            "telegramNewsNotifOff": "📰 Telegram news notifications is OFF 🔕",
+            "telegramSingalsNotifOn": "🚦 Telegram signals notifications is ON 🔔",
+            "telegramSingalsNotifOff": "🚦 Telegram signals notifications is OFF 🔕",
+            "telegramTradingNotifOn": "🤖 Telegram trading notifications is ON 🔔",
+            "telegramTradingNotifOff": "🤖 Telegram trading notifications is OFF 🔕",
             "notifError": "❌ Failed to change notifications - ${error}"
         },
         "userExAccs": {
@@ -202,7 +202,7 @@
         "support": {
             "info1": "❓ Support\n\n📃 You can learn all about Cryptuoso Robots, how to use and configure signals, robots and exchange accounts in our <a href='https://support.cryptuoso.com'>Documentation site</a>.\n\n",
             "info1alt": "📃 You can learn all about Cryptuoso Robots, how to create new account, how to use and configure signals, robots and exchange accounts in our <a href='https://support.cryptuoso.com'>Documentation site</a>.\n\n",
-            "info2": "❓ Having common questions with signals or robots? Ask it in our <a href='https://t.me/joinchat/ACVS-0zaWVBgAYm8gOKYHA'>Telegram Community</a> and we will help you.\n\n",
+            "info2": "❓ Having common questions with signals or robots? Ask it in our <a href='https://t.me/joinchat/AAAAAEzaWVAzgkDmgOKYHA'>Telegram Community</a> and we will help you.\n\n",
             "info3": "❗️ Have a personal problem regarding connecting an exchange or billing? You can reach us at <a href='mailto:support@cruptuoso.com'>support@cruptuoso.com</a>.\n\n",
             "info4": "Also you can <b>type and send your message right now ⬇️ to this bot</b>\n\n(works only while you in Support section)",
             "success": "✅ Your support request have been received.\n\nIf you have any additional information regarding your issue\n\n you can use <b>❓ Support</b> section again!",
@@ -215,8 +215,8 @@
     },
     "userTrade": {
         "new": "🤖✅ New Robot Trade!\n\n🤖 Robot: <b>#${code}</b>\n\n",
-        "open": "-------\n<b>Position:</b> ${code}\n\n<b>Entry:</b> ${entryAction}\n<b>Entry Date:</b> ${entryDate}\n<b>Entry Price:</b> ${entryPrice}$\n<b>Amount:</b> ${volume} ${asset}",
-        "closed": "-------\n<b>Position:</b> ${code}\n\n<b>Entry:</b> ${entryAction}\n<b>Entry Date:</b> ${entryDate}\n<b>Entry Price:</b> ${entryPrice}$\n\n<b>Exit:</b> ${exitAction}\n<b>Exit Date:</b> ${exitDate}\n<b>Exit Price:</b> ${exitPrice}$\n\n<b>Amount:</b> ${volume} ${asset}\n\n<b>Bars Held:</b> ${barsHeld}\n<b>Profit:</b> ${profit}$\n"
+        "open": "-------\n<b>Position:</b> ${code}\n\n<b>Entry:</b> ${entryAction}\n<b>Entry Date:</b> ${entryDate}\n<b>Entry Price:</b> ${entryPrice} $\n<b>Amount:</b> ${volume} ${asset}",
+        "closed": "-------\n<b>Position:</b> ${code}\n\n<b>Entry:</b> ${entryAction}\n<b>Entry Date:</b> ${entryDate}\n<b>Entry Price:</b> ${entryPrice} $\n\n<b>Exit:</b> ${exitAction}\n<b>Exit Date:</b> ${exitDate}\n<b>Exit Price:</b> ${exitPrice} $\n\n<b>Amount:</b> ${volume} ${asset}\n\n<b>Bars Held:</b> ${barsHeld}\n<b>Profit:</b> ${profit} $\n"
     },
     "robot": {
         "menuInfo": "ℹ️ Robot Info",
@@ -225,26 +225,27 @@
         "menuPositions": "🗃 Latest positions",
         "name": "🤖\nRobot: <b>#${code}</b> ${subscribed}\n\n",
         "info": "🤖\nRobot: <b>#${code}</b> ${subscribed}\n<b>Description:</b> ${description}\n<b>Maximum signals:</b> ${signalsCount} per day\n\n",
-        "profit": "<b>Performance:</b> ${profit}$\n\n",
+        "profit": "<b>Profit:</b> ${profit} $\n\n",
         "volume": "<b>Amount:</b> ${volume}\n${type}\n\n",
         "subscribedAt": "<b>Subscribed at:</b> ${subscribedAt}\n\n",
         "startedAt": "<b>Started at:</b> ${startedAt}\n\n",
         "stoppedAt": "<b>Stopped at:</b> ${stoppedAt}\n\n",
-        "lastInfoUpdatedAt": "Info updated: ${lastInfoUpdatedAt}\n",
+        "lastInfoUpdatedAt": "\nInfo updated: ${lastInfoUpdatedAt}\n",
         "status": "<b>Status:</b> ${status}\n",
         "userExAcc": "<b>Exchange API Key:</b> ${name}\n\n",
         "signals": "<b>Latest signals:</b>\n${signals}",
-        "signal": "<b>Position:</b> ${code}\n<b>Action:</b> ${action}\n<b>Order type:</b> ${orderType}\n<b>Signal time:</b> ${timestamp}\n<b>Price:</b> ${price}$\n",
+        "signal": "<b>Position:</b> ${code}\n<b>Action:</b> ${action}\n<b>Order type:</b> ${orderType}\n<b>Signal time:</b> ${timestamp}\n<b>Price:</b> ${price} $\n",
         "signalsNone": "\n\nRobot hasn't current signals",
         "positionsOpen": "<b>📬 Open positions:</b> ${openPositions}",
-        "positionOpen": "-------\n<b>Position:</b> ${code}\n\n<b>Entry:</b> ${entryAction}\n<b>Entry Date:</b> ${entryDate}\n<b>Entry Price:</b> ${entryPrice}$<b>Unrealized Profit:</b> ${profit}$\n",
+        "positionOpenNotif": "-------\n<b>Position:</b> ${code}\n\n<b>Entry:</b> ${entryAction}\n<b>Entry Date:</b> ${entryDate}\n<b>Entry Price:</b> ${entryPrice} $\n",
+        "positionOpen": "-------\n<b>Position:</b> ${code}\n\n<b>Entry:</b> ${entryAction}\n<b>Entry Date:</b> ${entryDate}\n<b>Entry Price:</b> ${entryPrice} $\n<b>Unrealized Profit:</b> ${profit} $\n",
         "positionsClosed": "<b>📪 Closed positions:</b> ${closedPositions}\n",
-        "positionClosed": "-------\n<b>Position:</b> ${code}\n\n<b>Entry:</b> ${entryAction}\n<b>Entry Date:</b> ${entryDate}\n<b>Entry Price:</b> ${entryPrice}$\n\n<b>Exit:</b> ${exitAction}\n<b>Exit Date:</b> ${exitDate}\n<b>Exit Price:</b> ${exitPrice}$\n\n<b>Bars Held:</b> ${barsHeld}\n<b>Profit:</b> ${profit}$\n",
+        "positionClosed": "-------\n<b>Position:</b> ${code}\n\n<b>Entry:</b> ${entryAction}\n<b>Entry Date:</b> ${entryDate}\n<b>Entry Price:</b> ${entryPrice} $\n\n<b>Exit:</b> ${exitAction}\n<b>Exit Date:</b> ${exitDate}\n<b>Exit Price:</b> ${exitPrice} $\n\n<b>Bars Held:</b> ${barsHeld}\n<b>Profit:</b> ${profit} $\n",
         "positionsNone": "Robot has no positions yet...",
         "statsLastUpdatedAt": "<b>Stats last updated at:</b> ${lastUpdatedAt}\n",
-        "statsProfit": "<b>💰 Profit</b> \n\n<b>Net Profit:</b> ${netProfit}$ \n<b>Number of Trades:</b> ${tradesCount} \n<b>Average Profit:</b> ${avgNetProfit}$ \n<b>Average Bars held:</b> ${avgBarsHeld} \n<b>Profit Factor:</b> ${profitFactor} \n<b>Recovery Factor:</b> ${recoveryFactor} \n<b>Payoff Ratio:</b> ${payoffRatio} \n<b>Maximum Drawdown:</b> ${maxDrawdown}$ \n<b>Maximum Drawdown Date:</b> ${maxDrawdownDate} \n\n",
-        "statsWinners": "<b>🏆 Winners</b> \n\n<b>Win Rate:</b> ${winRate}%\n<b>Gross Profit:</b> ${grossProfit}$ \n<b>Average Profit:</b> ${avgProfit}$ \n<b>Average Bars held:</b> ${avgBarsHeldWinning} \n<b>Max. Consecutive Winners:</b> ${maxConsecWins} \n\n",
-        "statsLosses": "<b>🌋 Losses</b> \n\n<b>Loss Rate:</b> ${lossRate}%\n<b>Gross Loss:</b> ${grossLoss}$ \n<b>Average Loss:</b> ${avgLoss}$ \n<b>Average Bars held:</b> ${avgBarsHeldLosing} \n<b>Max. Consecutive Losses:</b> ${maxConsecLosses} \n\n",
+        "statsProfit": "<b>💰 Profit</b> \n\n<b>Net Profit:</b> ${netProfit} $ \n<b>Number of Trades:</b> ${tradesCount} \n<b>Average Profit:</b> ${avgNetProfit} $ \n<b>Average Bars held:</b> ${avgBarsHeld} \n<b>Profit Factor:</b> ${profitFactor} \n<b>Recovery Factor:</b> ${recoveryFactor} \n<b>Payoff Ratio:</b> ${payoffRatio} \n<b>Maximum Drawdown:</b> ${maxDrawdown} $ \n<b>Maximum Drawdown Date:</b> ${maxDrawdownDate} \n\n",
+        "statsWinners": "<b>🏆 Winners</b> \n\n<b>Win Rate:</b> ${winRate}%\n<b>Gross Profit:</b> ${grossProfit} $ \n<b>Average Profit:</b> ${avgProfit} $ \n<b>Average Bars held:</b> ${avgBarsHeldWinning} \n<b>Max. Consecutive Winners:</b> ${maxConsecWins} \n\n",
+        "statsLosses": "<b>🌋 Losses</b> \n\n<b>Loss Rate:</b> ${lossRate}%\n<b>Gross Loss:</b> ${grossLoss} $ \n<b>Average Loss:</b> ${avgLoss} $ \n<b>Average Bars held:</b> ${avgBarsHeldLosing} \n<b>Max. Consecutive Losses:</b> ${maxConsecLosses} \n\n",
         "statsNone": "Robot has no statistics yet..."
     },
     "tradeAction": {
@@ -281,8 +282,8 @@
     },
     "userRobot": {
         "description": "The trend is your friend. Breakout trading is used by active investors to take a position within a trend's early stages. This strategy can be the starting point for major price moves, expansions in volatility and, when managed properly, can offer limited downside risk.",
-        "error": "❌ Error occurred while processing robot job <b>${jobType}</b>.\n\n${error} \n\n🤖 <b>#${code}</b> (${id})\n\n Please contact support.",
-        "orderError": "❌ Error occurred while processing order <b>${exId}</b>.\n\n${error} \n\n🤖 <b>#${code}</b> (${id})\n\n Please check your API Keys and Robot settings or contact support.",
+        "error": "❌ Error occurred while processing robot job.\n\n${error} \n\n🤖 <b>#${code}</b> (${id})\n\n Please contact support.",
+        "orderError": "❌ Error occurred while processing order <b>${orderId}</b>.\n\n${error} \n\n🤖 <b>#${code}</b> (${id})\n\n Please check your API Keys and Robot settings or contact support.",
         "status": "🤖 Robot <b>#${code}</b> is ${status} now!\n\n${message}"
     },
     "unknownError": "Unknown error",

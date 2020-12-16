@@ -995,9 +995,10 @@ export class ExwatcherBaseService extends BaseService {
             }
         } catch (error) {
             this.log.error(`Failed to save candles`, error);
-        }
-        if (!this.lightship.isServerShuttingDown()) {
-            this.candlesSaveTimer = setTimeout(this.handleCandlesToSave.bind(this), 1000);
+        } finally {
+            if (!this.lightship.isServerShuttingDown()) {
+                this.candlesSaveTimer = setTimeout(this.handleCandlesToSave.bind(this), 1000);
+            }
         }
     }
 }

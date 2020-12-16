@@ -40,22 +40,34 @@ function getUserExAccsMenu(ctx: any) {
 function getChooseAmountTypeMenu(ctx: any) {
     return Extra.HTML().markup((m: any) => {
         return m.inlineKeyboard([
-            [m.callbackButton(ctx.i18n.t("volumeType.assetStatic"), JSON.stringify({ a: "assetStatic" }), false)],
+            [
+                m.callbackButton(
+                    ctx.i18n.t("volumeType.assetStatic"),
+                    JSON.stringify({ a: "volumeType", p: "assetStatic" }),
+                    false
+                )
+            ],
             [
                 m.callbackButton(
                     ctx.i18n.t("volumeType.currencyDynamic"),
-                    JSON.stringify({ a: "currencyDynamic" }),
+                    JSON.stringify({ a: "volumeType", p: "currencyDynamic" }),
                     false
                 )
             ],
             [
                 m.callbackButton(
                     ctx.i18n.t("volumeType.assetDynamicDelta"),
-                    JSON.stringify({ a: "assetDynamicDelta" }),
+                    JSON.stringify({ a: "volumeType", p: "assetDynamicDelta" }),
                     false
                 )
             ],
-            [m.callbackButton(ctx.i18n.t("volumeType.balancePercent"), JSON.stringify({ a: "balancePercent" }), false)]
+            [
+                m.callbackButton(
+                    ctx.i18n.t("volumeType.balancePercent"),
+                    JSON.stringify({ a: "volumeType", p: "balancePercent" }),
+                    false
+                )
+            ]
         ]);
     });
 }
@@ -325,7 +337,8 @@ async function addUserRobotConfirm(ctx: any) {
                             }
                         }
                     `,
-                    params
+                    params,
+                    ctx
                 ));
             } catch (err) {
                 error = err.message;
@@ -368,7 +381,7 @@ async function addUserRobotConfirm(ctx: any) {
             );
             ctx.scene.state.silent = true;
             await ctx.scene.enter(TelegramScene.START_USER_ROBOT, {
-                selectedRobot: ctx.scene.state.selectedRobot,
+                robot: ctx.scene.state.robot,
                 prevState: ctx.scene.state.prevState
             });
         }
@@ -401,10 +414,7 @@ export function addUserRobotScene(service: BaseService) {
     scene.enter(addUserRobotEnter.bind(service));
     addBaseActions(scene, service, false);
     scene.action(/userExAcc/, addUserRobotSelectedAcc.bind(this));
-    scene.action(/assetStatic/, addUserRobotEnterVolume.bind(service));
-    scene.action(/currencyDynamic/, addUserRobotEnterVolume.bind(service));
-    scene.action(/assetDynamicDelta/, addUserRobotEnterVolume.bind(service));
-    scene.action(/balancePercent/, addUserRobotEnterVolume.bind(service));
+    scene.action(/volumeType/, addUserRobotEnterVolume.bind(service));
     scene.hears(match("keyboards.backKeyboard.back"), addUserRobotBack.bind(service));
     scene.command("back", addUserRobotBack.bind(service));
     scene.hears(/(.*?)/, addUserRobotConfirm.bind(service));

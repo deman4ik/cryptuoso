@@ -74,13 +74,13 @@ async function searchRobotsEnter(ctx: any) {
         else {
             ({ exchanges } = await this.gqlClient.request(
                 gql`
-                    query Exchanges($available: Int!) {
-                        exchanges(where: { available: { _gte: $available } }) {
+                    query Exchanges {
+                        exchanges {
                             code
                         }
                     }
                 `,
-                { available: ctx.session.user.available },
+                {},
                 ctx
             ));
             ctx.scene.state.exchanges = exchanges;
@@ -118,13 +118,9 @@ async function searchRobotsSelectAsset(ctx: any) {
             }[];
         } = await this.gqlClient.request(
             gql`
-                query AvailableAssets($available: Int!, $exchange: String!, $trading: Boolean!) {
+                query AvailableAssets($exchange: String!, $trading: Boolean!) {
                     assets: robots(
-                        where: {
-                            available: { _gte: $available }
-                            exchange: { _eq: $exchange }
-                            trading: { _eq: $trading }
-                        }
+                        where: { exchange: { _eq: $exchange }, trading: { _eq: $trading } }
                         distinct_on: [asset, currency]
                     ) {
                         asset
@@ -132,7 +128,7 @@ async function searchRobotsSelectAsset(ctx: any) {
                     }
                 }
             `,
-            { trading: true, exchange: ctx.scene.state.exchange, available: ctx.session.user.available },
+            { trading: true, exchange: ctx.scene.state.exchange },
             ctx
         );
 
@@ -166,16 +162,9 @@ async function searchRobotsSelectRobot(ctx: any) {
         const [asset, currency] = ctx.scene.state.selectedAsset.split("/");
         const { robots } = await this.gqlClient.request(
             gql`
-                query UserRobotsList(
-                    $userId: uuid!
-                    $available: Int!
-                    $exchange: String!
-                    $asset: String!
-                    $currency: String!
-                ) {
+                query UserRobotsList($userId: uuid!, $exchange: String!, $asset: String!, $currency: String!) {
                     robots(
                         where: {
-                            available: { _gte: $available }
                             exchange: { _eq: $exchange }
                             asset: { _eq: $asset }
                             currency: { _eq: $currency }
@@ -191,7 +180,6 @@ async function searchRobotsSelectRobot(ctx: any) {
             `,
             {
                 userId: ctx.session.user.id,
-                available: ctx.session.user.available,
                 exchange: ctx.scene.state.exchange,
                 asset,
                 currency

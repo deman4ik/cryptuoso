@@ -43,7 +43,8 @@ async function deleteUserRobotYes(ctx: any) {
                         }
                     }
                 `,
-                { id }
+                { id },
+                ctx
             ));
         } catch (err) {
             error = err.message;

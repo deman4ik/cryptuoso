@@ -60,16 +60,16 @@ async function robotSignalInfo(ctx: any) {
 
         let volumeText = "";
 
-        if (robot.userSignal) {
-            ({ volumeText } = getVolumeText(ctx, robot.settings.currentSettings, robot.asset));
+        if (robot.userSignal && robot.userSignal.settings) {
+            volumeText = getVolumeText(ctx, robot.userSignal.settings.currentSettings, robot.asset);
         } else {
-            ({ volumeText } = getVolumeText(ctx, robot.userSignal.settings.currentSettings, robot.asset));
+            volumeText = getVolumeText(ctx, robot.settings.currentSettings, robot.asset);
         }
 
         let profitText = "";
         let netProfit = null;
-        if (robot.userSignal) ({ netProfit } = robot.userSignal.stats);
-        else ({ netProfit } = robot.stats);
+        if (robot.userSignal && robot.userSignal.stats) ({ netProfit } = robot.userSignal.stats);
+        else if (robot.stats) ({ netProfit } = robot.stats);
 
         if (netProfit !== null && netProfit !== undefined) {
             profitText = ctx.i18n.t("robot.profit", {
@@ -99,7 +99,7 @@ async function robotSignalInfo(ctx: any) {
         if (signalsText !== "") signalsText = ctx.i18n.t("robot.signals", { signals: signalsText });
 
         const updatedAtText = ctx.i18n.t("robot.lastInfoUpdatedAt", {
-            lastInfoUpdatedAt: ctx.scene.state.lastInfoUpdatedAt
+            lastInfoUpdatedAt: ctx.scene.state.robot.lastInfoUpdatedAt
         });
 
         const message = `${ctx.i18n.t("robot.info", {
@@ -141,7 +141,7 @@ async function robotSignalPublicStats(ctx: any) {
 
         let message;
 
-        if (robot.stats.tradesCount)
+        if (robot.stats && robot.stats.tradesCount)
             message = getStatisticsText(ctx, robot.stats, robot.settings.currentSettings, robot.asset);
         else message = ctx.i18n.t("robot.statsNone");
         return ctx.editMessageText(
@@ -176,7 +176,7 @@ async function robotSignalMyStats(ctx: any) {
             lastInfoUpdatedAt: robot.lastInfoUpdatedAt
         });
         let message;
-        if (robot.userSignal && robot.userSignal.stats.tradesCount)
+        if (robot.userSignal && robot.userSignal.stats && robot.userSignal.stats.tradesCount)
             message = getStatisticsText(
                 ctx,
                 robot.userSignal.stats,
@@ -260,7 +260,7 @@ async function robotSignalPositions(ctx: any) {
             });
         }
         const updatedAtText = ctx.i18n.t("robot.lastInfoUpdatedAt", {
-            lastInfoUpdatedAt: ctx.scene.state.lastInfoUpdatedAt
+            lastInfoUpdatedAt: ctx.scene.state.robot.lastInfoUpdatedAt
         });
         const message =
             openPositionsText !== "" || closedPositionsText !== ""
@@ -284,7 +284,7 @@ async function robotSignalSubscribe(ctx: any) {
     try {
         ctx.scene.state.silent = true;
         await ctx.scene.enter(TelegramScene.SUBSCRIBE_SIGNALS, {
-            selectedRobot: ctx.scene.state.robot,
+            robot: ctx.scene.state.robot,
             prevState: {
                 ...ctx.scene.state,
                 page: null,
@@ -304,7 +304,7 @@ async function robotSignalEdit(ctx: any) {
     try {
         ctx.scene.state.silent = true;
         await ctx.scene.enter(TelegramScene.EDIT_SIGNALS, {
-            selectedRobot: ctx.scene.state.robot,
+            robot: ctx.scene.state.robot,
             prevState: {
                 ...ctx.scene.state,
                 page: null,
@@ -324,7 +324,7 @@ async function robotSignalUnsubscribe(ctx: any) {
     try {
         ctx.scene.state.silent = true;
         await ctx.scene.enter(TelegramScene.UNSUBSCRIBE_SIGNALS, {
-            selectedRobot: ctx.scene.state.robot,
+            robot: ctx.scene.state.robot,
             prevState: {
                 ...ctx.scene.state,
                 page: null,

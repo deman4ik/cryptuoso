@@ -39,16 +39,16 @@ export function getVolumeText(
     settings: RobotSettings | UserSignalSettings | UserRobotSettings,
     asset: string
 ) {
-    return ctx.i18n.t("robot.volume", {
-        volume: getVolumeValueText(settings, asset),
-        type: ctx.i18n.t(`volumeType.${settings.volumeType}`)
-    });
+    return ctx.i18n.t("robot.volume", getVolumeValueText(ctx, settings, asset));
 }
 
-export function getVolumeValueText(settings: RobotSettings | UserSignalSettings | UserRobotSettings, asset: string) {
+export function getVolumeValueText(
+    ctx: any,
+    settings: RobotSettings | UserSignalSettings | UserRobotSettings,
+    asset: string
+) {
     const { volumeType } = settings;
     let volumeValue;
-    let type;
     if (volumeType === VolumeSettingsType.assetStatic) {
         const { volume } = settings as AssetStaticSettings;
         volumeValue = `${volume} ${asset}`;
@@ -62,7 +62,7 @@ export function getVolumeValueText(settings: RobotSettings | UserSignalSettings 
         const { balancePercent } = settings as BalancePercentSettings;
         volumeValue = `${balancePercent} %`;
     }
-    return { volume: volumeValue, type };
+    return { volume: volumeValue, type: ctx.i18n.t(`volumeType.${settings.volumeType}`) };
 }
 
 export function getVolumeValue(settings: RobotSettings | UserSignalSettings | UserRobotSettings) {

@@ -95,16 +95,16 @@ async function userRobotInfo(ctx: any) {
 
         let volumeText = "";
 
-        if (userRobot) {
-            ({ volumeText } = getVolumeText(ctx, robot.settings.currentSettings, robot.asset));
+        if (userRobot && userRobot.settings) {
+            volumeText = getVolumeText(ctx, userRobot.settings.currentSettings, robot.asset);
         } else {
-            ({ volumeText } = getVolumeText(ctx, robot.userRobot.settings.currentSettings, robot.asset));
+            volumeText = getVolumeText(ctx, robot.settings.currentSettings, robot.asset);
         }
 
         let profitText = "";
         let netProfit = null;
-        if (userRobot) ({ netProfit } = userRobot.stats);
-        else ({ netProfit } = robot.stats);
+        if (userRobot && userRobot.stats) ({ netProfit } = userRobot.stats);
+        else if (robot.stats) ({ netProfit } = robot.stats);
 
         if (netProfit !== null && netProfit !== undefined) {
             profitText = ctx.i18n.t("robot.profit", {
@@ -113,7 +113,7 @@ async function userRobotInfo(ctx: any) {
         }
 
         const updatedAtText = ctx.i18n.t("robot.lastInfoUpdatedAt", {
-            lastInfoUpdatedAt: ctx.scene.state.lastInfoUpdatedAt
+            lastInfoUpdatedAt: ctx.scene.state.robot.lastInfoUpdatedAt
         });
 
         const message = `${ctx.i18n.t("robot.name", {
@@ -158,7 +158,7 @@ async function userRobotPublicStats(ctx: any) {
 
         let message;
 
-        if (robot.stats.tradesCount)
+        if (robot.stats && robot.stats.tradesCount)
             message = getStatisticsText(ctx, robot.stats, robot.settings.currentSettings, robot.asset);
         else message = ctx.i18n.t("robot.statsNone");
 
@@ -197,7 +197,7 @@ async function userRobotMyStats(ctx: any) {
         });
 
         let message;
-        if (userRobot && userRobot.stats.tradesCount)
+        if (userRobot && userRobot.stats && userRobot.stats.tradesCount)
             message = getStatisticsText(ctx, userRobot.stats, userRobot.settings.currentSettings, robot.asset);
         else message = ctx.i18n.t("robot.statsNone");
         return ctx.editMessageText(
@@ -219,8 +219,8 @@ async function userRobotPositions(ctx: any) {
     try {
         if (ctx.scene.state.page && ctx.scene.state.page === "pos") {
             if (
-                ctx.scene.state.lastInfoUpdatedAt &&
-                dayjs.utc().diff(dayjs.utc(ctx.scene.state.lastInfoUpdatedAt), "second") < 5
+                ctx.scene.state.robot &&
+                dayjs.utc().diff(dayjs.utc(ctx.scene.state.robot.lastInfoUpdatedAt), "second") < 5
             )
                 return;
             const robot: Robot = await this.getSignalRobot(ctx);
@@ -267,7 +267,7 @@ async function userRobotPositions(ctx: any) {
         }
 
         const updatedAtText = ctx.i18n.t("robot.lastInfoUpdatedAt", {
-            lastInfoUpdatedAt: ctx.scene.state.lastInfoUpdatedAt
+            lastInfoUpdatedAt: ctx.scene.state.robot.lastInfoUpdatedAt
         });
 
         const message =
@@ -293,7 +293,7 @@ async function userRobotAdd(ctx: any) {
     try {
         ctx.scene.state.silent = true;
         await ctx.scene.enter(TelegramScene.ADD_USER_ROBOT, {
-            selectedRobot: ctx.scene.state.selectedRobot,
+            robot: ctx.scene.state.robot,
             prevState: { ...ctx.scene.state, silent: false }
         });
     } catch (e) {
@@ -308,7 +308,7 @@ async function userRobotDelete(ctx: any) {
     try {
         ctx.scene.state.silent = true;
         await ctx.scene.enter(TelegramScene.DELETE_USER_ROBOT, {
-            selectedRobot: ctx.scene.state.selectedRobot,
+            robot: ctx.scene.state.robot,
             prevState: {
                 ...ctx.scene.state,
                 silent: false,
@@ -330,7 +330,7 @@ async function userRobotEdit(ctx: any) {
         ctx.scene.state.silent = true;
 
         await ctx.scene.enter(TelegramScene.EDIT_USER_ROBOT, {
-            selectedRobot: ctx.scene.state.selectedRobot,
+            robot: ctx.scene.state.robot,
             prevState: {
                 ...ctx.scene.state,
                 silent: false,
@@ -351,7 +351,7 @@ async function userRobotStart(ctx: any) {
     try {
         ctx.scene.state.silent = true;
         await ctx.scene.enter(TelegramScene.START_USER_ROBOT, {
-            selectedRobot: ctx.scene.state.selectedRobot,
+            robot: ctx.scene.state.robot,
             prevState: {
                 ...ctx.scene.state,
                 silent: false,
@@ -372,7 +372,7 @@ async function userRobotStop(ctx: any) {
     try {
         ctx.scene.state.silent = true;
         await ctx.scene.enter(TelegramScene.STOP_USER_ROBOT, {
-            selectedRobot: ctx.scene.state.selectedRobot,
+            robot: ctx.scene.state.robot,
             prevState: {
                 ...ctx.scene.state,
                 silent: false,

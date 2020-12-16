@@ -98,7 +98,8 @@ async function addUserExAccSubmited(ctx: any) {
                 {
                     exchange,
                     keys: { key, secret }
-                }
+                },
+                ctx
             ));
         } catch (err) {
             error = err.message;

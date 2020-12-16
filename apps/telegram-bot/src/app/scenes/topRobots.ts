@@ -50,13 +50,13 @@ async function topRobotsEnter(ctx: any) {
         else {
             ({ exchanges } = await this.gqlClient.request(
                 gql`
-                    query Exchanges($available: Int!) {
-                        exchanges(where: { available: { _gte: $available } }) {
+                    query Exchanges {
+                        exchanges {
                             code
                         }
                     }
                 `,
-                { available: ctx.session.user.available },
+                {},
                 ctx
             ));
             ctx.scene.state.exchanges = exchanges;
@@ -97,9 +97,9 @@ async function topRobotsSelectRobot(ctx: any) {
             }[];
         } = await this.gqlClient.request(
             gql`
-                query TopUserRobotsList($userId: uuid!, $available: Int!, $exchange: String!) {
+                query TopUserRobotsList($userId: uuid!, $exchange: String!) {
                     robots(
-                        where: { available: { _gte: $available }, exchange: { _eq: $exchange }, trading: { _eq: true } }
+                        where: { a exchange: { _eq: $exchange }, trading: { _eq: true } }
                         order_by: { stats: { recovery_factor: desc_nulls_last } }
                         limit: 10
                     ) {
@@ -116,7 +116,6 @@ async function topRobotsSelectRobot(ctx: any) {
             `,
             {
                 userId: ctx.session.user.id,
-                available: ctx.session.user.available,
                 exchange: ctx.scene.state.exchange
             },
             ctx

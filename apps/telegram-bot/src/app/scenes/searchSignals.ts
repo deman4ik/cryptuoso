@@ -107,13 +107,9 @@ async function searchSignalsSelectAsset(ctx: any) {
             }[];
         } = await this.gqlClient.request(
             gql`
-                query AvailableAssets($available: Int!, $exchange: String!, $signals: Boolean!) {
+                query AvailableAssets($exchange: String!, $signals: Boolean!) {
                     assets: robots(
-                        where: {
-                            available: { _gte: $available }
-                            exchange: { _eq: $exchange }
-                            signals: { _eq: $signals }
-                        }
+                        where: { exchange: { _eq: $exchange }, signals: { _eq: $signals } }
                         distinct_on: [asset, currency]
                     ) {
                         asset
@@ -121,7 +117,7 @@ async function searchSignalsSelectAsset(ctx: any) {
                     }
                 }
             `,
-            { signals: true, exchange: ctx.scene.state.exchange, available: ctx.session.user.available },
+            { signals: true, exchange: ctx.scene.state.exchange },
             ctx
         );
 
@@ -155,16 +151,9 @@ async function searchSignalsSelectRobot(ctx: any) {
         const [asset, currency] = ctx.scene.state.selectedAsset.split("/");
         const { robots } = await this.gqlClient.request(
             gql`
-                query SignalsRobotsList(
-                    $userId: uuid!
-                    $available: Int!
-                    $exchange: String!
-                    $asset: String!
-                    $currency: String!
-                ) {
+                query SignalsRobotsList($userId: uuid!, $exchange: String!, $asset: String!, $currency: String!) {
                     robots(
                         where: {
-                            available: { _gte: $available }
                             exchange: { _eq: $exchange }
                             asset: { _eq: $asset }
                             currency: { _eq: $currency }
@@ -180,7 +169,6 @@ async function searchSignalsSelectRobot(ctx: any) {
             `,
             {
                 userId: ctx.session.user.id,
-                available: ctx.session.user.available,
                 exchange: ctx.scene.state.exchange,
                 asset,
                 currency
