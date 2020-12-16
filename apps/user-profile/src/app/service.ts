@@ -646,7 +646,7 @@ export default class UserProfileService extends HTTPService {
             `);
         }
 
-        return name;
+        return exchangeAcc.id;
     }
 
     async userExchangeAccChangeName(
