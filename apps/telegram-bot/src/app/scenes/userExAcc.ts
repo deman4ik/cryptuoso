@@ -26,6 +26,9 @@ function getUserExAccMenu(ctx: any) {
 
 async function userExAccEnter(ctx: any) {
     try {
+        if (ctx.scene.state.reload) {
+            ctx.scene.state.userExAcc = this.getUserExchangeAcc(ctx);
+        }
         const { name, status }: UserExchangeAccountInfo = ctx.scene.state.userExAcc;
 
         if (ctx.scene.state.edit) {
@@ -78,7 +81,7 @@ async function userExAccDelete(ctx: any) {
         let result;
         try {
             ({
-                setNotificationSettings: { result }
+                userExchangeAccDelete: { result }
             } = await this.gqlClient.request(
                 gql`
                     mutation UserExchangeAccDelete($id: uuid!) {

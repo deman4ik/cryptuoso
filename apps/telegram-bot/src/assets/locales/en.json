@@ -58,7 +58,8 @@
         "searchSignals": {
             "selectExchange": "🔎 Searching Signal Robots\n\nSelect available <b>exchange</b>",
             "selectAsset": "🔎 Searching Signal Robots\n\nSelect available  <b>${exchange}</b> <b>cryptocurrency</b> pair",
-            "selectRobot": "🔎 Searching Signal Robots\n\nSelect available <b>${exchange}</b> <b>${asset}</b> robot"
+            "selectRobot": "🔎 Searching Signal Robots\n\nSelect available <b>${exchange}</b> <b>${asset}</b> robot",
+            "none": "🔎 Searching Signal Robots\n\nYou subscribed to all <b>${exchange}</b> <b>${asset}</b> robots.\nYou can find them in 🚥 My Signals section."
         },
         "topSignals": {
             "selectExchange": "🏆 Top Performance Signal Robots\n\nSelect available <b>exchange</b>",
@@ -114,7 +115,8 @@
         "searchRobots": {
             "selectExchange": "🔎 Searching Robots\n\nSelect available <b>exchange</b>",
             "selectAsset": "🔎 Searching Robots\n\nSelect available  <b>${exchange}</b> <b>cryptocurrency</b> pair",
-            "selectRobot": "🔎 Searching Robots\n\nSelect available <b>${exchange}</b> <b>${asset}</b> robot"
+            "selectRobot": "🔎 Searching Robots\n\nSelect available <b>${exchange}</b> <b>${asset}</b> robot",
+            "none": "🔎 Searching Robots\n\nYou added all <b>${exchange}</b> <b>${asset}</b> robots.\nYou can find them in 🤖 My Robots section."
         },
         "topRobots": {
             "selectExchange": "🏆 Top Performance Robots\n\nSelect available <b>exchange</b>",
@@ -181,15 +183,16 @@
         "addUserExAcc": {
             "chooseExchange": "🔑 Adding New Exchange API Key\n\nYou can learn how to configure keys in our <a href='https://support.cryptuoso.com/exchange-accounts'>docs</a>.\n\n<b>Choose one of available exchanges:</b>",
             "enterAPIKey": "🔑 Adding New Exchange API Key\n\nYou can learn how to configure keys in our <a href='https://support.cryptuoso.com/exchange-accounts'>docs</a>.\n\nEnter your ${exchange} <b>API KEY</b>",
-            "enterAPISecret": "🔑 Adding New Exchange API Key\n\nYou can learn how to configure keys in our <a href='https://support.cryptuoso.com/exchange-accounts'>docs</a>.\n\nEnter your ${exchange} <b>API Key Secret (Private Key)</b>",
+            "enterAPISecret": "🔑 Adding New Exchange API Key\n\nEnter your ${exchange} <b>API Key Secret (Private Key)</b>",
             "check": "🔑 Adding New Exchange API Key\n\n🌀 Checking your ${exchange} API Key...\n\n⏳ Please wait...",
-            "success": "🔑 New ${name} API Key succesfully added!",
+            "success": "🔑 New ${exchange} API Key succesfully added!",
             "failed": "❌ Failed to add new ${exchange} API Key.\n\n<b>${error}</b>\n\nPlease try again!\n\nYou can learn how to configure keys in our <a href='https://support.cryptuoso.com/exchange-accounts'>docs</a>."
         },
         "editUserExAcc": {
             "enterAPIKey": "🔑 Editing ${name} API Key\n\n<b>Enter your ${exchange} API Key</b>",
             "enterAPISecret": "🔑 Editing ${name} API Key\n\n<b>Enter your ${exchange} API Secret</b>",
-            "success": "🔑 ${name} API Key succesfully edited!",
+            "check": "🔑 Adding New Exchange API Key\n\n🌀 Checking your ${exchange} API Key...\n\n⏳ Please wait...",
+            "success": "🔑 ${exchange} API Key succesfully edited!",
             "failed": "❌ Failed to edit ${name} API Key.\n\n<b>${error}</b>\n\nPlease try again!"
         },
         "userExAcc": {

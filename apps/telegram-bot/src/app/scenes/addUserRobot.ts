@@ -140,7 +140,7 @@ async function addUserRobotSelectedAcc(ctx: any) {
         } = ctx.scene.state;
         if (ctx.scene.state.edit) {
             ctx.scene.state.edit = false;
-            return ctx.reply(
+            return ctx.editMessageText(
                 ctx.i18n.t("scenes.addUserRobot.chooseType", {
                     code: robot.code,
                     asset: robot.asset,
@@ -150,13 +150,13 @@ async function addUserRobotSelectedAcc(ctx: any) {
             );
         }
 
-        return ctx.editMessageText(
+        return ctx.reply(
             ctx.i18n.t("scenes.addUserRobot.chooseType", {
                 code: robot.code,
                 asset: robot.asset,
                 currency: robot.currency
             }),
-            Extra.HTML()
+            getChooseAmountTypeMenu(ctx)
         );
     } catch (e) {
         this.log.error(e);
@@ -356,7 +356,7 @@ async function addUserRobotConfirm(ctx: any) {
         }
 
         if (result) {
-            const updatedRobot: Robot = await this.getSignalRobot(ctx);
+            const updatedRobot: Robot = await this.getUserRobot(ctx);
             ctx.scene.state.robot = updatedRobot;
 
             let asset;

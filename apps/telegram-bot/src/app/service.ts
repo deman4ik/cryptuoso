@@ -701,6 +701,7 @@ export default class TelegramBotService extends BaseService {
                                 userExAccId: id
                                 userExAccName: name
                             }
+                            status
                             startedAt: started_at
                             stoppedAt: stopped_at
                             settings: user_robot_settings {
@@ -833,7 +834,7 @@ export default class TelegramBotService extends BaseService {
                     amounts: {
                         availableBalancePercent: number;
                     };
-                };
+                }[];
             },
             { userId: string; userExAccId: string }
         >(
@@ -849,11 +850,40 @@ export default class TelegramBotService extends BaseService {
             `,
             {
                 userId: ctx.session.user.id,
-                userExAccId: ctx.scene.state.userExAccId
+                userExAccId: ctx.scene.state.userExAccId || ctx.scene.state.robot.userRobot.userExAcc.userExAccId
             },
             ctx
         );
-        return { balance: userExAcc.balance, availableBalancePercent: userExAcc.amounts.availableBalancePercent };
+        return {
+            balance: userExAcc[0]?.balance,
+            availableBalancePercent: userExAcc[0]?.amounts.availableBalancePercent
+        };
+    }
+
+    async getUserExchangeAcc(ctx: any): Promise<UserExchangeAccountInfo> {
+        await ctx.replyWithChatAction("typing");
+        const { userExAcc } = await this.gqlClient.request<
+            {
+                userExAcc: UserExchangeAccountInfo;
+            },
+            { userExAcId: string }
+        >(
+            gql`
+                query UserExchangeAccs($userId: uuid!) {
+                    userExAcc: user_exchange_accs_by_pk(id: $userExAcId) {
+                        id
+                        exchange
+                        name
+                        status
+                    }
+                }
+            `,
+            {
+                userExAcId: ctx.scene.state.userExAcc.id
+            },
+            ctx
+        );
+        return userExAcc;
     }
 
     async getUserExchangeAccs(ctx: any): Promise<UserExchangeAccountInfo[]> {

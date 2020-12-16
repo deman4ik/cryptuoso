@@ -34,7 +34,7 @@ async function stopUserRobotYes(ctx: any) {
         let result;
         try {
             ({
-                userRobotStart: { result }
+                userRobotStop: { result }
             } = await this.gqlClient.request(
                 gql`
                     mutation UserRobotStop($id: uuid!) {

@@ -22,7 +22,7 @@ function getUserRobotMenu(ctx: any) {
             [m.callbackButton(ctx.i18n.t("robot.menuInfo"), JSON.stringify({ a: "info" }), false)],
             [m.callbackButton(ctx.i18n.t("robot.menuMyStats"), JSON.stringify({ a: "myStat" }), !added)],
             [m.callbackButton(ctx.i18n.t("robot.menuPublStats"), JSON.stringify({ a: "pStat" }), false)],
-            [m.callbackButton(ctx.i18n.t("robot.menuPositions"), JSON.stringify({ a: "pos" }), !added)],
+            [m.callbackButton(ctx.i18n.t("robot.menuPositions"), JSON.stringify({ a: "pos" }), false)],
             [m.callbackButton(ctx.i18n.t("scenes.userRobot.edit"), JSON.stringify({ a: "edit" }), !added)],
             [
                 m.callbackButton(
@@ -62,7 +62,7 @@ async function userRobotInfo(ctx: any) {
         }
         ctx.scene.state.page = "info";
 
-        const robot: Robot = await this.getSignalRobot(ctx);
+        const robot: Robot = await this.getUserRobot(ctx);
         ctx.scene.state.robot = robot;
 
         const { userRobot } = robot;
@@ -145,7 +145,7 @@ async function userRobotPublicStats(ctx: any) {
             )
                 return;
 
-            const robot: Robot = await this.getSignalRobot(ctx);
+            const robot: Robot = await this.getUserRobot(ctx);
             ctx.scene.state.robot = robot;
         }
 
@@ -187,7 +187,7 @@ async function userRobotMyStats(ctx: any) {
                 dayjs.utc().diff(dayjs.utc(ctx.scene.state.robot.lastInfoUpdatedAt), "second") < 5
             )
                 return;
-            const robot: Robot = await this.getSignalRobot(ctx);
+            const robot: Robot = await this.getUserRobot(ctx);
             ctx.scene.state.robot = robot;
         }
         ctx.scene.state.page = "myStats";
@@ -225,14 +225,22 @@ async function userRobotPositions(ctx: any) {
                 dayjs.utc().diff(dayjs.utc(ctx.scene.state.robot.lastInfoUpdatedAt), "second") < 5
             )
                 return;
-            const robot: Robot = await this.getSignalRobot(ctx);
+            const robot: Robot = await this.getUserRobot(ctx);
             ctx.scene.state.robot = robot;
         }
         ctx.scene.state.page = "pos";
         const { robot } = ctx.scene.state;
         const { userRobot } = robot;
 
-        const { openPositions, closedPositions } = userRobot;
+        const subscribed = !!userRobot;
+        let openPositions: OpenPosition[] = [];
+        let closedPositions: ClosedPosition[] = [];
+
+        if (subscribed) {
+            ({ openPositions, closedPositions } = userRobot);
+        } else {
+            ({ openPositions, closedPositions } = robot);
+        }
 
         let openPositionsText = "";
         if (openPositions && Array.isArray(openPositions) && openPositions.length > 0) {
@@ -419,7 +427,8 @@ async function userRobotBackEdit(ctx: any) {
         ctx.scene.state.silent = true;
         await ctx.scene.enter(ctx.scene.state.prevScene, {
             ...ctx.scene.state.prevState,
-            edit: true
+            edit: true,
+            reload: true
         });
     } catch (e) {
         this.log.error(e);

@@ -140,7 +140,14 @@ async function searchSignalsSelectRobot(ctx: any) {
 
         ctx.scene.state.robots = robots;
         if (!ctx.scene.state.robots || !Array.isArray(ctx.scene.state.robots) || ctx.scene.state.robots.length === 0) {
-            throw new Error("Failed to load signal robots");
+            await ctx.reply(
+                ctx.i18n.t("scenes.searchSignals.none", {
+                    exchange: formatExchange(ctx.scene.state.exchange),
+                    asset: ctx.scene.state.selectedAsset
+                }),
+                Extra.HTML()
+            );
+            return searchSignalsBack.call(this, ctx);
         }
 
         return ctx.editMessageText(

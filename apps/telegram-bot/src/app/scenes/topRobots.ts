@@ -85,7 +85,7 @@ async function topRobotsSelectRobot(ctx: any) {
             gql`
                 query TopUserRobotsList($userId: uuid!, $exchange: String!) {
                     robots(
-                        where: { a exchange: { _eq: $exchange }, trading: { _eq: true } }
+                        where: { exchange: { _eq: $exchange }, trading: { _eq: true } }
                         order_by: { stats: { recovery_factor: desc_nulls_last } }
                         limit: 10
                     ) {

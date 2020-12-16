@@ -75,7 +75,7 @@ async function editUserRobotEnter(ctx: any) {
                 asset: robot.asset,
                 currency: robot.currency
             }),
-            Extra.HTML()
+            getChooseAmountTypeMenu(ctx)
         );
     } catch (e) {
         this.log.error(e);
@@ -135,8 +135,12 @@ async function editUserRobotEnterVolume(ctx: any) {
         } else if (volumeType === VolumeSettingsType.balancePercent) {
             asset = "%";
             const minPercent = Math.ceil((amountUSD / balance) * 100);
+            let availablePercent = availableBalancePercent;
+            if (robot.userRobot.settings.currentSettings.volumeType === VolumeSettingsType.balancePercent) {
+                availablePercent = availableBalancePercent + robot.userRobot.settings.currentSettings.balancePercent;
+            }
             minVolumeText = `${ctx.i18n.t("scenes.editUserRobot.avPerc", {
-                volume: availableBalancePercent
+                volume: availablePercent
             })}${ctx.i18n.t("scenes.editUserRobot.minVal", { minVolume: minPercent, asset })}`;
         } else throw new BaseError("Unknown amount type", { volumeType });
         if (ctx.scene.state.edit) {
@@ -205,7 +209,12 @@ async function editUserRobotConfirm(ctx: any) {
                 checkCurrencyDynamic(volume, min.amountUSD, max.amountUSD);
             } else if (volumeType === VolumeSettingsType.balancePercent) {
                 const volumeUSD = (volume / 100) * balance;
-                checkBalancePercent(volume, availableBalancePercent, volumeUSD, min.amountUSD, max.amountUSD);
+                let availablePercent = availableBalancePercent;
+                if (robot.userRobot.settings.currentSettings.volumeType === VolumeSettingsType.balancePercent) {
+                    availablePercent =
+                        availableBalancePercent + robot.userRobot.settings.currentSettings.balancePercent;
+                }
+                checkBalancePercent(volume, availablePercent, volumeUSD, min.amountUSD, max.amountUSD);
             } else throw new BaseError("Unknown amount type", { volumeType });
         } catch (e) {
             error = e.message;

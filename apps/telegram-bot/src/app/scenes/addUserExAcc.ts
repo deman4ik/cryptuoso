@@ -115,7 +115,18 @@ async function addUserExAccSubmited(ctx: any) {
         }
 
         if (result) {
-            await ctx.reply(ctx.i18n.t("scenes.addUserExAcc.success", { name: result }), Extra.HTML());
+            await ctx.reply(
+                ctx.i18n.t("scenes.addUserExAcc.success", { exchange: formatExchange(exchange) }),
+                Extra.HTML()
+            );
+            if (ctx.scene.state.prevScene === TelegramScene.ADD_USER_ROBOT) {
+                return ctx.scene.enter(ctx.scene.state.prevScene, {
+                    ...ctx.scene.state.prevState,
+                    userExAccId: result,
+                    edit: false,
+                    reload: true
+                });
+            }
             await addUserExAccBack.call(this, ctx);
         }
     } catch (e) {

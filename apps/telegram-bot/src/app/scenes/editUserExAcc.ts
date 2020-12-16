@@ -5,6 +5,7 @@ import { addBaseActions } from "./default";
 import { match } from "@edjopato/telegraf-i18n";
 import { gql } from "@cryptuoso/graphql-client";
 import { UserExchangeAccountInfo } from "@cryptuoso/user-state";
+import { formatExchange } from "@cryptuoso/helpers";
 
 async function editUserExAccEnter(ctx: any) {
     try {
@@ -12,11 +13,14 @@ async function editUserExAccEnter(ctx: any) {
         ctx.scene.state.stage = "key";
         if (ctx.scene.state.edit) {
             return ctx.editMessageText(
-                ctx.i18n.t("scenes.editUserExAcc.enterAPIKey", { name, exchange }),
+                ctx.i18n.t("scenes.editUserExAcc.enterAPIKey", { name, exchange: formatExchange(exchange) }),
                 Extra.HTML()
             );
         }
-        return ctx.reply(ctx.i18n.t("scenes.editUserExAcc.enterAPIKey", { name, exchange }), Extra.HTML());
+        return ctx.reply(
+            ctx.i18n.t("scenes.editUserExAcc.enterAPIKey", { name, exchange: formatExchange(exchange) }),
+            Extra.HTML()
+        );
     } catch (e) {
         this.log.error(e);
         await ctx.reply(ctx.i18n.t("failed"));
@@ -31,14 +35,17 @@ async function editUserExAccSubmited(ctx: any) {
         if (ctx.scene.state.stage === "key") {
             ctx.scene.state.key = ctx.message.text;
             ctx.scene.state.stage = "secret";
-            return ctx.reply(ctx.i18n.t("scenes.editUserExAcc.enterAPISecret", { name, exchange }), Extra.HTML());
+            return ctx.reply(
+                ctx.i18n.t("scenes.editUserExAcc.enterAPISecret", { name, exchange: formatExchange(exchange) }),
+                Extra.HTML()
+            );
         } else if (ctx.scene.state.stage === "secret") {
             ctx.scene.state.secret = ctx.message.text;
         } else {
             await editUserExAccEnter.call(this, ctx);
         }
 
-        await ctx.reply(ctx.i18n.t("scenes.editUserExAcc.check", { exchange }), Extra.HTML());
+        await ctx.reply(ctx.i18n.t("scenes.editUserExAcc.check", { exchange: formatExchange(exchange) }), Extra.HTML());
 
         const {
             key,
@@ -87,7 +94,10 @@ async function editUserExAccSubmited(ctx: any) {
         }
 
         if (result) {
-            await ctx.reply(ctx.i18n.t("scenes.editUserExAcc.success", { name: result }), Extra.HTML());
+            await ctx.reply(
+                ctx.i18n.t("scenes.editUserExAcc.success", { excahnge: formatExchange(exchange) }),
+                Extra.HTML()
+            );
             await editUserExAccBack.call(this, ctx);
         }
     } catch (e) {

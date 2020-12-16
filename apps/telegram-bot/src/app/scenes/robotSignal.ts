@@ -372,7 +372,8 @@ async function robotSignalBackEdit(ctx: any) {
         ctx.scene.state.silent = true;
         await ctx.scene.enter(ctx.scene.state.prevScene, {
             ...ctx.scene.state.prevState,
-            edit: true
+            edit: true,
+            reload: true
         });
     } catch (e) {
         this.log.error(e);
