@@ -109,18 +109,13 @@ async function editUserRobotEnterVolume(ctx: any) {
                         min: { amount, amountUSD }
                     }
                 }
-            },
-            amounts: { balance, availableBalancePercent }
+            }
         }: {
             robot: Robot;
             volumeType: VolumeSettingsType;
             market: {
                 limits: UserMarketState["limits"];
                 precision: UserMarketState["precision"];
-            };
-            amounts: {
-                balance: number;
-                availableBalancePercent: number;
             };
         } = ctx.scene.state;
 
@@ -133,6 +128,14 @@ async function editUserRobotEnterVolume(ctx: any) {
             asset = robot.currency;
             minVolumeText = ctx.i18n.t("scenes.editUserRobot.minVal", { minVolume: amountUSD, asset });
         } else if (volumeType === VolumeSettingsType.balancePercent) {
+            const {
+                amounts: { balance, availableBalancePercent }
+            }: {
+                amounts: {
+                    balance: number;
+                    availableBalancePercent: number;
+                };
+            } = ctx.scene.state;
             asset = "%";
             const minPercent = Math.ceil((amountUSD / balance) * 100);
             let availablePercent = availableBalancePercent;
@@ -179,18 +182,13 @@ async function editUserRobotConfirm(ctx: any) {
                 limits: {
                     userRobot: { min, max }
                 }
-            },
-            amounts: { balance, availableBalancePercent }
+            }
         }: {
             robot: Robot;
             volumeType: VolumeSettingsType;
             market: {
                 limits: UserMarketState["limits"];
                 precision: UserMarketState["precision"];
-            };
-            amounts: {
-                balance: number;
-                availableBalancePercent: number;
             };
         } = ctx.scene.state;
 
@@ -208,6 +206,14 @@ async function editUserRobotConfirm(ctx: any) {
             } else if (volumeType === VolumeSettingsType.currencyDynamic) {
                 checkCurrencyDynamic(volume, min.amountUSD, max.amountUSD);
             } else if (volumeType === VolumeSettingsType.balancePercent) {
+                const {
+                    amounts: { balance, availableBalancePercent }
+                }: {
+                    amounts: {
+                        balance: number;
+                        availableBalancePercent: number;
+                    };
+                } = ctx.scene.state;
                 const volumeUSD = (volume / 100) * balance;
                 let availablePercent = availableBalancePercent;
                 if (robot.userRobot.settings.currentSettings.volumeType === VolumeSettingsType.balancePercent) {

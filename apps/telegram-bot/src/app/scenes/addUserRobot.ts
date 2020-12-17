@@ -190,18 +190,13 @@ async function addUserRobotEnterVolume(ctx: any) {
                         min: { amount, amountUSD }
                     }
                 }
-            },
-            amounts: { balance, availableBalancePercent }
+            }
         }: {
             robot: Robot;
             volumeType: VolumeSettingsType;
             market: {
                 limits: UserMarketState["limits"];
                 precision: UserMarketState["precision"];
-            };
-            amounts: {
-                balance: number;
-                availableBalancePercent: number;
             };
         } = ctx.scene.state;
 
@@ -214,6 +209,14 @@ async function addUserRobotEnterVolume(ctx: any) {
             asset = robot.currency;
             minVolumeText = ctx.i18n.t("scenes.addUserRobot.minVal", { minVolume: amountUSD, asset });
         } else if (volumeType === VolumeSettingsType.balancePercent) {
+            const {
+                amounts: { balance, availableBalancePercent }
+            }: {
+                amounts: {
+                    balance: number;
+                    availableBalancePercent: number;
+                };
+            } = ctx.scene.state;
             asset = "%";
             const minPercent = Math.ceil((amountUSD / balance) * 100);
             minVolumeText = `${ctx.i18n.t("scenes.addUserRobot.avPerc", {
@@ -259,7 +262,7 @@ async function addUserRobotConfirm(ctx: any) {
                     userRobot: { min, max }
                 }
             },
-            amounts: { balance, availableBalancePercent },
+
             userExAccId
         }: {
             robot: Robot;
@@ -268,10 +271,7 @@ async function addUserRobotConfirm(ctx: any) {
                 limits: UserMarketState["limits"];
                 precision: UserMarketState["precision"];
             };
-            amounts: {
-                balance: number;
-                availableBalancePercent: number;
-            };
+
             userExAccId: string;
         } = ctx.scene.state;
 
@@ -285,6 +285,14 @@ async function addUserRobotConfirm(ctx: any) {
             } else if (volumeType === VolumeSettingsType.currencyDynamic) {
                 checkCurrencyDynamic(volume, min.amountUSD, max.amountUSD);
             } else if (volumeType === VolumeSettingsType.balancePercent) {
+                const {
+                    amounts: { balance, availableBalancePercent }
+                }: {
+                    amounts: {
+                        balance: number;
+                        availableBalancePercent: number;
+                    };
+                } = ctx.scene.state;
                 const volumeUSD = (volume / 100) * balance;
                 checkBalancePercent(volume, availableBalancePercent, volumeUSD, min.amountUSD, max.amountUSD);
             } else throw new BaseError("Unknown amount type", { volumeType });
