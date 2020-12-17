@@ -84,6 +84,16 @@ spec:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
                                 key: BOT_HOST
+                      - name: MAILGUN_API_KEY
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: MAILGUN_API_KEY
+                      - name: MAILGUN_DOMAIN
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: MAILGUN_DOMAIN
                   ports:
                       - containerPort: 3000
                         protocol: TCP
