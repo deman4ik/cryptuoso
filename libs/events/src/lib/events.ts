@@ -249,7 +249,7 @@ export class Events {
                 topic,
                 ">"
             );
-            logger.debug(rawData || "no data");
+            // logger.debug(rawData || "no data");
             const beacon = this.#lightship.createBeacon();
             if (rawData) {
                 const data = this._parseStreamResponse(rawData);
@@ -329,7 +329,7 @@ export class Events {
                 "+",
                 ...[this.#state[`${topic}-${group}`].pending.count]
             );
-            logger.debug(rawData || "no data");
+            //  logger.debug(rawData || "no data");
             const beacon = this.#lightship.createBeacon();
             if (rawData) {
                 const data: {
