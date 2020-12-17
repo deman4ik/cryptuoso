@@ -161,7 +161,6 @@ export class UserRobot {
                 this._positions[key].cancel();
                 this._positions[key].executeJob();
             });
-        else this.setStop();
     }
 
     setStop() {
