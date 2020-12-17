@@ -13,7 +13,6 @@ import {
 } from "@cryptuoso/robot-settings";
 import { UserMarketState } from "@cryptuoso/market";
 import { BaseError } from "@cryptuoso/errors";
-import { round } from "@cryptuoso/helpers";
 
 function getChooseAmountTypeMenu(ctx: any) {
     return Extra.HTML().markup((m: any) => {

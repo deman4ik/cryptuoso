@@ -1,4 +1,4 @@
-import { BasePosition, PositionDirection } from "@cryptuoso/market";
+import { BasePosition } from "@cryptuoso/market";
 
 const positions: BasePosition[] = [
     {
