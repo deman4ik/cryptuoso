@@ -25,7 +25,7 @@ import {
     VolumeSettingsType
 } from "@cryptuoso/robot-settings";
 import dayjs from "@cryptuoso/dayjs";
-import { datesToISOString, keysToCamelCase, round } from "@cryptuoso/helpers";
+import { keysToCamelCase, round } from "@cryptuoso/helpers";
 
 export type UserRobotRunnerServiceConfig = BaseServiceConfig;
 

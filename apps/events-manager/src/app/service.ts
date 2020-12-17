@@ -52,7 +52,7 @@ export default class EventsManager extends HTTPService {
         super(config);
 
         this.events.subscribe({
-            [`${DEAD_LETTER_TOPIC}.*`]: {
+            [`${DEAD_LETTER_TOPIC}.**`]: {
                 handler: this.#deadLettersHandler.bind(this)
             },
             [BacktesterWorkerEvents.FAILED]: {
@@ -105,7 +105,8 @@ export default class EventsManager extends HTTPService {
                     },
                     eventIds: {
                         type: "array",
-                        items: "uuid"
+                        items: "uuid",
+                        optional: true
                     },
                     topic: {
                         type: "string",
@@ -141,9 +142,11 @@ export default class EventsManager extends HTTPService {
     }
 
     #deadLettersHandler = async (deadLetter: DeadLetter) => {
-        const event: Event = deadLetter.data;
+        try {
+            this.log.debug(deadLetter);
+            const event: Event = deadLetter.data;
 
-        await this.db.pg.query(sql`
+            await this.db.pg.query(sql`
             INSERT INTO dead_letters(
                 event_id, topic, "type", "timestamp", data
             ) VALUES (
@@ -155,11 +158,15 @@ export default class EventsManager extends HTTPService {
             );
         `);
 
-        this.log.info(`Dead letter event: #${event.id} ${event.type} saved`);
+            this.log.info(`Dead letter event: #${event.id} ${event.type} saved`);
+        } catch (err) {
+            this.log.error("Failed to save dead letter", err, deadLetter);
+        }
     };
 
     #errorHandler = async (event: Event) => {
-        await this.db.pg.query(sql`
+        try {
+            await this.db.pg.query(sql`
             INSERT INTO error_events (
                 event_id, topic, "type", data, "timestamp"
             ) VALUES (
@@ -171,7 +178,11 @@ export default class EventsManager extends HTTPService {
             );
         `);
 
-        this.log.info(`Error event: #${event.id} ${event.type} saved`);
+            this.log.info(`Error event: #${event.id} ${event.type} saved`);
+        } catch (err) {
+            this.log.error("Failed to save error event", err, event);
+            throw err;
+        }
     };
 
     async _resendHandler(
