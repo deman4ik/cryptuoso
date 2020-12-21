@@ -281,9 +281,7 @@ export default class ImporterWorkerService extends BaseService {
             if (candles && Array.isArray(candles) && candles.length > 0) {
                 const timeframe = candles[0].timeframe;
 
-                const call = async (bail: (e: Error) => void) => {
-                    try {
-                        await this.db.pg.query(sql`
+                await this.db.pg.query(sql`
                 insert into ${sql.identifier([`candles${timeframe}`])} 
                 (exchange, asset, currency, open, high, low, close, volume, time, timestamp, type)
                 SELECT *
@@ -322,20 +320,6 @@ export default class ImporterWorkerService extends BaseService {
                 close = excluded.close,
                 volume = excluded.volume,
                 type = excluded.type;`);
-                    } catch (e) {
-                        bail(e);
-                    }
-                };
-                await retry(call, {
-                    retries: 5,
-                    minTimeout: 500,
-                    maxTimeout: 30000,
-                    onRetry: (err: any, i: number) => {
-                        if (err) {
-                            this.log.warn(`Retry save candles ${i} - ${err.message}`);
-                        }
-                    }
-                });
             }
         } catch (err) {
             this.log.error("Failed to upsert candles", err);
