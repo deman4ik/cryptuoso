@@ -345,7 +345,7 @@ export class ExwatcherBaseService extends BaseService {
                     asset,
                     currency,
                     status: ExwatcherStatus.pending,
-                    importerId: null,
+                    importerId: this.subscriptions[id]?.importerId || null,
                     importStartedAt: null,
                     error: null
                 };
