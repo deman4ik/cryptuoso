@@ -195,7 +195,11 @@ export class Importer {
             }
         } else {
             Object.values(this.#currentState.candles)
-                .filter((s) => s.loaded === false && s.chunks.length === 0)
+                .filter(
+                    (s) =>
+                        ((this.#type === "history" && s.loaded === false) || this.#type === "recent") &&
+                        s.chunks.length === 0
+                )
                 .forEach((s) => {
                     let limit = loadLimit(this.#exchange);
                     const exchangeHasTimeframe = Timeframe.inList(exchangeTimeframes, Timeframe.toString(s.timeframe));
@@ -206,6 +210,7 @@ export class Importer {
                             .filter((t) => +t < +s.timeframe)[0];
                         limit = round(loadLimit(this.#exchange) / (s.timeframe / lowerTimeframe));
                     }
+                    this.#currentState.candles[s.timeframe].loaded = false;
                     this.#currentState.candles[s.timeframe].chunks = Timeframe.chunkDates(
                         s.dateFrom,
                         s.dateTo,
@@ -351,7 +356,7 @@ export class Importer {
             return this.#currentState.trades.loaded;
         } else if (this.#currentState.candles) {
             return Object.values(this.#currentState.candles).filter((t) => t.loaded === false).length === 0;
-        }
+        } else return false;
     }
 
     get isFailed() {

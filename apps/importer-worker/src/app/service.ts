@@ -75,21 +75,23 @@ export default class ImporterWorkerService extends BaseService {
     async process(job: Job<ImporterState, ImporterState>): Promise<ImporterState> {
         try {
             const importer = new Importer(job.data);
-            await this.connector.initConnector(importer.exchange);
-            importer.createChunks(this.connector.connectors[importer.exchange].timeframes);
-            importer.start();
-            this.log.info(
-                `Importer #${importer.id} - Starting ${importer.type} load of ${importer.exchange} ${importer.asset}/${importer.currency} candles`
-            );
-            try {
-                if (importer.type === "history" && importer.exchange === "kraken") {
-                    await this.importTrades(job, importer);
-                } else {
-                    await this.importCandles(job, importer);
+            if (!importer.isLoaded || importer.type === "recent") {
+                await this.connector.initConnector(importer.exchange);
+                importer.createChunks(this.connector.connectors[importer.exchange].timeframes);
+                importer.start();
+                this.log.info(
+                    `Importer #${importer.id} - Starting ${importer.type} load of ${importer.exchange} ${importer.asset}/${importer.currency} candles`
+                );
+                try {
+                    if (importer.type === "history" && importer.exchange === "kraken") {
+                        await this.importTrades(job, importer);
+                    } else {
+                        await this.importCandles(job, importer);
+                    }
+                } catch (err) {
+                    importer.fail(err.message);
+                    this.log.warn(`Importer #${importer.id}`, err);
                 }
-            } catch (err) {
-                importer.fail(err.message);
-                this.log.warn(`Importer #${importer.id}`, err);
             }
             importer.finish(this.abort[importer.id]);
             if (this.abort[importer.id]) delete this.abort[importer.id];
@@ -130,6 +132,7 @@ export default class ImporterWorkerService extends BaseService {
 
     async importTrades(job: Job<ImporterState, ImporterState>, importer: Importer): Promise<void> {
         try {
+            if (!importer.tradesChunks.length) return;
             await DataStream.from(importer.tradesChunks, { maxParallel: this.cpus * 2 })
                 .while(() => importer.isStarted && !this.abort[importer.id])
                 .map(async (chunk: TradesChunk) => this.loadTrades(importer, chunk))
@@ -168,6 +171,7 @@ export default class ImporterWorkerService extends BaseService {
 
     async importCandles(job: Job<ImporterState, ImporterState>, importer: Importer): Promise<void> {
         try {
+            if (!importer.candlesChunks.length) return;
             await DataStream.from(importer.candlesChunks, { maxParallel: 10 })
                 .while(() => importer.isStarted)
                 .map(async (chunk: CandlesChunk) => this.loadCandles(importer, chunk))
