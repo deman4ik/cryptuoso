@@ -447,7 +447,7 @@ export class ExwatcherBaseService extends BaseService {
 
     async importRecentCandles(subscription: Exwatcher): Promise<string> {
         const { exchange, asset, currency } = subscription;
-        const id = uuid();
+        const id = subscription.importerId || uuid();
         await this.events.emit<ImporterRunnerStart>({
             type: ImporterRunnerEvents.START,
             data: {
