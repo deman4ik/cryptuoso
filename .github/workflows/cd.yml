@@ -114,7 +114,7 @@ jobs:
 
             - name: Update deployment file APP prod
               if: contains(github.ref, 'master')
-              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do sed -i 's|<APP>|'${i}'|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do sed -i 's|<APP>|'${i}'-prod|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
 
             - name: Update deployment file ENV dev
               if: contains(github.ref, 'dev')
@@ -133,4 +133,4 @@ jobs:
 
             - name: Verify deployment prod
               if: contains(github.ref, 'master')
-              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig rollout status deployment/${i}; done;
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig rollout status deployment/${i}-prod; done;
