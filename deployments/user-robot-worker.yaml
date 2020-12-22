@@ -5,7 +5,7 @@ metadata:
         app: <APP>
         env: <ENV>
     name: <APP>
-    namespace: default
+    namespace: <ENV>
 spec:
     replicas: 1
     selector:
@@ -82,8 +82,8 @@ spec:
                           memory: 128Mi
                           cpu: "10m"
                       limits:
-                          memory: 256Mi
-                          cpu: "100m"
+                          memory: 512Mi
+                          cpu: "300m"
 ---
 apiVersion: v1
 kind: Service
@@ -92,7 +92,7 @@ metadata:
         app: <APP>
         env: <ENV>
     name: <APP>
-    namespace: default
+    namespace: <ENV>
 spec:
     ports:
         - name: "check"

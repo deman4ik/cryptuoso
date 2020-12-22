@@ -2,7 +2,6 @@ import { DataStream } from "scramjet";
 import os from "os";
 import { spawn, Pool, Worker as ThreadsWorker } from "threads";
 import { Job } from "bullmq";
-import retry from "async-retry";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { Importer, CandlesChunk, TradesChunk, ImporterState } from "@cryptuoso/importer-state";
