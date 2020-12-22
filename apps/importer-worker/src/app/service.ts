@@ -59,6 +59,45 @@ export default class ImporterWorkerService extends BaseService {
         this.abort[id] = true;
     }
 
+    async saveImporter(importer: Importer) {
+        const {
+            id,
+            exchange,
+            asset,
+            currency,
+            params,
+            status,
+            startedAt,
+            endedAt,
+            type,
+            progress,
+            error,
+            currentState
+        } = importer.state;
+        await this.db.pg.query(sql`
+        INSERT INTO importers
+        (id, exchange, asset, currency, 
+        params, 
+        status, started_at, ended_at, 
+        type, progress, error,
+        current_state)
+        VALUES(
+            ${id}, ${exchange}, ${asset}, ${currency},
+            ${JSON.stringify(params) || null},
+            ${status}, ${startedAt || null}, ${endedAt || null},
+            ${type}, ${progress || null}, ${error || null}, 
+            ${JSON.stringify(currentState) || null}
+        )
+        ON CONFLICT ON CONSTRAINT importers_pkey
+        DO UPDATE SET params = excluded.params,
+        status = excluded.status,
+        started_at = excluded.started_at,
+        ended_at = excluded.ended_at,
+        progress = excluded.progress,
+        error = excluded.error,
+        current_state = excluded.current_state;
+        `);
+    }
     async tradesToCandles({
         timeframes,
         chunk,
@@ -122,6 +161,7 @@ export default class ImporterWorkerService extends BaseService {
                         status: importer.status
                     }
                 });
+            await this.saveImporter(importer);
             return importer.state;
         } catch (err) {
             this.log.error(`Error while processing job ${job.id}`, err);

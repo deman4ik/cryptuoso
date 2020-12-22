@@ -14,6 +14,7 @@ import {
 import { BaseError } from "@cryptuoso/errors";
 import { Timeframe } from "@cryptuoso/market";
 import { UserRoles } from "@cryptuoso/user-state";
+import { sql } from "@cryptuoso/postgres";
 
 export type ImporterRunnerServiceConfig = HTTPServiceConfig;
 
@@ -31,6 +32,10 @@ export default class ImporterRunnerService extends HTTPService {
                     inputSchema: ImporterRunnerSchema[ImporterRunnerEvents.STOP],
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.stopHTTPHandler
+                },
+                importerStartAllMarkets: {
+                    roles: [UserRoles.admin, UserRoles.manager],
+                    handler: this.startAllMarketsHTTPHandler
                 }
             });
             this.events.subscribe({
@@ -71,7 +76,7 @@ export default class ImporterRunnerService extends HTTPService {
             const params: ImporterParams = {
                 timeframes: timeframes || Timeframe.validArray
             };
-            const market = await this.db.pg.maybeOne<{ loadFrom: string }>(this.db.sql`
+            const market = await this.db.pg.maybeOne<{ loadFrom: string }>(sql`
             select load_from from markets 
             where exchange = ${exchange} 
             and asset = ${asset} and currency = ${currency}
@@ -139,6 +144,26 @@ export default class ImporterRunnerService extends HTTPService {
                 } else {
                     await job.remove();
                 }
+            }
+        } catch (error) {
+            this.log.error(error);
+            throw error;
+        }
+    }
+
+    async startAllMarketsHTTPHandler(req: any, res: any) {
+        await this.startAllMarkets();
+        res.send({ result: "OK" });
+        res.end();
+    }
+
+    async startAllMarkets() {
+        try {
+            const markets = await this.db.pg.any<{ exchange: string; asset: string; currency: string }>(
+                sql`SELECT exchange, asset, currency FROM markets where available >= 10;`
+            );
+            for (const market of markets) {
+                await this.start({ ...market, type: "history", timeframes: [1440, 720, 480, 240, 120, 60, 30] });
             }
         } catch (error) {
             this.log.error(error);
