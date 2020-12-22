@@ -87,7 +87,7 @@ export class HTTPService extends BaseService {
             this.addOnStartHandler(this._startServer);
             this.addOnStopHandler(this._stopServer);
         } catch (err) {
-            this.log.error(err, "While constructing HTTPService");
+            this.log.error("Error while constructing HTTPService", err);
             process.exit(1);
         }
     }

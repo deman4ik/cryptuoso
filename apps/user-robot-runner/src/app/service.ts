@@ -95,7 +95,7 @@ export default class UserRobotRunnerService extends HTTPService {
             });
             this.addOnStartHandler(this.onServiceStart);
         } catch (err) {
-            this.log.error(err, "While constructing UserRobotRunnerService");
+            this.log.error("Error while constructing UserRobotRunnerService", err);
         }
     }
 

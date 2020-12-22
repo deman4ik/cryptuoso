@@ -101,7 +101,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
             this.addOnStartHandler(this.onServiceStart);
             this.addOnStopHandler(this.onServiceStop);
         } catch (err) {
-            this.log.error(err, "While constructing StatisticCalcRunnerService");
+            this.log.error("Error while constructing StatisticCalcRunnerService", err);
         }
     }
 

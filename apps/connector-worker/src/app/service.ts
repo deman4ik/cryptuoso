@@ -38,7 +38,7 @@ export default class ConnectorRunnerService extends BaseService {
             this.addOnStartHandler(this.onServiceStart);
             this.addOnStopHandler(this.onServiceStop);
         } catch (err) {
-            this.log.error(err, "While constructing ConnectorRunnerService");
+            this.log.error("Error while constructing ConnectorRunnerService", err);
         }
     }
 
@@ -69,7 +69,7 @@ export default class ConnectorRunnerService extends BaseService {
                 secret = await this.decrypt(userId, encryptedSecret);
                 password = encryptedPass && (await this.decrypt(userId, encryptedPass));
             } catch (e) {
-                this.log.error(`Failed to decrypt #${id} keys`, keys, e);
+                this.log.error(`Failed to decrypt #${id} keys`, e, keys);
                 if (e.message.includes("bad decrypt")) {
                     await this.events.emit<UserExchangeAccountErrorEvent>({
                         type: ConnectorWorkerEvents.USER_EX_ACC_ERROR,

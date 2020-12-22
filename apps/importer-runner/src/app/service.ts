@@ -50,7 +50,7 @@ export default class ImporterRunnerService extends HTTPService {
             });
             this.addOnStartHandler(this.onServiceStart);
         } catch (err) {
-            this.log.error(err, "While constructing ImporterRunnerService");
+            this.log.error("Error while constructing ImporterRunnerService", err);
         }
     }
 

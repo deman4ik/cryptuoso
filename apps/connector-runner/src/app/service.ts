@@ -19,7 +19,7 @@ export default class ConnectorRunnerService extends HTTPService {
             });
             this.addOnStartHandler(this.onServiceStart);
         } catch (err) {
-            this.log.error(err, "While constructing ConnectorRunnerService");
+            this.log.error("Error while constructing ConnectorRunnerService", err);
         }
     }
 

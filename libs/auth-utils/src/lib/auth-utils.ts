@@ -19,7 +19,7 @@ export class Auth {
             this.#bcrypt = bcrypt;
             this.#mailUtil = mailUtil;
         } catch (e) {
-            logger.error(e, "Failed to init Auth instance!");
+            logger.error("Failed to init Auth instance!", e);
         }
     }
 

@@ -67,7 +67,7 @@ export default class NotificationsService extends BaseService {
                 }
             });
         } catch (err) {
-            this.log.error(err, "While constructing NotificationsService");
+            this.log.error("Error while constructing NotificationsService", err);
         }
     }
 

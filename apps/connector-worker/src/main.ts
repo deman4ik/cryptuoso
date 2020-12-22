@@ -7,7 +7,7 @@ async function start() {
     try {
         await service.startService();
     } catch (error) {
-        log.error(error, `Failed to start service ${process.env.SERVICE}`);
+        log.error(`Failed to start service ${process.env.SERVICE}`, error);
         process.exit(1);
     }
 }

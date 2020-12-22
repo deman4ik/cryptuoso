@@ -146,7 +146,7 @@ export default class AuthService extends HTTPService {
                 }
             });
         } catch (err) {
-            this.log.error(err, "While constructing AuthService");
+            this.log.error("Error while constructing AuthService", err);
         }
     }
 

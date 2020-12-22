@@ -49,7 +49,7 @@ export default class BacktesterRunnerService extends HTTPService {
             });
             this.addOnStartHandler(this.onServiceStart);
         } catch (err) {
-            this.log.error(err, "While constructing BacktesterRunnerService");
+            this.log.error("Error while constructing BacktesterRunnerService", err);
         }
     }
 

@@ -38,7 +38,7 @@ export default class UtilsService extends HTTPService {
                 }
             });
         } catch (err) {
-            this.log.error(err, "While constructing UtilsService");
+            this.log.error("Error while constructing UtilsService", err);
         }
     }
 

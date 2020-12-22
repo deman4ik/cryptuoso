@@ -72,7 +72,7 @@ export default class RobotRunnerService extends HTTPService {
 
             this.addOnStartHandler(this.onServiceStart);
         } catch (err) {
-            this.log.error(err, "While constructing RobotRunnerService");
+            this.log.error("Error while constructing RobotRunnerService", err);
         }
     }
 

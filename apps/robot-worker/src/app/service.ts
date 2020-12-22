@@ -38,7 +38,7 @@ export default class RobotWorkerService extends BaseService {
             this.addOnStartHandler(this.onServiceStart);
             //TODO: Reload code event
         } catch (err) {
-            this.log.error(err, "While constructing RobotWorkerService");
+            this.log.error("Error while constructing RobotWorkerService", err);
         }
     }
 

@@ -125,7 +125,7 @@ export class BaseService {
             this.#log.info(`Started ${this.#name} service`);
         } catch (err) {
             console.error(err);
-            this.#log.error(err, `Failed to start ${this.#name} service`);
+            this.#log.error(`Failed to start ${this.#name} service`, err);
             process.exit(1);
         }
     };
@@ -320,7 +320,7 @@ export class BaseService {
             ...opts
         });
         this.#workers[name].on("error", (err) => {
-            this.log.error(`Worker ${name} error`, err);
+            this.log.warn(`Worker ${name} error`, err);
         });
     };
 
