@@ -1,4 +1,4 @@
-import { round, sum, average, averageRound, divideRound, addPercent } from "../lib/number";
+import { round, sum, average, averageRound, divideRound, addPercent, roundFirstSignificant } from "../lib/number";
 
 describe("'number' utils test", () => {
     describe("round test", () => {
@@ -13,9 +13,29 @@ describe("'number' utils test", () => {
         describe("Negative values test", () => {
             it("Should round a negative decimal", () => {
                 expect(round(-1.2345, 2)).toBe(-1.23);
-                expect(round(-12.345, 2)).toBe(-12.34);
+                expect(round(-12.345, 2)).toBe(-12.35); // was -12.34
                 expect(round(-0.4)).toBe(0);
                 expect(round(-0.6)).toBe(-1);
+            });
+        });
+    });
+
+    describe("roundFirstSignificant test", () => {
+        describe("Positive values test", () => {
+            it("Should round a positive decimal", () => {
+                expect(roundFirstSignificant(1.2345)).toBe(1.2);
+                expect(roundFirstSignificant(12.345)).toBe(12.3);
+                expect(roundFirstSignificant(0.4)).toBe(0.4);
+                expect(roundFirstSignificant(0.04)).toBe(0.04);
+            });
+        });
+
+        describe("Negative values test", () => {
+            it("Should round a negative decimal", () => {
+                expect(roundFirstSignificant(-1.2345)).toBe(-1.2);
+                expect(roundFirstSignificant(-12.345)).toBe(-12.3);
+                expect(roundFirstSignificant(-0.4)).toBe(-0.4);
+                expect(roundFirstSignificant(-0.04)).toBe(-0.04);
             });
         });
     });

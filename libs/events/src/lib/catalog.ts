@@ -97,7 +97,7 @@ export class EventsCatalog {
         [key: string]: {
             group?: string;
             unbalanced?: boolean;
-            handler: (data: any) => Promise<void>;
+            handler: (data: Event | any) => Promise<void>;
             passFullEvent?: boolean;
             schema?: ValidationSchema;
         };

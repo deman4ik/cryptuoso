@@ -1,31 +1,37 @@
-import { ExchangePrice } from "@cryptuoso/market";
+import { ISO_DATE_REGEX } from "@cryptuoso/helpers";
 
-export const enum ExwatcherWorkerEvents {
-    SUBSCRIBE = "in-exwatcher-worker.subscribe",
-    SUBSCRIBE_ALL = "in-exwatcher-worker.subscribe-all",
-    UNSUBSCRIBE_ALL = "in-exwatcher-worker.unsubscribe-all",
-    TICK = "out-exwatcher-worker.tick"
+export const enum ExwatcherEvents {
+    SUBSCRIBE = "in-exwatcher.subscribe",
+    SUBSCRIBE_ALL = "in-exwatcher.subscribe-all",
+    UNSUBSCRIBE_ALL = "in-exwatcher.unsubscribe-all",
+    ADD_MARKET = "in-exwatcher.add-market",
+    ERROR = "out-exwatcher.error"
 }
 
 export const ExwatcherSchema = {
-    [ExwatcherWorkerEvents.SUBSCRIBE]: {
+    [ExwatcherEvents.SUBSCRIBE]: {
         exchange: "string",
         asset: "string",
         currency: "string"
     },
-    [ExwatcherWorkerEvents.SUBSCRIBE_ALL]: {
+    [ExwatcherEvents.SUBSCRIBE_ALL]: {
         exchange: "string"
     },
-    [ExwatcherWorkerEvents.UNSUBSCRIBE_ALL]: {
+    [ExwatcherEvents.UNSUBSCRIBE_ALL]: {
         exchange: "string"
     },
-    [ExwatcherWorkerEvents.TICK]: {
+    [ExwatcherEvents.ADD_MARKET]: {
+        exchange: "string",
+        asset: "string",
+        currency: "string"
+    },
+    [ExwatcherEvents.ERROR]: {
         exchange: "string",
         asset: "string",
         currency: "string",
-        time: "number",
-        timestamp: "string",
-        price: "number"
+        exwatcherId: "string",
+        timestamp: { type: "string", pattern: ISO_DATE_REGEX },
+        error: "string"
     }
 };
 
@@ -43,4 +49,17 @@ export interface ExwatcherUnsubscribeAll {
     exchange: string;
 }
 
-export type ExwatcherTick = ExchangePrice;
+export interface ExwatcherAddMarket {
+    exchange: string;
+    asset: string;
+    currency: string;
+}
+
+export interface ExwatcherErrorEvent {
+    exchange: string;
+    asset: string;
+    currency: string;
+    exwatcherId: string;
+    timestamp: string;
+    error: string;
+}

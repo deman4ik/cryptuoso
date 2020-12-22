@@ -1,9 +1,11 @@
-import { RobotSettings, RobotStats, RobotEquity, Robot, StrategyCode } from "@cryptuoso/robot-state";
-import { ValidTimeframe, Candle } from "@cryptuoso/market";
+import { Robot, StrategyCode, RobotPositionState, StrategyProps, RobotStats } from "@cryptuoso/robot-state";
+import { ValidTimeframe, Candle, SignalEvent, DBCandle, calcPositionProfit } from "@cryptuoso/market";
 import dayjs from "@cryptuoso/dayjs";
 import { round, defaultValue } from "@cryptuoso/helpers";
 import logger from "@cryptuoso/logger";
 import { IndicatorCode } from "@cryptuoso/robot-indicators";
+import { calcStatistics } from "@cryptuoso/stats-calc";
+import { getRobotPositionVolume, RobotSettings, StrategySettings, VolumeSettingsType } from "@cryptuoso/robot-settings";
 
 export const enum Status {
     queued = "queued",
@@ -17,6 +19,7 @@ export const enum Status {
 export interface BacktesterSettings {
     local?: boolean;
     populateHistory?: boolean;
+    saveSignals?: boolean;
     savePositions?: boolean;
     saveLogs?: boolean;
 }
@@ -28,7 +31,7 @@ export interface BacktesterState {
     asset: string;
     currency: string;
     timeframe: ValidTimeframe;
-    strategyName: string;
+    strategy: string;
     dateFrom: string;
     dateTo: string;
     settings: BacktesterSettings;
@@ -39,11 +42,32 @@ export interface BacktesterState {
     status: Status;
     startedAt?: string;
     finishedAt?: string;
-    statistics?: { [key: string]: RobotStats };
-    equity?: { [key: string]: RobotEquity };
-    robotSettings?: { [key: string]: RobotSettings };
+    robotState?: StrategyProps;
+    strategySettings?: {
+        [key: string]: StrategySettings;
+    };
+    robotSettings?: RobotSettings;
     robotInstances?: { [key: string]: Robot };
     error?: string;
+}
+
+export interface BacktesterSignals extends SignalEvent {
+    backtestId: string;
+}
+
+export interface BacktesterPositionState extends RobotPositionState {
+    backtestId: string;
+}
+
+export interface BacktesterLogs {
+    [key: string]: any;
+    candle: DBCandle;
+    robotId: string;
+    backtestId: string;
+}
+
+export interface BacktesterStats extends RobotStats {
+    backtestId: string;
 }
 
 export class Backtester {
@@ -53,7 +77,8 @@ export class Backtester {
     #asset: string;
     #currency: string;
     #timeframe: ValidTimeframe;
-    #strategyName: string;
+    #strategy: string;
+    #averageFee: number;
     #dateFrom: string;
     #dateTo: string;
     #settings?: BacktesterSettings;
@@ -65,10 +90,30 @@ export class Backtester {
     #status: Status;
     #startedAt?: string;
     #finishedAt?: string;
-    #statistics?: { [key: string]: RobotStats };
-    #equity?: { [key: string]: RobotEquity };
-    #robotSettings?: { [key: string]: RobotSettings };
-    #robotInstances?: { [key: string]: Robot } = {};
+    #robotState?: StrategyProps;
+    #strategySettings?: {
+        [key: string]: StrategySettings;
+    };
+    #robotSettings?: RobotSettings;
+    #robots?: {
+        [key: string]: {
+            instance: Robot;
+            data: {
+                logs: BacktesterLogs[];
+                alerts: BacktesterSignals[];
+                trades: BacktesterSignals[];
+                positions: { [key: string]: BacktesterPositionState };
+                settings: {
+                    [key: string]: {
+                        strategySettings: StrategySettings;
+                        robotSettings: RobotSettings;
+                        activeFrom: string;
+                    };
+                };
+                stats: BacktesterStats;
+            };
+        };
+    } = {};
     #error?: string;
 
     constructor(state: BacktesterState) {
@@ -78,15 +123,17 @@ export class Backtester {
         this.#asset = state.asset;
         this.#currency = state.currency;
         this.#timeframe = state.timeframe;
-        this.#strategyName = state.strategyName;
+        this.#strategy = state.strategy;
         this.#dateFrom = state.dateFrom;
         this.#dateTo = state.dateTo;
         this.#settings = {
-            local: defaultValue(state.settings.local, false),
-            populateHistory: defaultValue(state.settings.populateHistory, false),
-            savePositions: defaultValue(state.settings.savePositions, true),
-            saveLogs: defaultValue(state.settings.saveLogs, false)
+            local: defaultValue(state.settings?.local, false),
+            populateHistory: defaultValue(state.settings?.populateHistory, false),
+            saveSignals: defaultValue(state.settings?.saveSignals, true),
+            savePositions: defaultValue(state.settings?.savePositions, true),
+            saveLogs: defaultValue(state.settings?.saveLogs, false)
         };
+        this.#strategySettings = state.strategySettings;
         this.#robotSettings = state.robotSettings;
         this.#totalBars = defaultValue(state.totalBars, 0);
         this.#processedBars = defaultValue(state.processedBars, 0);
@@ -95,8 +142,7 @@ export class Backtester {
         this.#status = state.status;
         this.#startedAt = state.startedAt || null;
         this.#finishedAt = state.finishedAt || null;
-        this.#statistics = state.statistics;
-        this.#equity = state.equity;
+        this.#robotState = state.robotState || null;
         this.#error = state.error || null;
     }
 
@@ -108,10 +154,11 @@ export class Backtester {
             asset: this.#asset,
             currency: this.#currency,
             timeframe: this.#timeframe,
-            strategyName: this.#strategyName,
+            strategy: this.#strategy,
             dateFrom: this.#dateFrom,
             dateTo: this.#dateTo,
             settings: this.#settings,
+            strategySettings: this.#strategySettings,
             robotSettings: this.#robotSettings,
             totalBars: this.#totalBars,
             processedBars: this.#processedBars,
@@ -120,14 +167,17 @@ export class Backtester {
             status: this.#status,
             startedAt: this.#startedAt,
             finishedAt: this.#finishedAt,
-            statistics: this.#statistics,
-            equity: this.#equity,
+            robotState: this.#robotState,
             error: this.#error
         };
     }
 
     get id() {
         return this.#id;
+    }
+
+    get robotId() {
+        return this.#robotId;
     }
 
     get exchange() {
@@ -146,8 +196,8 @@ export class Backtester {
         return this.#timeframe;
     }
 
-    get strategyName() {
-        return this.#strategyName;
+    get strategy() {
+        return this.#strategy;
     }
 
     get dateFrom() {
@@ -170,9 +220,13 @@ export class Backtester {
         return this.#status === Status.started;
     }
 
+    set averageFee(averageFee: number) {
+        this.#averageFee = averageFee;
+    }
+
     start() {
         this.#status = Status.started;
-        this.#startedAt = this.#startedAt ? this.#startedAt : dayjs.utc().toISOString();
+        this.#startedAt = this.#startedAt || dayjs.utc().toISOString();
     }
 
     set startedAt(date: string) {
@@ -221,7 +275,7 @@ export class Backtester {
         if (this.#completedPercent > this.#prevPercent) {
             this.#prevPercent = this.#completedPercent;
             logger.info(
-                `Importer #${this.#id} - Processed ${this.#processedBars}, left ${this.#leftBars} - ${
+                `Backtester #${this.#id} - Processed ${this.#processedBars}, left ${this.#leftBars} - ${
                     this.#completedPercent
                 }%`
             );
@@ -232,20 +286,8 @@ export class Backtester {
         return this.#settings;
     }
 
-    get statistics() {
-        return this.#statistics;
-    }
-
-    set statistics(statistics) {
-        this.#statistics = statistics;
-    }
-
-    get equity() {
-        return this.#equity;
-    }
-
-    set equity(equity) {
-        this.#equity = equity;
+    get robotState() {
+        return this.#robotState;
     }
 
     get robotSettings() {
@@ -257,45 +299,199 @@ export class Backtester {
     }
 
     get robotIds() {
-        return Object.keys(this.#robotInstances);
+        return Object.keys(this.#robots);
     }
 
-    get robotInstances() {
-        return this.#robotSettings;
+    get robots() {
+        return this.#robots;
     }
 
     get robotInstancesArray() {
-        return Object.values(this.#robotInstances);
+        return Object.values(this.#robots).map(({ instance }) => instance);
     }
 
     initRobots(strategyCode: StrategyCode) {
-        for (const [id, settings] of Object.entries(this.#robotSettings)) {
-            this.#robotInstances[id] = new Robot({
-                id,
-                exchange: this.#exchange,
-                asset: this.#asset,
-                currency: this.#currency,
-                timeframe: this.#timeframe,
-                strategyName: this.#strategyName,
-                settings,
-                backtest: true
-            });
-            this.#robotInstances[id].setStrategy(strategyCode);
-            this.#robotInstances[id].initStrategy();
+        for (const [id, settings] of Object.entries(this.#strategySettings)) {
+            try {
+                this.#robots[id] = {
+                    instance: new Robot({
+                        id,
+                        exchange: this.#exchange,
+                        asset: this.#asset,
+                        currency: this.#currency,
+                        timeframe: this.#timeframe,
+                        strategy: this.#strategy,
+                        settings: {
+                            strategySettings: settings,
+                            robotSettings: this.#robotSettings,
+                            activeFrom: this.#dateFrom
+                        },
+                        backtest: true
+                    }),
+                    data: {
+                        logs: [],
+                        alerts: [],
+                        trades: [],
+                        positions: {},
+                        settings: {},
+                        stats: null
+                    }
+                };
+                this.#robots[id].instance.setStrategy(strategyCode);
+                this.#robots[id].instance.initStrategy();
+            } catch (err) {
+                logger.error(`Backtester ${this.#id} - Failed to init robot ${id}`, err);
+                throw err;
+            }
         }
     }
 
     initIndicators(indicatorsCode: { fileName: string; code: IndicatorCode }[]) {
-        Object.keys(this.#robotInstances).forEach(([id]) => {
-            this.#robotInstances[id].setBaseIndicatorsCode(indicatorsCode);
-            this.#robotInstances[id].setIndicators();
-            this.#robotInstances[id].initIndicators();
+        Object.keys(this.#robots).forEach((id) => {
+            try {
+                this.#robots[id].instance.setBaseIndicatorsCode(indicatorsCode);
+                this.#robots[id].instance.setIndicators();
+                this.#robots[id].instance.initIndicators();
+            } catch (err) {
+                logger.error(`Backtester ${this.#id} - Failed to init robot's #${id} indicators`, err);
+                throw err;
+            }
         });
     }
 
     handleHistoryCandles(candles: Candle[]) {
-        Object.keys(this.#robotInstances).forEach(([id]) => {
-            this.#robotInstances[id].handleHistoryCandles(candles);
+        Object.keys(this.#robots).forEach((id) => {
+            this.#robots[id].instance.handleHistoryCandles(candles);
+        });
+    }
+
+    #saveLogs = (id: string) => {
+        if (this.#settings.saveLogs) {
+            const robot = this.#robots[id];
+            robot.data.logs = [
+                ...robot.data.logs,
+                ...robot.instance.logEventsToSend.map(({ data }) => ({
+                    ...data,
+                    backtestId: this.#id
+                }))
+            ];
+        }
+    };
+
+    #saveSignals = (id: string) => {
+        if (this.#settings.saveSignals || this.#settings.populateHistory) {
+            const robot = this.#robots[id];
+            robot.data.alerts = [
+                ...robot.data.alerts,
+                ...robot.instance.alertEventsToSend.map(({ data }) => ({
+                    ...data,
+                    robotId: id,
+                    backtestId: this.#id
+                }))
+            ];
+            robot.data.trades = [
+                ...robot.data.trades,
+                ...robot.instance.tradeEventsToSend.map(({ data }) => ({
+                    ...data,
+                    robotId: id,
+                    backtestId: this.#id
+                }))
+            ];
+        }
+    };
+
+    #savePositions = (id: string) => {
+        if (this.#settings.savePositions || this.#settings.populateHistory) {
+            const robot = this.#robots[id];
+            robot.instance.positionsToSave.forEach((pos) => {
+                const newPos = {
+                    ...pos,
+                    entryDate: pos.entryCandleTimestamp,
+                    exitDate: pos.exitCandleTimestamp
+                };
+                robot.data.positions[pos.id] = { ...newPos, backtestId: this.#id };
+            });
+        }
+    };
+
+    #saveSettings = (id: string) => {
+        const robot = this.#robots[id];
+        if (!robot.data.settings[robot.instance.settingsActiveFrom])
+            robot.data.settings[robot.instance.settingsActiveFrom] = robot.instance.settings;
+    };
+
+    #calcStats = (id: string) => {
+        const robot = this.#robots[id];
+        if (robot.instance.hasClosedPositions) {
+            const positions = robot.instance.closedPositions.map((pos) => {
+                const volume = getRobotPositionVolume(
+                    robot.instance.settings.robotSettings,
+                    pos.entryPrice,
+                    robot.data.stats?.statistics?.netProfit?.all
+                );
+                const profit = calcPositionProfit(
+                    pos.direction,
+                    pos.entryPrice,
+                    pos.exitPrice,
+                    volume,
+                    this.#averageFee
+                );
+                return { ...pos, volume, profit };
+            });
+            robot.data.stats = {
+                ...calcStatistics(robot.data.stats, positions),
+                robotId: id,
+                backtestId: this.#id
+            };
+        }
+    };
+
+    #updateSettings = (id: string) => {
+        const robot = this.#robots[id];
+        if (robot.instance.hasClosedPositions) {
+            if (robot.instance.robotSettings.volumeType === VolumeSettingsType.assetDynamicDelta) {
+                const volume = getRobotPositionVolume(
+                    robot.instance.settings.robotSettings,
+                    null,
+                    robot.data.stats.statistics.netProfit.all
+                );
+
+                if (volume !== robot.instance.robotSettings.volume)
+                    robot.instance.settings = {
+                        strategySettings: robot.instance.strategySettings,
+                        robotSettings: { ...robot.instance.robotSettings, volume },
+                        activeFrom: robot.instance.lastCandle.timestamp
+                    };
+            }
+        }
+    };
+
+    async handleCandle(candle: Candle) {
+        logger.info(`Backtester #${this.id} - Handling ${this.#processedBars + 1} bar of ${this.#totalBars}`);
+        Object.keys(this.#robots).forEach(async (id) => {
+            const robot = this.#robots[id];
+            robot.instance.handleCandle(candle);
+            robot.instance.clearEvents();
+            robot.instance.checkAlerts();
+
+            this.#saveLogs(id);
+            this.#saveSignals(id);
+            this.#savePositions(id);
+            this.#calcStats(id);
+            this.#updateSettings(id);
+            this.#saveSettings(id);
+
+            robot.instance.clearEvents();
+            await robot.instance.calcIndicators();
+            robot.instance.runStrategy();
+            robot.instance.finalize();
+
+            this.#saveLogs(id);
+            this.#saveSignals(id);
+            this.#savePositions(id);
+            this.#calcStats(id);
+            this.#updateSettings(id);
+            this.#saveSettings(id);
         });
     }
 
@@ -307,6 +503,7 @@ export class Backtester {
             return;
         }
         if (this.isProcessed) {
+            this.#robotState = this.#robots[this.#robotId].instance.state;
             this.#status = Status.finished;
         }
     }

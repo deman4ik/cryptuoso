@@ -8,13 +8,13 @@ import { BaseService } from "../lib/BaseService";
 
 const ERROR_CODE = 1;
 const mockExit = jest.fn();
-const mockLightshipType = {
+const mockLightship = {
     registerShutdownHandler: jest.fn(),
     signalReady: jest.fn(),
     shutdown: jest.fn()
 };
 const getLastRegisterShutdownHandler = () => {
-    const calls = mockLightshipType.registerShutdownHandler.mock.calls;
+    const calls = mockLightship.registerShutdownHandler.mock.calls;
     return calls[calls.length - 1][0];
 };
 const setProperty = (object: any, property: any, value: any) => {
@@ -24,14 +24,15 @@ const setProperty = (object: any, property: any, value: any) => {
 };
 
 setProperty(process, "exit", mockExit);
+setProperty(console, "log", jest.fn());
 setProperty(console, "error", jest.fn());
 jest.mock("lightship", () => {
     return {
         LightshipType: jest.fn().mockImplementation(() => {
-            return mockLightshipType;
+            return typeof mockLightship;
         }),
         createLightship: jest.fn().mockImplementation(() => {
-            return mockLightshipType;
+            return mockLightship;
         })
     };
 });
@@ -84,7 +85,7 @@ describe("Test 'BaseService' class", () => {
                 jest.clearAllMocks();
                 new BaseService(config);
 
-                expect(mockLightshipType.registerShutdownHandler).toHaveBeenCalledTimes(1);
+                expect(mockLightship.registerShutdownHandler).toHaveBeenCalledTimes(1);
             });
         });
 
@@ -113,15 +114,15 @@ describe("Test 'BaseService' class", () => {
 
     describe("Test methods", () => {
         describe("Testing startService", () => {
-            test("Testing mockLightshipType.signalReady calls count is 1", async () => {
+            test("Testing mockLightship.signalReady calls count is 1", async () => {
                 const baseService = new BaseService();
                 const methodStopService = getLastRegisterShutdownHandler();
 
-                mockLightshipType.signalReady.mockClear();
+                mockLightship.signalReady.mockClear();
 
                 await baseService.startService();
 
-                expect(mockLightshipType.signalReady).toHaveBeenCalledTimes(1);
+                expect(mockLightship.signalReady).toHaveBeenCalledTimes(1);
                 await methodStopService();
             });
         });
@@ -256,7 +257,7 @@ describe("Test 'BaseService' class", () => {
                 expect(pg.end).toHaveBeenCalledTimes(1);
             });
 
-            /* test("Testing mockLightshipType.shutdown calls count is 1", async () => {
+            /* test("Testing mockLightship.shutdown calls count is 1", async () => {
                 const baseService = new BaseService();
                 const methodStopService = getLastRegisterShutdownHandler();
         
@@ -264,7 +265,7 @@ describe("Test 'BaseService' class", () => {
                 jest.clearAllMocks();
                 await methodStopService();
 
-                expect(mockLightshipType.shutdown).toHaveBeenCalledTimes(1);
+                expect(mockLightship.shutdown).toHaveBeenCalledTimes(1);
             }); */
 
             test("Testing Redis.quit calls count is 1", async () => {

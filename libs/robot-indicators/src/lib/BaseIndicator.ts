@@ -1,6 +1,6 @@
 import { chunkArrayIncrEnd, validate } from "@cryptuoso/helpers";
 import { ValidationSchema } from "fastest-validator";
-import { Candle, CandleProps } from "@cryptuoso/market";
+import { CandleProps, DBCandle } from "@cryptuoso/market";
 import { NewEvent } from "@cryptuoso/events";
 import { RobotWorkerEvents } from "@cryptuoso/robot-events";
 import tulip from "./tulip/create";
@@ -25,7 +25,6 @@ export interface IndicatorState {
     indicatorName: string;
     initialized?: boolean;
     parameters?: { [key: string]: number };
-    robotSettings?: { [key: string]: any };
     variables?: { [key: string]: any };
     indicatorFunctions?: { [key: string]: () => any };
     parametersSchema?: ValidationSchema;
@@ -39,11 +38,8 @@ export class BaseIndicator {
     _parameters: {
         [key: string]: number;
     };
-    _robotSettings: {
-        [key: string]: any;
-    };
-    _candle: Candle;
-    _candles: Candle[];
+    _candle: DBCandle;
+    _candles: DBCandle[];
     _candlesProps: CandleProps;
     _indicators: {
         [key: string]: any;
@@ -58,7 +54,6 @@ export class BaseIndicator {
         this._indicatorName = state.indicatorName;
         this._initialized = state.initialized || false;
         this._parameters = state.parameters || {};
-        this._robotSettings = state.robotSettings;
         this._candle = null;
         this._candles = [];
         this._candlesProps = {
@@ -120,7 +115,7 @@ export class BaseIndicator {
         return Promise.resolve();
     }
 
-    prepareCandles(candles: Candle[]) {
+    prepareCandles(candles: DBCandle[]) {
         const candlesProps: CandleProps = {
             open: [],
             high: [],
@@ -268,7 +263,7 @@ export class BaseIndicator {
     }
     */
 
-    _handleCandles(candle: Candle, candles: Candle[], candlesProps: CandleProps) {
+    _handleCandles(candle: DBCandle, candles: DBCandle[], candlesProps: CandleProps) {
         if (
             !candle ||
             !candles ||

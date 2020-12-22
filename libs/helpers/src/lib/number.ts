@@ -1,3 +1,20 @@
+import round from "./round";
+
+export { round };
+
+/**
+ * Returns a number rounded to first significant digit after comma.
+ *
+ * @param {number} x A number to be rounded
+ * @returns {number}
+ * @example
+ * roundFirstSignificant(100.000234); // 100.0002
+ */
+export const roundFirstSignificant = (x: number) => {
+    const precision = Math.abs(Math.floor(Math.log10(Math.abs(x - round(x)))));
+    return round(x, precision);
+};
+
 /**
  * Returnts a number rounded to a specified amout of digits.
  *
@@ -6,7 +23,7 @@
  * @example
  * round(12.345, 2); // 12.35
  */
-export const round = (n: number, decimals = 0): number => +Number(`${Math.round(+`${n}e${decimals}`)}e-${decimals}`);
+export const roundOld = (n: number, decimals = 0): number => +Number(`${Math.round(+`${n}e${decimals}`)}e-${decimals}`);
 
 /**
  * Returns the sum of numbers provided.

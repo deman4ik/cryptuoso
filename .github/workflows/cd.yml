@@ -6,12 +6,12 @@ on:
 
 jobs:
     build:
-        if: "contains(github.event.head_commit.message, 'DEPLOY')"
+        if: "contains(github.event.head_commit.message, 'DEPLOY |')"
         name: Build, push, and deploy
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                node-version: [12.x]
+                node-version: [14.x]
         steps:
             - name: Checkout
               uses: actions/checkout@master
@@ -23,7 +23,7 @@ jobs:
               with:
                   node-version: ${{ matrix.node-version }}
 
-            - uses: webfactory/ssh-agent@v0.2.0
+            - uses: webfactory/ssh-agent@v0.4.1
               with:
                   ssh-private-key: ${{ secrets.GH_SSH_KEY }}
 
@@ -37,8 +37,12 @@ jobs:
                   result-encoding: string
                   github-token: ${{secrets.GITHUB_TOKEN}}
                   script: |
-                      if (context.payload.head_commit.message.includes("DEPLOY ALL")) {
-                         return "--all";
+                      const matched = context.payload.head_commit.message.match(/(?<=DEPLOY \|).*?(?=\s*\|)/gs);
+                      const list = matched && Array.isArray(matched) && matched.length > 0 ? matched[0].replace(/(\r\n|\n|\r)/gm," ").trim() : null;
+                      if (list === "ALL") {
+                             return "--all";
+                         } else if (list) {
+                             return list;
                          } else {
                          const branch = context.payload.ref.split("/")[2];
 
@@ -66,7 +70,13 @@ jobs:
 
             - name: List services
               id: services
-              run: echo ::set-output name=list::$(node ./node_modules/@nrwl/cli/bin/nx.js affected:apps --plain ${{steps.history.outputs.result}} )
+              run: |
+                  if [[ "${{steps.history.outputs.result}}" == *"--"* ]];
+                  then
+                     echo ::set-output name=list::$(node ./node_modules/@nrwl/cli/bin/nx.js affected:apps --plain ${{steps.history.outputs.result}} )
+                  else
+                     echo ::set-output name=list::${{steps.history.outputs.result}}
+                  fi
 
             - name: Echo services
               run: echo ${{ steps.services.outputs.list }}
@@ -75,11 +85,14 @@ jobs:
             #  if: steps.services.outputs.list == null || steps.services.outputs.list == ${{ ' ' }}
             #  run: exit 1
 
+            - name: Build base container
+              run: docker build --build-arg GITHUB_SSH_KEY="${{ secrets.GH_SSH_KEY }}" -t cryptuoso-build:latest -f build.Dockerfile .
+
             - name: Build containers
-              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do docker build --build-arg SERVICE_NAME="${i}" --build-arg GITHUB_SSH_KEY="${{ secrets.GH_SSH_KEY }}" -t registry.digitalocean.com/cpz/$i:$(echo $GITHUB_SHA | head -c7) .; done;
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do docker build --build-arg SERVICE_NAME="${i}"  -t registry.digitalocean.com/cpz/$i:$(echo $GITHUB_SHA | head -c7) .; done;
 
             - name: Install doctl
-              uses: digitalocean/action-doctl@v2-experiment
+              uses: digitalocean/action-doctl@v2
               with:
                   token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 
@@ -101,7 +114,7 @@ jobs:
 
             - name: Update deployment file APP prod
               if: contains(github.ref, 'master')
-              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do sed -i 's|<APP>|'${i}'|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do sed -i 's|<APP>|'${i}'-prod|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
 
             - name: Update deployment file ENV dev
               if: contains(github.ref, 'dev')
@@ -116,8 +129,8 @@ jobs:
 
             - name: Verify deployment dev
               if: contains(github.ref, 'dev')
-              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig rollout status deployment/${i}-dev; done;
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig --namespace=dev rollout status deployment/${i}-dev; done;
 
             - name: Verify deployment prod
               if: contains(github.ref, 'master')
-              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig rollout status deployment/${i}; done;
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig --namespace=prod rollout status deployment/${i}-prod; done;

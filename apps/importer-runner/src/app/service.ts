@@ -1,4 +1,3 @@
-import { Queue } from "bullmq";
 import { v4 as uuid } from "uuid";
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import dayjs from "@cryptuoso/dayjs";
@@ -14,26 +13,29 @@ import {
 } from "@cryptuoso/importer-events";
 import { BaseError } from "@cryptuoso/errors";
 import { Timeframe } from "@cryptuoso/market";
+import { UserRoles } from "@cryptuoso/user-state";
+import { sql } from "@cryptuoso/postgres";
 
 export type ImporterRunnerServiceConfig = HTTPServiceConfig;
 
 export default class ImporterRunnerService extends HTTPService {
-    queues: { [key: string]: Queue<any> };
     constructor(config?: ImporterRunnerServiceConfig) {
         super(config);
         try {
             this.createRoutes({
                 importerStart: {
                     inputSchema: ImporterRunnerSchema[ImporterRunnerEvents.START],
-                    auth: true,
-                    roles: ["manager", "admin"],
+                    roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.startHTTPHandler
                 },
                 importerStop: {
                     inputSchema: ImporterRunnerSchema[ImporterRunnerEvents.STOP],
-                    auth: true,
-                    roles: ["manager", "admin"],
+                    roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.stopHTTPHandler
+                },
+                importerStartAllMarkets: {
+                    roles: [UserRoles.admin, UserRoles.manager],
+                    handler: this.startAllMarketsHTTPHandler
                 }
             });
             this.events.subscribe({
@@ -46,21 +48,14 @@ export default class ImporterRunnerService extends HTTPService {
                     schema: ImporterRunnerSchema[ImporterRunnerEvents.STOP]
                 }
             });
-            this.addOnStartHandler(this.onStartService);
-            this.addOnStopHandler(this.onStopService);
+            this.addOnStartHandler(this.onServiceStart);
         } catch (err) {
-            this.log.error(err, "While consctructing ImporterRunnerService");
+            this.log.error("Error while constructing ImporterRunnerService", err);
         }
     }
 
-    async onStartService() {
-        this.queues = {
-            importCandles: new Queue("importCandles", { connection: this.redis })
-        };
-    }
-
-    async onStopService() {
-        await this.queues.importCandles?.close();
+    async onServiceStart() {
+        this.createQueue("importCandles");
     }
 
     async startHTTPHandler(
@@ -81,7 +76,7 @@ export default class ImporterRunnerService extends HTTPService {
             const params: ImporterParams = {
                 timeframes: timeframes || Timeframe.validArray
             };
-            const market: { loadFrom: string } = await this.db.pg.maybeOne(this.db.sql`
+            const market = await this.db.pg.maybeOne<{ loadFrom: string }>(sql`
             select load_from from markets 
             where exchange = ${exchange} 
             and asset = ${asset} and currency = ${currency}
@@ -110,9 +105,10 @@ export default class ImporterRunnerService extends HTTPService {
             });
             importer.init();
 
-            await this.queues.importCandles.add(importer.type, importer.state, {
+            await this.addJob("importCandles", importer.type, importer.state, {
                 jobId: importer.id,
-                removeOnComplete: true
+                removeOnComplete: true,
+                removeOnFail: true
             });
             return { result: importer.id };
         } catch (error) {
@@ -136,7 +132,7 @@ export default class ImporterRunnerService extends HTTPService {
 
     async stop({ id }: ImporterRunnerStop) {
         try {
-            const job = await this.queues.importCandles.getJob(id);
+            const job = await this.queues["importCandles"].instance.getJob(id);
             if (job) {
                 if (job.isActive) {
                     await this.events.emit<ImporterWorkerCancel>({
@@ -148,6 +144,26 @@ export default class ImporterRunnerService extends HTTPService {
                 } else {
                     await job.remove();
                 }
+            }
+        } catch (error) {
+            this.log.error(error);
+            throw error;
+        }
+    }
+
+    async startAllMarketsHTTPHandler(req: any, res: any) {
+        await this.startAllMarkets();
+        res.send({ result: "OK" });
+        res.end();
+    }
+
+    async startAllMarkets() {
+        try {
+            const markets = await this.db.pg.any<{ exchange: string; asset: string; currency: string }>(
+                sql`SELECT exchange, asset, currency FROM markets where available >= 10;`
+            );
+            for (const market of markets) {
+                await this.start({ ...market, type: "history", timeframes: [1440, 720, 480, 240, 120, 60, 30] });
             }
         } catch (error) {
             this.log.error(error);

@@ -1,11 +1,10 @@
 import { ISO_DATE_REGEX, CANDLES_RECENT_AMOUNT } from "@cryptuoso/helpers";
 import { Timeframe, ValidTimeframe } from "@cryptuoso/market";
 import { Status, BacktesterSettings } from "@cryptuoso/backtester-state";
-import { RobotSettings } from "@cryptuoso/robot-state";
+import { RobotSettings, RobotSettingsSchema, StrategySettings } from "@cryptuoso/robot-settings";
 
 export const enum BacktesterRunnerEvents {
     START = "in-backtester-runner.start",
-    START_MANY = "in-backtester-runner.start-many",
     STOP = "in-backtester-runner.stop"
 }
 
@@ -43,10 +42,10 @@ export const BacktesterRunnerSchema = {
                     optional: true
                 },
                 timeframe: {
-                    type: "number",
-                    enum: Timeframe.validArray
+                    type: "enum",
+                    values: Timeframe.validArray
                 },
-                strategyName: {
+                strategy: {
                     type: "string",
                     optional: true
                 }
@@ -69,123 +68,45 @@ export const BacktesterRunnerSchema = {
             props: {
                 local: {
                     type: "boolean",
-                    optional: true,
                     default: false
                 },
                 populateHistory: {
                     type: "boolean",
-                    optional: true,
                     default: false
+                },
+                saveSignals: {
+                    type: "boolean",
+                    default: true
                 },
                 savePositions: {
                     type: "boolean",
-                    optional: true,
                     default: true
                 },
                 saveLogs: {
                     type: "boolean",
-                    optional: true,
                     default: false
                 }
             }
         },
-        robotSettings: {
+        strategySettingsRange: {
             type: "object",
-            optional: true,
-            strict: true,
-            props: {
-                strategyParameters: "object",
-                volume: { type: "number", integer: true },
-                requiredHistoryMaxBars: { type: "number", integer: true, default: CANDLES_RECENT_AMOUNT }
-            }
-        }
-    },
-    [BacktesterRunnerEvents.START_MANY]: {
-        id: {
-            type: "uuid",
             optional: true
         },
-        robotId: {
-            type: "uuid",
-            optional: true
-        },
-        robotParams: {
-            type: "object",
-            optional: true,
-            strict: true,
-            props: {
-                exchange: {
-                    type: "string",
-                    optional: true
-                },
-                asset: {
-                    type: "string",
-                    optional: true
-                },
-                currency: {
-                    type: "string",
-                    optional: true
-                },
-                timeframe: {
-                    type: "number",
-                    enum: Timeframe.validArray
-                },
-                strategyName: {
-                    type: "string",
-                    optional: true
-                }
-            }
-        },
-        dateFrom: {
-            type: "string",
-            pattern: ISO_DATE_REGEX,
-            optional: true
-        },
-        dateTo: {
-            type: "string",
-            pattern: ISO_DATE_REGEX,
-            optional: true
-        },
-        settings: {
-            type: "object",
-            optional: true,
-            strict: true,
-            props: {
-                local: {
-                    type: "boolean",
-                    optional: true,
-                    default: false
-                },
-                populateHistory: {
-                    type: "boolean",
-                    optional: true,
-                    default: false
-                },
-                savePositions: {
-                    type: "boolean",
-                    optional: true,
-                    default: true
-                },
-                saveLogs: {
-                    type: "boolean",
-                    optional: true,
-                    default: false
-                }
-            }
-        },
-        robotSettings: {
-            type: "array",
-            optional: true,
-            items: {
+        strategySettings: [
+            {
                 type: "object",
-                strict: true,
+                optional: true,
                 props: {
-                    strategyParameters: "object",
-                    volume: { type: "number", integer: true },
                     requiredHistoryMaxBars: { type: "number", integer: true, default: CANDLES_RECENT_AMOUNT }
                 }
+            },
+            {
+                type: "array",
+                props: "object",
+                optional: true
             }
-        }
+        ],
+        robotSettings: RobotSettingsSchema.map((s) => ({ ...s, optional: true }))
     },
     [BacktesterRunnerEvents.STOP]: {
         id: {
@@ -219,28 +140,14 @@ export interface BacktesterRunnerStart {
         asset: string;
         currency: string;
         timeframe: ValidTimeframe;
-        strategyName: string;
+        strategy: string;
     };
     dateFrom?: string;
     dateTo?: string;
-    settings?: BacktesterSettings;
+    settings: BacktesterSettings;
+    strategySettingsRange?: { [key: string]: any }; //TODO settings generator
+    strategySettings?: StrategySettings | StrategySettings[];
     robotSettings?: RobotSettings;
-}
-
-export interface BacktesterRunnerStartMany {
-    id?: string;
-    robotId?: string;
-    robotParams?: {
-        exchange: string;
-        asset: string;
-        currency: string;
-        timeframe: ValidTimeframe;
-        strategyName: string;
-    };
-    dateFrom?: string;
-    dateTo?: string;
-    settings?: BacktesterSettings;
-    robotSettings?: RobotSettings[]; //TODO settings generator
 }
 
 export interface BacktesterRunnerStop {

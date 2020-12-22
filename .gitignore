@@ -41,3 +41,11 @@ Thumbs.db
 # ENV
 .local.env
 .env
+.env.compose
+
+strategies/*.js
+!strategies/.gitkeep 
+indicators/*.js
+!indicators/.gitkeep 
+
+migrations.json

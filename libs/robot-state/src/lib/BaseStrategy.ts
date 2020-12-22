@@ -2,39 +2,25 @@ import { ValidationSchema } from "fastest-validator";
 import dayjs from "@cryptuoso/dayjs";
 import { v4 as uuid } from "uuid";
 import { validate, sortAsc } from "@cryptuoso/helpers";
-import { RobotPosition, RobotPositionStatus, RobotPositionState } from "./RobotPosition";
-import { Candle, CandleProps, OrderType, TradeAction, ValidTimeframe, SignalInfo } from "@cryptuoso/market";
+import { RobotPosition } from "./RobotPosition";
+import {
+    CandleProps,
+    OrderType,
+    TradeAction,
+    ValidTimeframe,
+    SignalInfo,
+    RobotPositionStatus,
+    Candle
+} from "@cryptuoso/market";
 import { IndicatorState, IndicatorType } from "@cryptuoso/robot-indicators";
 import { NewEvent } from "@cryptuoso/events";
-import { RobotWorkerEvents, Signal } from "@cryptuoso/robot-events";
+import { RobotWorkerEvents, Signal, SignalEvents } from "@cryptuoso/robot-events";
 import logger from "@cryptuoso/logger";
-
-interface RobotSettings {
-    strategyParameters?: { [key: string]: any };
-    volume?: number;
-    requiredHistoryMaxBars?: number;
-}
-
-interface RobotsPostionInternalState {
-    [key: string]: any;
-    highestHigh?: number;
-    lowestLow?: number;
-    stop?: number;
-}
-
-export interface StrategyProps {
-    initialized: boolean;
-    posLastNumb: { [key: string]: number };
-    positions: RobotPositionState[];
-    indicators: {
-        [key: string]: IndicatorState;
-    };
-    variables: { [key: string]: any };
-}
+import { RobotPositionState, StrategyProps } from "./types";
+import { StrategySettings } from "@cryptuoso/robot-settings";
 
 export interface StrategyState extends StrategyProps {
-    parameters?: { [key: string]: number | string };
-    robotSettings: { [key: string]: any };
+    strategySettings: StrategySettings;
     exchange: string;
     asset: string;
     currency: string;
@@ -48,8 +34,7 @@ export interface StrategyState extends StrategyProps {
 export class BaseStrategy {
     [key: string]: any;
     _initialized: boolean;
-    _parameters: { [key: string]: number | string };
-    _robotSettings: RobotSettings;
+    _strategySettings: StrategySettings;
     _exchange: string;
     _asset: string;
     _currency: string;
@@ -68,13 +53,12 @@ export class BaseStrategy {
     _consts: { [key: string]: string };
     _eventsToSend: NewEvent<any>[];
     _positionsToSave: RobotPositionState[];
-    _log = logger.debug;
+    _log = logger.debug.bind(logger);
     _dayjs = dayjs;
 
     constructor(state: StrategyState) {
         this._initialized = state.initialized || false; // стратегия инициализирована
-        this._parameters = state.parameters || {};
-        this._robotSettings = state.robotSettings;
+        this._strategySettings = state.strategySettings || {};
         this._exchange = state.exchange;
         this._asset = state.asset;
         this._currency = state.currency;
@@ -128,7 +112,7 @@ export class BaseStrategy {
 
     _checkParameters() {
         if (this._parametersSchema && Object.keys(this._parametersSchema).length > 0) {
-            validate(this._parameters, this._parametersSchema);
+            validate(this._strategySettings, this._parametersSchema);
         }
     }
 
@@ -168,9 +152,7 @@ export class BaseStrategy {
     _createAlertEvents() {
         Object.values(this._positions).forEach((position) => {
             if (position.hasAlertsToPublish) {
-                position.alertsToPublish.forEach((signal) =>
-                    this._createSignalEvent(signal, RobotWorkerEvents.SIGNAL_ALERT)
-                );
+                position.alertsToPublish.forEach((signal) => this._createSignalEvent(signal, SignalEvents.ALERT));
                 position._clearAlertsToPublish();
                 this._positionsToSave.push(position.state);
             }
@@ -180,14 +162,14 @@ export class BaseStrategy {
     _createTradeEvents() {
         Object.values(this._positions).forEach((position) => {
             if (position.hasTradeToPublish) {
-                this._createSignalEvent(position.tradeToPublish, RobotWorkerEvents.SIGNAL_TRADE);
+                this._createSignalEvent(position.tradeToPublish, SignalEvents.TRADE);
                 position._clearTradeToPublish();
                 this._positionsToSave.push(position.state);
             }
         });
     }
 
-    _createSignalEvent(signal: SignalInfo, type: RobotWorkerEvents.SIGNAL_ALERT | RobotWorkerEvents.SIGNAL_TRADE) {
+    _createSignalEvent(signal: SignalInfo, type: SignalEvents.ALERT | SignalEvents.TRADE) {
         const signalData: Signal = {
             ...signal,
             id: uuid(),
@@ -196,7 +178,7 @@ export class BaseStrategy {
             asset: this._asset,
             currency: this._currency,
             timeframe: this._timeframe,
-            timestamp: dayjs.utc().toISOString()
+            timestamp: this._backtest ? signal.candleTimestamp : dayjs.utc().toISOString()
         };
 
         this._eventsToSend.push({
@@ -209,20 +191,6 @@ export class BaseStrategy {
     _positionsHandleCandle(candle: Candle) {
         if (Object.keys(this._positions).length > 0) {
             Object.keys(this._positions).forEach((key) => {
-                /*   if (
-          this._candlesProps &&
-          this._candlesProps.high &&
-          this._candlesProps.low &&
-          this._positions[key].isActive &&
-          (this._positions[key].highestHigh === null ||
-            this._positions[key].lowestLow === null)
-        ) {
-          this._positions[key]._initHighLow(
-            candle.timestamp,
-            this._candlesProps.high,
-            this._candlesProps.low
-          );
-        }*/
                 this._positions[key]._handleCandle(candle);
             });
         }
@@ -248,13 +216,12 @@ export class BaseStrategy {
             id: uuid(),
             robotId: this._robotId,
             timeframe: this._timeframe,
-            volume: this._robotSettings.volume,
             prefix,
             code,
             parentId: parentId,
             backtest: this._backtest
         });
-        this._positions[code]._log = this._log.bind(this);
+        this._positions[code]._log = logger.debug.bind(logger);
         this._positions[code]._handleCandle(this._candle);
         return this._positions[code];
     }
@@ -297,7 +264,7 @@ export class BaseStrategy {
         if (positions && Array.isArray(positions) && positions.length > 0) {
             positions.forEach((position) => {
                 this._positions[position.code] = new RobotPosition(position);
-                this._positions[position.code]._log = this._log.bind(this);
+                this._positions[position.code]._log = logger.debug.bind(logger);
             });
         }
     }
@@ -315,7 +282,7 @@ export class BaseStrategy {
                 if (this._positions[key].hasAlerts) {
                     this._positions[key]._checkAlerts();
                     if (this._positions[key].hasTradeToPublish) {
-                        this._createSignalEvent(this._positions[key].tradeToPublish, RobotWorkerEvents.SIGNAL_TRADE);
+                        this._createSignalEvent(this._positions[key].tradeToPublish, SignalEvents.TRADE);
                         this._positionsToSave.push(this._positions[key].state);
                         this._positions[key]._clearTradeToPublish();
                         if (this._positions[key].status === RobotPositionStatus.closed) {
@@ -399,7 +366,7 @@ export class BaseStrategy {
     }
 
     get parameters() {
-        return this._parameters;
+        return this._strategySettings;
     }
 
     get robotSettings() {

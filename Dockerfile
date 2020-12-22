@@ -1,27 +1,10 @@
-FROM node:12-alpine as build
+FROM cryptuoso-build:latest as build
 
-RUN apk add --no-cache build-base git openssh-client
-
-ARG GITHUB_SSH_KEY
 ARG SERVICE_NAME
-RUN \
-    mkdir ~/.ssh/ && \
-    echo "$GITHUB_SSH_KEY" > ~/.ssh/id_rsa && \
-    chmod 600 ~/.ssh/id_rsa && \
-    eval $(ssh-agent) && \
-    echo -e "StrictHostKeyChecking no" >> /etc/ssh/ssh_config && \
-    ssh-add ~/.ssh/id_rsa && \
-    touch ~/.ssh/known_hosts && \
-    ssh-keyscan github.com >> ~/.ssh/known_hosts
 
-RUN mkdir -p /usr/src/app
-WORKDIR /usr/src/app
+RUN npm run build:"$SERVICE_NAME" && npm prune --production && npm cache clean --force
 
-COPY . /usr/src/app/
-
-RUN npm install && npm run build:"$SERVICE_NAME" && npm prune --production
-
-FROM node:12-alpine as runtime
+FROM node:14-alpine as runtime
 RUN mkdir -p /usr/src/app
 COPY --from=build ["/usr/src/app/node_modules","/usr/src/app/node_modules"]
 COPY --from=build ["/usr/src/app/dist","/usr/src/app/dist"]

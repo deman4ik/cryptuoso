@@ -8,7 +8,7 @@ const interceptors = [
         format: "CAMEL_CASE"
     })
 ];
-const parseDate = (value: string) => (!value ? value : dayjs.utc(value).toISOString());
+const parseDate = (value: string) => (!value ? value : dayjs.utc(value + "+0000").toISOString());
 
 const typeParsers = [
     ...createTypeParserPreset(),
@@ -25,11 +25,12 @@ const typeParsers = [
         parse: parseDate
     }
 ];
+
 const config: ClientConfigurationInputType = {
-    connectionRetryLimit: 5,
-    connectionTimeout: 10000,
+    connectionRetryLimit: 10,
+    connectionTimeout: "DISABLE_TIMEOUT",
     idleTimeout: 3000,
-    maximumPoolSize: 16,
+    maximumPoolSize: 10,
     interceptors,
     typeParsers
 };

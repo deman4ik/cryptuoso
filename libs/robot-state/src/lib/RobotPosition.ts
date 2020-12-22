@@ -1,60 +1,19 @@
 import { sortAsc, round } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
-import { TradeAction, OrderType, SignalType, AlertInfo, SignalInfo, Candle, ValidTimeframe } from "@cryptuoso/market";
-
-export const enum PositionDirection {
-    long = "long",
-    short = "short"
-}
-
-export const enum RobotPositionStatus {
-    new = "new",
-    open = "open",
-    closed = "closed"
-}
-
-export const enum RobotTradeStatus {
-    new = "new",
-    open = "open",
-    closed = "closed"
-}
-
-interface RobotsPostionInternalState {
-    [key: string]: any;
-    highestHigh?: number;
-    lowestLow?: number;
-    stop?: number;
-}
-
-export interface RobotPositionState {
-    id: string;
-    robotId: string;
-    timeframe: ValidTimeframe;
-    volume: number;
-    prefix: string;
-    code: string;
-    parentId?: string;
-    direction?: PositionDirection;
-    status?: RobotPositionStatus;
-    entryStatus?: RobotTradeStatus;
-    entryPrice?: number;
-    entryDate?: string;
-    entryOrderType?: OrderType;
-    entryAction?: TradeAction;
-    entryCandleTimestamp?: string;
-    exitStatus?: RobotTradeStatus;
-    exitPrice?: number;
-    exitDate?: string;
-    exitOrderType?: OrderType;
-    exitAction?: TradeAction;
-    exitCandleTimestamp?: string;
-    alerts?: { [key: string]: AlertInfo };
-    profit?: number;
-    barsHeld?: number;
-    fee?: number;
-    backtest?: boolean;
-    internalState?: RobotsPostionInternalState;
-}
+import {
+    TradeAction,
+    OrderType,
+    SignalType,
+    AlertInfo,
+    SignalInfo,
+    ValidTimeframe,
+    PositionDirection,
+    RobotPositionStatus,
+    RobotTradeStatus,
+    Candle,
+    DBCandle
+} from "@cryptuoso/market";
+import { RobotPositionState, RobotPostionInternalState } from "./types";
 
 /**
  * Robot position
@@ -65,7 +24,6 @@ export class RobotPosition {
     private _id: string;
     private _robotId: string;
     private _timeframe: ValidTimeframe;
-    private _volume: number;
     private _prefix: string;
     private _code: string;
     private _parentId?: string;
@@ -86,9 +44,8 @@ export class RobotPosition {
     private _alerts?: { [key: string]: AlertInfo };
     private _profit: number;
     private _barsHeld: number;
-    private _fee: number;
     private _backtest?: boolean;
-    private _internalState: RobotsPostionInternalState;
+    private _internalState: RobotPostionInternalState;
     private _candle?: Candle;
     private _alertsToPublish: SignalInfo[];
     private _tradeToPublish: SignalInfo;
@@ -98,7 +55,6 @@ export class RobotPosition {
         this._id = state.id;
         this._robotId = state.robotId;
         this._timeframe = state.timeframe;
-        this._volume = state.volume;
         this._prefix = state.prefix;
         this._code = state.code;
         this._parentId = state.parentId;
@@ -119,7 +75,6 @@ export class RobotPosition {
         this._alerts = state.alerts || {};
         this._profit = state.profit || 0;
         this._barsHeld = state.barsHeld || 0;
-        this._fee = state.fee;
         this._backtest = state.backtest;
         this._internalState = state.internalState || {
             highestHigh: null,
@@ -207,12 +162,11 @@ export class RobotPosition {
         return this._internalState.lowestLow;
     }
 
-    public get state() {
+    public get state(): RobotPositionState {
         return {
             id: this._id,
             robotId: this._robotId,
             timeframe: this._timeframe,
-            volume: this._volume,
             prefix: this._prefix,
             code: this._code,
             parentId: this._parentId,
@@ -254,30 +208,7 @@ export class RobotPosition {
         this._alerts = {};
     }
 
-    /*_initHighLow(timestamp: string, highs: number[], lows: number[]) {
-    if (
-      this._status === RobotPositionStatus.open &&
-      (!this.highestHigh || !this.lowestLow)
-    ) {
-      let barsHeld =
-        +round(
-          dayjs
-            .utc(timestamp)
-            .diff(dayjs.utc(this._entryCandleTimestamp), TimeUnit.minute) /
-            this._timeframe
-        ) + 1;
-
-      this._internalState.highestHigh = Math.max(...highs.slice(-barsHeld));
-      this._internalState.lowestLow = Math.min(...lows.slice(-barsHeld));
-    }
-  }*/
-
     _calcStats() {
-        if (this._direction === PositionDirection.long) {
-            this._profit = +round((this._exitPrice - this._entryPrice) * this._volume, 6);
-        } else {
-            this._profit = +round((this._entryPrice - this._exitPrice) * this._volume, 6);
-        }
         this._barsHeld = +round(
             dayjs.utc(this._exitCandleTimestamp).diff(dayjs.utc(this._entryCandleTimestamp), "minute") / this._timeframe
         );
@@ -337,8 +268,7 @@ export class RobotPosition {
             positionId: this._id,
             positionPrefix: this._prefix,
             positionCode: this._code,
-            positionParentId: this._parentId,
-            positionBarsHeld: this._barsHeld
+            positionParentId: this._parentId
         };
     }
 
@@ -352,7 +282,7 @@ export class RobotPosition {
         this._entryOrderType = orderType;
         this._entryAction = action;
         this._entryCandleTimestamp = this._candle.timestamp;
-        this._direction = action === TradeAction.long ? PositionDirection.long : PositionDirection.short;
+        this._direction = action === TradeAction.long ? "long" : "short";
         this._createTradeSignal({
             ...alert,
             candleTimestamp: this._candle.timestamp
@@ -396,15 +326,15 @@ export class RobotPosition {
         let nextPrice = null;
         switch (orderType) {
             case OrderType.stop: {
-                nextPrice = this._checkStop(action, price);
+                nextPrice = RobotPosition.checkStop(action, price, this._candle, this._backtest);
                 break;
             }
             case OrderType.limit: {
-                nextPrice = this._checkLimit(action, price);
+                nextPrice = RobotPosition.checkLimit(action, price, this._candle, this._backtest);
                 break;
             }
             case OrderType.market: {
-                nextPrice = this._checkMarket(action, price);
+                nextPrice = RobotPosition.checkMarket(action, price, this._candle, this._backtest);
                 break;
             }
             default:
@@ -421,28 +351,28 @@ export class RobotPosition {
         return false;
     }
 
-    _checkMarket(action: TradeAction, price: number) {
+    public static checkMarket(action: TradeAction, price: number, currentCandle: DBCandle, isBacktest = false) {
         if (action === TradeAction.long || action === TradeAction.closeShort) {
-            if (!this._backtest) return +Math.max(+this._candle.close, +price);
-            else return +Math.max(+this._candle.open, +price);
+            if (!isBacktest) return +Math.max(+currentCandle.close, +price);
+            else return +Math.max(+currentCandle.open, +price);
         }
         if (action === TradeAction.short || action === TradeAction.closeLong) {
-            if (!this._backtest) return +Math.min(+this._candle.close, +price);
-            else return +Math.min(+this._candle.open, +price);
+            if (!isBacktest) return +Math.min(+currentCandle.close, +price);
+            else return +Math.min(+currentCandle.open, +price);
         }
         throw new Error(`Unknown action ${action}`);
     }
 
-    _checkStop(action: TradeAction, price: number) {
+    public static checkStop(action: TradeAction, price: number, currentCandle: DBCandle, isBacktest = false) {
         if (action === TradeAction.long || action === TradeAction.closeShort) {
-            if (+this._candle.high >= +price) {
-                if (!this._backtest) return +Math.max(+this._candle.close, +price);
-                else return +Math.max(+this._candle.open, +price);
+            if (+currentCandle.high >= +price) {
+                if (!isBacktest) return +Math.max(+currentCandle.close, +price);
+                else return +Math.max(+currentCandle.open, +price);
             }
         } else if (action === TradeAction.short || action === TradeAction.closeLong) {
-            if (+this._candle.low <= +price) {
-                if (!this._backtest) return +Math.min(+this._candle.close, +price);
-                else return +Math.min(+this._candle.open, +price);
+            if (+currentCandle.low <= +price) {
+                if (!isBacktest) return +Math.min(+currentCandle.close, +price);
+                else return +Math.min(+currentCandle.open, +price);
             }
         } else {
             throw new Error(`Unknown action ${action}`);
@@ -450,16 +380,16 @@ export class RobotPosition {
         return null;
     }
 
-    _checkLimit(action: TradeAction, price: number): number {
+    public static checkLimit(action: TradeAction, price: number, currentCandle: DBCandle, isBacktest = false): number {
         if (action === TradeAction.long || action === TradeAction.closeShort) {
-            if (+this._candle.high <= +price) {
-                if (!this._backtest) return +Math.min(+this._candle.close, +price);
-                else return +Math.min(+this._candle.open, +price);
+            if (+currentCandle.high <= +price) {
+                if (!isBacktest) return +Math.min(+currentCandle.close, +price);
+                else return +Math.min(+currentCandle.open, +price);
             }
         } else if (action === TradeAction.short || action === TradeAction.closeLong) {
-            if (+this._candle.low >= +price) {
-                if (!this._backtest) return +Math.max(+this._candle.close, +price);
-                else return +Math.max(+this._candle.open, +price);
+            if (+currentCandle.low >= +price) {
+                if (!isBacktest) return +Math.max(+currentCandle.close, +price);
+                else return +Math.max(+currentCandle.open, +price);
             }
         } else {
             throw new Error(`Unknown action ${action}`);

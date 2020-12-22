@@ -2,67 +2,87 @@ import { Redis } from "ioredis";
 import { LightshipType } from "lightship";
 import { ValidationSchema } from "fastest-validator";
 import { v4 as uuid } from "uuid";
-import logger, { Logger } from "@cryptuoso/logger";
+import logger from "@cryptuoso/logger";
 import { JSONParse, round, sleep } from "@cryptuoso/helpers";
 import { CloudEvent as Event, CloudEventV1 } from "cloudevents";
 import { BaseError } from "@cryptuoso/errors";
 import { EventsCatalog, EventHandler, BASE_REDIS_PREFIX } from "./catalog";
 import dayjs from "@cryptuoso/dayjs";
 
-export { CloudEventV1 as Event };
+export { Event };
 export interface NewEvent<T> {
     type: string;
     data: T;
     subject?: string;
 }
+export interface EventsConfig {
+    blockTimeout?: number;
+    pendingInterval?: number;
+    pendingRetryRate?: number;
+    pendingMinIdleTime?: number;
+    pendingMaxRetries?: number;
+    deadLetterTopic?: string;
+}
+
+export interface DeadLetter {
+    topic: string;
+    group?: string;
+    type: string;
+    data: Event | any;
+    error: string;
+}
 
 const BLOCK_TIMEOUT = 60000;
+const PENDING_INTERVAL = 15000;
+const PENDING_RETRY_RATE = 30;
+const PENDING_MAX_RETRIES = 3;
+export const DEAD_LETTER_TOPIC = "dead-letter";
 
 type StreamMsgVals = string[];
 type StreamMessage = [string, StreamMsgVals];
 
 export class Events {
-    #log: Logger;
     #catalog: EventsCatalog;
     #redis: Redis;
     #lightship: LightshipType;
     #consumerId: string;
     #blockTimeout: number;
+    #pendingInterval: number;
+    #pendingRetryRate: number;
+    #pendingMinIdleTime: number;
+    #pendingMaxRetries: number;
+    #deadLetterTopic: string;
     #state: {
         [topic: string]: {
             unbalanced?: {
                 redis: Redis; // need separate client for blocking
-                timerId?: any;
+                timerId?: NodeJS.Timer;
                 lastId?: string;
                 count?: number;
             };
             grouped?: {
                 redis: Redis; // need separate client for blocking
-                timerId?: any;
-                lastId?: string;
+                timerId?: NodeJS.Timer;
                 count?: number;
-                historyLoaded?: boolean;
             };
             pending?: {
-                timerId: any;
-                lastId?: string;
+                timerId: NodeJS.Timer;
                 count?: number;
-                historyLoaded?: boolean;
             };
         };
     } = {};
-    constructor(redisClient: Redis, lightship: LightshipType, blockTimeout?: number) {
-        this.#log = logger;
+    constructor(redisClient: Redis, lightship: LightshipType, config?: EventsConfig) {
         this.#redis = redisClient.duplicate();
         this.#lightship = lightship;
 
         this.#consumerId = uuid();
         this.#catalog = new EventsCatalog();
-        this.#blockTimeout = blockTimeout || BLOCK_TIMEOUT;
-    }
-
-    get log() {
-        return this.#log;
+        this.#blockTimeout = config?.blockTimeout || BLOCK_TIMEOUT;
+        this.#pendingInterval = config?.pendingInterval || PENDING_INTERVAL;
+        this.#pendingMinIdleTime = config?.pendingMinIdleTime || BLOCK_TIMEOUT;
+        this.#pendingRetryRate = config?.pendingRetryRate || PENDING_RETRY_RATE;
+        this.#pendingMaxRetries = config?.pendingMaxRetries || PENDING_MAX_RETRIES;
+        this.#deadLetterTopic = config?.deadLetterTopic || DEAD_LETTER_TOPIC;
     }
 
     _parseObjectResponse(reply: StreamMsgVals): { [key: string]: any } {
@@ -114,7 +134,7 @@ export class Events {
                 const newEvent = new Event(event);
                 events[msgId] = newEvent;
             } catch (error) {
-                this.log.error("Failed to parse and validate event", error);
+                logger.error(`Failed to parse and validate event - ${error.message}`);
             }
         }
         return events;
@@ -122,7 +142,7 @@ export class Events {
 
     private async _createGroup(topic: string, group: string) {
         try {
-            await this.#redis.xgroup("CREATE", topic, group, "$", "MKSTREAM");
+            await this.#redis.xgroup("CREATE", topic, group, "0", "MKSTREAM");
         } catch (err) {
             if (!err.message.includes("BUSYGROUP")) throw err;
         }
@@ -149,7 +169,7 @@ export class Events {
                 const events: { [key: string]: Event } = this._parseEvents(data[topic]);
                 await Promise.all(
                     Object.entries(events).map(async ([msgId, event]) => {
-                        this.log.info(`Handling "${topic}" event #${msgId} (${event.id})...`);
+                        logger.info(`Handling "${topic}" event #${msgId} (${event.id})...`);
                         await Promise.all(
                             this.#catalog
                                 .getUnbalancedHandlers(topic, event.type)
@@ -164,23 +184,31 @@ export class Events {
                                                 { validationErrors },
                                                 "VALIDATION"
                                             );
-                                    } catch (err) {
-                                        this.log.error(
-                                            err,
-                                            `Failed to handle "${topic}" event #${msgId} (${event.id}) ${event.type}`
+                                    } catch (error) {
+                                        logger.error(
+                                            `Failed to handle "${topic}" event #${msgId} (${event.id}) ${event.type}  - ${error.message}`
                                         );
+                                        if (error instanceof BaseError && error.type === "VALIDATION") {
+                                            const letter: DeadLetter = {
+                                                topic,
+                                                type: event.type,
+                                                data: event,
+                                                error: error.message
+                                            };
+                                            await this.emitDeadLetter(letter);
+                                        }
                                     }
                                 })
                         );
 
-                        this.log.info(`Handled "${topic}" event #${msgId} (${event.id})`);
+                        logger.info(`Handled "${topic}" event #${msgId} (${event.id})`);
                     })
                 );
                 this.#state[topic].unbalanced.lastId = data[topic][data[topic].length - 1].msgId;
             }
             await beacon.die();
         } catch (error) {
-            this.log.error(error, "Failed to receive message");
+            logger.error(`Failed to receive message - ${error.message}`);
             if (error.message !== "Connection is closed.") {
                 throw error;
             }
@@ -201,7 +229,7 @@ export class Events {
                 timerId: setTimeout(this._receiveMessagesTick.bind(this, topic), 0)
             };
         } catch (error) {
-            this.log.error(error);
+            logger.error(error.message);
         }
     }
 
@@ -219,23 +247,17 @@ export class Events {
                 this.#state[`${topic}-${group}`].grouped.count,
                 "STREAMS",
                 topic,
-                this.#state[`${topic}-${group}`].grouped.lastId
+                ">"
             );
-            //  this.log.debug(rawData);
+            // logger.debug(rawData || "no data");
             const beacon = this.#lightship.createBeacon();
             if (rawData) {
                 const data = this._parseStreamResponse(rawData);
-                if (!this.#state[`${topic}-${group}`].grouped.historyLoaded) {
-                    this.log.debug(`Loaded events history for "${topic}" group "${group}"`);
-                    this.#state[`${topic}-${group}`].grouped.historyLoaded = true;
-                    this.#state[`${topic}-${group}`].grouped.lastId = ">";
-                    this.#state[`${topic}-${group}`].grouped.count = 10;
-                }
                 const events: { [key: string]: Event } = this._parseEvents(data[topic]);
                 await Promise.all(
                     Object.entries(events).map(async ([msgId, event]) => {
                         try {
-                            this.log.debug(`Handling "${topic}" group "${group}" event #${msgId} (${event.id})...`);
+                            logger.debug(`Handling "${topic}" group "${group}" event #${msgId} (${event.id})...`);
                             const handlers: EventHandler[] = this.#catalog.getGroupHandlers(topic, group, event.type);
                             for (const { handler, validate, passFullEvent } of handlers) {
                                 const validationErrors = await validate(event.toJSON());
@@ -250,19 +272,29 @@ export class Events {
                             }
 
                             await this.#state[`${topic}-${group}`].grouped.redis.xack(topic, group, msgId);
-                            this.log.debug(`Handled "${topic}" group "${group}" event #${msgId} (${event.id})`);
+                            logger.debug(`Handled "${topic}" group "${group}" event #${msgId} (${event.id})`);
                         } catch (error) {
-                            this.log.error(
-                                error,
-                                `Failed to handle "${topic}" group "${group}" event #${msgId} (${event.id})`
+                            logger.error(
+                                `Failed to handle "${topic}" group "${group}" event #${msgId} (${event.id})  - ${error.message}`
                             );
+                            if (error instanceof BaseError && error.type === "VALIDATION") {
+                                const letter: DeadLetter = {
+                                    topic,
+                                    group,
+                                    type: event.type,
+                                    data: event,
+                                    error: error.message
+                                };
+                                await this.emitDeadLetter(letter);
+                                await this.#redis.xack(topic, group, msgId);
+                            }
                         }
                     })
                 );
             }
             await beacon.die();
         } catch (error) {
-            this.log.error(error, `Failed to receive "${topic}" message`);
+            logger.error(`Failed to receive "${topic}" message  - ${error.message}`);
             if (error.message !== "Connection is closed.") {
                 throw error;
             }
@@ -280,13 +312,11 @@ export class Events {
             if (!this.#state[`${topic}-${group}`]) this.#state[`${topic}-${group}`] = {};
             this.#state[`${topic}-${group}`].grouped = {
                 redis: this.#redis.duplicate(),
-                historyLoaded: false,
-                lastId: "0-0",
                 count: 20,
                 timerId: setTimeout(this._receiveGroupMessagesTick.bind(this, topic, group), 0)
             };
         } catch (error) {
-            this.log.error(error);
+            logger.error(error.message);
         }
     }
 
@@ -299,7 +329,7 @@ export class Events {
                 "+",
                 ...[this.#state[`${topic}-${group}`].pending.count]
             );
-            // this.log.debug(rawData);
+            //  logger.debug(rawData || "no data");
             const beacon = this.#lightship.createBeacon();
             if (rawData) {
                 const data: {
@@ -308,22 +338,27 @@ export class Events {
                     idleSeconds: number;
                     retries: number;
                 }[] = this._parsePendingResponse(rawData);
-                if (!this.#state[`${topic}-${group}`].pending.historyLoaded) {
-                    this.log.debug(`Loaded pending events history for "${topic}" group "${group}"`);
-                    this.#state[`${topic}-${group}`].pending.historyLoaded = true;
-                    this.#state[`${topic}-${group}`].pending.lastId = ">";
-                    this.#state[`${topic}-${group}`].pending.count = 10;
-                }
 
-                for (const { msgId } of data.filter(({ idleSeconds, retries }) => idleSeconds > retries * 30)) {
+                for (const { msgId, retries } of data.filter(
+                    ({ idleSeconds, retries }) => idleSeconds > retries * this.#pendingRetryRate
+                )) {
                     try {
-                        const result = await this.#redis.xclaim(topic, group, this.#consumerId, 60000, msgId);
+                        const result = await this.#redis.xclaim(
+                            topic,
+                            group,
+                            this.#consumerId,
+                            this.#pendingMinIdleTime,
+                            msgId
+                        );
                         if (result) {
                             const [event]: Event[] = Object.values(
                                 this._parseEvents(this._parseMessageResponse(result))
                             );
+
+                            if (!event) continue;
+
                             try {
-                                this.log.debug(
+                                logger.debug(
                                     `Handling pending "${topic}" group "${group}" event #${msgId} (${event.id})...`
                                 );
                                 const handlers: EventHandler[] = this.#catalog.getGroupHandlers(
@@ -343,25 +378,37 @@ export class Events {
                                         );
                                 }
                                 await this.#redis.xack(topic, group, msgId);
-                                this.log.debug(
+                                logger.debug(
                                     `Handled pending "${topic}" group "${group}" event #${msgId} (${event.id})`
                                 );
                             } catch (error) {
-                                //TODO: deadletter queue + endpoints to handle them
-                                this.log.error(
-                                    error,
-                                    `Failed to handle pending "${topic}" group "${group}" event #${msgId} (${event.id})`
+                                logger.error(
+                                    `Failed to handle pending "${topic}" group "${group}" event #${msgId} (${event.id})  - ${error.message}`
                                 );
+                                if (
+                                    (error instanceof BaseError && error.type === "VALIDATION") ||
+                                    retries >= this.#pendingMaxRetries
+                                ) {
+                                    const letter: DeadLetter = {
+                                        topic,
+                                        group,
+                                        type: event.type,
+                                        data: event,
+                                        error: error.message
+                                    };
+                                    await this.emitDeadLetter(letter);
+                                    await this.#redis.xack(topic, group, msgId);
+                                }
                             }
                         }
                     } catch (error) {
-                        this.log.error(error, `Failed to claim pending "${topic}" event #${msgId}`);
+                        logger.error(`Failed to claim pending "${topic}" event #${msgId}  - ${error.message}`);
                     }
                 }
             }
             await beacon.die();
         } catch (error) {
-            this.log.error(error, `Failed to receive pending "${topic}" message`);
+            logger.error(`Failed to receive pending "${topic}" message - ${error.message}`);
             if (error.message !== "Connection is closed.") {
                 throw error;
             }
@@ -370,7 +417,7 @@ export class Events {
         if (!this.#lightship.isServerShuttingDown()) {
             this.#state[`${topic}-${group}`].pending.timerId = setTimeout(
                 this._receivePendingGroupMessagesTick.bind(this, topic, group),
-                60000
+                this.#pendingInterval
             );
         }
     }
@@ -379,14 +426,21 @@ export class Events {
         try {
             if (!this.#state[`${topic}-${group}`]) this.#state[`${topic}-${group}`] = {};
             this.#state[`${topic}-${group}`].pending = {
-                historyLoaded: false,
-                lastId: "0-0",
                 count: 100,
                 timerId: setTimeout(this._receivePendingGroupMessagesTick.bind(this, topic, group), 0)
             };
         } catch (error) {
-            this.log.error(error);
+            logger.error(error.message);
         }
+    }
+
+    async emitDeadLetter(deadLetter: DeadLetter) {
+        const typeChunks = deadLetter.type.split(".");
+        const evt = {
+            type: `${this.#deadLetterTopic}.${typeChunks.slice(2, typeChunks.length).join(".")}`,
+            data: deadLetter
+        };
+        await this.emit(evt);
     }
 
     async emit<T>(event: NewEvent<T>) {
@@ -402,6 +456,7 @@ export class Events {
                 data,
                 subject
             });
+
             const args = [
                 "id",
                 cloudEvent.id,
@@ -413,9 +468,30 @@ export class Events {
                 JSON.stringify(cloudEvent.toJSON())
             ];
             await this.#redis.xadd(topic, "*", ...args);
-            this.log.debug(`Emited Event ${type}`);
+            logger.debug(`Emited Event ${type}`);
         } catch (error) {
-            this.log.error("Failed to emit event", error, event);
+            logger.error(`Failed to emit event - ${error.message}`, event);
+        }
+    }
+
+    async emitRaw(topic: string, event: CloudEventV1) {
+        try {
+            const cloudEvent = new Event(event);
+
+            const args = [
+                "id",
+                cloudEvent.id,
+                "type",
+                cloudEvent.type,
+                "timestamp",
+                dayjs.utc(cloudEvent.time).toISOString(),
+                "event",
+                JSON.stringify(cloudEvent.toJSON())
+            ];
+            await this.#redis.xadd(topic, "*", ...args);
+            logger.debug(`Emited Raw Event ${cloudEvent.type}`);
+        } catch (error) {
+            logger.error(`Failed to emit event - ${error.message}`, event);
         }
     }
 
@@ -423,7 +499,8 @@ export class Events {
         [key: string]: {
             group?: string;
             unbalanced?: boolean;
-            handler: (event: Event) => Promise<void>;
+            handler: (event: Event | any) => Promise<void>;
+            passFullEvent?: boolean;
             schema?: ValidationSchema;
         };
     }): void {
@@ -432,9 +509,10 @@ export class Events {
 
     async start() {
         try {
+            await this._createGroup(`${BASE_REDIS_PREFIX}${this.#deadLetterTopic}`, this.#deadLetterTopic);
             await Promise.all(
                 this.#catalog.groups.map(async ({ topic, group }) => {
-                    this.log.info(`Subscribing to "${topic}" group "${group}" events...`);
+                    logger.info(`Subscribing to "${topic}" group "${group}" events...`);
                     await this._createGroup(topic, group);
                     await this._receiveGroupMessages(topic, group);
                     await this._receivePendingGroupMessages(topic, group);
@@ -442,12 +520,30 @@ export class Events {
             );
             await Promise.all(
                 this.#catalog.unbalancedTopics.map(async (topic) => {
-                    this.log.info(`Subscribing to "${topic}" unbalanced events...`);
+                    logger.info(`Subscribing to "${topic}" unbalanced events...`);
                     await this._receiveMessages(topic);
                 })
             );
         } catch (error) {
-            this.log.error(error);
+            logger.error(error.message);
+        }
+    }
+
+    closeConnections() {
+        try {
+            logger.info("Closing connection redis...");
+            this.#redis.quit();
+            this.#catalog.groups.map(async ({ topic, group }) => {
+                logger.info(`Closing connection "${topic}" group "${group}" ...`);
+                this.#state[`${topic}-${group}`].grouped.redis.quit();
+            });
+
+            this.#catalog.unbalancedTopics.map(async (topic) => {
+                logger.info(`Closing connection "${topic}" unbalanced ...`);
+                this.#state[topic].unbalanced.redis.quit();
+            });
+        } catch (error) {
+            logger.error(error.message);
         }
     }
 }

@@ -195,7 +195,11 @@ export class Importer {
             }
         } else {
             Object.values(this.#currentState.candles)
-                .filter((s) => s.loaded === false && s.chunks.length === 0)
+                .filter(
+                    (s) =>
+                        ((this.#type === "history" && s.loaded === false) || this.#type === "recent") &&
+                        s.chunks.length === 0
+                )
                 .forEach((s) => {
                     let limit = loadLimit(this.#exchange);
                     const exchangeHasTimeframe = Timeframe.inList(exchangeTimeframes, Timeframe.toString(s.timeframe));
@@ -206,6 +210,7 @@ export class Importer {
                             .filter((t) => +t < +s.timeframe)[0];
                         limit = round(loadLimit(this.#exchange) / (s.timeframe / lowerTimeframe));
                     }
+                    this.#currentState.candles[s.timeframe].loaded = false;
                     this.#currentState.candles[s.timeframe].chunks = Timeframe.chunkDates(
                         s.dateFrom,
                         s.dateTo,
@@ -306,7 +311,7 @@ export class Importer {
 
     #calcCandlesProgress = () => {
         const loaded = Object.values(this.#currentState.candles)
-            .filter((t) => t.loaded === false)
+            .filter((t) => t.loaded === true)
             .map((t) => t.chunks)
             .flat().length;
         this.#progress = round(
@@ -321,10 +326,11 @@ export class Importer {
     #setTradesProgress = (chunkId: number) => {
         const index = this.#currentState.trades.chunks.findIndex(({ id }) => id === chunkId);
         this.#currentState.trades.chunks[index].loaded = true;
-        this.#calcTradesProgress();
         if (this.#currentState.trades.chunks.filter((t) => t.loaded === false).length === 0) {
             this.#currentState.trades.loaded = true;
         }
+        this.#calcTradesProgress();
+        this.finish();
         return this.#progress;
     };
 
@@ -335,10 +341,11 @@ export class Importer {
     #setCandlesProgress = (timeframe: ValidTimeframe, chunkId: number) => {
         const index = this.#currentState.candles[timeframe].chunks.findIndex(({ id }) => id === chunkId);
         this.#currentState.candles[timeframe].chunks[index].loaded = true;
-        this.#calcCandlesProgress();
         if (this.#currentState.candles[timeframe].chunks.filter((t) => t.loaded === false).length === 0) {
             this.#currentState.candles[timeframe].loaded = true;
         }
+        this.#calcCandlesProgress();
+        this.finish();
         return this.#progress;
     };
 
@@ -351,7 +358,7 @@ export class Importer {
             return this.#currentState.trades.loaded;
         } else if (this.#currentState.candles) {
             return Object.values(this.#currentState.candles).filter((t) => t.loaded === false).length === 0;
-        }
+        } else return false;
     }
 
     get isFailed() {

@@ -1,8 +1,7 @@
 import { DataStream } from "scramjet";
 import os from "os";
 import { spawn, Pool, Worker as ThreadsWorker } from "threads";
-import { Worker, Job } from "bullmq";
-import retry from "async-retry";
+import { Job } from "bullmq";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { Importer, CandlesChunk, TradesChunk, ImporterState } from "@cryptuoso/importer-state";
@@ -17,6 +16,7 @@ import {
     ImporterWorkerEvents
 } from "@cryptuoso/importer-events";
 import { ImporterUtils } from "./importerUtilsWorker";
+import { sql } from "@cryptuoso/postgres";
 
 export type ImporterWorkerServiceConfig = BaseServiceConfig;
 
@@ -25,17 +25,16 @@ export default class ImporterWorkerService extends BaseService {
     abort: { [key: string]: boolean } = {};
     cpus: number;
     pool: Pool<any>;
-    workers: { [key: string]: Worker };
     constructor(config?: ImporterWorkerServiceConfig) {
         super(config);
         try {
             this.connector = new PublicConnector();
             this.cpus = os.cpus().length;
-            this.addOnStartHandler(this.onStartService);
-            this.addOnStopHandler(this.onStopService);
+            this.addOnStartHandler(this.onServiceStart);
+            this.addOnStopHandler(this.onServiceStop);
             this.events.subscribe({
                 [ImporterWorkerEvents.CANCEL]: {
-                    handler: this.pause.bind(this),
+                    handler: this.cancel.bind(this),
                     schema: ImporterWorkerSchema[ImporterWorkerEvents.CANCEL],
                     unbalanced: true
                 }
@@ -45,27 +44,60 @@ export default class ImporterWorkerService extends BaseService {
         }
     }
 
-    async onStartService(): Promise<void> {
+    async onServiceStart(): Promise<void> {
         this.pool = Pool(() => spawn<ImporterUtils>(new ThreadsWorker("./importerUtilsWorker")), {
-            concurrency: this.cpus,
             name: "importer-utils"
         });
-        this.workers = {
-            importCandles: new Worker("importCandles", async (job: Job) => this.process(job), {
-                connection: this.redis
-            })
-        };
+        this.createWorker("importCandles", this.process);
     }
 
-    async onStopService(): Promise<void> {
-        await this.workers.importCandles.close();
+    async onServiceStop(): Promise<void> {
         await this.pool.terminate();
     }
 
-    pause({ id }: ImporterWorkerCancel): void {
+    cancel({ id }: ImporterWorkerCancel): void {
         this.abort[id] = true;
     }
 
+    async saveImporter(importer: Importer) {
+        const {
+            id,
+            exchange,
+            asset,
+            currency,
+            params,
+            status,
+            startedAt,
+            endedAt,
+            type,
+            progress,
+            error,
+            currentState
+        } = importer.state;
+        await this.db.pg.query(sql`
+        INSERT INTO importers
+        (id, exchange, asset, currency, 
+        params, 
+        status, started_at, ended_at, 
+        type, progress, error,
+        current_state)
+        VALUES(
+            ${id}, ${exchange}, ${asset}, ${currency},
+            ${JSON.stringify(params) || null},
+            ${status}, ${startedAt || null}, ${endedAt || null},
+            ${type}, ${progress || null}, ${error || null}, 
+            ${JSON.stringify(currentState) || null}
+        )
+        ON CONFLICT ON CONSTRAINT importers_pkey
+        DO UPDATE SET params = excluded.params,
+        status = excluded.status,
+        started_at = excluded.started_at,
+        ended_at = excluded.ended_at,
+        progress = excluded.progress,
+        error = excluded.error,
+        current_state = excluded.current_state;
+        `);
+    }
     async tradesToCandles({
         timeframes,
         chunk,
@@ -81,21 +113,23 @@ export default class ImporterWorkerService extends BaseService {
     async process(job: Job<ImporterState, ImporterState>): Promise<ImporterState> {
         try {
             const importer = new Importer(job.data);
-            await this.connector.initConnector(importer.exchange);
-            importer.createChunks(this.connector.connectors[importer.exchange].timeframes);
-            importer.start();
-            this.log.info(
-                `Importer #${importer.id} - Starting ${importer.type} load of ${importer.exchange} ${importer.asset}/${importer.currency} candles`
-            );
-            try {
-                if (importer.type === "history" && importer.exchange === "kraken") {
-                    await this.importTrades(job, importer);
-                } else {
-                    await this.importCandles(job, importer);
+            if (!importer.isLoaded || importer.type === "recent") {
+                await this.connector.initConnector(importer.exchange);
+                importer.createChunks(this.connector.connectors[importer.exchange].timeframes);
+                importer.start();
+                this.log.info(
+                    `Importer #${importer.id} - Starting ${importer.type} load of ${importer.exchange} ${importer.asset}/${importer.currency} candles`
+                );
+                try {
+                    if (importer.type === "history" && importer.exchange === "kraken") {
+                        await this.importTrades(job, importer);
+                    } else {
+                        await this.importCandles(job, importer);
+                    }
+                } catch (err) {
+                    importer.fail(err.message);
+                    this.log.warn(`Importer #${importer.id}`, err);
                 }
-            } catch (err) {
-                importer.fail(err.message);
-                this.log.warn(`Importer #${importer.id}`, err);
             }
             importer.finish(this.abort[importer.id]);
             if (this.abort[importer.id]) delete this.abort[importer.id];
@@ -127,6 +161,7 @@ export default class ImporterWorkerService extends BaseService {
                         status: importer.status
                     }
                 });
+            await this.saveImporter(importer);
             return importer.state;
         } catch (err) {
             this.log.error(`Error while processing job ${job.id}`, err);
@@ -136,10 +171,10 @@ export default class ImporterWorkerService extends BaseService {
 
     async importTrades(job: Job<ImporterState, ImporterState>, importer: Importer): Promise<void> {
         try {
+            if (!importer.tradesChunks.length) return;
             await DataStream.from(importer.tradesChunks, { maxParallel: this.cpus * 2 })
                 .while(() => importer.isStarted && !this.abort[importer.id])
                 .map(async (chunk: TradesChunk) => this.loadTrades(importer, chunk))
-                .while(() => importer.isStarted && !this.abort[importer.id])
                 .map(
                     async ({
                         timeframes,
@@ -151,7 +186,6 @@ export default class ImporterWorkerService extends BaseService {
                         trades: ExchangeTrade[];
                     }) => this.tradesToCandles({ timeframes, chunk, trades })
                 )
-                .while(() => importer.isStarted && !this.abort[importer.id])
                 .each(
                     async ({
                         chunk,
@@ -164,7 +198,6 @@ export default class ImporterWorkerService extends BaseService {
                 .catch((err: Error) => {
                     importer.fail(err.message);
                 })
-                .while(() => importer.isStarted && !this.abort[importer.id])
                 .whenEnd();
         } catch (err) {
             this.log.error(`Importer #${importer.id} - Failed while importing trades`, err);
@@ -174,17 +207,16 @@ export default class ImporterWorkerService extends BaseService {
 
     async importCandles(job: Job<ImporterState, ImporterState>, importer: Importer): Promise<void> {
         try {
+            if (!importer.candlesChunks.length) return;
             await DataStream.from(importer.candlesChunks, { maxParallel: 10 })
-                .while(() => importer.isStarted)
+                .while(() => importer.isStarted && !this.abort[importer.id])
                 .map(async (chunk: CandlesChunk) => this.loadCandles(importer, chunk))
-                .while(() => importer.isStarted)
                 .each(async ({ chunk, candles }: { chunk: CandlesChunk; candles: ExchangeCandle[] }) =>
                     this.finalizeCandles(job, importer, chunk, candles)
                 )
                 .catch((err: Error) => {
                     importer.fail(err.message);
                 })
-                .while(() => importer.isStarted)
                 .whenEnd();
         } catch (err) {
             this.log.error(`Importer #${importer.id} - Failed while importing candle`, err);
@@ -287,13 +319,11 @@ export default class ImporterWorkerService extends BaseService {
             if (candles && Array.isArray(candles) && candles.length > 0) {
                 const timeframe = candles[0].timeframe;
 
-                const call = async (bail: (e: Error) => void) => {
-                    try {
-                        await this.db.pg.query(this.db.sql`
-                insert into ${this.db.sql.identifier([`candles${timeframe}`])} 
+                await this.db.pg.query(sql`
+                insert into ${sql.identifier([`candles${timeframe}`])} 
                 (exchange, asset, currency, open, high, low, close, volume, time, timestamp, type)
                 SELECT *
-                FROM ${this.db.sql.unnest(
+                FROM ${sql.unnest(
                     this.db.util.prepareUnnest(candles, [
                         "exchange",
                         "asset",
@@ -321,29 +351,13 @@ export default class ImporterWorkerService extends BaseService {
                         "varchar"
                     ]
                 )}
-                ON CONFLICT ON CONSTRAINT ${this.db.sql.identifier([
-                    `candles${timeframe}_time_exchange_asset_currency_key`
-                ])}
+                ON CONFLICT ON CONSTRAINT ${sql.identifier([`candles${timeframe}_time_exchange_asset_currency_key`])}
                 DO UPDATE SET open = excluded.open,
                 high = excluded.high,
                 low = excluded.low,
                 close = excluded.close,
                 volume = excluded.volume,
                 type = excluded.type;`);
-                    } catch (e) {
-                        bail(e);
-                    }
-                };
-                await retry(call, {
-                    retries: 5,
-                    minTimeout: 500,
-                    maxTimeout: 30000,
-                    onRetry: (err: any, i: number) => {
-                        if (err) {
-                            this.log.warn(`Retry save candles ${i} - ${err.message}`);
-                        }
-                    }
-                });
             }
         } catch (err) {
             this.log.error("Failed to upsert candles", err);
@@ -369,6 +383,11 @@ export default class ImporterWorkerService extends BaseService {
             const progress = importer.setCandlesProgress(chunk.timeframe, chunk.id);
             await job.updateProgress(progress);
             await job.update(importer.state);
+            this.log.info(
+                `Importer #${importer.id} - Finalized ${chunk.timeframe} candles ${candles[0].timestamp} - ${
+                    candles[candles.length - 1].timestamp
+                }`
+            );
         } catch (err) {
             this.log.error(
                 `Importer #${importer.id} - Failed to save ${chunk.timeframe} chunk ${chunk.dateFrom} - ${chunk.dateTo}`,

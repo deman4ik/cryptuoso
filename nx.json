@@ -6,7 +6,7 @@
             "dependencies": "*",
             "devDependencies": "*"
         },
-        ".eslintrc": "*",
+        ".eslintrc.json": "*",
         "nx.json": "*",
         "tsconfig.base.json": "*"
     },
@@ -97,7 +97,7 @@
         "backtester-events": {
             "tags": []
         },
-        "trade-statistics": {
+        "stats-calc": {
             "tags": []
         },
         "auth": {
@@ -107,6 +107,81 @@
             "tags": []
         },
         "mail": {
+            "tags": []
+        },
+        "stats-calc-worker": {
+            "tags": []
+        },
+        "stats-calc-runner": {
+            "tags": []
+        },
+        "stats-calc-events": {
+            "tags": []
+        },
+        "test-helpers": {
+            "tags": []
+        },
+        "utils": {
+            "tags": []
+        },
+        "events-manager": {
+            "tags": []
+        },
+        "user-signal-state": {
+            "tags": []
+        },
+        "user-robot-state": {
+            "tags": []
+        },
+        "user-profile": {
+            "tags": []
+        },
+        "robot-settings": {
+            "tags": []
+        },
+        "robot-runner": {
+            "tags": []
+        },
+        "robot-worker": {
+            "tags": []
+        },
+        "user-robot-events": {
+            "tags": []
+        },
+        "connector-events": {
+            "tags": []
+        },
+        "connector-runner": {
+            "tags": []
+        },
+        "connector-worker": {
+            "tags": []
+        },
+        "user-robot-runner": {
+            "tags": []
+        },
+        "user-robot-worker": {
+            "tags": []
+        },
+        "connector-state": {
+            "tags": []
+        },
+        "ccxt-private": {
+            "tags": []
+        },
+        "notifications": {
+            "tags": []
+        },
+        "support": {
+            "tags": []
+        },
+        "telegram-bot": {
+            "tags": []
+        },
+        "graphql-client": {
+            "tags": []
+        },
+        "auth-utils": {
             "tags": []
         }
     },

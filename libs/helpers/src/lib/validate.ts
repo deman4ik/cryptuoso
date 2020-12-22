@@ -15,7 +15,7 @@ const v = new Validator();
  *   };
  * validate({foo: "bar", tar: 1}) // throws error;
  */
-export function validate(data: object, schema: ValidationSchema): void {
+export function validate(data: Record<string, unknown>, schema: ValidationSchema): void {
     const validationErrors = v.validate(data, schema);
     if (Array.isArray(validationErrors)) {
         throw new BaseError(

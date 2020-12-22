@@ -5,15 +5,31 @@ import helmet from "helmet";
 import Validator, { ValidationSchema, ValidationError } from "fastest-validator";
 import { BaseService, BaseServiceConfig } from "./BaseService";
 import { ActionsHandlerError } from "@cryptuoso/errors";
+import { BaseUser, User, UserRoles, UserStatus } from "@cryptuoso/user-state";
+import { JSONParse } from "@cryptuoso/helpers";
+import { sql } from "@cryptuoso/postgres";
 
 //TODO: req/res typings
+
 export interface ActionPayload {
     action: {
         name: string;
     };
-    input: { [key: string]: any };
-    session_variables: { [key: string]: string };
+    input: { [key: string]: any } | any;
+    session_variables: {
+        [key: string]: string;
+        "x-hasura-user-id"?: string;
+        "x-hasura-role"?: UserRoles;
+    };
 }
+
+export type RequestExtended<P extends Protocol = any> = Request<P> & {
+    body?: ActionPayload;
+    meta?: {
+        [key: string]: any;
+        user: User;
+    };
+};
 
 export interface HTTPServiceConfig extends BaseServiceConfig {
     port?: number;
@@ -52,12 +68,13 @@ export class HTTPService extends BaseService {
             this._server.use(
                 "/actions",
                 this._iu(this._checkAuth.bind(this)).iff(
-                    (req: any) => this._routes[req.url] && this._routes[req.url].auth
+                    (req: any) =>
+                        this._routes[req.url] && (this._routes[req.url].auth || this._routes[req.url].roles.length > 0)
                 )
             );
             this._server.use(async (req, res, next) => {
                 try {
-                    this.log.debug({ method: req.method, url: req.url, headers: req.headers, body: req.body });
+                    this.log.info({ method: req.method, url: req.url, headers: req.headers, body: req.body });
                     await next();
                 } catch (err) {
                     return next(err);
@@ -70,7 +87,7 @@ export class HTTPService extends BaseService {
             this.addOnStartHandler(this._startServer);
             this.addOnStopHandler(this._stopServer);
         } catch (err) {
-            this.log.error(err, "While constructing HTTPService");
+            this.log.error("Error while constructing HTTPService", err);
             process.exit(1);
         }
     }
@@ -89,15 +106,19 @@ export class HTTPService extends BaseService {
 
     private _checkApiKey(req: Request<Protocol>, res: Response<Protocol>, next: (err?: Error) => void) {
         if (!req.headers["x-api-key"] || req.headers["x-api-key"] !== process.env.API_KEY) {
-            throw new ActionsHandlerError("Forbidden: Invalid API Key", null, "FORBIDDEN", 403);
+            throw new ActionsHandlerError("Invalid API Key", null, "FORBIDDEN", 403);
         }
         return next();
     }
 
     private _checkValidation(req: Request<Protocol>, res: Response<Protocol>, next: (err?: Error) => void) {
-        const body = req.body;
-        const validationErrors = this._routes[req.url].validate(body);
+        const route = this._routes[req.url];
+        const body: any = req.body;
+        const validationErrors = route.validate(body);
+
         if (validationErrors === true) {
+            if (!route.auth && route.roles.length > 0 && !route.roles.includes(body.session_variables["x-hasura-role"]))
+                throw new ActionsHandlerError("Invalid role", null, "FORBIDDEN", 403);
             req.body = body;
             return next();
         } else
@@ -109,19 +130,65 @@ export class HTTPService extends BaseService {
             );
     }
 
-    private _checkAuth(req: any, res: Response<Protocol>, next: (err?: Error) => void) {
+    private async _checkAuth(req: RequestExtended<Protocol>, res: Response<Protocol>, next: (err?: Error) => void) {
         try {
-            this.log.debug(req.body);
+            if (!this._routes[req.url].auth) {
+                if (this._routes[req.url].roles.length > 0) {
+                    const role = req.body.session_variables["x-hasura-role"];
+
+                    if (!this._routes[req.url].roles.includes(role))
+                        throw new ActionsHandlerError("Invalid role", null, "FORBIDDEN", 403);
+                }
+
+                return next();
+            }
+
             const userId = req.body.session_variables["x-hasura-user-id"];
-            if (!userId)
-                throw new ActionsHandlerError("Unauthorized: Invalid session variables", null, "UNAUTHORIZED", 401);
+            if (!userId) throw new ActionsHandlerError("Invalid session variables", null, "UNAUTHORIZED", 401);
 
-            const role = req.body.session_variables["x-hasura-role"];
+            const cachedUserKey = `cpz:users:${userId}`;
+            let user: BaseUser;
 
-            if (this._routes[req.url].roles.length > 0 && !this._routes[req.url].roles.includes(role))
-                throw new ActionsHandlerError("Forbidden: Invalid role", null, "FORBIDDEN", 403);
+            const cachedUserJSON = await this.redis.get(cachedUserKey);
 
-            //TODO: check user in DB and cache in Redis
+            if (cachedUserJSON) {
+                const parsed = JSONParse(cachedUserJSON);
+
+                if (parsed != cachedUserJSON) {
+                    user = parsed;
+                    // Can be used when cached user data will be expiring by (un)blocking
+                    //await this.redis.expire(cachedUserKey, 15);
+                }
+            }
+
+            if (!user) {
+                user = await this.db.pg.maybeOne<BaseUser>(sql`
+                    SELECT id, status, roles, access, settings, last_active_at
+                    FROM users
+                    WHERE id = ${userId};
+                `);
+
+                if (!user) throw new ActionsHandlerError("User account is not found", null, "NOT_FOUND", 404);
+
+                await this.redis.setex(cachedUserKey, 60, JSON.stringify(user));
+            }
+
+            if (user.status == UserStatus.blocked)
+                throw new ActionsHandlerError("User blocked", null, "FORBIDDEN", 403);
+
+            if (
+                this._routes[req.url].roles.length > 0 &&
+                !user.roles?.allowedRoles?.some((userRole) => this._routes[req.url].roles.includes(userRole))
+            )
+                throw new ActionsHandlerError("Invalid role", null, "FORBIDDEN", 403);
+
+            await this.db.pg.query(this.db.sql`
+                UPDATE users
+                SET last_active_at = now()
+                WHERE id = ${user.id};
+            `);
+
+            req.meta = { ...req.meta, user };
             return next();
         } catch (err) {
             return next(err);
@@ -158,33 +225,39 @@ export class HTTPService extends BaseService {
         }
 
         for (const [name, route] of Object.entries(routes)) {
-            const { handler } = route;
-            let { auth, roles, inputSchema } = route;
+            const { handler, inputSchema } = route;
+            let { auth, roles } = route;
             if (!name) throw new Error("Route name is required");
             if (this._routes[`/actions/${name}`]) throw new Error("This route name is occupied");
             if (!handler && typeof handler !== "function") throw new Error("Route handler must be a function");
             auth = auth || false;
+            if (roles && (!Array.isArray(roles) || roles.length === 0))
+                throw new Error("Roles must be an array or undefined");
             roles = roles || [];
-            inputSchema = inputSchema || undefined;
-            const schema: ValidationSchema = {
-                action: {
-                    type: "object",
-                    props: {
-                        name: { type: "equal", value: name }
+            let schema: ValidationSchema;
+
+            if (inputSchema !== null || inputSchema === undefined) {
+                schema = {
+                    action: {
+                        type: "object",
+                        props: {
+                            name: { type: "equal", value: name }
+                        }
+                    },
+                    input: { type: "object", props: inputSchema },
+
+                    session_variables: {
+                        type: "object",
+                        props: {
+                            "x-hasura-user-id": { type: "string", optional: !auth },
+                            "x-hasura-role": { type: "string", optional: roles.length === 0 }
+                        }
                     }
-                },
-                input: { type: "object", props: inputSchema },
-                // eslint-disable-next-line @typescript-eslint/camelcase
-                session_variables: {
-                    type: "object",
-                    props: {
-                        "x-hasura-user-id": { type: "string", optional: !auth },
-                        "x-hasura-role": { type: "string", optional: roles.length === 0 }
-                    }
-                }
-            };
+                };
+            }
+
             this._routes[`/actions/${name}`] = {
-                validate: this._v.compile(schema),
+                validate: schema && this._v.compile(schema),
                 auth,
                 roles
             };

@@ -1,10 +1,8 @@
 module.exports = {
-    testMatch: ["**/+(*.)+(spec|test).+(ts|js)?(x)"],
-    transform: {
-        "^.+\\.(ts|js|html)$": "ts-jest"
-    },
-    resolver: "@nrwl/jest/plugins/resolver",
-    moduleFileExtensions: ["ts", "js", "html"],
-    coverageReporters: ["html"],
-    setupFilesAfterEnv: ["jest-extended"]
+    projects: [
+        "<rootDir>/apps/support",
+        "<rootDir>/apps/telegram-bot",
+        "<rootDir>/libs/graphql-client",
+        "<rootDir>/libs/auth-utils"
+    ]
 };

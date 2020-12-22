@@ -13,33 +13,14 @@ import {
     getCurrentCandleParams,
     getCandlesParams,
     handleCandleGaps,
-    batchCandles
+    batchCandles,
+    Market
 } from "@cryptuoso/market";
 import { createSocksProxyAgent } from "./fetch";
-
-interface MinMax {
-    min: number;
-    max: number | undefined;
-}
-
-export interface Market {
-    exchange: string;
-    asset: string;
-    currency: string;
-    precision: { base: number; quote: number; amount: number; price: number };
-    limits: { amount: MinMax; price: MinMax; cost?: MinMax };
-    averageFee: number;
-    loadFrom: string;
-}
 
 export class PublicConnector {
     log: Logger;
     connectors: { [key: string]: Exchange } = {};
-
-    constructor() {
-        this.log = logger;
-    }
-
     retryOptions = {
         retries: 1000,
         minTimeout: 0,
@@ -50,13 +31,23 @@ export class PublicConnector {
             }
         }
     };
+    agent = process.env.PROXY_ENDPOINT && createSocksProxyAgent(process.env.PROXY_ENDPOINT);
+    constructor() {
+        this.log = logger;
+    }
 
-    _agent = process.env.PROXY_ENDPOINT && createSocksProxyAgent(process.env.PROXY_ENDPOINT);
+    async initAllConnectors(): Promise<void> {
+        logger.info("Initializing all public connectors...");
+        for (const excahnge of ["bitfinex", "kraken", "binance_futures", "binance_spot"]) {
+            await this.initConnector(excahnge);
+        }
+        logger.info("All public connectors inited!");
+    }
 
     async initConnector(exchange: string): Promise<void> {
-        if (!(exchange in this.connectors)) {
+        if (!(exchange in this.connectors) || !this.connectors[exchange].markets) {
             const config: { [key: string]: any } = {
-                agent: this._agent
+                agent: this.agent
             };
             if (exchange === "bitfinex" || exchange === "kraken") {
                 this.connectors[exchange] = new ccxt[exchange](config);
@@ -93,7 +84,7 @@ export class PublicConnector {
                     exchange,
                     asset,
                     currency,
-                    dayjs.utc("01.01.2013").toISOString()
+                    dayjs.utc("01.01.2016").toISOString()
                 );
                 if (firstTrade) loadFrom = dayjs.utc(firstTrade.timestamp).add(1, "day").startOf("day").toISOString();
             } else {
@@ -101,18 +92,26 @@ export class PublicConnector {
                     exchange,
                     asset,
                     currency,
-                    5,
-                    dayjs.utc("01.01.2013").toISOString(),
+                    30,
+                    dayjs.utc("01.01.2016").toISOString(),
                     10
                 );
                 if (firstCandle) loadFrom = dayjs.utc(firstCandle.timestamp).add(1, "day").startOf("day").toISOString();
             }
+            const currentPrice = await this.getCurrentPrice(exchange, asset, currency);
+
             return {
                 exchange,
                 asset,
                 currency,
                 loadFrom,
-                limits: response.limits,
+                limits: {
+                    ...response.limits,
+                    amountCurrency: {
+                        min: currentPrice?.price * response.limits?.amount.min,
+                        max: currentPrice?.price * response.limits?.amount.max
+                    }
+                },
                 precision: response.precision,
                 averageFee: response.taker
             };

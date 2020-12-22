@@ -5,7 +5,7 @@ metadata:
         app: <APP>
         env: <ENV>
     name: <APP>
-    namespace: default
+    namespace: <ENV>
 spec:
     replicas: 1
     selector:
@@ -28,29 +28,29 @@ spec:
                       httpGet:
                           path: /ready
                           port: 9000
-                      failureThreshold: 1
-                      initialDelaySeconds: 5
-                      periodSeconds: 5
+                      failureThreshold: 5
+                      initialDelaySeconds: 10
+                      periodSeconds: 10
                       successThreshold: 1
-                      timeoutSeconds: 5
+                      timeoutSeconds: 10
                   livenessProbe:
                       httpGet:
                           path: /live
                           port: 9000
-                      failureThreshold: 3
+                      failureThreshold: 10
                       initialDelaySeconds: 10
                       periodSeconds: 30
                       successThreshold: 1
-                      timeoutSeconds: 5
+                      timeoutSeconds: 10
                   startupProbe:
                       httpGet:
                           path: /live
                           port: 9000
-                      failureThreshold: 3
+                      failureThreshold: 5
                       initialDelaySeconds: 10
                       periodSeconds: 30
                       successThreshold: 1
-                      timeoutSeconds: 5
+                      timeoutSeconds: 10
                   env:
                       - name: SERVICE
                         value: <APP>
@@ -105,9 +105,12 @@ spec:
                       - containerPort: 9000
                         protocol: TCP
                   resources:
+                      requests:
+                          memory: 128Mi
+                          cpu: "10m"
                       limits:
-                          memory: 512Mi
-                          cpu: "256m"
+                          memory: 256Mi
+                          cpu: "200m"
 ---
 apiVersion: v1
 kind: Service
@@ -116,7 +119,7 @@ metadata:
         app: <APP>
         env: <ENV>
     name: <APP>
-    namespace: default
+    namespace: <ENV>
 spec:
     ports:
         - name: "api"

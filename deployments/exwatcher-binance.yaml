@@ -5,7 +5,7 @@ metadata:
         app: <APP>
         env: <ENV>
     name: <APP>
-    namespace: default
+    namespace: <ENV>
 spec:
     replicas: 1
     selector:
@@ -78,9 +78,12 @@ spec:
                       - containerPort: 9000
                         protocol: TCP
                   resources:
+                      requests:
+                          memory: 128Mi
+                          cpu: "10m"
                       limits:
-                          memory: 512Mi
-                          cpu: "256m"
+                          memory: 256Mi
+                          cpu: "200m"
 ---
 apiVersion: v1
 kind: Service
@@ -89,7 +92,7 @@ metadata:
         app: <APP>
         env: <ENV>
     name: <APP>
-    namespace: default
+    namespace: <ENV>
 spec:
     ports:
         - name: "check"
