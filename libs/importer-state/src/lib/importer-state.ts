@@ -311,7 +311,7 @@ export class Importer {
 
     #calcCandlesProgress = () => {
         const loaded = Object.values(this.#currentState.candles)
-            .filter((t) => t.loaded === false)
+            .filter((t) => t.loaded === true)
             .map((t) => t.chunks)
             .flat().length;
         this.#progress = round(
@@ -326,10 +326,11 @@ export class Importer {
     #setTradesProgress = (chunkId: number) => {
         const index = this.#currentState.trades.chunks.findIndex(({ id }) => id === chunkId);
         this.#currentState.trades.chunks[index].loaded = true;
-        this.#calcTradesProgress();
         if (this.#currentState.trades.chunks.filter((t) => t.loaded === false).length === 0) {
             this.#currentState.trades.loaded = true;
         }
+        this.#calcTradesProgress();
+        this.finish();
         return this.#progress;
     };
 
@@ -340,10 +341,11 @@ export class Importer {
     #setCandlesProgress = (timeframe: ValidTimeframe, chunkId: number) => {
         const index = this.#currentState.candles[timeframe].chunks.findIndex(({ id }) => id === chunkId);
         this.#currentState.candles[timeframe].chunks[index].loaded = true;
-        this.#calcCandlesProgress();
         if (this.#currentState.candles[timeframe].chunks.filter((t) => t.loaded === false).length === 0) {
             this.#currentState.candles[timeframe].loaded = true;
         }
+        this.#calcCandlesProgress();
+        this.finish();
         return this.#progress;
     };
 

@@ -136,7 +136,6 @@ export default class ImporterWorkerService extends BaseService {
             await DataStream.from(importer.tradesChunks, { maxParallel: this.cpus * 2 })
                 .while(() => importer.isStarted && !this.abort[importer.id])
                 .map(async (chunk: TradesChunk) => this.loadTrades(importer, chunk))
-                .while(() => importer.isStarted && !this.abort[importer.id])
                 .map(
                     async ({
                         timeframes,
@@ -148,7 +147,6 @@ export default class ImporterWorkerService extends BaseService {
                         trades: ExchangeTrade[];
                     }) => this.tradesToCandles({ timeframes, chunk, trades })
                 )
-                .while(() => importer.isStarted && !this.abort[importer.id])
                 .each(
                     async ({
                         chunk,
@@ -161,7 +159,6 @@ export default class ImporterWorkerService extends BaseService {
                 .catch((err: Error) => {
                     importer.fail(err.message);
                 })
-                .while(() => importer.isStarted && !this.abort[importer.id])
                 .whenEnd();
         } catch (err) {
             this.log.error(`Importer #${importer.id} - Failed while importing trades`, err);
@@ -173,16 +170,14 @@ export default class ImporterWorkerService extends BaseService {
         try {
             if (!importer.candlesChunks.length) return;
             await DataStream.from(importer.candlesChunks, { maxParallel: 10 })
-                .while(() => importer.isStarted)
+                .while(() => importer.isStarted && !this.abort[importer.id])
                 .map(async (chunk: CandlesChunk) => this.loadCandles(importer, chunk))
-                .while(() => importer.isStarted)
                 .each(async ({ chunk, candles }: { chunk: CandlesChunk; candles: ExchangeCandle[] }) =>
                     this.finalizeCandles(job, importer, chunk, candles)
                 )
                 .catch((err: Error) => {
                     importer.fail(err.message);
                 })
-                .while(() => importer.isStarted)
                 .whenEnd();
         } catch (err) {
             this.log.error(`Importer #${importer.id} - Failed while importing candle`, err);
@@ -349,6 +344,11 @@ export default class ImporterWorkerService extends BaseService {
             const progress = importer.setCandlesProgress(chunk.timeframe, chunk.id);
             await job.updateProgress(progress);
             await job.update(importer.state);
+            this.log.info(
+                `Importer #${importer.id} - Finalized ${chunk.timeframe} candles ${candles[0].timestamp} - ${
+                    candles[candles.length - 1].timestamp
+                }`
+            );
         } catch (err) {
             this.log.error(
                 `Importer #${importer.id} - Failed to save ${chunk.timeframe} chunk ${chunk.dateFrom} - ${chunk.dateTo}`,

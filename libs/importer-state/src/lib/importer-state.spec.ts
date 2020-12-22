@@ -1,6 +1,7 @@
 import MockDate from "mockdate";
 import { Importer, ImporterState, Status } from "./importer-state";
 import dayjs from "@cryptuoso/dayjs";
+import util from "util";
 
 const config: ImporterState = {
     id: "some_id",
@@ -135,6 +136,28 @@ describe("Test 'Importer' Class", () => {
             expect(importer.currentState.candles["1440"].chunks[0].dateFrom).toBe("2016-04-03T00:00:00.000Z");
             expect(importer.currentState.candles["1440"].chunks[0].dateTo).toBe("2017-01-28T00:00:00.000Z");
             expect(importer.currentState.candles["1440"].chunks[0].timeframe).toBe(1440);
+        });
+    });
+
+    describe("Test progress", () => {
+        it("Should set progress", () => {
+            const importer = new Importer({
+                ...config,
+                type: "recent",
+                params: {
+                    timeframes: [30, 60, 1440],
+                    amount: 300
+                }
+            });
+            importer.init();
+            importer.createChunks(bitfinexTimeframes);
+
+            importer.start();
+
+            importer.setCandlesProgress(1440, 14400);
+            console.log(util.inspect(importer.state, false, null, true));
+            expect(importer.state.progress).toEqual(33);
+            expect(importer.isLoaded).toEqual(false);
         });
     });
 });
