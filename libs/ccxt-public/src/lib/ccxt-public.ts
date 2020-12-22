@@ -84,7 +84,7 @@ export class PublicConnector {
                     exchange,
                     asset,
                     currency,
-                    dayjs.utc("01.01.2013").toISOString()
+                    dayjs.utc("01.01.2016").toISOString()
                 );
                 if (firstTrade) loadFrom = dayjs.utc(firstTrade.timestamp).add(1, "day").startOf("day").toISOString();
             } else {
@@ -92,8 +92,8 @@ export class PublicConnector {
                     exchange,
                     asset,
                     currency,
-                    5,
-                    dayjs.utc("01.01.2013").toISOString(),
+                    30,
+                    dayjs.utc("01.01.2016").toISOString(),
                     10
                 );
                 if (firstCandle) loadFrom = dayjs.utc(firstCandle.timestamp).add(1, "day").startOf("day").toISOString();
