@@ -59,6 +59,7 @@ export default class ExwatcherRunnerService extends HTTPService {
 
         this.createWorker(queueKey, this.updateMarkets);
 
+        await this.connector.initAllConnectors();
         await this.addJob(queueKey, JobTypes.updateMarkets, null, {
             repeat: {
                 cron: "0 0 */12 * * *"
@@ -183,11 +184,7 @@ export default class ExwatcherRunnerService extends HTTPService {
             const markets = await this.db.pg.any<{ exchange: string; asset: string; currency: string }>(
                 sql`SELECT exchange, asset, currency FROM markets where available >= 5;`
             );
-            this.log.info(
-                `Updating ${markets
-                    .map(({ exchange, asset, currency }) => `${exchange}.${asset}.${currency}`)
-                    .join(", ")} markets`
-            );
+            this.log.info(`Updating ${markets.length} markets`);
             const errors: { exchange: string; asset: string; currency: string; error: string }[] = [];
             for (const market of markets) {
                 try {
@@ -209,6 +206,7 @@ export default class ExwatcherRunnerService extends HTTPService {
                 });
                 throw new Error(`Failed to update ${errors.length} markets of ${markets}`);
             }
+            this.log.info(`Updated ${markets.length} markets!`);
         } catch (error) {
             this.log.error("Failed to update markets", error);
             throw error;
@@ -217,6 +215,7 @@ export default class ExwatcherRunnerService extends HTTPService {
 
     async updateMarket(params: { exchange: string; asset: string; currency: string }) {
         const { exchange, asset, currency } = params;
+        this.log.debug(`Updating ${exchange}.${asset}.${currency} market...`);
         const { precision, limits, averageFee, loadFrom } = await this.connector.getMarket(exchange, asset, currency);
 
         const available = 15;
@@ -238,6 +237,7 @@ export default class ExwatcherRunnerService extends HTTPService {
                 average_fee = excluded.average_fee,
                 load_from = excluded.load_from;
             `);
+        this.log.debug(`${exchange}.${asset}.${currency} market updated!`);
     }
 
     async addMarket(

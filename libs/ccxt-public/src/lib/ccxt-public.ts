@@ -36,8 +36,16 @@ export class PublicConnector {
         this.log = logger;
     }
 
+    async initAllConnectors(): Promise<void> {
+        logger.info("Initializing all public connectors...");
+        for (const excahnge of ["bitfinex", "kraken", "binance_futures", "binance_spot"]) {
+            await this.initConnector(excahnge);
+        }
+        logger.info("All public connectors inited!");
+    }
+
     async initConnector(exchange: string): Promise<void> {
-        if (!(exchange in this.connectors)) {
+        if (!(exchange in this.connectors) || !this.connectors[exchange].markets) {
             const config: { [key: string]: any } = {
                 agent: this.agent
             };
