@@ -273,7 +273,7 @@ export default class TelegramBotService extends BaseService {
 
     async blockHandler(telegramId: number, error: { ok: boolean; error_code: number; description: string }) {
         try {
-            this.log.warn(telegramId, error);
+            this.log.warn(`${telegramId}`, error);
             if (error && error.ok === false && (error.error_code === 403 || error.error_code === 400)) {
                 const user = await this.db.pg.maybeOne<{ id: string; settings: UserSettings }>(sql`
                                     SELECT id, settings
