@@ -243,7 +243,8 @@ export class BaseService {
                     try {
                         await redlock.unlock();
                     } catch (err) {
-                        this.log.error(`Failed to unlock (${lockName})`, err);
+                        if (!err.message.includes("Unable to fully release the lock on resource"))
+                            this.log.error(`Failed to unlock (${lockName})`, err);
                     }
                 }
             }
