@@ -5,6 +5,7 @@ import { NewEvent } from "@cryptuoso/events";
 import { RobotWorkerEvents } from "@cryptuoso/robot-events";
 import tulip from "./tulip/create";
 import logger from "@cryptuoso/logger";
+import { StrategySettings } from "@cryptuoso/robot-settings";
 
 export interface IndicatorCode {
     [key: string]: any;
@@ -48,6 +49,7 @@ export class BaseIndicator {
     _eventsToSend: NewEvent<any>[];
     result: number | number[];
     _log = logger.info;
+    _strategySettings: StrategySettings;
 
     constructor(state: IndicatorState) {
         this._name = state.name;
@@ -79,6 +81,7 @@ export class BaseIndicator {
             });
         }
         this._parametersSchema = state.parametersSchema;
+        this._strategySettings = state.strategySettings || {};
         this._eventsToSend = [];
     }
 
@@ -305,5 +308,9 @@ export class BaseIndicator {
 
     get candlesProps() {
         return this._candlesProps;
+    }
+
+    get strategySettings() {
+        return this._strategySettings;
     }
 }

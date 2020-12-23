@@ -369,10 +369,6 @@ export class BaseStrategy {
         return this._strategySettings;
     }
 
-    get robotSettings() {
-        return this._robotSettings;
-    }
-
     get exchange() {
         return this._exchange;
     }

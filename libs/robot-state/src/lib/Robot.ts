@@ -352,6 +352,7 @@ export class Robot {
                         currency: this._currency,
                         timeframe: this._timeframe,
                         robotId: this._id,
+                        strategySettings: this._settings.strategySettings,
                         parametersSchema,
                         indicatorFunctions, // функции индикатора
                         ...indicator // стейт индикатора
@@ -368,6 +369,7 @@ export class Robot {
                         currency: this._currency,
                         timeframe: this._timeframe,
                         robotId: this._id,
+                        strategySettings: this._settings.strategySettings,
                         parameters: indicator.parameters,
                         ...indicator // стейт индикатора
                     });
@@ -383,6 +385,7 @@ export class Robot {
                 currency: this._currency,
                 timeframe: this._timeframe,
                 robotId: this._id,
+                strategySettings: this._settings.strategySettings,
                 parameters: indicator.parameters,
                 ...indicator // стейт индикатора
               });
@@ -399,6 +402,7 @@ export class Robot {
                 currency: this._currency,
                 timeframe: this._timeframe,
                 robotId: this._id,
+                strategySettings: this._settings.strategySettings,
                 parameters: indicator.parameters,
                 ...indicator // стейт индикатора
               });
