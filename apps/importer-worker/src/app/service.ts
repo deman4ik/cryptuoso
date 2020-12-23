@@ -233,7 +233,7 @@ export default class ImporterWorkerService extends BaseService {
         trades: ExchangeTrade[];
     }> {
         try {
-            this.log.info(`Importer #${importer.id} - Loading chunk ${chunk.dateFrom} - ${chunk.dateTo}`);
+            this.log.debug(`Importer #${importer.id} - Loading chunk ${chunk.dateFrom} - ${chunk.dateTo}`);
             let trades: ExchangeTrade[] = [];
             let dateNext = dayjs.utc(chunk.dateFrom);
             while (dateNext.valueOf() <= dayjs.utc(chunk.dateTo).valueOf()) {
@@ -251,7 +251,7 @@ export default class ImporterWorkerService extends BaseService {
                     dateNext = dayjs.utc(response[response.length - 1].timestamp);
                 }
             }
-            this.log.info(
+            this.log.debug(
                 `Importer #${importer.id} - Loaded chunk ${chunk.dateFrom} - ${chunk.dateTo} => ${trades.length}`
             );
             return {
@@ -273,7 +273,7 @@ export default class ImporterWorkerService extends BaseService {
         candles: ExchangeCandle[];
     }> {
         try {
-            this.log.info(
+            this.log.debug(
                 `Importer #${importer.id} - Loading ${chunk.timeframe} chunk ${chunk.dateFrom} - ${chunk.dateTo}`
             );
             let candles = await this.connector.getCandles(
@@ -295,10 +295,10 @@ export default class ImporterWorkerService extends BaseService {
             const dateToValueOf = dayjs.utc(chunk.dateTo).valueOf();
             candles = candles.filter((candle) => candle.time >= dateFromValueOf && candle.time <= dateToValueOf);
 
-            this.log.info(
+            this.log.debug(
                 `Importer #${importer.id} - Loaded ${chunk.timeframe} chunk ${chunk.dateFrom}(${
-                    candles[0].timestamp
-                }) - ${chunk.dateTo}(${candles[candles.length - 1].timestamp}) => ${candles.length}`
+                    candles[0]?.timestamp
+                }) - ${chunk.dateTo}(${candles[candles.length - 1]?.timestamp}) => ${candles.length}`
             );
 
             return {
@@ -373,13 +373,13 @@ export default class ImporterWorkerService extends BaseService {
     ): Promise<void> {
         try {
             if (candles && Array.isArray(candles) && candles.length > 0) {
-                this.log.info(
-                    `Importer #${importer.id} - Finalizing ${chunk.timeframe} candles ${candles[0].timestamp} - ${
-                        candles[candles.length - 1].timestamp
+                this.log.debug(
+                    `Importer #${importer.id} - Finalizing ${chunk.timeframe} candles ${candles[0]?.timestamp} - ${
+                        candles[candles.length - 1]?.timestamp
                     }`
                 );
                 await this.upsertCandles(candles);
-                this.log.info(
+                this.log.debug(
                     `Importer #${importer.id} - Finalized ${chunk.timeframe} candles ${candles[0]?.timestamp} - ${
                         candles[candles.length - 1]?.timestamp
                     }`
@@ -388,6 +388,7 @@ export default class ImporterWorkerService extends BaseService {
             const progress = importer.setCandlesProgress(chunk.timeframe, chunk.id);
             await job.updateProgress(progress);
             await job.update(importer.state);
+            this.log.info(`Importer #${importer.id} - ${progress} %`);
         } catch (err) {
             this.log.error(
                 `Importer #${importer.id} - Failed to save ${chunk.timeframe} chunk ${chunk.dateFrom} - ${chunk.dateTo}`,
@@ -405,17 +406,25 @@ export default class ImporterWorkerService extends BaseService {
     ): Promise<void> {
         try {
             for (const [timeframe, candles] of Object.entries(candlesInTimeframes)) {
-                this.log.info(
-                    `Importer #${importer.id} - Finalizing ${timeframe} candles ${candles[0].timestamp} - ${
-                        candles[candles.length - 1].timestamp
-                    }`
-                );
-                await this.upsertCandles(candles);
+                if (candles && Array.isArray(candles) && candles.length > 0) {
+                    this.log.debug(
+                        `Importer #${importer.id} - Finalizing ${timeframe} candles ${candles[0]?.timestamp} - ${
+                            candles[candles.length - 1]?.timestamp
+                        }`
+                    );
+                    await this.upsertCandles(candles);
+                    this.log.debug(
+                        `Importer #${importer.id} - Finalized ${timeframe} candles ${candles[0]?.timestamp} - ${
+                            candles[candles.length - 1]?.timestamp
+                        }`
+                    );
+                }
             }
 
             const progress = importer.setTradesProgress(chunk.id);
             await job.updateProgress(progress);
             await job.update(importer.state);
+            this.log.info(`Importer #${importer.id} - ${progress} %`);
         } catch (err) {
             this.log.error(`Importer #${importer.id} - Failed to save chunk ${chunk.dateFrom} - ${chunk.dateTo}`, err);
             throw err;
