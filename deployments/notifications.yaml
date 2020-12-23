@@ -76,7 +76,7 @@ spec:
                         protocol: TCP
                   resources:
                       requests:
-                          memory: 128Mi
+                          memory: 64Mi
                           cpu: "10m"
                       limits:
                           memory: 256Mi
