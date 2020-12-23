@@ -379,15 +379,15 @@ export default class ImporterWorkerService extends BaseService {
                     }`
                 );
                 await this.upsertCandles(candles);
+                this.log.info(
+                    `Importer #${importer.id} - Finalized ${chunk.timeframe} candles ${candles[0]?.timestamp} - ${
+                        candles[candles.length - 1]?.timestamp
+                    }`
+                );
             }
             const progress = importer.setCandlesProgress(chunk.timeframe, chunk.id);
             await job.updateProgress(progress);
             await job.update(importer.state);
-            this.log.info(
-                `Importer #${importer.id} - Finalized ${chunk.timeframe} candles ${candles[0].timestamp} - ${
-                    candles[candles.length - 1].timestamp
-                }`
-            );
         } catch (err) {
             this.log.error(
                 `Importer #${importer.id} - Failed to save ${chunk.timeframe} chunk ${chunk.dateFrom} - ${chunk.dateTo}`,
