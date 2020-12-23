@@ -19,7 +19,7 @@ export class TulipIndicator extends BaseIndicator {
                 integer: "true",
                 positive: "true",
                 min: 1,
-                max: this._robotSettings.requiredHistoryMaxBars || 1,
+                max: this._strategySettings?.requiredHistoryMaxBars || 1,
                 optional: true
             }
         };
