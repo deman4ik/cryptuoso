@@ -1,4 +1,5 @@
 import { DataStream } from "scramjet";
+import { spawn, Pool, Worker as ThreadsWorker } from "threads";
 import { Job } from "bullmq";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import dayjs from "@cryptuoso/dayjs";
@@ -14,7 +15,7 @@ import {
 import requireFromString from "require-from-string";
 import { RobotPositionState, RobotState, RobotStats, RobotStatus, StrategyCode } from "@cryptuoso/robot-state";
 import { IndicatorCode } from "@cryptuoso/robot-indicators";
-import { ValidTimeframe, Candle, DBCandle, SignalEvent, CandleType } from "@cryptuoso/market";
+import { ValidTimeframe, Candle, DBCandle, SignalEvent, CandleType, BasePosition } from "@cryptuoso/market";
 import { sortAsc, chunkArray } from "@cryptuoso/helpers";
 import { makeChunksGenerator, sql } from "@cryptuoso/postgres";
 import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
@@ -25,10 +26,14 @@ import {
     BacktesterWorkerFinished,
     BacktesterWorkerSchema
 } from "@cryptuoso/backtester-events";
+import { StatisticsUtils } from "./statsWorker";
+import { TradeStats } from "@cryptuoso/stats-calc";
 
 export type BacktesterWorkerServiceConfig = BaseServiceConfig;
 
 export default class BacktesterWorkerService extends BaseService {
+    private pool: Pool<any>;
+
     abort: { [key: string]: boolean } = {};
     defaultChunkSize = 500;
     defaultInsertChunkSize = 1000;
@@ -43,17 +48,30 @@ export default class BacktesterWorkerService extends BaseService {
                 }
             });
             this.addOnStartHandler(this.onServiceStart);
+            this.addOnStopHandler(this.onServiceStop);
         } catch (err) {
             this.log.error("Error in BacktesterWorkerService constructor", err);
         }
     }
 
     async onServiceStart(): Promise<void> {
+        this.pool = Pool(() => spawn<StatisticsUtils>(new ThreadsWorker("./statsWorker")), {
+            name: "statistics-utils",
+            concurrency: 10
+        });
         this.createWorker("backtest", this.process);
+    }
+
+    async onServiceStop(): Promise<void> {
+        await this.pool.terminate();
     }
 
     cancel({ id }: BacktesterWorkerCancel): void {
         this.abort[id] = true;
+    }
+
+    async calcStatistics(prevStats: TradeStats, positions: BasePosition[]) {
+        return await this.pool.queue(async (utils: StatisticsUtils) => utils.calcStatistics(prevStats, positions));
     }
 
     #loadStrategyCode = async (strategy: string, local: boolean) => {
@@ -124,7 +142,7 @@ export default class BacktesterWorkerService extends BaseService {
     async process(job: Job<BacktesterState, BacktesterState>): Promise<BacktesterState> {
         try {
             const beacon = this.lightship.createBeacon();
-            const backtester = new Backtester(job.data);
+            const backtester = new Backtester({ ...job.data, calcStatistics: this.calcStatistics.bind(this) });
             backtester.start();
             this.log.info(`Backtester #${backtester.id} - Starting`);
             try {

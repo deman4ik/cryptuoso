@@ -1,10 +1,10 @@
 import { Robot, StrategyCode, RobotPositionState, StrategyProps, RobotStats } from "@cryptuoso/robot-state";
-import { ValidTimeframe, Candle, SignalEvent, DBCandle, calcPositionProfit } from "@cryptuoso/market";
+import { ValidTimeframe, Candle, SignalEvent, DBCandle, calcPositionProfit, BasePosition } from "@cryptuoso/market";
 import dayjs from "@cryptuoso/dayjs";
 import { round, defaultValue } from "@cryptuoso/helpers";
 import logger from "@cryptuoso/logger";
 import { IndicatorCode } from "@cryptuoso/robot-indicators";
-import { calcStatistics } from "@cryptuoso/stats-calc";
+import { calcStatistics, TradeStats } from "@cryptuoso/stats-calc";
 import { getRobotPositionVolume, RobotSettings, StrategySettings, VolumeSettingsType } from "@cryptuoso/robot-settings";
 
 export const enum Status {
@@ -49,6 +49,7 @@ export interface BacktesterState {
     robotSettings?: RobotSettings;
     robotInstances?: { [key: string]: Robot };
     error?: string;
+    calcStatistics?: (prevStats: TradeStats, positions: BasePosition[]) => Promise<TradeStats>;
 }
 
 export interface BacktesterSignals extends SignalEvent {
@@ -95,6 +96,7 @@ export class Backtester {
         [key: string]: StrategySettings;
     };
     #robotSettings?: RobotSettings;
+    #calcStatistics: (prevStats: TradeStats, positions: BasePosition[]) => Promise<TradeStats>;
     #robots?: {
         [key: string]: {
             instance: Robot;
@@ -144,6 +146,7 @@ export class Backtester {
         this.#finishedAt = state.finishedAt || null;
         this.#robotState = state.robotState || null;
         this.#error = state.error || null;
+        this.#calcStatistics = state.calcStatistics || calcStatistics;
     }
 
     get state(): BacktesterState {
@@ -441,7 +444,7 @@ export class Backtester {
                 return { ...pos, volume, profit };
             });
             robot.data.stats = {
-                ...(await calcStatistics(robot.data.stats, positions)),
+                ...(await this.#calcStatistics(robot.data.stats, positions)),
                 robotId: id,
                 backtestId: this.#id
             };
