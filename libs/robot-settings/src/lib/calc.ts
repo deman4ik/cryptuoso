@@ -21,18 +21,12 @@ export const calcBalancePercent = (percent: number, balance: number, price: numb
     return calcCurrencyDynamic((percent / 100) * balance, price);
 };
 
-export const getRobotPositionVolume = (
-    settings: RobotSettings | UserSignalSettings,
-    price?: number,
-    profit?: number
-): number => {
+export const getRobotPositionVolume = (settings: RobotSettings | UserSignalSettings, price?: number): number => {
     if (settings.volumeType === VolumeSettingsType.assetStatic) {
         return settings.volume;
     } else if (settings.volumeType === VolumeSettingsType.currencyDynamic) {
         if (!price) return null;
         return calcCurrencyDynamic(settings.volumeInCurrency, price);
-    } else if (settings.volumeType === VolumeSettingsType.assetDynamicDelta) {
-        return calcAssetDynamicDelta(settings.initialVolume, settings.delta, profit);
     } else return null;
 };
 

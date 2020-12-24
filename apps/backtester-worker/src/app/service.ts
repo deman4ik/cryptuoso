@@ -804,6 +804,7 @@ export default class BacktesterWorkerService extends BaseService {
                 .whenEnd();
 
             if (!this.abort[backtester.id]) {
+                await backtester.calcStats();
                 if (backtester.settings.populateHistory) {
                     const robot = backtester.robots[backtester.robotId];
 

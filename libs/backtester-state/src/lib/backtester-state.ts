@@ -1,5 +1,13 @@
 import { Robot, StrategyCode, RobotPositionState, StrategyProps, RobotStats } from "@cryptuoso/robot-state";
-import { ValidTimeframe, Candle, SignalEvent, DBCandle, calcPositionProfit, BasePosition } from "@cryptuoso/market";
+import {
+    ValidTimeframe,
+    Candle,
+    SignalEvent,
+    DBCandle,
+    calcPositionProfit,
+    BasePosition,
+    RobotPositionStatus
+} from "@cryptuoso/market";
 import dayjs from "@cryptuoso/dayjs";
 import { round, defaultValue } from "@cryptuoso/helpers";
 import logger from "@cryptuoso/logger";
@@ -419,7 +427,7 @@ export class Backtester {
         }
     };
 
-    #saveSettings = (id: string) => {
+    /* #saveSettings = (id: string) => {
         const robot = this.#robots[id];
         if (!robot.data.settings[robot.instance.settingsActiveFrom])
             robot.data.settings[robot.instance.settingsActiveFrom] = robot.instance.settings;
@@ -469,7 +477,7 @@ export class Backtester {
                     };
             }
         }
-    };
+    };*/
 
     async handleCandle(candle: Candle) {
         logger.info(`Backtester #${this.id} - Handling ${this.#processedBars + 1} bar of ${this.#totalBars}`);
@@ -482,9 +490,6 @@ export class Backtester {
             this.#saveLogs(id);
             this.#saveSignals(id);
             this.#savePositions(id);
-            await this.#calcStats(id);
-            this.#updateSettings(id);
-            this.#saveSettings(id);
 
             robot.instance.clearEvents();
             await robot.instance.calcIndicators();
@@ -494,11 +499,32 @@ export class Backtester {
             this.#saveLogs(id);
             this.#saveSignals(id);
             this.#savePositions(id);
-            await this.#calcStats(id);
-            this.#updateSettings(id);
-            this.#saveSettings(id);
         });
     }
+
+    calcStats = async () => {
+        Object.keys(this.#robots).forEach(async (id) => {
+            const robot = this.#robots[id];
+            const positions = Object.values(robot.data.positions)
+                .filter(({ status }) => status === RobotPositionStatus.closed)
+                .map((pos) => {
+                    const volume = getRobotPositionVolume(robot.instance.settings.robotSettings, pos.entryPrice);
+                    const profit = calcPositionProfit(
+                        pos.direction,
+                        pos.entryPrice,
+                        pos.exitPrice,
+                        volume,
+                        this.#averageFee
+                    );
+                    return { ...pos, volume, profit };
+                });
+            robot.data.stats = {
+                ...(await this.#calcStatistics(robot.data.stats, positions)),
+                robotId: id,
+                backtestId: this.#id
+            };
+        });
+    };
 
     finish(cancel = false) {
         this.#finishedAt = dayjs.utc().toISOString();
