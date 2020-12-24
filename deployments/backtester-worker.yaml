@@ -28,11 +28,11 @@ spec:
                       httpGet:
                           path: /ready
                           port: 9000
-                      failureThreshold: 1
-                      initialDelaySeconds: 5
-                      periodSeconds: 5
+                      failureThreshold: 5
+                      initialDelaySeconds: 10
+                      periodSeconds: 15
                       successThreshold: 1
-                      timeoutSeconds: 5
+                      timeoutSeconds: 15
                   livenessProbe:
                       httpGet:
                           path: /live

@@ -27,11 +27,11 @@ export interface BalancePercentSettings {
     balancePercent: number;
 }
 
-export type RobotSettings = AssetStaticSettings | CurrencyDynamicSettings | AssetDynamicDeltaSettings;
+export type RobotSettings = AssetStaticSettings | CurrencyDynamicSettings;
 
 export type UserSignalSettings = AssetStaticSettings | CurrencyDynamicSettings;
 
-export type UserRobotSettings = RobotSettings | BalancePercentSettings;
+export type UserRobotSettings = RobotSettings | BalancePercentSettings | AssetDynamicDeltaSettings;
 
 export interface StrategySettings {
     [key: string]: number | string;
