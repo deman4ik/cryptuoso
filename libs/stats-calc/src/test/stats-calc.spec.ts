@@ -14,8 +14,8 @@ describe("Test 'tradeStatistics' utils", () => {
 
     // Refactored to automatically round every value
     describe("Test calcStatisticsCumulatively with no previous statistics", () => {
-        it("Should cumulatively calculate statistics", () => {
-            const result = calcStatistics(null, positions);
+        it("Should cumulatively calculate statistics", async () => {
+            const result = await calcStatistics(null, positions);
 
             correctResult.lastUpdatedAt = dayjs.utc().toISOString();
             expect(result).toStrictEqual(correctResult);

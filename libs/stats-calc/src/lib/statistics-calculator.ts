@@ -132,10 +132,10 @@ export default class StatisticsCalculator {
         this.setTradeStats(prevTradeStats);
     }
 
-    public getStats(): TradeStats {
+    public async getStats(): Promise<TradeStats> {
         while (this.currentPositionIndex < this.positions.length) {
             this.selectNextPosition();
-            this.updateStatisticsValues();
+            await this.updateStatisticsValues();
             if (this.currentPositionIndex !== this.positions.length) this.setTradeStats(this.currentTradeStats);
         }
 
@@ -194,7 +194,7 @@ export default class StatisticsCalculator {
     }
 
     //updating is consecutive
-    private updateStatisticsValues(): StatisticsCalculator {
+    private async updateStatisticsValues(): Promise<StatisticsCalculator> {
         this.updateTradesAll()
             .updateTradesWinning()
             .updateTradesLosing()

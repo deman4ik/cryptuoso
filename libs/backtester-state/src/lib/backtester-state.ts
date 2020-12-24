@@ -422,7 +422,7 @@ export class Backtester {
             robot.data.settings[robot.instance.settingsActiveFrom] = robot.instance.settings;
     };
 
-    #calcStats = (id: string) => {
+    #calcStats = async (id: string) => {
         const robot = this.#robots[id];
         if (robot.instance.hasClosedPositions) {
             const positions = robot.instance.closedPositions.map((pos) => {
@@ -441,7 +441,7 @@ export class Backtester {
                 return { ...pos, volume, profit };
             });
             robot.data.stats = {
-                ...calcStatistics(robot.data.stats, positions),
+                ...(await calcStatistics(robot.data.stats, positions)),
                 robotId: id,
                 backtestId: this.#id
             };
@@ -479,7 +479,7 @@ export class Backtester {
             this.#saveLogs(id);
             this.#saveSignals(id);
             this.#savePositions(id);
-            this.#calcStats(id);
+            await this.#calcStats(id);
             this.#updateSettings(id);
             this.#saveSettings(id);
 
@@ -491,7 +491,7 @@ export class Backtester {
             this.#saveLogs(id);
             this.#saveSignals(id);
             this.#savePositions(id);
-            this.#calcStats(id);
+            await this.#calcStats(id);
             this.#updateSettings(id);
             this.#saveSettings(id);
         });
