@@ -77,8 +77,10 @@ export default class BacktesterWorkerService extends BaseService {
             fileNames.map(async (fileName) => {
                 let code: IndicatorCode;
                 if (local) {
+                    this.log.debug(`Loading local indicator ${fileName}`);
                     code = await import(`../../../../indicators/${fileName}`);
                 } else {
+                    this.log.debug(`Loading remote indicator ${fileName}`);
                     const { file }: { file: string } = await this.db.pg.one(
                         sql`select file from indicators where id = ${fileName}`
                     );

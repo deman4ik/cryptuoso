@@ -291,7 +291,7 @@ export class Robot {
         if (strategyCodeParam) strategyCode = strategyCodeParam;
         // Функции стратегии
         const strategyFunctions: { [key: string]: () => any } = {};
-        Object.getOwnPropertyNames(strategyCode)
+        Object.keys(strategyCode)
             .filter((key) => typeof strategyCode[key] === "function")
             .forEach((key) => {
                 strategyFunctions[key] = strategyCode[key];
@@ -334,15 +334,14 @@ export class Robot {
 
                     // Считываем объект индикатора
 
-                    const indicatorCode = this._baseIndicatorsCode[`${indicator.fileName}`];
+                    const indicatorCode = this._baseIndicatorsCode[indicator.fileName];
                     // Берем все функции индикатора
                     const indicatorFunctions: { [key: string]: () => any } = {};
-                    Object.getOwnPropertyNames(indicatorCode)
+                    Object.keys(indicatorCode)
                         .filter((ownProp) => typeof indicatorCode[ownProp] === "function")
                         .forEach((ownProp) => {
                             indicatorFunctions[ownProp] = indicatorCode[ownProp];
                         });
-
                     // Схема параметров
                     const { parametersSchema } = indicatorCode;
                     // Создаем новый инстанc базового индикатора
