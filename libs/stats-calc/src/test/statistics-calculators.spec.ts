@@ -11,17 +11,15 @@ describe("statistics-calculator test", () => {
     const newPosition = positions[positions.length - 1];
 
     describe("Testing StatisticsCalculator with valid input", () => {
-        describe("Resulting object values test", () => {
+        it("Resulting object values test", async () => {
             const statsCalculator = new StatisticsCalculator(statsWithoutLastPos, [newPosition]);
-            const calculatedStats = statsCalculator.getStats();
+            const calculatedStats = await statsCalculator.getStats();
             correctFinalResult.lastUpdatedAt = calculatedStats.lastPositionExitDate;
 
             for (const prop in calculatedStats) {
-                it(`Should be equal to  ${prop} of reference object`, () => {
-                    if (prop != "lastUpdatedAt") {
-                        expect((calculatedStats as any)[prop]).toStrictEqual((correctFinalResult as any)[prop]);
-                    }
-                });
+                if (prop != "lastUpdatedAt") {
+                    expect((calculatedStats as any)[prop]).toStrictEqual((correctFinalResult as any)[prop]);
+                }
             }
         });
 
