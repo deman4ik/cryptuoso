@@ -73,7 +73,7 @@ spec:
                         valueFrom:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
-                                key: WORKER_CONCURRENCY
+                                key: ROBOT_WORKER_CONCURRENCY
                   ports:
                       - containerPort: 9000
                         protocol: TCP

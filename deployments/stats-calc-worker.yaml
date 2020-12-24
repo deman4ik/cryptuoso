@@ -73,7 +73,7 @@ spec:
                         valueFrom:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
-                                key: WORKER_CONCURRENCY
+                                key: STATS_CALC_WORKER_CONCURRENCY
                   ports:
                       - containerPort: 3000
                         protocol: TCP
@@ -85,7 +85,7 @@ spec:
                           cpu: "100m"
                       limits:
                           memory: 512Mi
-                          cpu: "300m"
+                          cpu: "500m"
 ---
 apiVersion: v1
 kind: Service
