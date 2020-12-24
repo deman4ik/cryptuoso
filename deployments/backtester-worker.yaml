@@ -37,20 +37,20 @@ spec:
                       httpGet:
                           path: /live
                           port: 9000
-                      failureThreshold: 3
+                      failureThreshold: 5
                       initialDelaySeconds: 10
-                      periodSeconds: 30
+                      periodSeconds: 60
                       successThreshold: 1
-                      timeoutSeconds: 5
+                      timeoutSeconds: 30
                   startupProbe:
                       httpGet:
                           path: /live
                           port: 9000
-                      failureThreshold: 3
+                      failureThreshold: 5
                       initialDelaySeconds: 10
-                      periodSeconds: 30
+                      periodSeconds: 60
                       successThreshold: 1
-                      timeoutSeconds: 5
+                      timeoutSeconds: 30
                   env:
                       - name: SERVICE
                         value: <APP>
