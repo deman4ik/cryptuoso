@@ -313,6 +313,7 @@ export class Backtester {
     initRobots(strategyCode: StrategyCode) {
         for (const [id, settings] of Object.entries(this.#strategySettings)) {
             try {
+                logger.debug(`Backtester #${this.#id} - Initializing robot #${id}`);
                 this.#robots[id] = {
                     instance: new Robot({
                         id,
@@ -340,7 +341,7 @@ export class Backtester {
                 this.#robots[id].instance.setStrategy(strategyCode);
                 this.#robots[id].instance.initStrategy();
             } catch (err) {
-                logger.error(`Backtester ${this.#id} - Failed to init robot ${id}`, err);
+                logger.error(`Backtester #${this.#id} - Failed to init robot #${id}`, err);
                 throw err;
             }
         }
@@ -349,11 +350,12 @@ export class Backtester {
     initIndicators(indicatorsCode: { fileName: string; code: IndicatorCode }[]) {
         Object.keys(this.#robots).forEach((id) => {
             try {
+                logger.debug(`Backtester #${this.#id} - Initializing robot's #${id} indicators`);
                 this.#robots[id].instance.setBaseIndicatorsCode(indicatorsCode);
                 this.#robots[id].instance.setIndicators();
                 this.#robots[id].instance.initIndicators();
             } catch (err) {
-                logger.error(`Backtester ${this.#id} - Failed to init robot's #${id} indicators`, err);
+                logger.error(`Backtester #${this.#id} - Failed to init robot's #${id} indicators`, err);
                 throw err;
             }
         });

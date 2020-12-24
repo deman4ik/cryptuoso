@@ -26,13 +26,11 @@ export default class BacktesterRunnerService extends HTTPService {
             this.createRoutes({
                 backtesterStart: {
                     inputSchema: BacktesterRunnerSchema[BacktesterRunnerEvents.START],
-                    auth: true,
                     roles: ["manager", "admin"],
                     handler: this.startHTTPHandler
                 },
                 backtesterStop: {
                     inputSchema: BacktesterRunnerSchema[BacktesterRunnerEvents.STOP],
-                    auth: true,
                     roles: ["manger", "admin"],
                     handler: this.stopHTTPHandler
                 }

@@ -48,7 +48,7 @@ export class BaseIndicator {
     _parametersSchema: ValidationSchema;
     _eventsToSend: NewEvent<any>[];
     result: number | number[];
-    _log = logger.info;
+    _log = logger.debug.bind(logger);
     _strategySettings: StrategySettings;
 
     constructor(state: IndicatorState) {
@@ -71,13 +71,13 @@ export class BaseIndicator {
             talib: {} */
         };
         if (state.variables) {
-            Object.keys(state.variables).forEach((key) => {
-                this[key] = state.variables[key];
+            Object.entries(state.variables).forEach(([key, value]) => {
+                this[key] = value;
             });
         }
         if (state.indicatorFunctions) {
-            Object.getOwnPropertyNames(state.indicatorFunctions).forEach((key) => {
-                this[key] = state.indicatorFunctions[key];
+            Object.entries(state.indicatorFunctions).forEach(([key, value]) => {
+                this[key] = value;
             });
         }
         this._parametersSchema = state.parametersSchema;
@@ -86,7 +86,7 @@ export class BaseIndicator {
     }
 
     init() {
-        throw new Error("Not implemented");
+        return;
     }
 
     calc() {
