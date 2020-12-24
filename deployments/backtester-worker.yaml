@@ -73,7 +73,7 @@ spec:
                         valueFrom:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
-                                key: WORKER_CONCURRENCY
+                                key: BACKTESTER_WORKER_CONCURRENCY
                   ports:
                       - containerPort: 9000
                         protocol: TCP
@@ -83,7 +83,7 @@ spec:
                           cpu: "10m"
                       limits:
                           memory: 512Mi
-                          cpu: "500m"
+                          cpu: "700m"
 ---
 apiVersion: v1
 kind: Service
