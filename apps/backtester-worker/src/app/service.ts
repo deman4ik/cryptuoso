@@ -35,7 +35,8 @@ export default class BacktesterWorkerService extends BaseService {
     private pool: Pool<any>;
 
     abort: { [key: string]: boolean } = {};
-    defaultChunkSize = 500;
+    defaultChunkSize = 1000;
+    defaultInsertChunkSize = 1000;
     constructor(config?: BacktesterWorkerServiceConfig) {
         super(config);
         try {
@@ -216,7 +217,7 @@ export default class BacktesterWorkerService extends BaseService {
                 });
                 throw new BaseError(backtester.error, { backtesterId: backtester.id });
             }
-            if (backtester.isFinished)
+            if (backtester.isFinished) {
                 await this.events.emit<BacktesterWorkerFinished>({
                     type: BacktesterWorkerEvents.FINISHED,
                     data: {
@@ -225,6 +226,12 @@ export default class BacktesterWorkerService extends BaseService {
                         status: backtester.status
                     }
                 });
+                this.log.info(
+                    `Backtester #${backtester.id} finished in ${dayjs
+                        .utc(backtester.finishedAt)
+                        .diff(backtester.startedAt, "second")} seconds`
+                );
+            }
 
             await beacon.die();
             return backtester.state;
@@ -286,7 +293,7 @@ export default class BacktesterWorkerService extends BaseService {
                     `Backtester #${signals[0].backtestId} - Saving robot's #${signals[0].robotId} ${signals.length} signals`
                 );
 
-                const chunks = chunkArray(signals, this.defaultChunkSize);
+                const chunks = chunkArray(signals, this.defaultInsertChunkSize);
                 for (const chunk of chunks) {
                     await this.db.pg.query(sql`
         INSERT INTO backtest_signals
@@ -339,7 +346,7 @@ export default class BacktesterWorkerService extends BaseService {
                 this.log.info(
                     `Backtester #${positions[0].backtestId} - Saving robot's #${positions[0].robotId} ${positions.length} positions`
                 );
-                const chunks = chunkArray(positions, this.defaultChunkSize);
+                const chunks = chunkArray(positions, this.defaultInsertChunkSize);
                 for (const chunk of chunks) {
                     await this.db.pg.query(sql`
         INSERT INTO backtest_positions
@@ -433,7 +440,7 @@ export default class BacktesterWorkerService extends BaseService {
                     candleTimestamp: log.candle.timestamp,
                     data: JSON.stringify(log)
                 })),
-                this.defaultChunkSize
+                this.defaultInsertChunkSize
             );
             for (const chunk of chunks) {
                 await this.db.pg.query(sql`
@@ -502,7 +509,7 @@ export default class BacktesterWorkerService extends BaseService {
                     strategySettings: JSON.stringify(s.strategySettings),
                     robotSettings: JSON.stringify(s.robotSettings)
                 })),
-                this.defaultChunkSize
+                this.defaultInsertChunkSize
             );
             for (const chunk of chunks) {
                 await this.db.pg.query(sql`
@@ -573,7 +580,7 @@ export default class BacktesterWorkerService extends BaseService {
                     strategySettings: JSON.stringify(s.strategySettings),
                     robotSettings: JSON.stringify(s.robotSettings)
                 })),
-                this.defaultChunkSize
+                this.defaultInsertChunkSize
             );
 
             for (const chunk of chunks) {
@@ -598,7 +605,7 @@ export default class BacktesterWorkerService extends BaseService {
             this.log.info(`Robot #${robotId} - Saving trades`);
             await this.db.pg.query(sql`DELETE FROM robot_signals where robot_id = ${robotId}`);
             if (signals && Array.isArray(signals) && signals.length > 0) {
-                const chunks = chunkArray(signals, this.defaultChunkSize);
+                const chunks = chunkArray(signals, this.defaultInsertChunkSize);
                 for (const chunk of chunks) {
                     await this.db.pg.query(sql`
         INSERT INTO robot_signals
@@ -648,7 +655,7 @@ export default class BacktesterWorkerService extends BaseService {
             this.log.info(`Robot #${robotId} - Saving positions`);
             await this.db.pg.query(sql`DELETE FROM robot_positions where robot_id = ${robotId}`);
             if (positions && Array.isArray(positions) && positions.length > 0) {
-                const chunks = chunkArray(positions, this.defaultChunkSize);
+                const chunks = chunkArray(positions, this.defaultInsertChunkSize);
                 for (const chunk of chunks) {
                     try {
                         await this.db.pg.query(sql`
@@ -791,8 +798,8 @@ export default class BacktesterWorkerService extends BaseService {
                 { maxParallel: 1 }
             )
                 .flatMap((i) => i)
-                .while(() => backtester.isStarted && !this.abort[backtester.id])
                 .each(async (candle: Candle) => {
+                    if (this.abort[backtester.id]) throw new Error("Stopped");
                     await backtester.handleCandle(candle);
                     backtester.incrementProgress();
                 })

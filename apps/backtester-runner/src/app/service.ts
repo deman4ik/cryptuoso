@@ -52,7 +52,9 @@ export default class BacktesterRunnerService extends HTTPService {
     }
 
     async onServiceStart() {
-        this.createQueue("backtest");
+        this.createQueue("backtest", null, {
+            stalledInterval: 60000
+        });
     }
 
     async startHTTPHandler(
