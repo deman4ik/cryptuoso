@@ -13,7 +13,7 @@ import { round, defaultValue } from "@cryptuoso/helpers";
 import logger from "@cryptuoso/logger";
 import { IndicatorCode } from "@cryptuoso/robot-indicators";
 import { calcStatistics, TradeStats } from "@cryptuoso/stats-calc";
-import { getRobotPositionVolume, RobotSettings, StrategySettings, VolumeSettingsType } from "@cryptuoso/robot-settings";
+import { getRobotPositionVolume, RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 
 export const enum Status {
     queued = "queued",
