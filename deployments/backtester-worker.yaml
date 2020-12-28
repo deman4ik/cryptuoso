@@ -30,9 +30,9 @@ spec:
                           port: 9000
                       failureThreshold: 5
                       initialDelaySeconds: 10
-                      periodSeconds: 15
+                      periodSeconds: 60
                       successThreshold: 1
-                      timeoutSeconds: 15
+                      timeoutSeconds: 30
                   livenessProbe:
                       httpGet:
                           path: /live
