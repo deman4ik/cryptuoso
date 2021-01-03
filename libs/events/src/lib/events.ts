@@ -1,5 +1,5 @@
 import { Redis } from "ioredis";
-import { LightshipType } from "lightship";
+import { Lightship } from "lightship";
 import { ValidationSchema } from "fastest-validator";
 import { v4 as uuid } from "uuid";
 import logger from "@cryptuoso/logger";
@@ -44,7 +44,7 @@ type StreamMessage = [string, StreamMsgVals];
 export class Events {
     #catalog: EventsCatalog;
     #redis: Redis;
-    #lightship: LightshipType;
+    #lightship: Lightship;
     #consumerId: string;
     #blockTimeout: number;
     #pendingInterval: number;
@@ -71,7 +71,7 @@ export class Events {
             };
         };
     } = {};
-    constructor(redisClient: Redis, lightship: LightshipType, config?: EventsConfig) {
+    constructor(redisClient: Redis, lightship: Lightship, config?: EventsConfig) {
         this.#redis = redisClient.duplicate();
         this.#lightship = lightship;
 

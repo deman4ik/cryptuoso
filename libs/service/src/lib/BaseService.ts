@@ -1,9 +1,11 @@
-import { createLightship, LightshipType } from "lightship";
+import { createLightship, Lightship } from "lightship";
 import {
     Job,
     JobsOptions,
     Processor,
     Queue,
+    QueueEvents,
+    QueueEventsOptions,
     QueueOptions,
     QueueScheduler,
     QueueSchedulerOptions,
@@ -24,7 +26,7 @@ export interface BaseServiceConfig {
 
 export class BaseService {
     #log: Logger;
-    #lightship: LightshipType;
+    #lightship: Lightship;
     #name: string;
     #onServiceStart: { (): Promise<void> }[] = [];
     #onServiceStop: { (): Promise<void> }[] = [];
@@ -32,7 +34,7 @@ export class BaseService {
     #redLock: RedLock;
     #db: { sql: typeof sql; pg: typeof pg; util: typeof pgUtil };
     #events: Events;
-    #queues: { [key: string]: { instance: Queue<any>; scheduler: QueueScheduler } } = {};
+    #queues: { [key: string]: { instance: Queue<any>; scheduler: QueueScheduler; events: QueueEvents } } = {};
     #workers: { [key: string]: Worker } = {};
     #workerConcurrency = +process.env.WORKER_CONCURRENCY || 10;
     #lockers = new Map<string, { unlock(): Promise<void> }>();
@@ -277,17 +279,47 @@ export class BaseService {
         return this.#queues;
     }
 
-    #createQueue = (name: string, queueOpts?: QueueOptions, schedulerOpts?: QueueSchedulerOptions) => {
+    #createQueue = (
+        name: string,
+        queueOpts?: QueueOptions,
+        schedulerOpts?: QueueSchedulerOptions,
+        eventsOpts?: QueueEventsOptions
+    ) => {
         if (this.#queues[name]) throw new Error(`Queue ${name} already exists`);
         this.#queues[name] = {
             instance: new Queue(name, { ...queueOpts, connection: this.redis.duplicate() }),
-            scheduler: new QueueScheduler(name, { ...schedulerOpts, connection: this.redis.duplicate() })
+            scheduler: new QueueScheduler(name, { ...schedulerOpts, connection: this.redis.duplicate() }),
+            events: new QueueEvents(name, { ...eventsOpts, connection: this.redis.duplicate() })
         };
+        this.#queues[name].events.on("completed", ({ jobId, returnvalue }) =>
+            this.#jobCompletedLogger(name, jobId, returnvalue)
+        );
+        this.#queues[name].events.on("failed", ({ jobId, failedReason }) =>
+            this.#jobErrorLogger(name, jobId, failedReason)
+        );
+        this.#queues[name].events.on("stalled", ({ jobId }) => this.#jobStalledLogger(name, jobId));
+        this.#queues[name].events.on("progress", ({ jobId, data }) => this.#jobProgressLogger(name, jobId, data));
     };
 
     get createQueue() {
         return this.#createQueue;
     }
+
+    #jobCompletedLogger = (name: string, jobId: string, returnvalue: string) => {
+        this.log.info(`Queue ${name} job #${jobId} - completed `, returnvalue);
+    };
+
+    #jobErrorLogger = (name: string, jobId: string, failedReason: string) => {
+        this.log.error(`Queue ${name} job #${jobId} - failed - ${failedReason}`);
+    };
+
+    #jobStalledLogger = (name: string, jobId: string) => {
+        this.log.error(`Queue ${name} job #${jobId} - stalled`);
+    };
+
+    #jobProgressLogger = (name: string, jobId: string, data: string) => {
+        this.log.info(`Queue ${name} job #${jobId} - progress - ${data}`);
+    };
 
     #addJob = async <T>(queueName: string, jobName: string, data: T, opts?: JobsOptions): Promise<Job<any, any>> => {
         if (!this.#queues[queueName]) throw new Error(`Queue ${queueName} doesn't exists`);

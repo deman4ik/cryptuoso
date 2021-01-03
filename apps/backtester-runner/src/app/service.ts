@@ -237,6 +237,7 @@ export default class BacktesterRunnerService extends HTTPService {
                 removeOnComplete: true,
                 removeOnFail: true
             });
+            this.log.info(`Backtester ${backtester.id} scheduled`);
             return { result: backtester.id };
         } catch (error) {
             this.log.error(error);

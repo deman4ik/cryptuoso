@@ -5,14 +5,13 @@ import {
     SignalEvent,
     DBCandle,
     calcPositionProfit,
-    BasePosition,
     RobotPositionStatus
 } from "@cryptuoso/market";
 import dayjs from "@cryptuoso/dayjs";
 import { round, defaultValue } from "@cryptuoso/helpers";
 import logger from "@cryptuoso/logger";
 import { IndicatorCode } from "@cryptuoso/robot-indicators";
-import { calcStatistics, TradeStats } from "@cryptuoso/stats-calc";
+import { calcStatistics } from "@cryptuoso/stats-calc";
 import { getRobotPositionVolume, RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 
 export const enum Status {
@@ -46,6 +45,7 @@ export interface BacktesterState {
     totalBars?: number;
     processedBars?: number;
     leftBars?: number;
+    prevPercent?: number;
     completedPercent?: number;
     status: Status;
     startedAt?: string;
@@ -57,7 +57,6 @@ export interface BacktesterState {
     robotSettings?: RobotSettings;
     robotInstances?: { [key: string]: Robot };
     error?: string;
-    calcStatistics?: (prevStats: TradeStats, positions: BasePosition[]) => Promise<TradeStats>;
 }
 
 export interface BacktesterSignals extends SignalEvent {
@@ -104,7 +103,6 @@ export class Backtester {
         [key: string]: StrategySettings;
     };
     #robotSettings?: RobotSettings;
-    #calcStatistics: (prevStats: TradeStats, positions: BasePosition[]) => Promise<TradeStats>;
     #robots?: {
         [key: string]: {
             instance: Robot;
@@ -154,7 +152,6 @@ export class Backtester {
         this.#finishedAt = state.finishedAt || null;
         this.#robotState = state.robotState || null;
         this.#error = state.error || null;
-        this.#calcStatistics = state.calcStatistics || calcStatistics;
     }
 
     get state(): BacktesterState {
@@ -171,10 +168,11 @@ export class Backtester {
             settings: this.#settings,
             strategySettings: this.#strategySettings,
             robotSettings: this.#robotSettings,
-            totalBars: this.#totalBars,
-            processedBars: this.#processedBars,
-            leftBars: this.#leftBars,
-            completedPercent: this.#completedPercent,
+            totalBars: this.#totalBars || 0,
+            processedBars: this.#processedBars || 0,
+            leftBars: this.#leftBars || 0,
+            prevPercent: this.#prevPercent || 0,
+            completedPercent: this.#completedPercent || 0,
             status: this.#status,
             startedAt: this.#startedAt,
             finishedAt: this.#finishedAt,
@@ -240,8 +238,16 @@ export class Backtester {
         this.#startedAt = this.#startedAt || dayjs.utc().toISOString();
     }
 
+    get startedAt() {
+        return this.#startedAt;
+    }
+
     set startedAt(date: string) {
         this.#startedAt = dayjs.utc(date).toISOString();
+    }
+
+    get finishedAt() {
+        return this.#finishedAt;
     }
 
     set finishedAt(date: string) {
@@ -290,7 +296,9 @@ export class Backtester {
                     this.#completedPercent
                 }%`
             );
+            return true;
         }
+        return false;
     }
 
     get settings() {
@@ -519,7 +527,7 @@ export class Backtester {
                     return { ...pos, volume, profit };
                 });
             robot.data.stats = {
-                ...(await this.#calcStatistics(robot.data.stats, positions)),
+                ...(await calcStatistics(robot.data.stats, positions)),
                 robotId: id,
                 backtestId: this.#id
             };
