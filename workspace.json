@@ -2098,6 +2098,108 @@
                     "outputs": ["coverage/libs/auth-utils"]
                 }
             }
+        },
+        "exwatcher-kucoin": {
+            "root": "apps/exwatcher-kucoin",
+            "sourceRoot": "apps/exwatcher-kucoin/src",
+            "projectType": "application",
+            "prefix": "exwatcher-kucoin",
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "outputs": ["{options.outputPath}"],
+                    "options": {
+                        "outputPath": "dist/apps/exwatcher-kucoin",
+                        "main": "apps/exwatcher-kucoin/src/main.ts",
+                        "tsConfig": "apps/exwatcher-kucoin/tsconfig.app.json",
+                        "assets": ["apps/exwatcher-kucoin/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/exwatcher-kucoin/src/environments/environment.ts",
+                                    "with": "apps/exwatcher-kucoin/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "exwatcher-kucoin:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["apps/exwatcher-kucoin/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/apps/exwatcher-kucoin"],
+                    "options": {
+                        "jestConfig": "apps/exwatcher-kucoin/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "exwatcher-huobipro": {
+            "root": "apps/exwatcher-huobipro",
+            "sourceRoot": "apps/exwatcher-huobipro/src",
+            "projectType": "application",
+            "prefix": "exwatcher-huobipro",
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "outputs": ["{options.outputPath}"],
+                    "options": {
+                        "outputPath": "dist/apps/exwatcher-huobipro",
+                        "main": "apps/exwatcher-huobipro/src/main.ts",
+                        "tsConfig": "apps/exwatcher-huobipro/tsconfig.app.json",
+                        "assets": ["apps/exwatcher-huobipro/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/exwatcher-huobipro/src/environments/environment.ts",
+                                    "with": "apps/exwatcher-huobipro/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "exwatcher-huobipro:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["apps/exwatcher-huobipro/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/apps/exwatcher-huobipro"],
+                    "options": {
+                        "jestConfig": "apps/exwatcher-huobipro/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
         }
     },
     "cli": {

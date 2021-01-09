@@ -89,8 +89,7 @@ export default class ConnectorRunnerService extends BaseService {
                 throw e;
             }
 
-            this.connectors[id] = new PrivateConnector();
-            await this.connectors[id].initConnector({
+            this.connectors[id] = new PrivateConnector({
                 exchange,
                 keys: {
                     apiKey,
@@ -99,6 +98,7 @@ export default class ConnectorRunnerService extends BaseService {
                 },
                 ordersCache
             });
+            await this.connectors[id].initConnector();
         }
     }
 

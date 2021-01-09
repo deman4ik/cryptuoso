@@ -491,18 +491,19 @@ export default class UserProfileService extends HTTPService {
 
     async userExchangeAccUpsert(
         user: User,
-        {
-            id,
-            exchange,
-            name,
-            keys: { key, secret, pass }
-        }: {
+        params: {
             id?: string;
             exchange: string;
             name?: string;
             keys: { key: string; secret: string; pass?: string };
         }
     ) {
+        const {
+            exchange,
+            keys: { key, secret, pass }
+        } = params;
+        const id = params.id;
+        let name = params.name;
         const { id: userId } = user;
 
         let existed;
@@ -549,7 +550,14 @@ export default class UserProfileService extends HTTPService {
             }
         }
 
-        const connector = new PrivateConnector();
+        const connector = new PrivateConnector({
+            exchange,
+            keys: {
+                apiKey: key,
+                secret,
+                password: pass
+            }
+        });
         const check:
             | {
                   success: boolean;
@@ -560,12 +568,7 @@ export default class UserProfileService extends HTTPService {
                   success: boolean;
                   error: string;
                   balances?: undefined;
-              } = await connector.checkAPIKeys({
-            exchange,
-            key,
-            secret,
-            pass
-        });
+              } = await connector.checkAPIKeys();
         if (!check.success) throw new ActionsHandlerError(check.error, null, "VALIDATION", 400);
 
         const encryptedKeys: UserExchangeKeys = {
@@ -576,7 +579,7 @@ export default class UserProfileService extends HTTPService {
 
         if (!existed) {
             if (!name || name === "") {
-                const { name: sameExchangeName } = await this.db.pg.maybeOne<{ name: string }>(sql`
+                const accExists = await this.db.pg.maybeOne<{ name: string }>(sql`
                     SELECT name
                     FROM user_exchange_accs
                     WHERE exchange = ${exchange}
@@ -584,6 +587,7 @@ export default class UserProfileService extends HTTPService {
                     LIMIT 1;
                 `);
 
+                const sameExchangeName = accExists?.name || "";
                 const number = (sameExchangeName && +sameExchangeName.split("#")[1]) || 0;
 
                 name = `${formatExchange(exchange)} #${number + 1}`;
@@ -592,6 +596,7 @@ export default class UserProfileService extends HTTPService {
                     SELECT id
                     FROM user_exchange_accs
                     WHERE name = ${name}
+                    AND user_id = ${userId}
                     LIMIT 1;
                 `);
 

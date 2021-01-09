@@ -17,8 +17,8 @@ export class PrivateConnector {
     connector: Exchange;
     retryOptions = {
         retries: 100,
-        minTimeout: 0,
-        maxTimeout: 100,
+        minTimeout: 100,
+        maxTimeout: 500,
         onRetry: (err: any, i: number) => {
             if (err) {
                 this.log.warn(`Retry ${i} - ${err.message}`);
@@ -26,8 +26,37 @@ export class PrivateConnector {
         }
     };
     agent = process.env.PROXY_ENDPOINT && createSocksProxyAgent(process.env.PROXY_ENDPOINT);
+    config: { [key: string]: any } = {};
+    constructor({
+        exchange,
+        keys,
+        ordersCache
+    }: {
+        exchange: UserExchangeAccount["exchange"];
+        keys?: {
+            apiKey: string;
+            secret: string;
+            password?: string;
+        };
+        ordersCache?: UserExchangeAccount["ordersCache"];
+    }) {
+        if (keys) {
+            const { apiKey, secret, password } = keys;
 
-    constructor() {
+            this.config = {
+                apiKey,
+                secret,
+                password,
+                orders: ordersCache,
+                enableRateLimit: true,
+                agent: this.agent,
+                timeout: 30000,
+                nonce() {
+                    return this.milliseconds();
+                }
+            };
+        }
+        this.exchange = exchange;
         this.log = logger;
     }
 
@@ -39,8 +68,8 @@ export class PrivateConnector {
         return this.connector.orders;
     }
 
-    getOrderParams(exchange: string, id: string, params: GenericObject<any>, type: OrderType) {
-        if (exchange === "kraken") {
+    getOrderParams(id: string, params: GenericObject<any>, type: OrderType) {
+        if (this.exchange === "kraken") {
             const { kraken } = params;
             return {
                 leverage: (kraken && kraken.leverage) || 3,
@@ -48,7 +77,7 @@ export class PrivateConnector {
                 // clientOrderId: id
             };
         }
-        if (exchange === "bitfinex") {
+        if (this.exchange === "bitfinex") {
             if (type === OrderType.market || type === OrderType.forceMarket)
                 return {
                     type: OrderType.market
@@ -57,7 +86,23 @@ export class PrivateConnector {
                 type: "limit"
             };
         }
-        /*if (exchange === "binance_futures" && id) {
+        if (this.exchange === "kucoin") {
+            return {
+                tradeType: "MARGIN_TRADE"
+            };
+        }
+        if (this.exchange === "huobipro") {
+            const superMarginAccount = this.connector.accounts.find(
+                ({ type }: { type: string }) => type === "super-margin"
+            );
+            if (!superMarginAccount) throw new Error("Cross margin account not found");
+
+            return {
+                "account-id": superMarginAccount.id,
+                source: "super-margin-api"
+            };
+        }
+        /*if (this.exchange === "binance_futures" && id) {
           return {
             clientOrderId: id
           };
@@ -97,12 +142,7 @@ export class PrivateConnector {
         );
     }
 
-    async getCurrentPrice(
-        connector: ccxt.Exchange,
-        exchange: string,
-        asset: string,
-        currency: string
-    ): Promise<ExchangePrice> {
+    async getCurrentPrice(connector: ccxt.Exchange, asset: string, currency: string): Promise<ExchangePrice> {
         try {
             const call = async (bail: (e: Error) => void) => {
                 try {
@@ -116,7 +156,7 @@ export class PrivateConnector {
             if (!response || !response.timestamp) return null;
             const time = dayjs.utc(response.timestamp);
             return {
-                exchange,
+                exchange: this.exchange,
                 asset,
                 currency,
                 time: time.valueOf(),
@@ -129,65 +169,65 @@ export class PrivateConnector {
             throw e;
         }
     }
-    async checkAPIKeys(params: { exchange: string; key: string; secret: string; pass?: string }) {
+
+    async checkAPIKeys() {
         try {
-            const { exchange, key, secret, pass } = params;
-            const config: { [key: string]: any } = {
-                apiKey: key,
-                secret,
-                password: pass,
-                agent: this.agent,
-                options: {
-                    enableRateLimit: true
-                }
-            };
-            let connector: ccxt.Exchange;
-            if (exchange === "bitfinex" || exchange === "kraken") {
-                connector = new ccxt[exchange](config);
-            } else if (exchange === "binance_futures") {
-                config.options.defaultType = "future";
-                config.options.adjustForTimeDifference = true;
-
-                connector = new ccxt.binance(config);
-            } else throw new Error("Unsupported exchange");
-
-            const balances = await this.getBalances(connector, exchange);
+            await this.initConnector();
+            const balances = await this.getBalances(this.connector, this.exchange);
             const asset = "BTC";
-            const currency = exchange === "binance_futures" ? "USDT" : "USD";
+            const currency = ["binance_futures", "kucoin", "huobipro"].includes(this.exchange) ? "USDT" : "USD";
             const market = await pg.one<{ limits: Market["limits"] }>(sql`SELECT limits 
             FROM markets 
-            WHERE exchange = ${exchange} 
+            WHERE exchange = ${this.exchange} 
               AND asset =  ${asset}
               AND currency = ${currency};`);
 
             let price = market.limits.price.min;
-            if (exchange === "binance_futures") {
-                const { price: currentPrice } = await this.getCurrentPrice(connector, exchange, asset, currency);
+            let amount = market.limits.amount.min;
+            if (this.exchange === "binance_futures" || this.exchange === "huobipro") {
+                const { price: currentPrice } = await this.getCurrentPrice(this.connector, asset, currency);
 
                 price = currentPrice - 1500;
             }
+            if (this.exchange === "huobipro") {
+                amount = amount * 500;
+            }
+
             const type = OrderType.limit;
-            const orderParams = this.getOrderParams(exchange, null, {}, type);
+            const orderParams = this.getOrderParams(null, {}, type);
 
             const createOrderCall = async (bail: (e: Error) => void) => {
                 try {
-                    return await connector.createOrder(
+                    this.log.debug({
+                        exchange: this.exchange,
+                        asset,
+                        currency,
+                        type,
+                        side: OrderDirection.buy,
+                        amount,
+                        price,
+                        orderParams
+                    });
+                    return await this.connector.createOrder(
                         this.getSymbol(asset, currency),
                         type,
                         OrderDirection.buy,
-                        market.limits.amount.min,
+                        amount,
                         price,
                         orderParams
                     );
                 } catch (e) {
-                    if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) throw e;
+                    if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) {
+                        this.initConnector();
+                        throw e;
+                    }
                     bail(e);
                 }
             };
             let order: ccxt.Order;
             try {
                 order = await retry(createOrderCall, this.retryOptions);
-                //  this.logger.info("Created order", order);
+                this.log.debug("Created order", order);
                 if (!order)
                     throw new BaseError(
                         "Wrong response from exchange while creating test order",
@@ -201,16 +241,19 @@ export class PrivateConnector {
 
             const cancelOrderCall = async (bail: (e: Error) => void) => {
                 try {
-                    return await connector.cancelOrder(order.id, this.getSymbol(asset, currency));
+                    return await this.connector.cancelOrder(order.id, this.getSymbol(asset, currency));
                 } catch (e) {
-                    if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) throw e;
+                    if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) {
+                        this.initConnector();
+                        throw e;
+                    }
                     bail(e);
                 }
             };
             try {
                 const canceled = await retry(cancelOrderCall, this.retryOptions);
 
-                //  this.logger.info("Canceled order", canceled);
+                this.log.debug("Canceled order", canceled);
                 if (!canceled)
                     throw new BaseError(
                         "Wrong response from exchange while canceling test order",
@@ -233,51 +276,43 @@ export class PrivateConnector {
         }
     }
 
-    async initConnector({
-        exchange,
-        keys,
-        ordersCache
-    }: {
-        exchange: UserExchangeAccount["exchange"];
-        keys: {
-            apiKey: string;
-            secret: string;
-            password?: string;
-        };
-        ordersCache: UserExchangeAccount["ordersCache"];
-    }): Promise<void> {
-        const { apiKey, secret, password } = keys;
-
-        const config: { [key: string]: any } = {
-            apiKey,
-            secret,
-            password,
-            orders: ordersCache,
-            enableRateLimit: true,
-            agent: this.agent,
-            timeout: 30000,
-            nonce() {
-                return this.milliseconds();
-            }
-        };
-        this.exchange = exchange;
-        if (exchange === "kraken") {
-            this.connector = new ccxt.kraken(config);
-        } else if (exchange === "bitfinex") {
-            this.connector = new ccxt.bitfinex2(config);
-        } else if (exchange === "binance_futures") {
-            config.options = {
+    async initConnector(): Promise<void> {
+        if (this.connector) {
+            this.config.orders = this.connector.orders;
+        }
+        if (this.exchange === "kraken") {
+            this.connector = new ccxt.kraken(this.config);
+        } else if (this.exchange === "bitfinex") {
+            this.connector = new ccxt.bitfinex2(this.config);
+        } else if (this.exchange === "kucoin") {
+            this.connector = new ccxt.kucoin(this.config);
+        } else if (this.exchange === "huobipro") {
+            this.connector = new ccxt.huobipro(this.config);
+            const call = async (bail: (e: Error) => void) => {
+                try {
+                    return this.connector.loadAccounts();
+                } catch (e) {
+                    if (e instanceof ccxt.NetworkError) {
+                        await this.initConnector();
+                        throw e;
+                    }
+                    bail(e);
+                }
+            };
+            await retry(call, this.retryOptions);
+        } else if (this.exchange === "binance_futures") {
+            this.config.options = {
                 defaultType: "future",
                 adjustForTimeDifference: true,
                 recvWindow: 10000000
             };
-            this.connector = new ccxt.binance(config);
-        } else if (exchange === "binance_spot") {
-            config.options = {
+            this.connector = new ccxt.binance(this.config);
+        } else if (this.exchange === "binance_spot") {
+            this.config.options = {
                 adjustForTimeDifference: true,
                 recvWindow: 10000000
             };
-            this.connector = new ccxt.binance(config);
+            this.connector = new ccxt.binance(this.config);
         } else throw new Error("Unsupported exchange");
     }
 
@@ -296,12 +331,32 @@ export class PrivateConnector {
                 ([c, v]) => c !== "USD" && v
             )) {
                 if (connector.markets[`${c}/USD`]) {
-                    const { price } = await this.getCurrentPrice(connector, exchange, c, "USD");
+                    const { price } = await this.getCurrentPrice(connector, c, "USD");
                     USD += price * v;
                 } else if (connector.markets[`BTC/${c}`]) {
-                    const { price } = await this.getCurrentPrice(connector, exchange, "BTC", c);
-                    if (!priceBTC)
-                        ({ price: priceBTC } = await this.getCurrentPrice(connector, exchange, "BTC", "USD"));
+                    const { price } = await this.getCurrentPrice(connector, "BTC", c);
+                    if (!priceBTC) ({ price: priceBTC } = await this.getCurrentPrice(connector, "BTC", "USD"));
+                    USD += (priceBTC / price) * v;
+                }
+            }
+            return {
+                info: balances,
+                totalUSD: USD || 0,
+                updatedAt: dayjs.utc().toISOString()
+            };
+        } else if (exchange === "kucoin" || exchange === "huobipro") {
+            let USD = balances.total["USDT"] || 0;
+
+            let priceBTC;
+            for (const [c, v] of Object.entries(balances.total as { [key: string]: number }).filter(
+                ([c, v]) => c !== "USDT" && v
+            )) {
+                if (connector.markets[`${c}/USDT`]) {
+                    const { price } = await this.getCurrentPrice(connector, c, "USDT");
+                    USD += price * v;
+                } else if (connector.markets[`BTC/${c}`]) {
+                    const { price } = await this.getCurrentPrice(connector, "BTC", c);
+                    if (!priceBTC) ({ price: priceBTC } = await this.getCurrentPrice(connector, "BTC", "USDT"));
                     USD += (priceBTC / price) * v;
                 }
             }
@@ -321,18 +376,31 @@ export class PrivateConnector {
             try {
                 return connector.loadMarkets();
             } catch (e) {
-                if (e instanceof ccxt.NetworkError) throw e;
+                if (e instanceof ccxt.NetworkError) {
+                    await this.initConnector();
+                    throw e;
+                }
                 bail(e);
             }
         };
         await retry(call, this.retryOptions);
         let params = {};
-        if (exchange === "bitfinex") params = { type: "margin" };
+        if (["bitfinex", "kucoin"].includes(exchange)) params = { type: "margin" };
+        if (exchange === "huobipro") {
+            const superMarginAccount = connector.accounts.find(({ type }: { type: string }) => type === "super-margin");
+            if (!superMarginAccount) throw new Error("Cross margin account not found");
+            params = {
+                id: superMarginAccount?.id
+            };
+        }
         const getBalanceCall = async (bail: (e: Error) => void) => {
             try {
                 return await connector.fetchBalance(params);
             } catch (e) {
-                if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) throw e;
+                if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) {
+                    await this.initConnector();
+                    throw e;
+                }
                 bail(e);
             }
         };
@@ -373,17 +441,12 @@ export class PrivateConnector {
             } else if (order.signalPrice && order.signalPrice > 0) {
                 signalPrice = order.signalPrice;
             } else {
-                const currentPrice: ExchangePrice = await this.getCurrentPrice(
-                    this.connector,
-                    exchange,
-                    asset,
-                    currency
-                );
+                const currentPrice: ExchangePrice = await this.getCurrentPrice(this.connector, asset, currency);
 
                 signalPrice = currentPrice.price;
             }
 
-            const orderParams = this.getOrderParams(<string>exchange, order.id, order.params, type);
+            const orderParams = this.getOrderParams(order.id, order.params, type);
             let response: ccxt.Order;
             if (order.error && order.exTimestamp) {
                 const existedOrder = await this.checkIfOrderExists(order, dayjs.utc(order.exTimestamp).valueOf());
@@ -504,7 +567,10 @@ export class PrivateConnector {
                     try {
                         return await this.connector.fetchOrders(this.getSymbol(asset, currency), creationDate);
                     } catch (e) {
-                        if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) throw e;
+                        if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) {
+                            await this.initConnector();
+                            throw e;
+                        }
                         bail(e);
                     }
                 };
@@ -514,7 +580,10 @@ export class PrivateConnector {
                     try {
                         return await this.connector.fetchOpenOrders(this.getSymbol(asset, currency), creationDate);
                     } catch (e) {
-                        if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) throw e;
+                        if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) {
+                            await this.initConnector();
+                            throw e;
+                        }
                         bail(e);
                     }
                 };
@@ -522,7 +591,10 @@ export class PrivateConnector {
                     try {
                         return await this.connector.fetchClosedOrders(this.getSymbol(asset, currency), creationDate);
                     } catch (e) {
-                        if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) throw e;
+                        if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) {
+                            await this.initConnector();
+                            throw e;
+                        }
                         bail(e);
                     }
                 };
@@ -586,7 +658,10 @@ export class PrivateConnector {
                 try {
                     return await this.connector.fetchOrder(exId, this.getSymbol(asset, currency));
                 } catch (e) {
-                    if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) throw e;
+                    if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) {
+                        await this.initConnector();
+                        throw e;
+                    }
                     bail(e);
                 }
             };
@@ -686,7 +761,10 @@ export class PrivateConnector {
                 try {
                     return await this.connector.cancelOrder(exId, this.getSymbol(asset, currency));
                 } catch (e) {
-                    if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) throw e;
+                    if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) {
+                        await this.initConnector();
+                        throw e;
+                    }
                     bail(e);
                 }
             };

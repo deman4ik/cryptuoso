@@ -18,13 +18,14 @@ import {
 } from "@cryptuoso/market";
 import { createSocksProxyAgent } from "./fetch";
 
+const EXCHANGES = ["bitfinex", "kraken", "kucoin", "binance_futures", "binance_spot"];
 export class PublicConnector {
     log: Logger;
     connectors: { [key: string]: Exchange } = {};
     retryOptions = {
         retries: 1000,
-        minTimeout: 0,
-        maxTimeout: 0,
+        minTimeout: 100,
+        maxTimeout: 1000,
         onRetry: (err: any, i: number) => {
             if (err) {
                 this.log.warn(`Retry ${i} - ${err.message}`);
@@ -36,33 +37,49 @@ export class PublicConnector {
         this.log = logger;
     }
 
+    isInited() {
+        let result = true;
+        for (const exchange of EXCHANGES) {
+            result = !!this.connectors[exchange].markets;
+            if (!result) return result;
+        }
+        return result;
+    }
+
     async initAllConnectors(): Promise<void> {
         logger.info("Initializing all public connectors...");
-        for (const excahnge of ["bitfinex", "kraken", "binance_futures", "binance_spot"]) {
-            await this.initConnector(excahnge);
+        for (const exchange of EXCHANGES) {
+            await this.initConnector(exchange);
         }
         logger.info("All public connectors inited!");
     }
 
+    #createConnector = (exchange: string) => {
+        const config: { [key: string]: any } = {
+            agent: this.agent
+        };
+        if (exchange === "bitfinex" || exchange === "kraken" || exchange === "kucoin" || exchange === "huobipro") {
+            this.connectors[exchange] = new ccxt[exchange](config);
+        } else if (exchange === "binance_futures") {
+            config.options = { defaultType: "future" };
+            this.connectors[exchange] = new ccxt.binance(config);
+        } else if (exchange === "binance_spot") {
+            this.connectors[exchange] = new ccxt.binance(config);
+        } else throw new Error("Unsupported exchange");
+    };
+
     async initConnector(exchange: string): Promise<void> {
         if (!(exchange in this.connectors) || !this.connectors[exchange].markets) {
-            const config: { [key: string]: any } = {
-                agent: this.agent
-            };
-            if (exchange === "bitfinex" || exchange === "kraken") {
-                this.connectors[exchange] = new ccxt[exchange](config);
-            } else if (exchange === "binance_futures") {
-                config.options = { defaultType: "future" };
-                this.connectors[exchange] = new ccxt.binance(config);
-            } else if (exchange === "binance_spot") {
-                this.connectors[exchange] = new ccxt.binance(config);
-            } else throw new Error("Unsupported exchange");
+            this.#createConnector(exchange);
 
             const call = async (bail: (e: Error) => void) => {
                 try {
                     return await this.connectors[exchange].loadMarkets();
                 } catch (e) {
-                    if (e instanceof ccxt.NetworkError) throw e;
+                    if (e instanceof ccxt.NetworkError) {
+                        this.#createConnector(exchange);
+                        throw e;
+                    }
                     bail(e);
                 }
             };
@@ -88,14 +105,21 @@ export class PublicConnector {
                 );
                 if (firstTrade) loadFrom = dayjs.utc(firstTrade.timestamp).add(1, "day").startOf("day").toISOString();
             } else {
-                const [firstCandle] = await this.getRawCandles(
-                    exchange,
-                    asset,
-                    currency,
-                    30,
-                    dayjs.utc("01.01.2016").toISOString(),
-                    10
-                );
+                let dateFrom = dayjs.utc("01.01.2016").toISOString();
+                let limit = 10;
+                let timeframe = 30;
+                if (exchange === "kucoin") {
+                    dateFrom = dayjs.utc("01.01.2018").toISOString();
+                    limit = 1500;
+                    timeframe = 1440;
+                }
+                if (exchange === "huobipro") {
+                    dateFrom = dayjs.utc("01.01.2018").toISOString();
+                    limit = 2000;
+                    timeframe = 1440;
+                }
+
+                const [firstCandle] = await this.getRawCandles(exchange, asset, currency, timeframe, dateFrom, limit);
                 if (firstCandle) loadFrom = dayjs.utc(firstCandle.timestamp).add(1, "day").startOf("day").toISOString();
             }
             const currentPrice = await this.getCurrentPrice(exchange, asset, currency);
@@ -146,7 +170,10 @@ export class PublicConnector {
                 try {
                     return await this.connectors[exchange].fetchTicker(this.getSymbol(asset, currency));
                 } catch (e) {
-                    if (e instanceof ccxt.NetworkError) throw e;
+                    if (e instanceof ccxt.NetworkError) {
+                        this.#createConnector(exchange);
+                        throw e;
+                    }
                     bail(e);
                 }
             };
@@ -186,7 +213,10 @@ export class PublicConnector {
                         params.limit
                     );
                 } catch (e) {
-                    if (e instanceof ccxt.NetworkError) throw e;
+                    if (e instanceof ccxt.NetworkError) {
+                        this.#createConnector(exchange);
+                        throw e;
+                    }
                     bail(e);
                 }
             };
@@ -283,7 +313,10 @@ export class PublicConnector {
                         limit
                     );
                 } catch (e) {
-                    if (e instanceof ccxt.NetworkError) throw e;
+                    if (e instanceof ccxt.NetworkError) {
+                        this.#createConnector(exchange);
+                        throw e;
+                    }
                     bail(e);
                 }
             };
@@ -344,7 +377,10 @@ export class PublicConnector {
                         params.limit
                     );
                 } catch (e) {
-                    if (e instanceof ccxt.NetworkError) throw e;
+                    if (e instanceof ccxt.NetworkError) {
+                        this.#createConnector(exchange);
+                        throw e;
+                    }
                     bail(e);
                 }
             };
@@ -409,7 +445,10 @@ export class PublicConnector {
                         params
                     );
                 } catch (e) {
-                    if (e instanceof ccxt.NetworkError) throw e;
+                    if (e instanceof ccxt.NetworkError) {
+                        this.#createConnector(exchange);
+                        throw e;
+                    }
                     bail(e);
                 }
             };

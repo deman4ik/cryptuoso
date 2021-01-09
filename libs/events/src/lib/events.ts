@@ -208,10 +208,7 @@ export class Events {
             }
             await beacon.die();
         } catch (error) {
-            logger.error(`Failed to receive message - ${error.message}`);
-            if (error.message !== "Connection is closed.") {
-                throw error;
-            }
+            logger.error(`Failed to receive message - ${error.message}`, error);
             await sleep(5000);
         }
 
@@ -294,9 +291,9 @@ export class Events {
             }
             await beacon.die();
         } catch (error) {
-            logger.error(`Failed to receive "${topic}" message  - ${error.message}`);
-            if (error.message !== "Connection is closed.") {
-                throw error;
+            logger.error(`Failed to receive "${topic}" message  - ${error.message}`, error);
+            if (error.message.includes("NOGROUP")) {
+                await this._createGroup(topic, group);
             }
             await sleep(5000);
         }
@@ -408,9 +405,10 @@ export class Events {
             }
             await beacon.die();
         } catch (error) {
-            logger.error(`Failed to receive pending "${topic}" message - ${error.message}`);
-            if (error.message !== "Connection is closed.") {
-                throw error;
+            logger.error(`Failed to receive pending "${topic}" message - ${error.message}`, error);
+
+            if (error.message.includes("NOGROUP")) {
+                await this._createGroup(topic, group);
             }
             await sleep(5000);
         }

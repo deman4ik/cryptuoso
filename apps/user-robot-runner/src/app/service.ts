@@ -108,13 +108,17 @@ export default class UserRobotRunnerService extends HTTPService {
             jobId: UserRobotRunnerJobType.idleUserRobotJobs,
             repeat: {
                 every: 15000
-            }
+            },
+            removeOnComplete: 1,
+            removeOnFail: 10
         });
         await this.addJob(Queues.userRobotRunner, UserRobotRunnerJobType.idleUserOrders, null, {
             jobId: UserRobotRunnerJobType.idleUserOrders,
             repeat: {
                 every: 60000
-            }
+            },
+            removeOnComplete: 1,
+            removeOnFail: 10
         });
     }
 

@@ -10,6 +10,7 @@ import {
 import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { sql } from "slonik";
 import { UserRoles } from "@cryptuoso/user-state";
+import { sleep } from "@cryptuoso/helpers";
 
 export type ExwatcherRunnerServiceConfig = HTTPServiceConfig;
 
@@ -66,8 +67,8 @@ export default class ExwatcherRunnerService extends HTTPService {
             },
             attempts: 3,
             backoff: { type: "exponential", delay: 60000 },
-            removeOnComplete: true,
-            removeOnFail: 100
+            removeOnComplete: 1,
+            removeOnFail: 10
         });
     }
 
@@ -181,6 +182,10 @@ export default class ExwatcherRunnerService extends HTTPService {
 
     async updateMarkets() {
         try {
+            while (!this.connector.isInited()) {
+                this.log.info("Waiting for connectors to Initialize...");
+                await sleep(5000);
+            }
             const markets = await this.db.pg.any<{ exchange: string; asset: string; currency: string }>(
                 sql`SELECT exchange, asset, currency FROM markets where available >= 5;`
             );
@@ -217,7 +222,7 @@ export default class ExwatcherRunnerService extends HTTPService {
         const { exchange, asset, currency } = params;
         this.log.debug(`Updating ${exchange}.${asset}.${currency} market...`);
         const { precision, limits, averageFee, loadFrom } = await this.connector.getMarket(exchange, asset, currency);
-
+        this.log.debug({ exchange, asset, currency, precision, limits, averageFee, loadFrom });
         const available = 15;
         await this.db.pg.query(sql`INSERT INTO markets (
                 exchange, asset, currency, precision, limits, average_fee, load_from, available )
@@ -225,7 +230,7 @@ export default class ExwatcherRunnerService extends HTTPService {
                     ${exchange},
                     ${asset},
                     ${currency},
-                    ${sql.json(precision)},
+                    ${JSON.stringify(precision)},
                     ${JSON.stringify(limits)},
                     ${averageFee},
                     ${loadFrom},
