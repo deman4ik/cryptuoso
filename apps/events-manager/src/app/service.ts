@@ -137,7 +137,9 @@ export default class EventsManager extends HTTPService {
             jobId: JobTypes.clearStreams,
             repeat: {
                 cron: "30 6 * * * *"
-            }
+            },
+            removeOnComplete: 1,
+            removeOnFail: 10
         });
     }
 

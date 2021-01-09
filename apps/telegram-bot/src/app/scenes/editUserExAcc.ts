@@ -95,7 +95,7 @@ async function editUserExAccSubmited(ctx: any) {
 
         if (result) {
             await ctx.reply(
-                ctx.i18n.t("scenes.editUserExAcc.success", { excahnge: formatExchange(exchange) }),
+                ctx.i18n.t("scenes.editUserExAcc.success", { exchange: formatExchange(exchange) }),
                 Extra.HTML()
             );
             await editUserExAccBack.call(this, ctx);

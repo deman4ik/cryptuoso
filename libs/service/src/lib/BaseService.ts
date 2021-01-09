@@ -287,9 +287,16 @@ export class BaseService {
     ) => {
         if (this.#queues[name]) throw new Error(`Queue ${name} already exists`);
         this.#queues[name] = {
-            instance: new Queue(name, { ...queueOpts, connection: this.redis.duplicate() }),
+            instance: new Queue(name, {
+                ...queueOpts,
+                connection: this.redis.duplicate(),
+                streams: { events: { maxLen: 1000 } }
+            }),
             scheduler: new QueueScheduler(name, { ...schedulerOpts, connection: this.redis.duplicate() }),
-            events: new QueueEvents(name, { ...eventsOpts, connection: this.redis.duplicate() })
+            events: new QueueEvents(name, {
+                ...eventsOpts,
+                connection: this.redis.duplicate()
+            })
         };
         this.#queues[name].events.on("completed", ({ jobId, returnvalue }) =>
             this.#jobCompletedLogger(name, jobId, returnvalue)

@@ -143,6 +143,24 @@ export class ExwatcherBaseService extends BaseService {
             this.cronHandleChanges = cron.schedule("* * * * * *", this.handleTrades.bind(this), {
                 scheduled: false
             });
+        } else if (this.exchange === "kucoin") {
+            this.connector = new ccxtpro.kucoin({
+                enableRateLimit: true,
+                agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
+                options: { OHLCVLimit: 100, tradesLimit: 1000 }
+            });
+            this.cronHandleChanges = cron.schedule("* * * * * *", this.handleTrades.bind(this), {
+                scheduled: false
+            });
+        } else if (this.exchange === "huobipro") {
+            this.connector = new ccxtpro.huobipro({
+                enableRateLimit: true,
+                agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
+                options: { OHLCVLimit: 100, tradesLimit: 1000 }
+            });
+            this.cronHandleChanges = cron.schedule("* * * * * *", this.handleTrades.bind(this), {
+                scheduled: false
+            });
         } else throw new Error("Unsupported exchange");
     }
 
@@ -426,11 +444,11 @@ export class ExwatcherBaseService extends BaseService {
     async subscribeCCXT(id: string) {
         try {
             const symbol = this.getSymbol(this.subscriptions[id].asset, this.subscriptions[id].currency);
-            if (this.exchange === "binance_futures") {
+            if (["binance_futures"].includes(this.exchange)) {
                 for (const timeframe of Timeframe.validArray) {
                     await this.connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
                 }
-            } else if (this.exchange === "bitfinex" || this.exchange === "kraken") {
+            } else if (["bitfinex", "kraken", "kucoin", "huobipro"].includes(this.exchange)) {
                 await this.connector.watchTrades(symbol);
                 await this.loadCurrentCandles(this.subscriptions[id]);
             } else {

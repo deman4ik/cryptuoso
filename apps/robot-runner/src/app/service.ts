@@ -81,24 +81,31 @@ export default class RobotRunnerService extends HTTPService {
 
         this.createQueue(Queues.robotRunner);
         this.createWorker(Queues.robotRunner, this.process);
+
         await this.addJob(Queues.robotRunner, RobotRunnerJobType.alerts, null, {
             jobId: RobotRunnerJobType.alerts,
             repeat: {
                 every: 1000
-            }
+            },
+            removeOnComplete: 1,
+            removeOnFail: 10
         });
         await this.addJob(Queues.robotRunner, RobotRunnerJobType.newCandles, null, {
             jobId: RobotRunnerJobType.newCandles,
             repeat: {
                 cron: "0 */5 * * * *"
-            }
+            },
+            removeOnComplete: 1,
+            removeOnFail: 10
         });
 
         await this.addJob(Queues.robotRunner, RobotRunnerJobType.idleRobotJobs, null, {
             jobId: RobotRunnerJobType.idleRobotJobs,
             repeat: {
                 cron: "*/30 * * * * *"
-            }
+            },
+            removeOnComplete: 1,
+            removeOnFail: 10
         });
     }
 

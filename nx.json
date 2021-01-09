@@ -183,6 +183,12 @@
         },
         "auth-utils": {
             "tags": []
+        },
+        "exwatcher-kucoin": {
+            "tags": []
+        },
+        "exwatcher-huobipro": {
+            "tags": []
         }
     },
     "affected": {
