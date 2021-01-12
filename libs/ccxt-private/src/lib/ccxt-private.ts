@@ -174,7 +174,7 @@ export class PrivateConnector {
         try {
             await this.initConnector();
             const balances = await this.getBalances(this.connector, this.exchange);
-            const asset = "BTC";
+            const asset = "ETH";
             const currency = ["binance_futures", "kucoin", "huobipro"].includes(this.exchange) ? "USDT" : "USD";
             const market = await pg.one<{ limits: Market["limits"] }>(sql`SELECT limits 
             FROM markets 
@@ -187,12 +187,11 @@ export class PrivateConnector {
             if (this.exchange === "binance_futures" || this.exchange === "huobipro") {
                 const { price: currentPrice } = await this.getCurrentPrice(this.connector, asset, currency);
 
-                price = currentPrice - 1500;
+                price = currentPrice / 1.3;
             }
             if (this.exchange === "huobipro") {
-                amount = amount * 500;
+                amount = round(5 / price, 3) + market.limits.amount.min;
             }
-
             const type = OrderType.limit;
             const orderParams = this.getOrderParams(null, {}, type);
 
