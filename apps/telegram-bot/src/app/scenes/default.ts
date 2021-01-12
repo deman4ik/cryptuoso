@@ -18,7 +18,7 @@ export function getExchangesMenu(ctx: any) {
         const buttons = exchanges.map(({ code }) =>
             m.callbackButton(formatExchange(code), JSON.stringify({ a: "exchange", p: code }), false)
         );
-        const chunkedButtons = chunkArray(buttons, 3);
+        const chunkedButtons = chunkArray(buttons, 2);
         return m.inlineKeyboard([
             ...chunkedButtons,
             [m.callbackButton(ctx.i18n.t("keyboards.backKeyboard.back"), JSON.stringify({ a: "back", p: null }), false)]

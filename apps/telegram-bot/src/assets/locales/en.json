@@ -182,8 +182,9 @@
         },
         "addUserExAcc": {
             "chooseExchange": "🔑 Adding New Exchange API Key\n\nYou can learn how to configure keys in our <a href='https://support.cryptuoso.com/exchange-accounts'>docs</a>.\n\n<b>Choose one of available exchanges:</b>",
-            "enterAPIKey": "🔑 Adding New Exchange API Key\n\nYou can learn how to configure keys in our <a href='https://support.cryptuoso.com/exchange-accounts'>docs</a>.\n\nEnter your ${exchange} <b>API KEY</b>",
+            "enterAPIKey": "🔑 Adding New Exchange API Key\n\nEnter your ${exchange} <b>API Key</b>",
             "enterAPISecret": "🔑 Adding New Exchange API Key\n\nEnter your ${exchange} <b>API Key Secret (Private Key)</b>",
+            "enterAPIPass": "🔑 Adding New Exchange API Key\n\nEnter your ${exchange} <b>API Password</b>",
             "check": "🔑 Adding New Exchange API Key\n\n🌀 Checking your ${exchange} API Key...\n\n⏳ Please wait...",
             "success": "🔑 New ${exchange} API Key succesfully added!",
             "failed": "❌ Failed to add new ${exchange} API Key.\n\n<b>${error}</b>\n\nPlease try again!\n\nYou can learn how to configure keys in our <a href='https://support.cryptuoso.com/exchange-accounts'>docs</a>."
@@ -191,6 +192,7 @@
         "editUserExAcc": {
             "enterAPIKey": "🔑 Editing ${name} API Key\n\n<b>Enter your ${exchange} API Key</b>",
             "enterAPISecret": "🔑 Editing ${name} API Key\n\n<b>Enter your ${exchange} API Secret</b>",
+            "enterAPIPass": "🔑 Editing ${name} API Key\n\nEnter your ${exchange} <b>API Password</b>",
             "check": "🔑 Adding New Exchange API Key\n\n🌀 Checking your ${exchange} API Key...\n\n⏳ Please wait...",
             "success": "🔑 ${exchange} API Key succesfully edited!",
             "failed": "❌ Failed to edit ${name} API Key.\n\n<b>${error}</b>\n\nPlease try again!"
