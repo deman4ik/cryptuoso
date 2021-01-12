@@ -111,6 +111,12 @@ export class Robot {
         return this._postionsToSave;
     }
 
+    get signalsToSave() {
+        return this._eventsToSend.filter(({ type }) =>
+            [SignalEvents.ALERT, SignalEvents.TRADE].includes(type as SignalEvents)
+        );
+    }
+
     get hasClosedPositions() {
         return this._postionsToSave.filter(({ status }) => status === RobotPositionStatus.closed).length > 0;
     }

@@ -14,7 +14,7 @@ import { DatabaseTransactionConnectionType, sql } from "slonik";
 import { Candle, DBCandle, Timeframe, ValidTimeframe } from "@cryptuoso/market";
 import { sortAsc } from "@cryptuoso/helpers";
 import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
-import { RobotWorkerError, RobotWorkerEvents } from "@cryptuoso/robot-events";
+import { RobotWorkerError, RobotWorkerEvents, Signal } from "@cryptuoso/robot-events";
 import dayjs from "dayjs";
 import { BaseError } from "@cryptuoso/errors";
 
@@ -194,6 +194,33 @@ export default class RobotWorkerService extends BaseService {
         }
     };
 
+    #saveRobotSignals = async (transaction: DatabaseTransactionConnectionType, signals: Signal[]) => {
+        for (const signal of signals) {
+            const {
+                id,
+                robotId,
+                action,
+                orderType,
+                price,
+                type,
+                positionId,
+                positionPrefix,
+                positionCode,
+                positionParentId,
+                candleTimestamp,
+                timestamp
+            } = signal;
+            await this.db.pg.query(sql`
+                INSERT INTO robot_signals
+                (id, robot_id, action, order_type, price, type, position_id,
+                position_prefix, position_code, position_parent_id,
+                candle_timestamp,timestamp)
+                VALUES (${id}, ${robotId}, ${action}, ${orderType}, ${price || null}, ${type},
+                ${positionId}, ${positionPrefix}, ${positionCode}, ${positionParentId || null}, ${candleTimestamp},
+                ${timestamp})
+            `);
+        }
+    };
     #saveRobotState = async (transaction: DatabaseTransactionConnectionType, state: RobotState) =>
         transaction.query(sql`
             UPDATE robots 
@@ -285,9 +312,13 @@ export default class RobotWorkerService extends BaseService {
             } else throw new BaseError(`Unknown robot job type "${type}"`, job);
 
             await this.db.pg.transaction(async (t) => {
-                if (robot.positionsToSave.length > 0) {
-                    await this.#saveRobotPositions(t, robot.positionsToSave);
-                }
+                if (robot.positionsToSave.length) await this.#saveRobotPositions(t, robot.positionsToSave);
+
+                if (robot.signalsToSave.length)
+                    await this.#saveRobotSignals(
+                        t,
+                        robot.signalsToSave.map(({ data }) => data)
+                    );
 
                 await this.#saveRobotState(t, robot.robotState);
 

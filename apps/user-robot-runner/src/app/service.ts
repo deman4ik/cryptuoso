@@ -25,7 +25,7 @@ import dayjs from "@cryptuoso/dayjs";
 import { Job } from "bullmq";
 import { Signal, SignalEvents, SignalSchema } from "@cryptuoso/robot-events";
 import { Event } from "@cryptuoso/events";
-import { OrderStatus, TradeAction } from "@cryptuoso/market";
+import { OrderStatus, SignalEvent, TradeAction } from "@cryptuoso/market";
 
 export type UserRobotRunnerServiceConfig = HTTPServiceConfig;
 
@@ -396,7 +396,7 @@ export default class UserRobotRunnerService extends HTTPService {
         } else throw new Error("No User Robots id, userExAccId or exchange was specified");
 
         for (const { id } of userRobotsToResume) {
-            const latestSignal = await this.db.pg.maybeOne(sql`
+            const latestSignal = await this.db.pg.maybeOne<SignalEvent>(sql`
             SELECT s.id, s.robot_id, r.exchange, r.asset, r.currency, r.timeframe, 
                    s.timestamp,  s.candle_timestamp,
                    s.position_id, s.position_prefix, s.position_code, s.position_parent_id,
@@ -409,7 +409,7 @@ export default class UserRobotRunnerService extends HTTPService {
             LIMIT 1;
             `);
 
-            if (latestSignal) {
+            if (latestSignal && [TradeAction.closeLong, TradeAction.closeShort].includes(latestSignal?.action)) {
                 await this.addUserRobotJob(
                     {
                         userRobotId: id,

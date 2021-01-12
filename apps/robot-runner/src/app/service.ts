@@ -9,10 +9,7 @@ import {
     RobotRunnerStart,
     RobotRunnerStop,
     RobotWorkerEvents,
-    ROBOT_WORKER_TOPIC,
-    SignalEvents,
-    SignalSchema,
-    Signal
+    ROBOT_WORKER_TOPIC
 } from "@cryptuoso/robot-events";
 import { BacktesterRunnerEvents, BacktesterRunnerStart } from "@cryptuoso/backtester-events";
 import { Queues, RobotJob, RobotJobType, RobotPosition, RobotRunnerJobType, RobotStatus } from "@cryptuoso/robot-state";
@@ -59,14 +56,6 @@ export default class RobotRunnerService extends HTTPService {
                 [`${ROBOT_WORKER_TOPIC}.*`]: {
                     passFullEvent: true,
                     handler: this.handleRobotWorkerEvents.bind(this)
-                },
-                [SignalEvents.ALERT]: {
-                    handler: this.handleSignalEvents.bind(this),
-                    schema: SignalSchema[SignalEvents.ALERT]
-                },
-                [SignalEvents.TRADE]: {
-                    handler: this.handleSignalEvents.bind(this),
-                    schema: SignalSchema[SignalEvents.TRADE]
                 }
             });
 
@@ -669,32 +658,5 @@ export default class RobotRunnerService extends HTTPService {
                 break;
             }
         }
-    }
-
-    async handleSignalEvents(event: Signal) {
-        const {
-            id,
-            robotId,
-            action,
-            orderType,
-            price,
-            type,
-            positionId,
-            positionPrefix,
-            positionCode,
-            positionParentId,
-            candleTimestamp,
-            timestamp
-        } = event;
-        this.log.info(`Robot's #${robotId} ${type} event`, JSON.stringify(event));
-        await this.db.pg.query(sql`
-            INSERT INTO robot_signals
-            (id, robot_id, action, order_type, price, type, position_id,
-            position_prefix, position_code, position_parent_id,
-            candle_timestamp,timestamp)
-            VALUES (${id}, ${robotId}, ${action}, ${orderType}, ${price || null}, ${type},
-            ${positionId}, ${positionPrefix}, ${positionCode}, ${positionParentId || null}, ${candleTimestamp},
-            ${timestamp})
-        `);
     }
 }
