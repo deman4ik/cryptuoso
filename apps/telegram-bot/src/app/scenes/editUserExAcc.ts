@@ -41,6 +41,15 @@ async function editUserExAccSubmited(ctx: any) {
             );
         } else if (ctx.scene.state.stage === "secret") {
             ctx.scene.state.secret = ctx.message.text;
+            if (exchange === "kucoin") {
+                ctx.scene.state.stage = "pass";
+                return ctx.reply(
+                    ctx.i18n.t("scenes.editUserExAcc.enterAPIPass", { name, exchange: formatExchange(exchange) }),
+                    Extra.HTML()
+                );
+            }
+        } else if (ctx.scene.state.stage === "pass") {
+            ctx.scene.state.pass = ctx.message.text;
         } else {
             await editUserExAccEnter.call(this, ctx);
         }
@@ -49,10 +58,12 @@ async function editUserExAccSubmited(ctx: any) {
 
         const {
             key,
-            secret
+            secret,
+            pass
         }: {
             key: string;
             secret: string;
+            pass?: string;
         } = ctx.scene.state;
 
         let error;
@@ -71,7 +82,7 @@ async function editUserExAccSubmited(ctx: any) {
                 {
                     id,
                     exchange,
-                    keys: { key, secret }
+                    keys: { key, secret, pass }
                 },
                 ctx
             ));
@@ -89,6 +100,7 @@ async function editUserExAccSubmited(ctx: any) {
             );
             ctx.scene.state.key = null;
             ctx.scene.state.secret = null;
+            ctx.scene.state.pass = null;
             ctx.scene.state.stage = null;
             await editUserExAccEnter.call(this, ctx);
         }
