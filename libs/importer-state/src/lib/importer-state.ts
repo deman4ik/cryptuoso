@@ -306,7 +306,9 @@ export class Importer {
 
     #calcTradesProgress = () => {
         const loaded = this.#currentState.trades.chunks.filter((t) => t.loaded === true).length;
+        const prevProgress = this.#progress;
         this.#progress = round((loaded / this.#currentState.trades.chunks.length) * 100);
+        return prevProgress === this.#progress;
     };
 
     #calcCandlesProgress = () => {
@@ -314,6 +316,7 @@ export class Importer {
             .filter((t) => t.loaded === true)
             .map((t) => t.chunks)
             .flat().length;
+        const prevProgress = this.#progress;
         this.#progress = round(
             (loaded /
                 Object.values(this.#currentState.candles)
@@ -321,6 +324,7 @@ export class Importer {
                     .flat().length) *
                 100
         );
+        return prevProgress === this.#progress;
     };
 
     #setTradesProgress = (chunkId: number) => {
@@ -329,9 +333,9 @@ export class Importer {
         if (this.#currentState.trades.chunks.filter((t) => t.loaded === false).length === 0) {
             this.#currentState.trades.loaded = true;
         }
-        this.#calcTradesProgress();
+        const progressChanged = this.#calcTradesProgress();
         this.finish();
-        return this.#progress;
+        return progressChanged;
     };
 
     get setTradesProgress() {
@@ -344,9 +348,9 @@ export class Importer {
         if (this.#currentState.candles[timeframe].chunks.filter((t) => t.loaded === false).length === 0) {
             this.#currentState.candles[timeframe].loaded = true;
         }
-        this.#calcCandlesProgress();
+        const progressChanged = this.#calcCandlesProgress();
         this.finish();
-        return this.#progress;
+        return progressChanged;
     };
 
     get setCandlesProgress() {
