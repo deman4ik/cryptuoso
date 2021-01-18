@@ -709,14 +709,13 @@ class BacktesterWorker {
                 await this.#saveState(this.backtester.state);
 
                 await this.run();
-
-                this.backtester.finish();
-                await this.#saveState(this.backtester.state);
             } catch (err) {
                 this.backtester.fail(err.message);
                 this.log.warn(`Backtester #${this.backtester.id}`, err);
             }
 
+            this.backtester.finish();
+            await this.#saveState(this.backtester.state);
             this.log.info(`Backtester #${this.backtester.id} is ${this.backtester.status}!`);
 
             return this.backtester.state;

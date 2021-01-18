@@ -59,6 +59,17 @@ export default class ImporterRunnerService extends HTTPService {
 
     async onServiceStart() {
         this.createQueue("importCandles");
+        this.queues["importCandles"].events.on("failed", async ({ jobId, failedReason }) => {
+            try {
+                await this.db.pg.query(sql`
+                    UPDATE importers SET 
+                        error = ${failedReason || "unknown"}, 
+                        status = ${"failed"}
+                        WHERE ID = ${jobId};`);
+            } catch (err) {
+                this.log.error("Failed to update importer error", err);
+            }
+        });
     }
 
     async startHTTPHandler(
@@ -111,7 +122,7 @@ export default class ImporterRunnerService extends HTTPService {
             await this.addJob("importCandles", importer.type, importer.state, {
                 jobId: importer.id,
                 removeOnComplete: true,
-                removeOnFail: true
+                removeOnFail: 100
             });
             return { result: importer.id };
         } catch (error) {

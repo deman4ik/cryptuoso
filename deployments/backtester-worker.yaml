@@ -74,6 +74,11 @@ spec:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
                                 key: BACKTESTER_WORKER_CONCURRENCY
+                      - name: THREADS_WORKER_INIT_TIMEOUT
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: THREADS_WORKER_INIT_TIMEOUT
                   ports:
                       - containerPort: 9000
                         protocol: TCP

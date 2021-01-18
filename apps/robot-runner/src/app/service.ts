@@ -124,7 +124,7 @@ export default class RobotRunnerService extends HTTPService {
             {
                 jobId: robotId,
                 removeOnComplete: true,
-                removeOnFail: true
+                removeOnFail: 100
             }
         );
     }

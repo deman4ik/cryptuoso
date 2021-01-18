@@ -142,7 +142,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
         await this.addJob("calcStatistics", type, job, {
             jobId,
             removeOnComplete: true,
-            removeOnFail: true,
+            removeOnFail: 100,
             attempts: 3,
             backoff: { type: "exponential", delay: 10000 }
         });
