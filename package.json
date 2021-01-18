@@ -121,7 +121,7 @@
     "slonik-interceptor-field-name-transformation": "^1.5.3",
     "telegraf": "^3.38.0",
     "telegraf-throttler": "^0.2.0",
-    "threads": "git+ssh://git@github.com/deman4ik/threads.js.git",
+    "threads": "^1.6.3",
     "tulind": "git+ssh://git@github.com/deman4ik/tulipnode.git",
     "uuid": "^8.3.2",
     "winston": "^3.3.3"
