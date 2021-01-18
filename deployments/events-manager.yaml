@@ -102,3 +102,25 @@ spec:
         app: <APP>
         env: <ENV>
     type: ClusterIP
+---
+kind: HorizontalPodAutoscaler
+apiVersion: autoscaling/v2beta1
+metadata:
+    name: <APP>
+    namespace: <ENV>
+spec:
+    scaleTargetRef:
+        kind: Deployment
+        name: <APP>
+        apiVersion: apps/v1
+    minReplicas: 1
+    maxReplicas: 5
+    metrics:
+        - type: Resource
+          resource:
+              name: cpu
+              targetAverageUtilization: 65
+        - type: Resource
+          resource:
+              name: memory
+              targetAverageUtilization: 65
