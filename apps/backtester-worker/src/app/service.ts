@@ -149,7 +149,7 @@ export default class BacktesterWorkerService extends BaseService {
                 await beacon.die();
             }
         } catch (err) {
-            this.log.error(`Error while processing job ${job.id}`, err);
+            this.log.error(`Error while processing job #${job.id}`, err);
             throw err;
         }
     }

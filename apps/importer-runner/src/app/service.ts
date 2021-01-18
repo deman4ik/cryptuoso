@@ -34,6 +34,9 @@ export default class ImporterRunnerService extends HTTPService {
                     handler: this.stopHTTPHandler
                 },
                 importerStartAllMarkets: {
+                    inputSchema: {
+                        exchange: "string"
+                    },
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.startAllMarketsHTTPHandler
                 }
@@ -151,16 +154,23 @@ export default class ImporterRunnerService extends HTTPService {
         }
     }
 
-    async startAllMarketsHTTPHandler(req: any, res: any) {
-        await this.startAllMarkets();
+    async startAllMarketsHTTPHandler(
+        req: {
+            body: {
+                input: { exchange: string };
+            };
+        },
+        res: any
+    ) {
+        await this.startAllMarkets(req.body.input);
         res.send({ result: "OK" });
         res.end();
     }
 
-    async startAllMarkets() {
+    async startAllMarkets({ exchange }: { exchange: string }) {
         try {
             const markets = await this.db.pg.any<{ exchange: string; asset: string; currency: string }>(
-                sql`SELECT exchange, asset, currency FROM markets where available >= 10;`
+                sql`SELECT exchange, asset, currency FROM markets where available >= 10 and exchange = ${exchange};`
             );
             for (const market of markets) {
                 await this.start({ ...market, type: "history", timeframes: [1440, 720, 480, 240, 120, 60, 30] });

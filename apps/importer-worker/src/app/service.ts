@@ -1,12 +1,9 @@
-import { DataStream } from "scramjet";
-import os from "os";
-import { spawn, Pool, Worker as ThreadsWorker } from "threads";
+import { spawn, Worker as ThreadsWorker, Thread } from "threads";
 import { Job } from "bullmq";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
-import { Importer, CandlesChunk, TradesChunk, ImporterState } from "@cryptuoso/importer-state";
-import dayjs from "@cryptuoso/dayjs";
-import { ExchangeCandle, ExchangeTrade, ExchangeCandlesInTimeframes } from "@cryptuoso/market";
+import { Importer, ImporterState } from "@cryptuoso/importer-state";
+
 import { BaseError } from "@cryptuoso/errors";
 import {
     ImporterWorkerFailed,
@@ -15,23 +12,19 @@ import {
     ImporterWorkerSchema,
     ImporterWorkerEvents
 } from "@cryptuoso/importer-events";
-import { ImporterUtils } from "./importerUtilsWorker";
 import { sql } from "@cryptuoso/postgres";
+import { ImportWorker } from "./worker";
 
 export type ImporterWorkerServiceConfig = BaseServiceConfig;
 
 export default class ImporterWorkerService extends BaseService {
     connector: PublicConnector;
     abort: { [key: string]: boolean } = {};
-    cpus: number;
-    pool: Pool<any>;
     constructor(config?: ImporterWorkerServiceConfig) {
         super(config);
         try {
             this.connector = new PublicConnector();
-            this.cpus = os.cpus().length;
             this.addOnStartHandler(this.onServiceStart);
-            this.addOnStopHandler(this.onServiceStop);
             this.events.subscribe({
                 [ImporterWorkerEvents.CANCEL]: {
                     handler: this.cancel.bind(this),
@@ -45,21 +38,14 @@ export default class ImporterWorkerService extends BaseService {
     }
 
     async onServiceStart(): Promise<void> {
-        this.pool = Pool(() => spawn<ImporterUtils>(new ThreadsWorker("./importerUtilsWorker")), {
-            name: "importer-utils"
-        });
         this.createWorker("importCandles", this.process);
-    }
-
-    async onServiceStop(): Promise<void> {
-        await this.pool.terminate();
     }
 
     cancel({ id }: ImporterWorkerCancel): void {
         this.abort[id] = true;
     }
 
-    async saveImporter(importer: Importer) {
+    async saveState(state: ImporterState) {
         const {
             id,
             exchange,
@@ -73,7 +59,7 @@ export default class ImporterWorkerService extends BaseService {
             progress,
             error,
             currentState
-        } = importer.state;
+        } = state;
         await this.db.pg.query(sql`
         INSERT INTO importers
         (id, exchange, asset, currency, 
@@ -98,335 +84,69 @@ export default class ImporterWorkerService extends BaseService {
         current_state = excluded.current_state;
         `);
     }
-    async tradesToCandles({
-        timeframes,
-        chunk,
-        trades
-    }: {
-        timeframes: number[];
-        chunk: TradesChunk;
-        trades: ExchangeTrade[];
-    }): Promise<{ chunk: TradesChunk; candlesInTimeframes: ExchangeCandlesInTimeframes }> {
-        return this.pool.queue(async (utils: ImporterUtils) => utils.tradesToCandles({ timeframes, chunk, trades }));
-    }
 
     async process(job: Job<ImporterState, ImporterState>): Promise<ImporterState> {
         try {
-            const importer = new Importer(job.data);
-            if (!importer.isLoaded || importer.type === "recent") {
-                await this.connector.initConnector(importer.exchange);
-                importer.createChunks(this.connector.connectors[importer.exchange].timeframes);
-                importer.start();
-                this.log.info(
-                    `Importer #${importer.id} - Starting ${importer.type} load of ${importer.exchange} ${importer.asset}/${importer.currency} candles`
-                );
-                try {
-                    if (importer.type === "history" && importer.exchange === "kraken") {
-                        await this.importTrades(job, importer);
-                    } else {
-                        await this.importCandles(job, importer);
-                    }
-                } catch (err) {
-                    importer.fail(err.message);
-                    this.log.warn(`Importer #${importer.id}`, err);
+            this.log.info(`Processing job ${job.id}`);
+            const beacon = this.lightship.createBeacon();
+            const importerWorker = await spawn<ImportWorker>(new ThreadsWorker("./worker"));
+            this.log.info(`Worker spawned ${job.id}`);
+            try {
+                let importer = new Importer(job.data);
+                if (!importer.isLoaded || importer.type === "recent") {
+                    importer.start();
+                    importerWorker.progress().subscribe(async (state: ImporterState) => {
+                        await job.updateProgress(state.progress);
+
+                        if (this.abort[importer.id]) {
+                            importer = new Importer(state);
+                            importer.finish(true);
+                            await this.saveState(importer.state);
+                            delete this.abort[importer.id];
+                            throw new Error(`Importer #${importer.id} is canceled`);
+                        }
+                    });
                 }
-            }
-            importer.finish(this.abort[importer.id]);
-            if (this.abort[importer.id]) delete this.abort[importer.id];
-            this.log.info(`Importer #${importer.id} is ${importer.status}!`);
-            job.update(importer.state);
-            if (importer.isFailed) {
-                await this.events.emit<ImporterWorkerFailed>({
-                    type: ImporterWorkerEvents.FAILED,
-                    data: {
-                        id: importer.id,
-                        type: importer.type,
-                        exchange: importer.exchange,
-                        asset: importer.asset,
-                        currency: importer.currency,
-                        error: importer.error
-                    }
-                });
-                throw new BaseError(importer.error, { importerId: importer.id }); //TODO: requeue
-            }
-            if (importer.isFinished)
-                await this.events.emit<ImporterWorkerFinished>({
-                    type: ImporterWorkerEvents.FINISHED,
-                    data: {
-                        id: importer.id,
-                        type: importer.type,
-                        exchange: importer.exchange,
-                        asset: importer.asset,
-                        currency: importer.currency,
-                        status: importer.status
-                    }
-                });
-            await this.saveImporter(importer);
-            return importer.state;
-        } catch (err) {
-            this.log.error(`Error while processing job ${job.id}`, err);
-            throw err;
-        }
-    }
-
-    async importTrades(job: Job<ImporterState, ImporterState>, importer: Importer): Promise<void> {
-        try {
-            if (!importer.tradesChunks.length) return;
-            await DataStream.from(importer.tradesChunks, { maxParallel: this.cpus * 2 })
-                .while(() => importer.isStarted && !this.abort[importer.id])
-                .map(async (chunk: TradesChunk) => this.loadTrades(importer, chunk))
-                .map(
-                    async ({
-                        timeframes,
-                        chunk,
-                        trades
-                    }: {
-                        timeframes: number[];
-                        chunk: TradesChunk;
-                        trades: ExchangeTrade[];
-                    }) => this.tradesToCandles({ timeframes, chunk, trades })
-                )
-                .each(
-                    async ({
-                        chunk,
-                        candlesInTimeframes
-                    }: {
-                        chunk: TradesChunk;
-                        candlesInTimeframes: ExchangeCandlesInTimeframes;
-                    }) => this.finalizeTrades(job, importer, chunk, candlesInTimeframes)
-                )
-                .catch((err: Error) => {
-                    importer.fail(err.message);
-                })
-                .whenEnd();
-        } catch (err) {
-            this.log.error(`Importer #${importer.id} - Failed while importing trades`, err);
-            throw err;
-        }
-    }
-
-    async importCandles(job: Job<ImporterState, ImporterState>, importer: Importer): Promise<void> {
-        try {
-            if (!importer.candlesChunks.length) return;
-            await DataStream.from(importer.candlesChunks, { maxParallel: 10 })
-                .while(() => importer.isStarted && !this.abort[importer.id])
-                .map(async (chunk: CandlesChunk) => this.loadCandles(importer, chunk))
-                .each(async ({ chunk, candles }: { chunk: CandlesChunk; candles: ExchangeCandle[] }) =>
-                    this.finalizeCandles(job, importer, chunk, candles)
-                )
-                .catch((err: Error) => {
-                    importer.fail(err.message);
-                })
-                .whenEnd();
-        } catch (err) {
-            this.log.error(`Importer #${importer.id} - Failed while importing candle`, err);
-            throw err;
-        }
-    }
-
-    async loadTrades(
-        importer: Importer,
-        chunk: TradesChunk
-    ): Promise<{
-        timeframes: number[];
-        chunk: TradesChunk;
-        trades: ExchangeTrade[];
-    }> {
-        try {
-            this.log.debug(`Importer #${importer.id} - Loading chunk ${chunk.dateFrom} - ${chunk.dateTo}`);
-            let trades: ExchangeTrade[] = [];
-            let dateNext = dayjs.utc(chunk.dateFrom);
-            while (dateNext.valueOf() <= dayjs.utc(chunk.dateTo).valueOf()) {
-                const response: ExchangeTrade[] = await this.connector.getTrades(
-                    importer.exchange,
-                    importer.asset,
-                    importer.currency,
-                    dateNext.toISOString()
-                );
-                if (!response || !Array.isArray(response)) throw new Error("Wrong connector response");
-                dateNext = dayjs.utc(chunk.dateTo);
-                if (response.length > 0) {
-                    trades = [...trades, ...response];
-
-                    dateNext = dayjs.utc(response[response.length - 1].timestamp);
+                const initState = await importerWorker.init(importer.state);
+                importer = new Importer(initState);
+                const finalState = await importerWorker.process();
+                importer = new Importer(finalState);
+                this.log.info(`Importer #${importer.id} is ${importer.status}!`);
+                job.update(importer.state);
+                if (importer.isFailed) {
+                    await this.events.emit<ImporterWorkerFailed>({
+                        type: ImporterWorkerEvents.FAILED,
+                        data: {
+                            id: importer.id,
+                            type: importer.type,
+                            exchange: importer.exchange,
+                            asset: importer.asset,
+                            currency: importer.currency,
+                            error: importer.error
+                        }
+                    });
+                    throw new BaseError(importer.error, { importerId: importer.id });
                 }
-            }
-            this.log.debug(
-                `Importer #${importer.id} - Loaded chunk ${chunk.dateFrom} - ${chunk.dateTo} => ${trades.length}`
-            );
-            return {
-                timeframes: importer.params.timeframes,
-                chunk,
-                trades
-            };
-        } catch (err) {
-            this.log.error(`Importer #${importer.id} - Failed to load chunk ${chunk.dateFrom} - ${chunk.dateTo}`, err);
-            throw err;
-        }
-    }
+                if (importer.isFinished)
+                    await this.events.emit<ImporterWorkerFinished>({
+                        type: ImporterWorkerEvents.FINISHED,
+                        data: {
+                            id: importer.id,
+                            type: importer.type,
+                            exchange: importer.exchange,
+                            asset: importer.asset,
+                            currency: importer.currency,
+                            status: importer.status
+                        }
+                    });
 
-    async loadCandles(
-        importer: Importer,
-        chunk: CandlesChunk
-    ): Promise<{
-        chunk: TradesChunk;
-        candles: ExchangeCandle[];
-    }> {
-        try {
-            this.log.debug(
-                `Importer #${importer.id} - Loading ${chunk.timeframe} chunk ${chunk.dateFrom} - ${chunk.dateTo}`
-            );
-            let candles = await this.connector.getCandles(
-                importer.exchange,
-                importer.asset,
-                importer.currency,
-                chunk.timeframe,
-                chunk.dateFrom,
-                chunk.limit
-            );
-            if (!candles || !Array.isArray(candles) || candles.length === 0) {
-                this.log.warn(
-                    `Importer #${importer.id} - Failed to load ${chunk.timeframe} chunk ${chunk.dateFrom} - ${chunk.dateTo}`
-                );
-                if (importer.type === "recent") return { chunk, candles: [] };
-                else throw new Error(`Empty response`);
-            }
-            const dateFromValueOf = dayjs.utc(chunk.dateFrom).valueOf();
-            const dateToValueOf = dayjs.utc(chunk.dateTo).valueOf();
-            candles = candles.filter((candle) => candle.time >= dateFromValueOf && candle.time <= dateToValueOf);
-
-            this.log.debug(
-                `Importer #${importer.id} - Loaded ${chunk.timeframe} chunk ${chunk.dateFrom}(${
-                    candles[0]?.timestamp
-                }) - ${chunk.dateTo}(${candles[candles.length - 1]?.timestamp}) => ${candles.length}`
-            );
-
-            return {
-                chunk,
-                candles
-            };
-        } catch (err) {
-            this.log.error(
-                `Importer #${importer.id} - Failed to load ${chunk.timeframe} chunk ${chunk.dateFrom} - ${chunk.dateTo}`,
-                err
-            );
-            throw err;
-        }
-    }
-
-    async upsertCandles(candles: ExchangeCandle[]): Promise<void> {
-        try {
-            if (candles && Array.isArray(candles) && candles.length > 0) {
-                const timeframe = candles[0].timeframe;
-
-                await this.db.pg.query(sql`
-                insert into ${sql.identifier([`candles${timeframe}`])} 
-                (exchange, asset, currency, open, high, low, close, volume, time, timestamp, type)
-                SELECT *
-                FROM ${sql.unnest(
-                    this.db.util.prepareUnnest(candles, [
-                        "exchange",
-                        "asset",
-                        "currency",
-                        "open",
-                        "high",
-                        "low",
-                        "close",
-                        "volume",
-                        "time",
-                        "timestamp",
-                        "type"
-                    ]),
-                    [
-                        "varchar",
-                        "varchar",
-                        "varchar",
-                        "numeric",
-                        "numeric",
-                        "numeric",
-                        "numeric",
-                        "numeric",
-                        "int8",
-                        "timestamp",
-                        "varchar"
-                    ]
-                )}
-                ON CONFLICT ON CONSTRAINT ${sql.identifier([`candles${timeframe}_time_exchange_asset_currency_key`])}
-                DO UPDATE SET open = excluded.open,
-                high = excluded.high,
-                low = excluded.low,
-                close = excluded.close,
-                volume = excluded.volume,
-                type = excluded.type;`);
+                return importer.state;
+            } finally {
+                await Thread.terminate(importerWorker);
+                await beacon.die();
             }
         } catch (err) {
-            this.log.error("Failed to upsert candles", err);
-            throw err;
-        }
-    }
-
-    async finalizeCandles(
-        job: Job<ImporterState, ImporterState>,
-        importer: Importer,
-        chunk: CandlesChunk,
-        candles: ExchangeCandle[]
-    ): Promise<void> {
-        try {
-            if (candles && Array.isArray(candles) && candles.length > 0) {
-                this.log.debug(
-                    `Importer #${importer.id} - Finalizing ${chunk.timeframe} candles ${candles[0]?.timestamp} - ${
-                        candles[candles.length - 1]?.timestamp
-                    }`
-                );
-                await this.upsertCandles(candles);
-                this.log.debug(
-                    `Importer #${importer.id} - Finalized ${chunk.timeframe} candles ${candles[0]?.timestamp} - ${
-                        candles[candles.length - 1]?.timestamp
-                    }`
-                );
-            }
-            const progress = importer.setCandlesProgress(chunk.timeframe, chunk.id);
-            await job.updateProgress(progress);
-            await job.update(importer.state);
-            this.log.info(`Importer #${importer.id} - ${progress} %`);
-        } catch (err) {
-            this.log.error(
-                `Importer #${importer.id} - Failed to save ${chunk.timeframe} chunk ${chunk.dateFrom} - ${chunk.dateTo}`,
-                err
-            );
-            throw err;
-        }
-    }
-
-    async finalizeTrades(
-        job: Job<ImporterState, ImporterState>,
-        importer: Importer,
-        chunk: TradesChunk,
-        candlesInTimeframes: ExchangeCandlesInTimeframes
-    ): Promise<void> {
-        try {
-            for (const [timeframe, candles] of Object.entries(candlesInTimeframes)) {
-                if (candles && Array.isArray(candles) && candles.length > 0) {
-                    this.log.debug(
-                        `Importer #${importer.id} - Finalizing ${timeframe} candles ${candles[0]?.timestamp} - ${
-                            candles[candles.length - 1]?.timestamp
-                        }`
-                    );
-                    await this.upsertCandles(candles);
-                    this.log.debug(
-                        `Importer #${importer.id} - Finalized ${timeframe} candles ${candles[0]?.timestamp} - ${
-                            candles[candles.length - 1]?.timestamp
-                        }`
-                    );
-                }
-            }
-
-            const progress = importer.setTradesProgress(chunk.id);
-            await job.updateProgress(progress);
-            await job.update(importer.state);
-            this.log.info(`Importer #${importer.id} - ${progress} %`);
-        } catch (err) {
-            this.log.error(`Importer #${importer.id} - Failed to save chunk ${chunk.dateFrom} - ${chunk.dateTo}`, err);
+            this.log.error(`Error while processing job #${job.id}`, err);
             throw err;
         }
     }
