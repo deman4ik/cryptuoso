@@ -114,13 +114,13 @@ spec:
         name: <APP>
         apiVersion: apps/v1
     minReplicas: 1
-    maxReplicas: 5
+    maxReplicas: 2
     metrics:
         - type: Resource
           resource:
               name: cpu
-              targetAverageUtilization: 85
+              targetAverageUtilization: 95
         - type: Resource
           resource:
               name: memory
-              targetAverageUtilization: 85
+              targetAverageUtilization: 95
