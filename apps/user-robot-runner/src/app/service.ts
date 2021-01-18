@@ -405,11 +405,12 @@ export default class UserRobotRunnerService extends HTTPService {
             AND ur.robot_id = s.robot_id 
             AND ur.robot_id = r.id 
             AND s.type = 'trade' 
+            and s.action in (${TradeAction.closeLong}, ${TradeAction.closeShort})
             ORDERBY timestamp DESC 
             LIMIT 1;
             `);
 
-            if (latestSignal && [TradeAction.closeLong, TradeAction.closeShort].includes(latestSignal?.action)) {
+            if (latestSignal) {
                 await this.addUserRobotJob(
                     {
                         userRobotId: id,
