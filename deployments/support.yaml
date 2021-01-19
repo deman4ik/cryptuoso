@@ -86,8 +86,8 @@ spec:
                         protocol: TCP
                   resources:
                       requests:
-                          memory: 32Mi
-                          cpu: "10m"
+                          memory: 128Mi
+                          cpu: "20m"
                       limits:
                           memory: 256Mi
                           cpu: "128m"
@@ -129,8 +129,8 @@ spec:
         - type: Resource
           resource:
               name: cpu
-              targetAverageUtilization: 95
+              targetAverageUtilization: 90
         - type: Resource
           resource:
               name: memory
-              targetAverageUtilization: 95
+              targetAverageUtilization: 90

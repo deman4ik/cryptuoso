@@ -84,11 +84,11 @@ spec:
                         protocol: TCP
                   resources:
                       requests:
-                          memory: 64Mi
-                          cpu: "10m"
+                          memory: 128Mi
+                          cpu: "20m"
                       limits:
                           memory: 512Mi
-                          cpu: "700m"
+                          cpu: "500m"
 ---
 apiVersion: v1
 kind: Service
@@ -119,13 +119,13 @@ spec:
         name: <APP>
         apiVersion: apps/v1
     minReplicas: 1
-    maxReplicas: 20
+    maxReplicas: 10
     metrics:
         - type: Resource
           resource:
               name: cpu
-              targetAverageUtilization: 95
+              targetAverageUtilization: 90
         - type: Resource
           resource:
               name: memory
-              targetAverageUtilization: 95
+              targetAverageUtilization: 90
