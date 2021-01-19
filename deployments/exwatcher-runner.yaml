@@ -81,8 +81,8 @@ spec:
                         protocol: TCP
                   resources:
                       requests:
-                          memory: 64Mi
-                          cpu: "10m"
+                          memory: 128Mi
+                          cpu: "20m"
                       limits:
                           memory: 256Mi
                           cpu: "200m"
@@ -107,3 +107,25 @@ spec:
         app: <APP>
         env: <ENV>
     type: ClusterIP
+---
+kind: HorizontalPodAutoscaler
+apiVersion: autoscaling/v2beta1
+metadata:
+    name: <APP>
+    namespace: <ENV>
+spec:
+    scaleTargetRef:
+        kind: Deployment
+        name: <APP>
+        apiVersion: apps/v1
+    minReplicas: 1
+    maxReplicas: 2
+    metrics:
+        - type: Resource
+          resource:
+              name: cpu
+              targetAverageUtilization: 90
+        - type: Resource
+          resource:
+              name: memory
+              targetAverageUtilization: 90

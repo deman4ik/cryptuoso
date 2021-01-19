@@ -104,12 +104,12 @@ class ImporterWorker {
                 } else {
                     await this.importCandles();
                 }
-                this.#importer.finish();
-                this.#saveState(this.#importer.state);
             } catch (err) {
                 this.#importer.fail(err.message);
                 this.log.warn(`Importer #${this.#importer.id}`, err);
             }
+            this.#importer.finish();
+            this.#saveState(this.#importer.state);
             this.log.info(`Importer #${this.#importer.id} is ${this.#importer.status}!`);
             return this.#importer.state;
         } catch (err) {
