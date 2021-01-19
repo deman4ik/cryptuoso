@@ -93,25 +93,26 @@ export default class ImporterWorkerService extends BaseService {
             this.log.info(`Worker spawned ${job.id}`);
             try {
                 let importer = new Importer(job.data);
-                if (!importer.isLoaded || importer.type === "recent") {
-                    importer.start();
-                    importerWorker.progress().subscribe(async (state: ImporterState) => {
-                        await job.updateProgress(state.progress);
 
-                        if (this.abort[importer.id]) {
-                            importer = new Importer(state);
-                            importer.finish(true);
-                            await this.saveState(importer.state);
-                            delete this.abort[importer.id];
-                            throw new Error(`Importer #${importer.id} is canceled`);
-                        }
-                    });
-                }
+                importer.start();
+                importerWorker.progress().subscribe(async (state: ImporterState) => {
+                    await job.updateProgress(state.progress);
+
+                    if (this.abort[importer.id]) {
+                        importer = new Importer(state);
+                        importer.finish(true);
+                        await this.saveState(importer.state);
+                        delete this.abort[importer.id];
+                        throw new Error(`Importer #${importer.id} is canceled`);
+                    }
+                });
+
                 const initState = await importerWorker.init(importer.state);
                 importer = new Importer(initState);
                 const finalState = await importerWorker.process();
                 importer = new Importer(finalState);
-                this.log.info(`Importer #${importer.id} is ${importer.status}!`);
+
+                await this.saveState(importer.state);
                 job.update(importer.state);
                 if (importer.isFailed) {
                     await this.events.emit<ImporterWorkerFailed>({
@@ -139,7 +140,7 @@ export default class ImporterWorkerService extends BaseService {
                             status: importer.status
                         }
                     });
-
+                this.log.info(`Job ${job.id} processed - Importer is ${importer.status}!`);
                 return importer.state;
             } finally {
                 await Thread.terminate(importerWorker);

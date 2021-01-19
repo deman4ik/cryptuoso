@@ -90,26 +90,28 @@ class ImporterWorker {
 
     async process() {
         try {
-            this.log.info(
-                `Importer #${this.#importer.id} - Starting ${this.#importer.type} load of ${this.#importer.exchange} ${
-                    this.#importer.asset
-                }/${this.#importer.currency} candles`
-            );
-            try {
-                await this.#connector.initConnector(this.importer.exchange);
-                this.#importer.createChunks(this.#connector.connectors[this.#importer.exchange].timeframes);
-                this.#saveState(this.#importer.state);
-                if (this.#importer.type === "history" && this.#importer.exchange === "kraken") {
-                    await this.importTrades();
-                } else {
-                    await this.importCandles();
+            if (!this.#importer.isLoaded || this.#importer.type === "recent") {
+                this.log.info(
+                    `Importer #${this.#importer.id} - Starting ${this.#importer.type} load of ${
+                        this.#importer.exchange
+                    } ${this.#importer.asset}/${this.#importer.currency} candles`
+                );
+                try {
+                    await this.#connector.initConnector(this.importer.exchange);
+                    this.#importer.createChunks(this.#connector.connectors[this.#importer.exchange].timeframes);
+                    await this.#saveState(this.#importer.state);
+                    if (this.#importer.type === "history" && this.#importer.exchange === "kraken") {
+                        await this.importTrades();
+                    } else {
+                        await this.importCandles();
+                    }
+                } catch (err) {
+                    this.#importer.fail(err.message);
+                    this.log.warn(`Importer #${this.#importer.id}`, err);
                 }
-            } catch (err) {
-                this.#importer.fail(err.message);
-                this.log.warn(`Importer #${this.#importer.id}`, err);
             }
             this.#importer.finish();
-            this.#saveState(this.#importer.state);
+            await this.#saveState(this.#importer.state);
             this.log.info(`Importer #${this.#importer.id} is ${this.#importer.status}!`);
             return this.#importer.state;
         } catch (err) {
@@ -269,8 +271,9 @@ class ImporterWorker {
                         chunk.dateTo
                     }`
                 );
-                if (this.#importer.type === "recent") return { chunk, candles: [] };
-                else throw new Error(`Empty response`);
+                //if (this.#importer.type === "recent")
+                return { chunk, candles: [] };
+                //else throw new Error(`Empty response`);
             }
             const dateFromValueOf = dayjs.utc(chunk.dateFrom).valueOf();
             const dateToValueOf = dayjs.utc(chunk.dateTo).valueOf();

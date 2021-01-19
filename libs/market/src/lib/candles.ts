@@ -300,17 +300,17 @@ export function getCandlesParams(
 export function loadLimit(exchange: string) {
     switch (exchange) {
         case "bitfinex":
-            return 1000;
+            return 900;
         case "kraken":
             return 450;
         case "binance":
-            return 1000;
+            return 900;
         case "binance_futures":
-            return 1000;
+            return 900;
         case "kucoin":
-            return 1500;
+            return 1400;
         case "huobipro":
-            return 2000;
+            return 1900;
         default:
             return 250;
     }
