@@ -381,6 +381,10 @@ export class Importer {
         this.#error = message;
     }
 
+    get progress() {
+        return this.#progress;
+    }
+
     set progress(progress: number) {
         this.#progress = progress;
     }
