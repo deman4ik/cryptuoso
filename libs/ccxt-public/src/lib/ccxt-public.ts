@@ -203,7 +203,9 @@ export class PublicConnector {
     ): Promise<ExchangeCandle> {
         try {
             await this.initConnector(exchange);
-            const params = getCurrentCandleParams(this.connectors[exchange].timeframes, timeframe);
+            const timeframes = this.connectors[exchange].timeframes;
+            if (exchange === "huobipro") delete timeframes["1d"];
+            const params = getCurrentCandleParams(timeframes, timeframe);
             const call = async (bail: (e: Error) => void) => {
                 try {
                     return await this.connectors[exchange].fetchOHLCV(
@@ -364,7 +366,9 @@ export class PublicConnector {
     ): Promise<ExchangeCandle[]> {
         try {
             await this.initConnector(exchange);
-            const params = getCandlesParams(this.connectors[exchange].timeframes, timeframe, dateFrom, limit);
+            const timeframes = this.connectors[exchange].timeframes;
+            if (exchange === "huobipro") delete timeframes["1d"];
+            const params = getCandlesParams(timeframes, timeframe, dateFrom, limit);
             const dateTo = dayjs.utc(params.dateTo).toISOString();
             let candles: ExchangeCandle[] = [];
 

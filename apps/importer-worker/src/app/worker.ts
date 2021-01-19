@@ -98,7 +98,9 @@ class ImporterWorker {
                 );
                 try {
                     await this.#connector.initConnector(this.importer.exchange);
-                    this.#importer.createChunks(this.#connector.connectors[this.#importer.exchange].timeframes);
+                    const timeframes = this.#connector.connectors[this.#importer.exchange].timeframes;
+                    if (this.#importer.exchange === "huobipro") delete timeframes["1d"];
+                    this.#importer.createChunks(timeframes);
                     await this.#saveState(this.#importer.state);
                     if (this.#importer.type === "history" && this.#importer.exchange === "kraken") {
                         await this.importTrades();
