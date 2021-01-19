@@ -308,7 +308,7 @@ export class Importer {
         const loaded = this.#currentState.trades.chunks.filter((t) => t.loaded === true).length;
         const prevProgress = this.#progress;
         this.#progress = round((loaded / this.#currentState.trades.chunks.length) * 100);
-        return prevProgress === this.#progress;
+        return prevProgress !== this.#progress;
     };
 
     #calcCandlesProgress = () => {
@@ -324,7 +324,7 @@ export class Importer {
                     .flat().length) *
                 100
         );
-        return prevProgress === this.#progress;
+        return prevProgress !== this.#progress;
     };
 
     #setTradesProgress = (chunkId: number) => {
