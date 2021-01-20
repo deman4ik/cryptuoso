@@ -223,6 +223,7 @@ export function convertExchangeTimeframes(exchangeTimeframes: {
 }
 
 export function getCurrentCandleParams(
+    exchange: string,
     exchangeTimeframes: { [key: string]: string | number },
     timeframe: ValidTimeframe
 ) {
@@ -250,7 +251,7 @@ export function getCurrentCandleParams(
         params.timeframe = lowerTimeframe;
         params.timeframeStr = Timeframe.toString(lowerTimeframe);
         params.dateFrom = Timeframe.getCurrentSince(amountInUnit, lowerTimeframe);
-        params.limit = amountInUnit;
+        params.limit = loadLimit(exchange);
         params.batch = true;
     }
 
@@ -258,14 +259,16 @@ export function getCurrentCandleParams(
 }
 
 export function getCandlesParams(
+    exchange: string,
     exchangeTimeframes: { [key: string]: string | number },
     timeframe: ValidTimeframe,
     dateFromInput: string,
-    limit = 100
+    inputLimit = 100
 ) {
     const timeframes: { [key: string]: Timeframe } = convertExchangeTimeframes(exchangeTimeframes); //TODO: refactor
     let currentTimeframe = Timeframe.get(timeframe);
     const exchangeHasTimeframe = Timeframe.inList(timeframes, Timeframe.toString(timeframe));
+    let limit = inputLimit;
     if (!exchangeHasTimeframe) {
         currentTimeframe = Timeframe.get(
             Object.values(timeframes)
@@ -273,6 +276,7 @@ export function getCandlesParams(
                 .sort(sortDesc)
                 .filter((t) => +t < +timeframe)[0]
         );
+        limit = loadLimit(exchange);
     }
 
     const { amount, unit } = Timeframe.timeframeAmountToTimeUnit(limit, currentTimeframe.value);
