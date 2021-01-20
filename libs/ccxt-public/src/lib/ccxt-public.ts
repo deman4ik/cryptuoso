@@ -205,7 +205,8 @@ export class PublicConnector {
             await this.initConnector(exchange);
             const timeframes = this.connectors[exchange].timeframes;
             if (exchange === "huobipro") delete timeframes["1d"];
-            const params = getCurrentCandleParams(timeframes, timeframe);
+            const params = getCurrentCandleParams(exchange, timeframes, timeframe);
+
             const call = async (bail: (e: Error) => void) => {
                 try {
                     return await this.connectors[exchange].fetchOHLCV(
@@ -368,10 +369,9 @@ export class PublicConnector {
             await this.initConnector(exchange);
             const timeframes = this.connectors[exchange].timeframes;
             if (exchange === "huobipro") delete timeframes["1d"];
-            const params = getCandlesParams(timeframes, timeframe, dateFrom, limit);
+            const params = getCandlesParams(exchange, timeframes, timeframe, dateFrom, limit);
             const dateTo = dayjs.utc(params.dateTo).toISOString();
             let candles: ExchangeCandle[] = [];
-
             const call = async (bail: (e: Error) => void) => {
                 try {
                     return await this.connectors[exchange].fetchOHLCV(
