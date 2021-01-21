@@ -82,7 +82,7 @@ export function chunkNumberToArray(number: number, reducer: number): number[] {
  *                            {id: 2, value: "b"},
  *                            {id: 1, value: "c"},
  *                            {id: 3, value: "d"}];
- * // [{id:1, value: "a"}, {id: 2, value: "b"}, {id: 3, value: "d"}]
+ * [{id:1, value: "a"}, {id: 2, value: "b"}, {id: 3, value: "d"}]
  * uniqueElementsBy<MyType>(objects, (a,b) => a.id == b.id);
  */
 export function uniqueElementsBy<T>(arr: T[], fn: (a: T, b: T) => boolean): T[] {

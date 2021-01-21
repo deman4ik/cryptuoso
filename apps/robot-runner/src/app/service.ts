@@ -12,19 +12,11 @@ import {
     ROBOT_WORKER_TOPIC
 } from "@cryptuoso/robot-events";
 import { BacktesterRunnerEvents, BacktesterRunnerStart } from "@cryptuoso/backtester-events";
-import { Queues, RobotJob, RobotJobType, RobotPosition, RobotRunnerJobType, RobotStatus } from "@cryptuoso/robot-state";
+import { Queues, RobotJob, RobotJobType, RobotRunnerJobType, RobotStatus } from "@cryptuoso/robot-state";
 import { StrategySettings } from "@cryptuoso/robot-settings";
-import { equals, robotExchangeName, sortAsc, sortDesc, uniqueElementsBy } from "@cryptuoso/helpers";
+import { equals, robotExchangeName, sortDesc, uniqueElementsBy } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
-import {
-    AlertInfo,
-    CandleType,
-    DBCandle,
-    OrderType,
-    RobotPositionStatus,
-    Timeframe,
-    ValidTimeframe
-} from "@cryptuoso/market";
+import { CandleType, DBCandle, RobotPositionStatus, Timeframe, ValidTimeframe } from "@cryptuoso/market";
 import { Event } from "@cryptuoso/events";
 import { UserRoles } from "@cryptuoso/user-state";
 export type RobotRunnerServiceConfig = HTTPServiceConfig;
@@ -398,7 +390,7 @@ export default class RobotRunnerService extends HTTPService {
     async process(job: Job) {
         switch (job.name) {
             case RobotRunnerJobType.alerts:
-                await this.checkAlerts();
+                await this.scheduleAlerts();
                 break;
             case RobotRunnerJobType.newCandles:
                 await this.handleNewCandles();
@@ -411,106 +403,40 @@ export default class RobotRunnerService extends HTTPService {
         }
     }
 
-    async checkAlerts() {
+    async scheduleAlerts() {
         try {
             const entities = await this.db.pg.any<{
-                robotId: string;
                 exchange: string;
                 asset: string;
                 currency: string;
-                status: RobotStatus;
-                alerts: { [key: string]: AlertInfo };
                 timeframe: ValidTimeframe;
             }>(sql`
-            SELECT rp.robot_id, rp.alerts, r.exchange, r.asset, r.currency, r.timeframe, r.status
+            SELECT distinct r.exchange, r.asset, r.currency, r.timeframe
             FROM robot_positions rp, robots r
             WHERE rp.robot_id = r.id
             AND rp.status in (${RobotPositionStatus.new},${RobotPositionStatus.open})
             AND r.has_alerts = true
+            AND rp.alerts is not null AND rp.alerts != '{}'
             AND r.status in (${RobotStatus.started}, ${RobotStatus.starting}, ${RobotStatus.paused});`);
 
             if (entities && Array.isArray(entities) && entities.length > 0) {
-                const markets = uniqueElementsBy(
-                    entities.map(({ exchange, asset, currency, timeframe }) => ({
-                        exchange,
-                        asset,
-                        currency,
-                        timeframe
-                    })),
-                    (a, b) =>
-                        a.exchange === b.exchange &&
-                        a.asset === b.asset &&
-                        a.currency === b.currency &&
-                        a.timeframe === b.timeframe
-                );
-
                 await Promise.all(
-                    markets.map(async ({ exchange, asset, currency, timeframe }) => {
-                        const positions = entities.filter(
-                            (e) =>
-                                e.exchange === exchange &&
-                                e.asset === asset &&
-                                e.currency === currency &&
-                                e.timeframe === timeframe
-                        );
-                        const currentTime = Timeframe.getCurrentSince(1, timeframe);
-                        const candle = await this.db.pg.maybeOne<DBCandle>(sql`
-                            SELECT * 
-                            FROM ${sql.identifier([`candles${timeframe}`])}
-                            WHERE exchange = ${exchange}
-                            AND asset = ${asset}
-                            AND currency = ${currency}
-                            AND time = ${currentTime};`);
-                        if (!candle) {
-                            if (dayjs.utc(currentTime).diff(dayjs.utc(), "second") > 20)
-                                this.log.error(
-                                    `Failed to load ${exchange}-${asset}-${currency}-${timeframe}-${dayjs
-                                        .utc(currentTime)
-                                        .toISOString()} current candle`
-                                );
-                            return;
-                        }
-                        const robots = positions
-                            .filter(({ alerts }) => {
-                                let nextPrice = null;
-                                for (const key of Object.keys(alerts).sort((a, b) => sortAsc(+a, +b))) {
-                                    const alert = alerts[key];
-                                    const { orderType, action, price } = alert;
-
-                                    switch (orderType) {
-                                        case OrderType.stop: {
-                                            nextPrice = RobotPosition.checkStop(action, price, candle);
-                                            break;
-                                        }
-                                        case OrderType.limit: {
-                                            nextPrice = RobotPosition.checkLimit(action, price, candle);
-                                            break;
-                                        }
-                                        case OrderType.market: {
-                                            nextPrice = RobotPosition.checkMarket(action, price, candle);
-                                            break;
-                                        }
-                                        default:
-                                            throw new Error(`Unknown order type ${orderType}`);
-                                    }
-                                    if (nextPrice) break;
-                                }
-                                if (nextPrice) return true;
-
-                                return false;
-                            })
-                            .map(({ robotId, status }) => ({ robotId, status }));
-
-                        await Promise.all(
-                            robots.map(async ({ robotId, status }) =>
-                                this.addRobotJob({ robotId, type: RobotJobType.tick }, status)
-                            )
+                    entities.map(async ({ exchange, asset, currency, timeframe }) => {
+                        await this.addJob(
+                            Queues.robot,
+                            "checkAlerts",
+                            { exchange, asset, currency, timeframe },
+                            {
+                                jobId: `${exchange}.${asset}.${currency}.${timeframe}`,
+                                removeOnComplete: true,
+                                removeOnFail: 100
+                            }
                         );
                     })
                 );
             }
         } catch (err) {
-            this.log.error("Failed to check alerts", err);
+            this.log.error("Failed to schedule alerts check", err);
         }
     }
 
