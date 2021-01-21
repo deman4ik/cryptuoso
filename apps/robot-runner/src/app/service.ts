@@ -217,7 +217,7 @@ export default class RobotRunnerService extends HTTPService {
             }
             const id = uuid();
             await this.db.pg.transaction(async (t) => {
-                t.query(sql`
+                await t.query(sql`
                 INSERT INTO robots (
                     id,
                     code, 
@@ -247,7 +247,7 @@ export default class RobotRunnerService extends HTTPService {
                     ${trading}
                 );`);
 
-                t.query(sql`
+                await t.query(sql`
               INSERT INTO robot_settings (
                   robot_id,
                   strategy_settings,
