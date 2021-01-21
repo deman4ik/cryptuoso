@@ -5,13 +5,22 @@ import {
     Robot,
     RobotJob,
     RobotJobType,
+    RobotPosition,
     RobotPositionState,
     RobotState,
     RobotStatus
 } from "@cryptuoso/robot-state";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import { DatabaseTransactionConnectionType, sql } from "slonik";
-import { Candle, DBCandle, Timeframe, ValidTimeframe } from "@cryptuoso/market";
+import {
+    AlertInfo,
+    Candle,
+    DBCandle,
+    OrderType,
+    RobotPositionStatus,
+    Timeframe,
+    ValidTimeframe
+} from "@cryptuoso/market";
 import { sortAsc } from "@cryptuoso/helpers";
 import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
 import { RobotWorkerError, RobotWorkerEvents, Signal } from "@cryptuoso/robot-events";
@@ -94,7 +103,145 @@ export default class RobotWorkerService extends BaseService {
       LIMIT 1;  
      `);
 
+    async queueRobotJob(robotId: string) {
+        await this.addJob(
+            Queues.robot,
+            "job",
+            { robotId },
+            {
+                jobId: robotId,
+                removeOnComplete: true,
+                removeOnFail: 100
+            }
+        );
+    }
+
+    async addRobotJob({ robotId, type, data }: RobotJob, status: RobotStatus) {
+        await this.db.pg.query(sql`
+        INSERT INTO robot_jobs
+        (
+            robot_id,
+            type,
+            data
+        ) VALUES (
+            ${robotId},
+            ${type},
+            ${JSON.stringify(data) || null}
+        )
+        ON CONFLICT ON CONSTRAINT robot_jobs_robot_id_type_key 
+         DO UPDATE SET updated_at = now(),
+         type = excluded.type,
+         data = excluded.data,
+         retries = null,
+         error = null;
+        `);
+        if (status === RobotStatus.started) await this.queueRobotJob(robotId);
+    }
+
     async process(job: Job) {
+        switch (job.name) {
+            case "job":
+                await this.robotJob(job);
+                break;
+            case "checkAlerts":
+                await this.checkAlerts(job);
+                break;
+
+            default:
+                this.log.error(`Unknow job ${job.name}`);
+        }
+    }
+
+    async checkAlerts(job: Job) {
+        const beacon = this.lightship.createBeacon();
+        try {
+            const { exchange, asset, currency, timeframe } = job.data;
+
+            const positions = await this.db.pg.any<{
+                robotId: string;
+                exchange: string;
+                asset: string;
+                currency: string;
+                status: RobotStatus;
+                alerts: { [key: string]: AlertInfo };
+                timeframe: ValidTimeframe;
+            }>(sql`
+            SELECT rp.robot_id, rp.alerts, r.exchange, r.asset, r.currency, r.timeframe, r.status
+            FROM robot_positions rp, robots r
+            WHERE rp.robot_id = r.id
+            AND rp.status in (${RobotPositionStatus.new},${RobotPositionStatus.open})
+            AND r.has_alerts = true
+            AND rp.alerts is not null AND rp.alerts != '{}'
+            AND r.status in (${RobotStatus.started}, ${RobotStatus.starting}, ${RobotStatus.paused})
+            AND r.exchange = ${exchange}
+            AND r.asset = ${asset}
+            and r.currency = ${currency}
+            and r.timeframe = ${timeframe};`);
+
+            if (positions && positions.length) {
+                const currentTime = Timeframe.getCurrentSince(1, timeframe);
+                const candle = await this.db.pg.maybeOne<DBCandle>(sql`
+                SELECT * 
+                FROM ${sql.identifier([`candles${timeframe}`])}
+                WHERE exchange = ${exchange}
+                AND asset = ${asset}
+                AND currency = ${currency}
+                AND time = ${currentTime};`);
+                if (!candle) {
+                    if (dayjs.utc(currentTime).diff(dayjs.utc(), "second") > 20)
+                        this.log.error(
+                            `Failed to load ${exchange}-${asset}-${currency}-${timeframe}-${dayjs
+                                .utc(currentTime)
+                                .toISOString()} current candle`
+                        );
+                    return;
+                }
+                const robots = positions
+                    .filter(({ alerts }) => {
+                        let nextPrice = null;
+                        for (const key of Object.keys(alerts).sort((a, b) => sortAsc(+a, +b))) {
+                            const alert = alerts[key];
+                            const { orderType, action, price } = alert;
+
+                            switch (orderType) {
+                                case OrderType.stop: {
+                                    nextPrice = RobotPosition.checkStop(action, price, candle);
+                                    break;
+                                }
+                                case OrderType.limit: {
+                                    nextPrice = RobotPosition.checkLimit(action, price, candle);
+                                    break;
+                                }
+                                case OrderType.market: {
+                                    nextPrice = RobotPosition.checkMarket(action, price, candle);
+                                    break;
+                                }
+                                default:
+                                    throw new Error(`Unknown order type ${orderType}`);
+                            }
+                            if (nextPrice) break;
+                        }
+                        if (nextPrice) return true;
+
+                        return false;
+                    })
+                    .map(({ robotId, status }) => ({ robotId, status }));
+
+                await Promise.all(
+                    robots.map(async ({ robotId, status }) =>
+                        this.addRobotJob({ robotId, type: RobotJobType.tick }, status)
+                    )
+                );
+            }
+        } catch (err) {
+            this.log.error(`Error while processing job ${job.id}`, err);
+            throw err;
+        } finally {
+            await beacon.die();
+        }
+    }
+
+    async robotJob(job: Job) {
         const beacon = this.lightship.createBeacon();
         try {
             const robotId = job.id;
@@ -111,10 +258,11 @@ export default class RobotWorkerService extends BaseService {
                     }
                 }
             }
-            await beacon.die();
         } catch (err) {
             this.log.error(`Error while processing job ${job.id}`, err);
             throw err;
+        } finally {
+            await beacon.die();
         }
     }
 

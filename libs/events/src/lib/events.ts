@@ -149,6 +149,7 @@ export class Events {
     }
 
     async _receiveMessagesTick(topic: string) {
+        const beacon = this.#lightship.createBeacon();
         try {
             //FIXME: must be [string, [string, string[]][]][]
             // but in ioredis it is [string, string[]][] 🤷
@@ -161,7 +162,6 @@ export class Events {
                 topic,
                 ...[this.#state[topic].unbalanced.lastId]
             );
-            const beacon = this.#lightship.createBeacon();
             if (rawData) {
                 const data: {
                     [key: string]: { msgId: string; data: { [key: string]: any } }[];
@@ -188,15 +188,14 @@ export class Events {
                                         logger.error(
                                             `Failed to handle "${topic}" event #${msgId} (${event.id}) ${event.type}  - ${error.message}`
                                         );
-                                        if (error instanceof BaseError && error.type === "VALIDATION") {
-                                            const letter: DeadLetter = {
-                                                topic,
-                                                type: event.type,
-                                                data: event,
-                                                error: error.message
-                                            };
-                                            await this.emitDeadLetter(letter);
-                                        }
+
+                                        const letter: DeadLetter = {
+                                            topic,
+                                            type: event.type,
+                                            data: event,
+                                            error: error.message
+                                        };
+                                        await this.emitDeadLetter(letter);
                                     }
                                 })
                         );
@@ -206,14 +205,14 @@ export class Events {
                 );
                 this.#state[topic].unbalanced.lastId = data[topic][data[topic].length - 1].msgId;
             }
-            await beacon.die();
         } catch (error) {
             logger.error(`Failed to receive message - ${error.message}`, error);
             await sleep(5000);
+        } finally {
+            await beacon.die();
+            if (!this.#lightship.isServerShuttingDown())
+                this.#state[topic].unbalanced.timerId = setTimeout(this._receiveMessagesTick.bind(this, topic), 0);
         }
-
-        if (!this.#lightship.isServerShuttingDown())
-            this.#state[topic].unbalanced.timerId = setTimeout(this._receiveMessagesTick.bind(this, topic), 0);
     }
 
     private async _receiveMessages(topic: string) {
@@ -231,6 +230,7 @@ export class Events {
     }
 
     async _receiveGroupMessagesTick(topic: string, group: string) {
+        const beacon = this.#lightship.createBeacon();
         try {
             //FIXME: must be [string, [string, string[]][]][]
             // but in ioredis it is [string, string[]][] 🤷
@@ -247,7 +247,7 @@ export class Events {
                 ">"
             );
             // logger.debug(rawData || "no data");
-            const beacon = this.#lightship.createBeacon();
+
             if (rawData) {
                 const data = this._parseStreamResponse(rawData);
                 const events: { [key: string]: Event } = this._parseEvents(data[topic]);
@@ -289,19 +289,20 @@ export class Events {
                     })
                 );
             }
-            await beacon.die();
         } catch (error) {
             logger.error(`Failed to receive "${topic}" message  - ${error.message}`, error);
             if (error.message.includes("NOGROUP")) {
                 await this._createGroup(topic, group);
             }
             await sleep(5000);
+        } finally {
+            await beacon.die();
+            if (!this.#lightship.isServerShuttingDown())
+                this.#state[`${topic}-${group}`].grouped.timerId = setTimeout(
+                    this._receiveGroupMessagesTick.bind(this, topic, group),
+                    0
+                );
         }
-        if (!this.#lightship.isServerShuttingDown())
-            this.#state[`${topic}-${group}`].grouped.timerId = setTimeout(
-                this._receiveGroupMessagesTick.bind(this, topic, group),
-                0
-            );
     }
 
     private async _receiveGroupMessages(topic: string, group: string) {
@@ -318,6 +319,7 @@ export class Events {
     }
 
     async _receivePendingGroupMessagesTick(topic: string, group: string) {
+        const beacon = this.#lightship.createBeacon();
         try {
             const rawData = await this.#redis.xpending(
                 topic,
@@ -327,7 +329,7 @@ export class Events {
                 ...[this.#state[`${topic}-${group}`].pending.count]
             );
             //  logger.debug(rawData || "no data");
-            const beacon = this.#lightship.createBeacon();
+
             if (rawData) {
                 const data: {
                     msgId: string;
@@ -403,7 +405,6 @@ export class Events {
                     }
                 }
             }
-            await beacon.die();
         } catch (error) {
             logger.error(`Failed to receive pending "${topic}" message - ${error.message}`, error);
 
@@ -411,12 +412,14 @@ export class Events {
                 await this._createGroup(topic, group);
             }
             await sleep(5000);
-        }
-        if (!this.#lightship.isServerShuttingDown()) {
-            this.#state[`${topic}-${group}`].pending.timerId = setTimeout(
-                this._receivePendingGroupMessagesTick.bind(this, topic, group),
-                this.#pendingInterval
-            );
+        } finally {
+            await beacon.die();
+            if (!this.#lightship.isServerShuttingDown()) {
+                this.#state[`${topic}-${group}`].pending.timerId = setTimeout(
+                    this._receivePendingGroupMessagesTick.bind(this, topic, group),
+                    this.#pendingInterval
+                );
+            }
         }
     }
 
@@ -534,11 +537,13 @@ export class Events {
             this.#catalog.groups.map(async ({ topic, group }) => {
                 logger.info(`Closing connection "${topic}" group "${group}" ...`);
                 this.#state[`${topic}-${group}`].grouped.redis.quit();
+                clearInterval(this.#state[`${topic}-${group}`].grouped.timerId);
             });
 
             this.#catalog.unbalancedTopics.map(async (topic) => {
                 logger.info(`Closing connection "${topic}" unbalanced ...`);
                 this.#state[topic].unbalanced.redis.quit();
+                clearInterval(this.#state[topic].unbalanced.timerId);
             });
         } catch (error) {
             logger.error(error.message);

@@ -172,7 +172,7 @@ export class BaseService {
                     }
                 })
             );
-
+            await this.events.closeConnections();
             await this.#redisConnection.quit();
             await this.#db.pg.end();
         } catch (err) {
