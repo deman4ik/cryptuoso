@@ -250,17 +250,18 @@ export class ExwatcherBaseService extends BaseService {
                                 await this.connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
                             } catch (e) {
                                 this.log.warn(symbol, timeframe, e);
-                                await this.events.emit<ExwatcherErrorEvent>({
-                                    type: ExwatcherEvents.ERROR,
-                                    data: {
-                                        exchange,
-                                        asset,
-                                        currency,
-                                        exwatcherId: id,
-                                        timestamp: dayjs.utc().toISOString(),
-                                        error: `${e.message}`
-                                    }
-                                });
+                                if (!e.message.includes("connection closed"))
+                                    await this.events.emit<ExwatcherErrorEvent>({
+                                        type: ExwatcherEvents.ERROR,
+                                        data: {
+                                            exchange,
+                                            asset,
+                                            currency,
+                                            exwatcherId: id,
+                                            timestamp: dayjs.utc().toISOString(),
+                                            error: `${e.message}`
+                                        }
+                                    });
                             }
                         })
                     );
@@ -269,17 +270,18 @@ export class ExwatcherBaseService extends BaseService {
                         await this.connector.watchTrades(symbol);
                     } catch (e) {
                         this.log.warn(symbol, e);
-                        await this.events.emit<ExwatcherErrorEvent>({
-                            type: ExwatcherEvents.ERROR,
-                            data: {
-                                exchange,
-                                asset,
-                                currency,
-                                exwatcherId: id,
-                                timestamp: dayjs.utc().toISOString(),
-                                error: `${e.message}`
-                            }
-                        });
+                        if (!e.message.includes("connection closed"))
+                            await this.events.emit<ExwatcherErrorEvent>({
+                                type: ExwatcherEvents.ERROR,
+                                data: {
+                                    exchange,
+                                    asset,
+                                    currency,
+                                    exwatcherId: id,
+                                    timestamp: dayjs.utc().toISOString(),
+                                    error: `${e.message}`
+                                }
+                            });
                     }
                 }
             })
