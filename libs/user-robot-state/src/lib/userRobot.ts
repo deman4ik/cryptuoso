@@ -198,6 +198,7 @@ export class UserRobot {
 
         if (
             this._internalState.latestSignal &&
+            !signal.positionParentId &&
             dayjs.utc(this._internalState.latestSignal.timestamp).valueOf() > dayjs.utc(signal.timestamp).valueOf()
         )
             throw new BaseError(

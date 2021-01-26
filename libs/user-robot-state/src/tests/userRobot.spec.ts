@@ -1369,6 +1369,104 @@ describe("Test User Robot", () => {
         expect(userRobot.ordersToCreate[1].price).toBe(7702);
     });
 
+    it("Should skip close signal if open signal first", () => {
+        const signalOpen: SignalEvent = {
+            id: uuid(),
+            robotId,
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            timestamp: dayjs.utc("2019-10-26T00:05:01.000Z").toISOString(),
+            type: SignalType.trade,
+            positionId: uuid(),
+            positionPrefix: "p",
+            positionCode: "p_1",
+            candleTimestamp: dayjs.utc("2019-10-26T00:05:00.000Z").toISOString(),
+            action: TradeAction.short,
+            orderType: OrderType.market,
+            price: 6500
+        };
+
+        userRobot.handleSignal(signalOpen);
+        const openOrder = {
+            ...userRobot.ordersToCreate[0],
+            status: OrderStatus.closed,
+            exId: uuid(),
+            exTimestamp: dayjs.utc().toISOString(),
+            exLastTradeAt: dayjs.utc().toISOString(),
+            executed: userRobot.ordersToCreate[0].volume,
+            remaining: 0
+        };
+        userRobot = new UserRobot({
+            ...userRobot.state,
+            ...robotParams,
+            positions: [
+                {
+                    ...userRobot.positions[0],
+                    entryOrders: [openOrder]
+                }
+            ]
+        });
+        userRobot.handleOrder(openOrder);
+        const signalOpenNew: SignalEvent = {
+            id: uuid(),
+            robotId,
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            timestamp: dayjs.utc("2019-10-26T01:10:01.100Z").toISOString(),
+            type: SignalType.trade,
+            positionId: uuid(),
+            positionPrefix: "p",
+            positionCode: "p_2",
+            positionParentId: signalOpen.positionId,
+            candleTimestamp: dayjs.utc("2019-10-26T01:10:00.000Z").toISOString(),
+            action: TradeAction.long,
+            orderType: OrderType.market,
+            price: 7000
+        };
+        userRobot.handleSignal(signalOpenNew);
+        expect(userRobot.positions.length).toBe(2);
+        expect(userRobot.positions[0].exitAction).toBe(TradeAction.closeShort);
+        expect(userRobot.positions[1].status).toBe(UserPositionStatus.new);
+        expect(userRobot.connectorJobs.length).toBe(2);
+        expect(userRobot.connectorJobs[0].type).toBe(OrderJobType.create);
+        expect(userRobot.ordersToCreate[0].price).toBe(7702);
+        expect(userRobot.connectorJobs[1].type).toBe(OrderJobType.create);
+        expect(userRobot.ordersToCreate[1].price).toBe(7702);
+
+        const signalCloseNew: SignalEvent = {
+            id: uuid(),
+            robotId,
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            timestamp: dayjs.utc("2019-10-26T01:10:01.000Z").toISOString(),
+            type: SignalType.trade,
+            positionId: uuid(),
+            positionPrefix: "p",
+            positionCode: "p_1",
+            positionParentId: signalOpen.positionId,
+            candleTimestamp: dayjs.utc("2019-10-26T01:10:00.000Z").toISOString(),
+            action: TradeAction.closeShort,
+            orderType: OrderType.market,
+            price: 7000
+        };
+
+        userRobot.handleSignal(signalCloseNew);
+        expect(userRobot.positions.length).toBe(2);
+        expect(userRobot.positions[0].exitAction).toBe(TradeAction.closeShort);
+        expect(userRobot.positions[1].status).toBe(UserPositionStatus.new);
+        expect(userRobot.connectorJobs.length).toBe(2);
+        expect(userRobot.connectorJobs[0].type).toBe(OrderJobType.create);
+        expect(userRobot.ordersToCreate[0].price).toBe(7702);
+        expect(userRobot.connectorJobs[1].type).toBe(OrderJobType.create);
+        expect(userRobot.ordersToCreate[1].price).toBe(7702);
+    });
+
     it("Should create new position after close signal", () => {
         const signalOpen: SignalEvent = {
             id: uuid(),
