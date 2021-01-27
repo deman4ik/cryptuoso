@@ -296,7 +296,7 @@ export default class NotificationsService extends BaseService {
 
             const notification: Notification = {
                 userId,
-                timestamp: entryDate || exitDate || dayjs.utc().toISOString(),
+                timestamp: exitDate || entryDate || dayjs.utc().toISOString(),
                 type: "user-robot.trade",
                 data: { ...event, robotCode },
                 userRobotId,
