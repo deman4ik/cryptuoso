@@ -716,19 +716,15 @@ export class PrivateConnector {
             };
         } catch (err) {
             this.log.error(err, order);
-            if (
-                err instanceof ccxt.AuthenticationError ||
-                err instanceof ccxt.InsufficientFunds ||
-                err instanceof ccxt.InvalidNonce ||
-                err instanceof ccxt.InvalidOrder
-            ) {
-                throw err;
-            }
-            if (err instanceof ccxt.ExchangeError || err instanceof ccxt.NetworkError) {
+            if (!order.nextJob?.retries || order.nextJob?.retries < 5) {
                 return {
                     order: {
                         ...order,
-                        error: PrivateConnector.getErrorMessage(err)
+                        error: PrivateConnector.getErrorMessage(err),
+                        nextJob: {
+                            ...order.nextJob,
+                            retries: order.nextJob?.retries ? order.nextJob?.retries + 1 : 1
+                        }
                     },
                     nextJob: {
                         type: OrderJobType.check,
