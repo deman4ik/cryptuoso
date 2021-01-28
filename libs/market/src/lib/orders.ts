@@ -31,6 +31,7 @@ export interface OrderJob {
     data?: {
         price: number;
     };
+    retries?: number;
 }
 
 export interface OrderParams {
