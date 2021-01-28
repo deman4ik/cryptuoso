@@ -1,5 +1,5 @@
 <a href="https://cryptuoso.com">
- <img align="left" width="150" height="150" src="https://support.cryptuoso.com/cryptuoso_logo.png">  
+ <img align="left" width="150" height="150" src="https://pbs.twimg.com/profile_images/1225427644621230081/EJL1Ucky_200x200.jpg">  
 </a> 
 <br>
 <a href="https://cryptuoso.com">

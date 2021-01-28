@@ -650,7 +650,7 @@ export class Auth {
                 body: `<p>Congratulations!</p>
                 <p>Your user account is successfully activated!</p>
                 <p>Now you can login to <b><a href="https://cryptuoso.com/auth/login">your account</a></b> using your email and password.</p>
-                <p>Please check out our <b><a href="https://support.cryptuoso.com">Documentation Site</a></b> to get started!</p>`
+                <p>Please check out our <b><a href="https://cryptuoso.com/info/docs">Documentation</a></b> to get started!</p>`
             },
             tags: ["auth"]
         });
