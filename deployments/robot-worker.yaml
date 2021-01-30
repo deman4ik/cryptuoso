@@ -80,9 +80,9 @@ spec:
                   resources:
                       requests:
                           memory: 128Mi
-                          cpu: "50m"
+                          cpu: "300m"
                       limits:
-                          memory: 256Mi
+                          memory: 512Mi
                           cpu: "700m"
 ---
 apiVersion: v1
@@ -119,8 +119,8 @@ spec:
         - type: Resource
           resource:
               name: cpu
-              targetAverageUtilization: 90
+              targetAverageUtilization: 150
         - type: Resource
           resource:
               name: memory
-              targetAverageUtilization: 90
+              targetAverageUtilization: 150
