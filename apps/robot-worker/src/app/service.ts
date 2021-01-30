@@ -53,7 +53,7 @@ export default class RobotWorkerService extends BaseService {
 
     async onServiceStart(): Promise<void> {
         await this.loadCode();
-
+        this.createQueue(Queues.robot);
         this.createWorker(Queues.robot, this.process);
     }
 
