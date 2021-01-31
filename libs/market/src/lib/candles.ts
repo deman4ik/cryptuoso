@@ -310,7 +310,7 @@ export function loadLimit(exchange: string) {
         case "binance":
             return 900;
         case "binance_futures":
-            return 900;
+            return 500;
         case "kucoin":
             return 1400;
         case "huobipro":
