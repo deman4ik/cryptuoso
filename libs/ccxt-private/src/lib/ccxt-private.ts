@@ -17,8 +17,8 @@ export class PrivateConnector {
     connector: Exchange;
     retryOptions = {
         retries: 100,
-        minTimeout: 100,
-        maxTimeout: 500,
+        minTimeout: 500,
+        maxTimeout: 1000,
         onRetry: (err: any, i: number) => {
             if (err) {
                 this.log.warn(`Retry ${i} - ${err.message}`);
@@ -716,7 +716,7 @@ export class PrivateConnector {
             };
         } catch (err) {
             this.log.error(err, order);
-            if (!order.nextJob?.retries || order.nextJob?.retries < 5) {
+            if (err instanceof ccxt.NetworkError || !order.nextJob?.retries || order.nextJob?.retries < 5) {
                 return {
                     order: {
                         ...order,
