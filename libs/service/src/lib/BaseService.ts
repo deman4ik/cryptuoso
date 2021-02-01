@@ -298,9 +298,9 @@ export class BaseService {
                 connection: this.redis.duplicate()
             })
         };
-        this.#queues[name].events.on("completed", ({ jobId, returnvalue }) =>
+        /*this.#queues[name].events.on("completed", ({ jobId, returnvalue }) =>
             this.#jobCompletedLogger(name, jobId, returnvalue)
-        );
+        );*/
         this.#queues[name].events.on("failed", ({ jobId, failedReason }) =>
             this.#jobErrorLogger(name, jobId, failedReason)
         );
@@ -313,7 +313,7 @@ export class BaseService {
     }
 
     #jobCompletedLogger = (name: string, jobId: string, returnvalue: string) => {
-        this.log.info(`Queue ${name} job #${jobId} - completed `, returnvalue);
+        this.log.debug(`Queue ${name} job #${jobId} - completed `, returnvalue);
     };
 
     #jobErrorLogger = (name: string, jobId: string, failedReason: string) => {
@@ -325,7 +325,7 @@ export class BaseService {
     };
 
     #jobProgressLogger = (name: string, jobId: string, data: string) => {
-        this.log.info(`Queue ${name} job #${jobId} - progress - ${data}`);
+        this.log.debug(`Queue ${name} job #${jobId} - progress - ${data}`);
     };
 
     #addJob = async <T>(queueName: string, jobName: string, data: T, opts?: JobsOptions): Promise<Job<any, any>> => {
