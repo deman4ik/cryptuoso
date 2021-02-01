@@ -172,13 +172,14 @@ class BacktesterWorker {
                 for (const chunk of chunks) {
                     await this.db.pg.query(sql`
         INSERT INTO backtest_signals
-        (backtest_id, robot_id, timestamp, type, 
+        (id, backtest_id, robot_id, timestamp, type, 
         action, order_type, price,
         position_id, position_prefix, position_code, position_parent_id,
         candle_timestamp)
         SELECT * FROM
         ${sql.unnest(
             this.db.util.prepareUnnest(chunk, [
+                "id",
                 "backtestId",
                 "robotId",
                 "timestamp",
@@ -193,6 +194,7 @@ class BacktesterWorker {
                 "candleTimestamp"
             ]),
             [
+                "uuid",
                 "uuid",
                 "uuid",
                 "timestamp",
@@ -225,7 +227,7 @@ class BacktesterWorker {
                 for (const chunk of chunks) {
                     await this.db.pg.query(sql`
         INSERT INTO backtest_positions
-        (backtest_id, robot_id, prefix, code, parent_id,
+        (id, backtest_id, robot_id, prefix, code, parent_id,
          direction, status, entry_status, entry_price, 
          entry_date,
          entry_order_type, entry_action, 
@@ -248,6 +250,7 @@ class BacktesterWorker {
                     internalState: JSON.stringify(pos.internalState)
                 })),
                 [
+                    "id",
                     "backtestId",
                     "robotId",
                     "prefix",
@@ -273,6 +276,7 @@ class BacktesterWorker {
                 ]
             ),
             [
+                "uuid",
                 "uuid",
                 "uuid",
                 "varchar",
@@ -484,13 +488,14 @@ class BacktesterWorker {
                 for (const chunk of chunks) {
                     await this.db.pg.query(sql`
         INSERT INTO robot_signals
-        (robot_id, timestamp, type, 
+        (id, robot_id, timestamp, type, 
         action, order_type, price,
         position_id, position_prefix, position_code, position_parent_id,
         candle_timestamp)
         SELECT * FROM
         ${sql.unnest(
             this.db.util.prepareUnnest(chunk, [
+                "id",
                 "robotId",
                 "timestamp",
                 "type",
@@ -504,6 +509,7 @@ class BacktesterWorker {
                 "candleTimestamp"
             ]),
             [
+                "uuid",
                 "uuid",
                 "timestamp",
                 "varchar",
@@ -535,7 +541,7 @@ class BacktesterWorker {
                     try {
                         await this.db.pg.query(sql`
         INSERT INTO robot_positions
-        ( robot_id, prefix, code, parent_id,
+        ( id, robot_id, prefix, code, parent_id,
          direction, status, entry_status, entry_price, 
          entry_date,
          entry_order_type, entry_action, 
@@ -558,6 +564,7 @@ class BacktesterWorker {
                     internalState: JSON.stringify(pos.internalState)
                 })),
                 [
+                    "id",
                     "robotId",
                     "prefix",
                     "code",
@@ -582,6 +589,7 @@ class BacktesterWorker {
                 ]
             ),
             [
+                "uuid",
                 "uuid",
                 "varchar",
                 "varchar",
