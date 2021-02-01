@@ -292,7 +292,11 @@ export class BaseService {
                 connection: this.redis.duplicate(),
                 streams: { events: { maxLen: 1000 } }
             }),
-            scheduler: new QueueScheduler(name, { ...schedulerOpts, connection: this.redis.duplicate() }),
+            scheduler: new QueueScheduler(name, {
+                stalledInterval: 60000,
+                ...schedulerOpts,
+                connection: this.redis.duplicate()
+            }),
             events: new QueueEvents(name, {
                 ...eventsOpts,
                 connection: this.redis.duplicate()

@@ -1547,7 +1547,8 @@
                         "outputPath": "dist/apps/robot-worker",
                         "main": "apps/robot-worker/src/main.ts",
                         "tsConfig": "apps/robot-worker/tsconfig.app.json",
-                        "assets": ["apps/robot-worker/src/assets"]
+                        "assets": ["apps/robot-worker/src/assets"],
+                        "webpackConfig": "apps/robot-worker/webpack.config.js"
                     },
                     "configurations": {
                         "production": {
