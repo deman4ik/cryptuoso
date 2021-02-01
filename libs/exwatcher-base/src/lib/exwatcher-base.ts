@@ -249,7 +249,7 @@ export class ExwatcherBaseService extends BaseService {
                             try {
                                 await this.connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
                             } catch (e) {
-                                this.log.warn(symbol, timeframe, e);
+                                this.log.warn(e, { symbol, timeframe });
                                 if (!e.message.includes("connection closed"))
                                     await this.events.emit<ExwatcherErrorEvent>({
                                         type: ExwatcherEvents.ERROR,
@@ -269,7 +269,7 @@ export class ExwatcherBaseService extends BaseService {
                     try {
                         await this.connector.watchTrades(symbol);
                     } catch (e) {
-                        this.log.warn(symbol, e);
+                        this.log.warn(e, { symbol });
                         if (!e.message.includes("connection closed"))
                             await this.events.emit<ExwatcherErrorEvent>({
                                 type: ExwatcherEvents.ERROR,
