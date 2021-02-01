@@ -150,6 +150,7 @@ export default class RobotWorkerService extends BaseService {
             default:
                 this.log.error(`Unknow job ${job.name}`);
         }
+        return { result: "ok" };
     }
 
     async checkAlerts(job: Job) {

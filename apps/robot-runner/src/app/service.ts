@@ -401,6 +401,7 @@ export default class RobotRunnerService extends HTTPService {
             default:
                 this.log.error(`Unknow job ${job.name}`);
         }
+        return { result: "ok" };
     }
 
     async scheduleAlerts() {

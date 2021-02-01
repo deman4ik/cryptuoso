@@ -71,10 +71,12 @@ export default class UserRobotRunnerService extends BaseService {
                     }
                 }
             }
-            await beacon.die();
+            return { result: "ok" };
         } catch (err) {
             this.log.error(`Error while processing job ${job.id}`, err);
             throw err;
+        } finally {
+            await beacon.die();
         }
     }
 

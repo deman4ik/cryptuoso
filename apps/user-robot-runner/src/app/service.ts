@@ -529,6 +529,7 @@ export default class UserRobotRunnerService extends HTTPService {
             default:
                 this.log.error(`Unknow job ${job.name}`);
         }
+        return { result: "ok" };
     }
 
     async checkIdleUserRobotJobs() {
