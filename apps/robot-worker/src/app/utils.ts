@@ -39,7 +39,7 @@ async function checkAlerts(exchange: string, asset: string, currency: string, ti
         LIMIT 1
         ORDER BY time DESC;`);
         if (!candle) {
-            if (dayjs.utc(currentTime).diff(dayjs.utc(), "second") > 20)
+            if (dayjs.utc().diff(dayjs.utc(currentTime), "second") > 20)
                 this.log.error(
                     `Failed to load ${exchange}-${asset}-${currency}-${timeframe}-${dayjs
                         .utc(currentTime)
