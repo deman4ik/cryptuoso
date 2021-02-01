@@ -214,6 +214,7 @@ export default class StatisticCalcWorkerService extends BaseService {
 
             //await locker.unlock();
             this.log.info(`Job ${job.id} finished`);
+            return { result: "ok" };
         } catch (err) {
             this.log.error(`Error while processing job ${job.id}: ${type}(${JSON.stringify(params)})`, err);
             //await locker.unlock();
