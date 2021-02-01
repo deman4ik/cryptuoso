@@ -43,7 +43,7 @@ async function checkAlerts(exchange: string, asset: string, currency: string, ti
                         .utc(currentTime)
                         .toISOString()} current candle`
                 );
-            return;
+            return [];
         }
         const robots = positions
             .filter(({ alerts }) => {
