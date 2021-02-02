@@ -35,9 +35,7 @@ async function checkAlerts(exchange: string, asset: string, currency: string, ti
         WHERE exchange = ${exchange}
         AND asset = ${asset}
         AND currency = ${currency}
-        AND time = ${currentTime}
-        LIMIT 1
-        ORDER BY time DESC;`);
+        AND time = ${currentTime};`);
         if (!candle) {
             if (dayjs.utc().diff(dayjs.utc(currentTime), "second") > 20)
                 this.log.error(
