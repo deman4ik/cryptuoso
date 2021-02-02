@@ -81,7 +81,7 @@ const debugFormat = format((info: TransformableInfo) => {
 const loggerConfig: LoggerOptions =
     process.env.NODE_ENV === "production"
         ? {
-              format: format.combine(format.timestamp(), format.json()),
+              format: format.combine(format.timestamp(), format.errors({ stack: true }), format.json()),
               level: process.env.LOG_LEVEL || "debug",
               transports: [new transports.Console()]
           }
