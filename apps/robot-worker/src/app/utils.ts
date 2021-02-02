@@ -4,17 +4,24 @@ import { RobotPosition, RobotStatus } from "@cryptuoso/robot-state";
 import { AlertInfo, DBCandle, OrderType, RobotPositionStatus, Timeframe, ValidTimeframe } from "@cryptuoso/market";
 import dayjs from "@cryptuoso/dayjs";
 import { sortAsc } from "@cryptuoso/helpers";
+import logger from "@cryptuoso/logger";
 
-async function checkAlerts(exchange: string, asset: string, currency: string, timeframe: ValidTimeframe) {
-    const positions = await pg.any<{
-        robotId: string;
-        exchange: string;
-        asset: string;
-        currency: string;
-        status: RobotStatus;
-        alerts: { [key: string]: AlertInfo };
-        timeframe: ValidTimeframe;
-    }>(sql`
+async function checkAlerts(
+    exchange: string,
+    asset: string,
+    currency: string,
+    timeframe: ValidTimeframe
+): Promise<{ result: { robotId: string; status: RobotStatus }[]; error: string }> {
+    try {
+        const positions = await pg.any<{
+            robotId: string;
+            exchange: string;
+            asset: string;
+            currency: string;
+            status: RobotStatus;
+            alerts: { [key: string]: AlertInfo };
+            timeframe: ValidTimeframe;
+        }>(sql`
     SELECT rp.robot_id, rp.alerts, r.exchange, r.asset, r.currency, r.timeframe, r.status
     FROM robot_positions rp, robots r
     WHERE rp.robot_id = r.id
@@ -27,57 +34,68 @@ async function checkAlerts(exchange: string, asset: string, currency: string, ti
     and r.currency = ${currency}
     and r.timeframe = ${timeframe};`);
 
-    if (positions && positions.length) {
-        const currentTime = Timeframe.getCurrentSince(1, timeframe);
-        const candle = await pg.maybeOne<DBCandle>(sql`
+        if (positions && positions.length) {
+            const currentTime = Timeframe.getCurrentSince(1, timeframe);
+            const candle = await pg.maybeOne<DBCandle>(sql`
         SELECT * 
         FROM ${sql.identifier([`candles${timeframe}`])}
         WHERE exchange = ${exchange}
         AND asset = ${asset}
         AND currency = ${currency}
         AND time = ${currentTime};`);
-        if (!candle) {
-            if (dayjs.utc().diff(dayjs.utc(currentTime), "second") > 20)
-                this.log.error(
-                    `Failed to load ${exchange}-${asset}-${currency}-${timeframe}-${dayjs
+            if (!candle) {
+                if (dayjs.utc().diff(dayjs.utc(currentTime), "second") > 20) {
+                    const error = `Failed to load ${exchange}-${asset}-${currency}-${timeframe}-${dayjs
                         .utc(currentTime)
-                        .toISOString()} current candle`
-                );
-            return [];
-        }
-        const robots = positions
-            .filter(({ alerts }) => {
-                let nextPrice = null;
-                for (const key of Object.keys(alerts).sort((a, b) => sortAsc(+a, +b))) {
-                    const alert = alerts[key];
-                    const { orderType, action, price } = alert;
-
-                    switch (orderType) {
-                        case OrderType.stop: {
-                            nextPrice = RobotPosition.checkStop(action, price, candle);
-                            break;
-                        }
-                        case OrderType.limit: {
-                            nextPrice = RobotPosition.checkLimit(action, price, candle);
-                            break;
-                        }
-                        case OrderType.market: {
-                            nextPrice = RobotPosition.checkMarket(action, price, candle);
-                            break;
-                        }
-                        default:
-                            throw new Error(`Unknown order type ${orderType}`);
-                    }
-                    if (nextPrice) break;
+                        .toISOString()} current candle`;
+                    logger.error(error);
+                    return {
+                        result: null,
+                        error
+                    };
                 }
-                if (nextPrice) return true;
+                return {
+                    result: null,
+                    error: null
+                };
+            }
+            const robots = positions
+                .filter(({ alerts }) => {
+                    let nextPrice = null;
+                    for (const key of Object.keys(alerts).sort((a, b) => sortAsc(+a, +b))) {
+                        const alert = alerts[key];
+                        const { orderType, action, price } = alert;
 
-                return false;
-            })
-            .map(({ robotId, status }) => ({ robotId, status }));
-        return robots;
+                        switch (orderType) {
+                            case OrderType.stop: {
+                                nextPrice = RobotPosition.checkStop(action, price, candle);
+                                break;
+                            }
+                            case OrderType.limit: {
+                                nextPrice = RobotPosition.checkLimit(action, price, candle);
+                                break;
+                            }
+                            case OrderType.market: {
+                                nextPrice = RobotPosition.checkMarket(action, price, candle);
+                                break;
+                            }
+                            default:
+                                throw new Error(`Unknown order type ${orderType}`);
+                        }
+                        if (nextPrice) break;
+                    }
+                    if (nextPrice) return true;
+
+                    return false;
+                })
+                .map(({ robotId, status }) => ({ robotId, status }));
+            return { result: robots, error: null };
+        }
+        return { result: null, error: null };
+    } catch (err) {
+        logger.error(err);
+        return { result: null, error: err.message };
     }
-    return [];
 }
 
 const utils = {

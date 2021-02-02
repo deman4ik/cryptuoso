@@ -142,6 +142,7 @@ export default class RobotWorkerService extends BaseService {
     }
 
     async process(job: Job) {
+        this.log.debug(`Processing job ${job.name} #${job.id}`);
         switch (job.name) {
             case "job":
                 await this.robotJob(job);
@@ -149,10 +150,12 @@ export default class RobotWorkerService extends BaseService {
             case "checkAlerts":
                 await this.checkAlerts(job);
                 break;
-
             default:
                 this.log.error(`Unknow job ${job.name}`);
+                this.log.error(job);
+                break;
         }
+        this.log.debug(`Finished processing job ${job.name} #${job.id}`);
         return { result: "ok" };
     }
 
@@ -165,12 +168,22 @@ export default class RobotWorkerService extends BaseService {
         try {
             const { exchange, asset, currency, timeframe } = job.data;
 
-            const robots = await this.checkAlertsUtils(exchange, asset, currency, timeframe);
-            await Promise.all(
-                robots.map(async ({ robotId, status }) =>
-                    this.addRobotJob({ robotId, type: RobotJobType.tick }, status)
-                )
-            );
+            const { result, error } = await this.checkAlertsUtils(exchange, asset, currency, timeframe);
+            if (error) {
+                await this.events.emit<RobotWorkerError>({
+                    type: RobotWorkerEvents.ERROR,
+                    data: {
+                        ...job.data,
+                        error
+                    }
+                });
+            } else if (result && Array.isArray(result) && result.length) {
+                await Promise.all(
+                    result.map(async ({ robotId, status }) =>
+                        this.addRobotJob({ robotId, type: RobotJobType.tick }, status)
+                    )
+                );
+            }
         } catch (err) {
             this.log.error(`Error while processing job ${job.id}`, err);
             throw err;
