@@ -138,8 +138,10 @@ export default class BacktesterRunnerService extends HTTPService {
             // Job Status
             const jobStatus = await this.#checkJobStatus(id);
 
-            if (jobStatus !== "free")
-                throw new BaseError(`Backtest #${id} is still ${jobStatus}`, { backtestId: params.id, jobStatus });
+            if (["active", "delayed", "waiting"].includes(jobStatus)) {
+                this.log.error(`Backtest #${id} is still ${jobStatus}`);
+                return { result: false };
+            }
 
             // Combine robot parameters and settings
             let robotParams = params.robotParams;
