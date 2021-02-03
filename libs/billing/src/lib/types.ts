@@ -11,18 +11,19 @@ export interface SubscriptionOption {
 }
 
 export interface SubscriptionLimits {
-    trialNetProfit: number;
-    maxRobots: number;
+    trialNetProfit?: number;
+    maxRobots?: number;
 }
 
 export interface Subscription {
-    id: string;
+    id?: string;
     name: string;
+    available: number;
     description?: string;
     options: {
         [key: string]: SubscriptionOption;
     };
-    limits: SubscriptionLimits;
+    limits?: SubscriptionLimits;
 }
 
 export interface UserSub {
@@ -30,7 +31,7 @@ export interface UserSub {
     userId: string;
     subscriptionId: string;
     subscriptionOption: SubscriptionOptionKey;
-    status: "active" | "trial" | "expired";
+    status: "active" | "trial" | "expired" | "pending" | "canceled";
     activeFrom?: string;
     activeTo?: string;
     trialStarted?: string;
