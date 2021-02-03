@@ -33,6 +33,8 @@ export type RequestExtended<P extends Protocol = any> = Request<P> & {
 
 export interface HTTPServiceConfig extends BaseServiceConfig {
     port?: number;
+    enableActions?: boolean; // default: true
+    enableWebhooks?: boolean; // default: false
 }
 
 export class HTTPService extends BaseService {
@@ -42,12 +44,12 @@ export class HTTPService extends BaseService {
     private _server: Service<Protocol.HTTP>;
     private _routes: {
         [key: string]: {
-            validate: (value: any) => true | ValidationError[];
-            auth: boolean;
-            roles: string[];
+            validate?: (value: any) => true | ValidationError[];
+            auth?: boolean;
+            roles?: string[];
         };
     } = {};
-    constructor(config?: HTTPServiceConfig) {
+    constructor(config: HTTPServiceConfig = { enableActions: true, enableWebhooks: false }) {
         super(config);
         try {
             this._iu = ifunless();
@@ -58,20 +60,34 @@ export class HTTPService extends BaseService {
             });
             this._server.use(helmet() as RequestHandler<Protocol.HTTP>);
             this._server.use(bodyParser.json());
-            this._server.use(this._checkApiKey.bind(this));
-            this._server.use(
-                "/actions",
-                this._iu(this._checkValidation.bind(this)).iff(
-                    (req: any) => this._routes[req.url] && this._routes[req.url].validate
-                )
-            );
-            this._server.use(
-                "/actions",
-                this._iu(this._checkAuth.bind(this)).iff(
-                    (req: any) =>
-                        this._routes[req.url] && (this._routes[req.url].auth || this._routes[req.url].roles.length > 0)
-                )
-            );
+
+            if (config?.enableActions) {
+                this._server.use(this._checkApiKey.bind(this));
+                this._server.use(
+                    "/actions",
+                    this._iu(this._checkValidation.bind(this)).iff(
+                        (req: any) => this._routes[req.url] && this._routes[req.url].validate
+                    )
+                );
+                this._server.use(
+                    "/actions",
+                    this._iu(this._checkAuth.bind(this)).iff(
+                        (req: any) =>
+                            this._routes[req.url] &&
+                            (this._routes[req.url].auth || this._routes[req.url].roles.length > 0)
+                    )
+                );
+            }
+
+            if (config?.enableWebhooks) {
+                this._server.use(
+                    "/webhooks",
+                    this._iu(this._checkValidation.bind(this)).iff(
+                        (req: any) => this._routes[req.url] && this._routes[req.url].validate
+                    )
+                );
+            }
+
             this._server.use(async (req, res, next) => {
                 try {
                     this.log.info({ method: req.method, url: req.url, headers: req.headers, body: req.body });
@@ -218,12 +234,6 @@ export class HTTPService extends BaseService {
             inputSchema?: ValidationSchema;
         };
     }) {
-        for (const name of Object.keys(routes)) {
-            if (this._routes[`/actions/${name}`]) {
-                throw new Error(`This route ${name} is occupied`);
-            }
-        }
-
         for (const [name, route] of Object.entries(routes)) {
             const { handler, inputSchema } = route;
             let { auth, roles } = route;
@@ -267,5 +277,28 @@ export class HTTPService extends BaseService {
 
     get createRoutes() {
         return this._createRoutes;
+    }
+
+    private _createWebhooks(routes: {
+        [key: string]: {
+            handler: (req: any, res: any) => Promise<any>;
+            inputSchema?: ValidationSchema;
+        };
+    }) {
+        for (const [name, route] of Object.entries(routes)) {
+            const { handler, inputSchema } = route;
+            if (!name) throw new Error("Route name is required");
+            if (this._routes[`/webhooks/${name}`]) throw new Error("This route name is occupied");
+            if (!handler && typeof handler !== "function") throw new Error("Route handler must be a function");
+
+            this._routes[`/webhooks/${name}`] = {
+                validate: inputSchema && this._v.compile(inputSchema)
+            };
+            this._server.post(`/webhooks/${name}`, handler.bind(this));
+        }
+    }
+
+    get createWebhooks() {
+        return this._createWebhooks;
     }
 }

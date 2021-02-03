@@ -69,46 +69,11 @@ spec:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
                                 key: REDISCS
-                      - name: HASURA_URL
+                      - name: COINBASE_COMMERCE_SECRET
                         valueFrom:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
-                                key: HASURA_URL
-                      - name: BOT_TOKEN
-                        valueFrom:
-                            secretKeyRef:
-                                name: cpz-env-<ENV>
-                                key: BOT_TOKEN
-                      - name: BOT_HOST
-                        valueFrom:
-                            secretKeyRef:
-                                name: cpz-env-<ENV>
-                                key: BOT_HOST
-                      - name: MAILGUN_API_KEY
-                        valueFrom:
-                            secretKeyRef:
-                                name: cpz-env-<ENV>
-                                key: MAILGUN_API_KEY
-                      - name: MAILGUN_DOMAIN
-                        valueFrom:
-                            secretKeyRef:
-                                name: cpz-env-<ENV>
-                                key: MAILGUN_DOMAIN
-                      - name: REFRESH_TOKEN_EXPIRES
-                        valueFrom:
-                            secretKeyRef:
-                                name: cpz-env-<ENV>
-                                key: REFRESH_TOKEN_EXPIRES
-                      - name: JWT_SECRET
-                        valueFrom:
-                            secretKeyRef:
-                                name: cpz-env-<ENV>
-                                key: JWT_SECRET
-                      - name: JWT_TOKEN_EXPIRES
-                        valueFrom:
-                            secretKeyRef:
-                                name: cpz-env-<ENV>
-                                key: JWT_TOKEN_EXPIRES
+                                key: COINBASE_COMMERCE_SECRET
                   ports:
                       - containerPort: 3000
                         protocol: TCP
@@ -117,10 +82,10 @@ spec:
                   resources:
                       requests:
                           memory: 128Mi
-                          cpu: "100m"
+                          cpu: "20m"
                       limits:
-                          memory: 512Mi
-                          cpu: "300m"
+                          memory: 256Mi
+                          cpu: "200m"
 ---
 apiVersion: v1
 kind: Service
@@ -159,8 +124,8 @@ spec:
         - type: Resource
           resource:
               name: cpu
-              targetAverageUtilization: 200
+              targetAverageUtilization: 150
         - type: Resource
           resource:
               name: memory
-              targetAverageUtilization: 200
+              targetAverageUtilization: 150
