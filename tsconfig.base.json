@@ -49,7 +49,10 @@
             "@cryptuoso/connector-state": ["libs/connector-state/src/index.ts"],
             "@cryptuoso/ccxt-private": ["libs/ccxt-private/src/index.ts"],
             "@cryptuoso/graphql-client": ["libs/graphql-client/src/index.ts"],
-            "@cryptuoso/auth-utils": ["libs/auth-utils/src/index.ts"]
+            "@cryptuoso/auth-utils": ["libs/auth-utils/src/index.ts"],
+            "@cryptuoso/billing": ["libs/billing/src/index.ts"],
+            "@cryptuoso/analytics": ["libs/analytics/src/index.ts"],
+            "@cryptuoso/user-sub-events": ["libs/user-sub-events/src/index.ts"]
         }
     },
     "exclude": ["node_modules", "tmp"]
