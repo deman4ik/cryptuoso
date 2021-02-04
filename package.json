@@ -66,6 +66,8 @@
         "serve:events-manager": "nx serve events-manager --watch=false",
         "build:user-profile": "nx build user-profile --prod",
         "serve:user-profile": "nx serve user-profile --watch=false",
+        "build:user-sub": "nx build user-sub --prod",
+        "serve:user-sub": "nx serve user-sub --watch=false",
         "build:robot-runner": "nx build robot-runner --prod",
         "serve:robot-runner": "nx serve robot-runner --watch=false",
         "build:robot-worker": "nx build robot-worker --prod",
@@ -84,6 +86,8 @@
         "serve:support": "nx serve support --watch=false",
         "build:telegram-bot": "nx build telegram-bot --prod",
         "serve:telegram-bot": "nx serve telegram-bot --watch=false",
+        "build:webhooks": "nx build webhooks --prod",
+        "serve:webhooks": "nx serve webhooks --watch=false",
         "workspace-generator": "nx workspace-generator"
     },
     "private": true,
