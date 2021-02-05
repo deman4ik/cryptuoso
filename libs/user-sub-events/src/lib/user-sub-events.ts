@@ -10,49 +10,49 @@ export const enum UserSubEvents {
 
 export const UserSubSchema = {
     [UserSubEvents.CREATE]: {
-        subsciptionId: "uuid",
+        subscriptionId: "uuid",
         subscriptionOption: {
             type: "enum",
             values: ["1m", "6m", "1y", "2y"]
         }
     },
     [UserSubEvents.CHECKOUT]: {
-        subcriptionId: "uuid"
+        userSubId: "uuid"
     },
     [UserSubEvents.CANCEL]: {
-        subcriptionId: "uuid"
+        userSubId: "uuid"
     },
     [UserSubEvents.CHECK_PAYMENT]: {
-        code: "string",
+        chargeId: "string",
         provider: { type: "string", default: "coinbase.commerce" }
     },
     [UserSubEvents.ERROR]: {
-        subsciptionId: "uuid",
+        userSubId: "uuid",
         userId: "uuid",
         error: "string"
     }
 };
 
 export interface UserSubCreate {
-    subsciptionId: string;
+    subscriptionId: string;
     subscriptionOption: SubscriptionOptionKey;
 }
 
 export interface UserSubCheckout {
-    subsciptionId: string;
+    userSubId: string;
 }
 
 export interface UserSubCancel {
-    subsciptionId: string;
+    userSubId: string;
 }
 
 export interface UserSubCheckPayment {
-    code: string;
+    chargeId: string;
     provider: string;
 }
 
 export interface UserSubError {
-    subsciptionId: string;
+    userSubId: string;
     userId: string;
     error: string;
 }

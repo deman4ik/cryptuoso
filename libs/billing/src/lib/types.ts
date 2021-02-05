@@ -52,7 +52,6 @@ export interface UserPayment {
     createdAt: string;
     expiresAt?: string;
     addresses?: resources.Charge["addresses"];
-    exchangeRates?: { [key: string]: string };
     pricing?: resources.Charge["pricing"];
     info?: resources.Charge;
 }
