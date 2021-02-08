@@ -263,7 +263,7 @@ export class UserPosition {
                     ),
                     6
                 ) || 0;
-            this._entryRemaining = this._entryVolume - this._entryExecuted;
+            this._entryRemaining = round(this._entryVolume - this._entryExecuted, 6);
 
             if (this._entryRemaining < 0)
                 throw new BaseError(
@@ -324,7 +324,7 @@ export class UserPosition {
                     ),
                     6
                 ) || 0;
-            this._exitRemaining = this._exitVolume - this._exitExecuted;
+            this._exitRemaining = round(this._exitVolume - this._exitExecuted, 6);
 
             if (this._exitRemaining < 0)
                 throw new BaseError(
