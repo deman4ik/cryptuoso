@@ -1,2 +1,2 @@
 export * from "./lib/events";
-export * from "./lib/config";
+export * from "./lib/catalog";

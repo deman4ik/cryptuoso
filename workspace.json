@@ -2201,6 +2201,171 @@
                     }
                 }
             }
+        },
+        "user-sub": {
+            "root": "apps/user-sub",
+            "sourceRoot": "apps/user-sub/src",
+            "projectType": "application",
+            "prefix": "user-sub",
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "outputs": ["{options.outputPath}"],
+                    "options": {
+                        "outputPath": "dist/apps/user-sub",
+                        "main": "apps/user-sub/src/main.ts",
+                        "tsConfig": "apps/user-sub/tsconfig.app.json",
+                        "assets": ["apps/user-sub/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/user-sub/src/environments/environment.ts",
+                                    "with": "apps/user-sub/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "user-sub:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["apps/user-sub/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/apps/user-sub"],
+                    "options": {
+                        "jestConfig": "apps/user-sub/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "billing": {
+            "root": "libs/billing",
+            "sourceRoot": "libs/billing/src",
+            "projectType": "library",
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["libs/billing/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/libs/billing"],
+                    "options": {
+                        "jestConfig": "libs/billing/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "analytics": {
+            "root": "libs/analytics",
+            "sourceRoot": "libs/analytics/src",
+            "projectType": "library",
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["libs/analytics/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/libs/analytics"],
+                    "options": {
+                        "jestConfig": "libs/analytics/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "webhooks": {
+            "root": "apps/webhooks",
+            "sourceRoot": "apps/webhooks/src",
+            "projectType": "application",
+            "prefix": "webhooks",
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "outputs": ["{options.outputPath}"],
+                    "options": {
+                        "outputPath": "dist/apps/webhooks",
+                        "main": "apps/webhooks/src/main.ts",
+                        "tsConfig": "apps/webhooks/tsconfig.app.json",
+                        "assets": ["apps/webhooks/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/webhooks/src/environments/environment.ts",
+                                    "with": "apps/webhooks/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "webhooks:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["apps/webhooks/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/apps/webhooks"],
+                    "options": {
+                        "jestConfig": "apps/webhooks/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "user-sub-events": {
+            "root": "libs/user-sub-events",
+            "sourceRoot": "libs/user-sub-events/src",
+            "projectType": "library",
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["libs/user-sub-events/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/libs/user-sub-events"],
+                    "options": {
+                        "jestConfig": "libs/user-sub-events/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
         }
     },
     "cli": {

@@ -3,6 +3,10 @@ import { Timeframe, ValidTimeframe } from "@cryptuoso/market";
 import { Status, BacktesterSettings } from "@cryptuoso/backtester-state";
 import { RobotSettings, RobotSettingsSchema, StrategySettings } from "@cryptuoso/robot-settings";
 
+export const BACKTESTER_RUNNER_TOPIC = "in-backtester-runner";
+export const IN_BACKTESTER_WORKER_TOPIC = "in-backtester-worker";
+export const OUT_BACKTESTER_WORKER_TOPIC = "out-backtester-worker";
+
 export const enum BacktesterRunnerEvents {
     START = "in-backtester-runner.start",
     STOP = "in-backtester-runner.stop"

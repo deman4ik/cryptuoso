@@ -14,6 +14,8 @@ export const enum StatsCalcRunnerEvents {
     USER_ROBOT_DELETED = `stats-calc.user-robot-deleted`
 }
 
+export const OUR_STATS_CALC_TOPIC = "out-stats-calc-worker";
+
 export const enum StatsCalcWorkerEvents {
     ERROR = `out-stats-calc-worker.error`
 }

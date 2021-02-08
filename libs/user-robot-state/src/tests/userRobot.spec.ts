@@ -601,10 +601,85 @@ describe("Test User Robot", () => {
         expect(userRobot.connectorJobs.length).toBe(0);
     });
 
-    it("Should handle exit partial order", () => {
+    it("Should handle multiple entry partial orders", () => {
         userRobot = new UserRobot({
             ...userRobot.state,
 
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            tradeSettings: {
+                orderTimeout: 120
+            },
+            settings: {
+                volume: 0.05
+            }
+        });
+        const signalOpen: SignalEvent = {
+            id: uuid(),
+            robotId,
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            timestamp: dayjs.utc("2019-10-26T00:05:01.000Z").toISOString(),
+            type: SignalType.trade,
+            positionId: uuid(),
+            positionPrefix: "p",
+            positionCode: "p_1",
+            candleTimestamp: dayjs.utc("2019-10-26T00:05:00.000Z").toISOString(),
+            action: TradeAction.short,
+            orderType: OrderType.market,
+            price: 6500
+        };
+
+        userRobot.handleSignal(signalOpen);
+        const openOrder1 = {
+            ...userRobot.ordersToCreate[0],
+            status: OrderStatus.closed,
+            exId: uuid(),
+            exTimestamp: dayjs.utc().toISOString(),
+            exLastTradeAt: dayjs.utc().toISOString(),
+            executed: 0.025,
+            remaining: 0.025
+        };
+        const openOrder2 = {
+            ...userRobot.ordersToCreate[0],
+            status: OrderStatus.closed,
+            exId: uuid(),
+            exTimestamp: dayjs.utc().toISOString(),
+            exLastTradeAt: dayjs.utc().toISOString(),
+            executed: 0.01,
+            remaining: 0.015
+        };
+        userRobot = new UserRobot({
+            ...userRobot.state,
+
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            tradeSettings: {
+                orderTimeout: 120
+            },
+            positions: [
+                {
+                    ...userRobot.positions[0],
+                    entryOrders: [openOrder1, openOrder2]
+                }
+            ]
+        });
+        userRobot.handleOrder(openOrder1);
+        expect(userRobot.positions[0].status).toBe(UserPositionStatus.open);
+        expect(userRobot.positions[0].entryStatus).toBe(UserPositionOrderStatus.closed);
+        expect(userRobot.positions[0].entryExecuted).toBe(0.035);
+        expect(userRobot.connectorJobs.length).toBe(0);
+    });
+
+    it("Should handle exit partial order", () => {
+        userRobot = new UserRobot({
+            ...userRobot.state,
             exchange: "kraken",
             asset: "BTC",
             currency: "USD",

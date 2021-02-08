@@ -117,7 +117,7 @@ spec:
                   resources:
                       requests:
                           memory: 128Mi
-                          cpu: "20m"
+                          cpu: "100m"
                       limits:
                           memory: 512Mi
                           cpu: "300m"
@@ -142,3 +142,25 @@ spec:
         app: <APP>
         env: <ENV>
     type: ClusterIP
+---
+kind: HorizontalPodAutoscaler
+apiVersion: autoscaling/v2beta1
+metadata:
+    name: <APP>
+    namespace: <ENV>
+spec:
+    scaleTargetRef:
+        kind: Deployment
+        name: <APP>
+        apiVersion: apps/v1
+    minReplicas: 1
+    maxReplicas: 2
+    metrics:
+        - type: Resource
+          resource:
+              name: cpu
+              targetAverageUtilization: 200
+        - type: Resource
+          resource:
+              name: memory
+              targetAverageUtilization: 200
