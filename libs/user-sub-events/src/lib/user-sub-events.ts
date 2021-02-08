@@ -1,5 +1,9 @@
 import { SubscriptionOptionKey } from "@cryptuoso/billing";
 
+export const IN_USER_SUB_TOPIC = "in-user-sub";
+
+export const OUT_USER_SUB_TOPIC = "out-user-sub";
+
 export const enum UserSubEvents {
     CREATE = "in-user-sub.create",
     CHECKOUT = "in-user-sub.checkout",

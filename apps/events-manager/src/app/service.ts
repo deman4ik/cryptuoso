@@ -1,5 +1,5 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
-import { eventsManagementConfig, BASE_REDIS_PREFIX, DEAD_LETTER_TOPIC, DeadLetter, Event } from "@cryptuoso/events";
+import { BASE_REDIS_PREFIX, DEAD_LETTER_TOPIC, DeadLetter, Event } from "@cryptuoso/events";
 import { UserRoles } from "@cryptuoso/user-state";
 import { JSONParse } from "@cryptuoso/helpers";
 import dayjs from "dayjs";
@@ -12,6 +12,7 @@ import { ImporterWorkerEvents } from "@cryptuoso/importer-events";
 import { RobotWorkerEvents } from "@cryptuoso/robot-events";
 import { StatsCalcWorkerEvents } from "@cryptuoso/stats-calc-events";
 import { UserRobotWorkerEvents } from "@cryptuoso/user-robot-events";
+import { eventsManagementConfig } from "./config";
 
 interface StoredDeadLetter {
     id: string;

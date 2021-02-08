@@ -1,5 +1,8 @@
 import { ISO_DATE_REGEX } from "@cryptuoso/helpers";
 
+export const IN_EXWATCHER_TOPIC = "in-exwatcher";
+export const OUT_EXWATCHER_TOPIC = "out-exwatcher";
+
 export const enum ExwatcherEvents {
     SUBSCRIBE = "in-exwatcher.subscribe",
     SUBSCRIBE_ALL = "in-exwatcher.subscribe-all",

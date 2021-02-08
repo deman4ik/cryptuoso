@@ -1,6 +1,9 @@
 import { ISO_DATE_REGEX } from "@cryptuoso/helpers";
 import { OrderStatus } from "@cryptuoso/market";
 
+export const CONNECTOR_RUNNER_TOPIC = "in-connector-runner";
+export const CONNECTOR_WORKER_TOPIC = "out-connector-worker";
+
 export const enum ConnectorRunnerEvents {
     ADD_JOB = "in-connector-runner.add-job"
 }

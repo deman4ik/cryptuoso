@@ -2,6 +2,10 @@ import { ISO_DATE_REGEX, CANDLES_RECENT_AMOUNT } from "@cryptuoso/helpers";
 import { Timeframe, ValidTimeframe } from "@cryptuoso/market";
 import { ImportType, Status } from "@cryptuoso/importer-state";
 
+export const IMPORTER_RUNNER_TOPIC = "in-importer-runner";
+export const IN_IMPORTER_WORKER_TOPIC = "in-importer-worker";
+export const OUT_IMPORTER_WORKER_TOPIC = "out-importer-worker";
+
 export const enum ImporterRunnerEvents {
     START = "in-importer-runner.start",
     STOP = "in-importer-runner.stop"
