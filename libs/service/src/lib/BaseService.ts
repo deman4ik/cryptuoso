@@ -50,7 +50,7 @@ export class BaseService {
             })
         );
     };
-    #queuesClean = cron.schedule("*/6 */4 * * * *", this.#cleanQueues.bind(this), { scheduled: false });
+    #queuesClean = cron.schedule("*/6 */4 * * *", this.#cleanQueues.bind(this), { scheduled: false });
 
     constructor(config?: BaseServiceConfig) {
         try {
