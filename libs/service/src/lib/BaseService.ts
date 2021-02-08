@@ -18,6 +18,7 @@ import logger, { Logger } from "@cryptuoso/logger";
 import { sql, pg, pgUtil } from "@cryptuoso/postgres";
 import { Events, EventsConfig } from "@cryptuoso/events";
 import { sleep } from "@cryptuoso/helpers";
+import cron from "node-cron";
 
 export interface BaseServiceConfig {
     name?: string;
@@ -38,6 +39,18 @@ export class BaseService {
     #workers: { [key: string]: Worker } = {};
     #workerConcurrency = +process.env.WORKER_CONCURRENCY || 10;
     #lockers = new Map<string, { unlock(): Promise<void> }>();
+    #cleanQueueGrace = +process.env.CLEAN_QUEUE_GRACE || 1000 * 60 * 60 * 48;
+    #cleanQueues = async () => {
+        await Promise.all(
+            Object.keys(this.#queues).map(async (name) => {
+                this.log.debug(`Cleaning ${name} queue...`);
+                const completed = await this.#queues[name].instance.clean(this.#cleanQueueGrace, 0, "completed");
+                const failed = await this.#queues[name].instance.clean(this.#cleanQueueGrace, 0, "failed");
+                this.log.debug(`Cleaned ${name} queue completed: ${completed?.length}, failed: ${failed?.length}`);
+            })
+        );
+    };
+    #queuesClean = cron.schedule("*/6 */4 * * * *", this.#cleanQueues.bind(this), { scheduled: false });
 
     constructor(config?: BaseServiceConfig) {
         try {
@@ -123,6 +136,7 @@ export class BaseService {
                 await Promise.resolve();
             }
             await this.#events.start();
+
             this.#lightship.signalReady();
             this.#log.info(`Started ${this.#name} service`);
         } catch (err) {
@@ -173,6 +187,7 @@ export class BaseService {
                 })
             );
             await this.events.closeConnections();
+            this.#queuesClean.stop();
             await this.#redisConnection.quit();
             await this.#db.pg.end();
         } catch (err) {
@@ -310,6 +325,7 @@ export class BaseService {
         );
         this.#queues[name].events.on("stalled", ({ jobId }) => this.#jobStalledLogger(name, jobId));
         this.#queues[name].events.on("progress", ({ jobId, data }) => this.#jobProgressLogger(name, jobId, data));
+        this.#queuesClean.start();
     };
 
     get createQueue() {
