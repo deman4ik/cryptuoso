@@ -1,18 +1,28 @@
 import { UnitType } from "@cryptuoso/dayjs";
 import { resources } from "coinbase-commerce-node";
 
-export type SubscriptionOptionKey = "1m" | "6m" | "1y" | "2y";
+export type SubscriptionOptionKey = "1m" | "6m" | "1y";
 
 export interface SubscriptionOption {
-    price: number;
-    discount: number;
+    code: SubscriptionOptionKey;
+    subscriptionId: string;
+    name: string;
+    description?: string;
+    sortOrder: number;
+    priceMonth: number;
+    priceTotal: number;
+    discount?: number;
     amount: number;
     unit: UnitType;
+    available: number;
+    highlight: boolean;
+    subscriptionName?: string;
+    subscriptionDescription?: string;
+    subscriptionLimits?: SubscriptionLimits;
 }
 
 export interface SubscriptionLimits {
     trialNetProfit?: number;
-    maxRobots?: number;
 }
 
 export interface Subscription {
@@ -20,9 +30,7 @@ export interface Subscription {
     name: string;
     available: number;
     description?: string;
-    options: {
-        [key: string]: SubscriptionOption;
-    };
+    options?: SubscriptionOption[];
     limits?: SubscriptionLimits;
 }
 
@@ -37,7 +45,7 @@ export interface UserSub {
     trialStarted?: string;
     trialEnded?: string;
     data?: { [key: string]: any };
-    subscription?: Subscription;
+    subscription?: SubscriptionOption;
     payments?: UserPayment[];
 }
 

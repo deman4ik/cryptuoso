@@ -1,4 +1,4 @@
-import { Subscription, UserPayment, UserSub, coinbaseCommerce } from "@cryptuoso/billing";
+import { Subscription, UserPayment, UserSub, coinbaseCommerce, SubscriptionOption } from "@cryptuoso/billing";
 import dayjs from "@cryptuoso/dayjs";
 import { ActionsHandlerError } from "@cryptuoso/errors";
 import { GenericObject } from "@cryptuoso/helpers";
@@ -23,24 +23,6 @@ export default class UserSubService extends HTTPService {
         super(config);
         try {
             this.createRoutes({
-                createSubscription: {
-                    inputSchema: {
-                        name: "string",
-                        description: { type: "string", optional: true },
-                        available: { type: "number", integer: true },
-                        options: { type: "object" },
-                        limits: {
-                            type: "object",
-                            props: {
-                                trialNetProfit: { type: "number", optional: true },
-                                maxRobots: { type: "number", optional: true }
-                            },
-                            optional: true
-                        }
-                    },
-                    roles: [UserRoles.admin],
-                    handler: this._httpHandler.bind(this, this.createSubscription.bind(this))
-                },
                 createUserSub: {
                     inputSchema: UserSubSchema[UserSubEvents.CREATE],
                     auth: true,
@@ -60,22 +42,22 @@ export default class UserSubService extends HTTPService {
                     handler: this._httpHandler.bind(this, this.checkoutUserSub.bind(this))
                 },
                 checkPayment: {
-                    inputSchema: UserSubSchema[UserSubEvents.CHECKOUT],
+                    inputSchema: UserSubSchema[UserSubEvents.CHECK_PAYMENT],
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager, UserRoles.admin],
-                    handler: this._httpHandler.bind(this, this.checkPayment.bind(this))
+                    handler: this._checkPaymentHttpHandler.bind(this, this.checkPayment.bind(this))
+                }
+            });
+
+            this.events.subscribe({
+                [UserSubEvents.CHECK_PAYMENT]: {
+                    schema: UserSubSchema[UserSubEvents.CHECK_PAYMENT],
+                    handler: this.checkPayment.bind(this)
                 }
             });
         } catch (err) {
             this.log.error("Failed to initialize UserSubService", err);
         }
-    }
-
-    async _getSubscriptionById(subscriptionId: string): Promise<Subscription> {
-        return this.db.pg.one<Subscription>(sql`
-        SELECT id, name, description, options, limits 
-        FROM subscriptions where id = ${subscriptionId};
-        `);
     }
 
     async _getUserSubById(userSubId: string): Promise<UserSub> {
@@ -89,7 +71,7 @@ export default class UserSubService extends HTTPService {
 
     async _getUserPaymentById(chargeId: string): Promise<UserPayment> {
         return this.db.pg.one<UserPayment>(sql`
-        SELECT  id, user_id, user_sub_id, provider, status,
+        SELECT id, user_id, user_sub_id, provider, status,
             expires_at, addresses, 
             code, pricing,
             price, info, created_at
@@ -99,7 +81,7 @@ export default class UserSubService extends HTTPService {
 
     async _saveUserSub(userSub: UserSub) {
         await this.db.pg.query(sql`INSERT INTO user_subs (
-            id
+            id,
             user_id,
             subscription_id,
             subscription_option,
@@ -128,8 +110,7 @@ export default class UserSubService extends HTTPService {
         active_to = excluded.active_to,
         trial_started = excluded.trial_started,
         trial_ended = excluded.trial_ended,
-        data = excluded.data,
-             ;`);
+        data = excluded.data;`);
     }
 
     async _saveUserPayment(charge: UserPayment) {
@@ -170,42 +151,40 @@ export default class UserSubService extends HTTPService {
         res.end();
     }
 
-    async createSubscription(user: User, { name, description, available, options, limits }: Subscription) {
-        try {
-            await this.db.pg.query(sql`INSERT INTO subscriptions 
-        (name, 
-        description, 
-        available,
-        options, 
-        limits) 
-        VALUES (
-        ${name},
-        ${description || null},
-        ${available || null},
-        ${JSON.stringify(options) || null},
-        ${JSON.stringify(limits) || null}
-            ) `);
-        } catch (err) {
-            this.log.error(err);
-            throw err;
-        }
+    async _checkPaymentHttpHandler(
+        handler: (user: User, params: GenericObject<any>) => Promise<GenericObject<any>>,
+        req: RequestExtended,
+        res: any
+    ) {
+        const result = await handler(req.body.input, req.meta?.user);
+
+        res.send({ result: result || "OK" });
+        res.end();
     }
 
     async createUserSub(user: User, { subscriptionId, subscriptionOption }: UserSubCreate) {
         try {
-            const sameSubscription = await this.db.pg.maybeOneFirst(sql`SELECT id FROM user_subs 
+            const sameUserSubs = await this.db.pg.any<{
+                status: UserSub["status"];
+            }>(sql`SELECT status FROM user_subs 
             WHERE user_id = ${user.id} 
-            AND subcription_id = ${subscriptionId};
+            AND subscription_id = ${subscriptionId}
+            AND subscription_option = ${subscriptionOption};
             `);
-            if (sameSubscription) throw new BaseError("User subscription already exists");
+            if (
+                sameUserSubs &&
+                sameUserSubs?.length &&
+                sameUserSubs.filter(({ status }) => status !== "canceled" && status !== "expired").length
+            )
+                throw new BaseError("User subscription already exists");
 
-            const subscription = await this.db.pg.maybeOne<Subscription>(sql`SELECT id, options 
-            FROM subscriptions
-            WHERE id = ${subscriptionId}
+            const subscription = await this.db.pg.maybeOne<{ code: string }>(sql`SELECT code 
+            FROM subscription_options
+            WHERE code = ${subscriptionOption} 
+            AND subscription_id = ${subscriptionId}
             AND available >= ${user.access};
             `);
             if (!subscription) throw new BaseError("Subscription is not available");
-            if (!subscription.options[subscriptionOption]) throw new BaseError("Subscription option doesn't exists");
 
             const trialSubscription = await this.db.pg.maybeOneFirst(sql`SELECT id FROM user_subs 
             WHERE user_id = ${user.id}
@@ -213,7 +192,6 @@ export default class UserSubService extends HTTPService {
             let status: UserSub["status"] = "trial";
             if (trialSubscription) status = "pending";
 
-            //TODO: cancel other subscriptions /
             const userSub: UserSub = {
                 id: uuid(),
                 userId: user.id,
@@ -223,6 +201,7 @@ export default class UserSubService extends HTTPService {
                 trialStarted: status === "trial" ? dayjs.utc().toISOString() : null
             };
             await this._saveUserSub(userSub);
+            return userSub.id;
         } catch (err) {
             this.log.error(err);
             throw err;
@@ -249,14 +228,25 @@ export default class UserSubService extends HTTPService {
             if (!user.roles.allowedRoles.includes(UserRoles.admin) && userSub.userId != user.id)
                 throw new ActionsHandlerError("Wrong user subscription", null, "FORBIDDEN", 403);
 
-            userSub.subscription = await this._getSubscriptionById(userSub.subscriptionId);
+            userSub.subscription = await this.db.pg.one<SubscriptionOption>(sql`
+            SELECT s.name AS subscription_name, 
+            s.description AS subscription_description, 
+            so.name,
+            so.price_total
+            FROM subscription_options so, subscriptions s 
+            WHERE so.code = ${userSub.subscriptionOption} 
+            AND so.subscription_id = ${userSub.subscriptionId}
+            AND so.subscription_id = s.id;
+            `);
 
             const userPayment = await coinbaseCommerce.createCharge({
                 userId: userSub.userId,
                 userSubId: userSub.id,
-                name: userSub.subscription.name, //TODO add option to name
-                description: userSub.subscription.description,
-                price: userSub.subscription.options[userSub.subscriptionOption].price
+                subscriptionId: userSub.subscriptionId,
+                subscriptionOption: userSub.subscriptionOption,
+                name: `${userSub.subscription.subscriptionName} (${userSub.subscription.name})`,
+                description: userSub.subscription.subscriptionDescription,
+                price: userSub.subscription.priceTotal
             });
 
             await this._saveUserPayment(userPayment);
@@ -268,7 +258,7 @@ export default class UserSubService extends HTTPService {
         }
     }
 
-    async checkPayment(user: User, { chargeId, provider }: UserSubCheckPayment) {
+    async checkPayment({ chargeId, provider }: UserSubCheckPayment, user: User) {
         try {
             if (provider != "coinbase.commerce") throw new BaseError("Unknown provider");
 
@@ -294,16 +284,36 @@ export default class UserSubService extends HTTPService {
 
                 const userSub = { ...savedUserSub };
 
-                if (savedUserSub.status === "canceled" || savedUserSub.status === "active") return;
+                if (savedUserSub.status === "canceled" || savedUserSub.status === "expired") {
+                    this.log.error(`New payment for ${savedUserSub.status} subscription`, userPayment);
+                    //TODO: emit error event
+                }
 
+                const subscription = await this.db.pg.one<SubscriptionOption>(sql`
+                SELECT 
+                so.amount, so.unit, so.price_total
+                FROM subscription_options so
+                WHERE code = ${userSub.subscriptionOption} 
+                AND subscription_id = ${userSub.subscriptionId};
+                `);
+
+                if (subscription.priceTotal > userPayment.price) {
+                    this.log.error("Wrong payment price", userPayment);
+                    //TODO: emit error event
+                }
                 const currentTime = dayjs.utc().toISOString();
-                userSub.activeFrom = currentTime;
-                if (savedUserSub.status === "trial" && savedUserSub.trialStarted) userSub.trialEnded = currentTime;
 
+                if (userSub.status === "trial") {
+                    userSub.trialEnded = currentTime;
+                }
+
+                if (userSub.status === "trial" || userSub.status === "pending") userSub.activeFrom = currentTime;
+                userSub.activeTo = dayjs.utc(currentTime).add(subscription.amount, subscription.unit).toISOString();
                 userSub.status = "active";
 
                 await this._saveUserSub(userSub);
             } else if (userPayment.status === "EXPIRED" || userPayment.status === "CANCELED") {
+                this.log.info(`User payment ${userPayment.status}`, userPayment);
                 //TODO: Send notification
                 return;
             }

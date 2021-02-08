@@ -17,7 +17,7 @@ export const UserSubSchema = {
         subscriptionId: "uuid",
         subscriptionOption: {
             type: "enum",
-            values: ["1m", "6m", "1y", "2y"]
+            values: ["1m", "6m", "1y"]
         }
     },
     [UserSubEvents.CHECKOUT]: {

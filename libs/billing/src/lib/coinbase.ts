@@ -57,12 +57,16 @@ class CoinbaseCommerce {
     async createCharge({
         userId,
         userSubId,
+        subscriptionId,
+        subscriptionOption,
         name,
         description,
         price
     }: {
         userId: string;
         userSubId: string;
+        subscriptionId: string;
+        subscriptionOption: string;
         name: string;
         description: string;
         price: number;
@@ -80,7 +84,9 @@ class CoinbaseCommerce {
                         pricing_type: "fixed_price",
                         metadata: {
                             userId,
-                            userSubId
+                            userSubId,
+                            subscriptionId,
+                            subscriptionOption
                         }
                     });
                 } catch (e) {
