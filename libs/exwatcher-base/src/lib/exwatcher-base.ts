@@ -5,7 +5,7 @@ import { v4 as uuid } from "uuid";
 import dayjs from "@cryptuoso/dayjs";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { Timeframe, CandleType, ExchangePrice, ExchangeCandle } from "@cryptuoso/market";
-import { createSocksProxyAgent } from "@cryptuoso/ccxt-public";
+//import { createSocksProxyAgent } from "@cryptuoso/ccxt-public";
 import { sleep, groupBy } from "@cryptuoso/helpers";
 import {
     ImporterRunnerEvents,
@@ -119,48 +119,53 @@ export class ExwatcherBaseService extends BaseService {
         if (this.exchange === "binance_futures") {
             this.connector = new ccxtpro.binance({
                 enableRateLimit: true,
-                agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
+                //agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
                 options: { defaultType: "future", OHLCVLimit: 100, tradesLimit: 1000 }
             });
-            this.cronHandleChanges = cron.schedule("* * * * * *", this.handleCandles.bind(this), {
-                scheduled: false
-            });
+            if (!this.cronHandleChanges)
+                this.cronHandleChanges = cron.schedule("* * * * * *", this.handleCandles.bind(this), {
+                    scheduled: false
+                });
         } else if (this.exchange === "bitfinex") {
             this.connector = new ccxtpro.bitfinex({
                 enableRateLimit: true,
-                agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
+                //agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
                 options: { OHLCVLimit: 100, tradesLimit: 1000 }
             });
-            this.cronHandleChanges = cron.schedule("* * * * * *", this.handleTrades.bind(this), {
-                scheduled: false
-            });
+            if (!this.cronHandleChanges)
+                this.cronHandleChanges = cron.schedule("* * * * * *", this.handleTrades.bind(this), {
+                    scheduled: false
+                });
         } else if (this.exchange === "kraken") {
             this.connector = new ccxtpro.kraken({
                 enableRateLimit: true,
-                agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
+                //agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
                 options: { OHLCVLimit: 100, tradesLimit: 1000 }
             });
-            this.cronHandleChanges = cron.schedule("* * * * * *", this.handleTrades.bind(this), {
-                scheduled: false
-            });
+            if (!this.cronHandleChanges)
+                this.cronHandleChanges = cron.schedule("* * * * * *", this.handleTrades.bind(this), {
+                    scheduled: false
+                });
         } else if (this.exchange === "kucoin") {
             this.connector = new ccxtpro.kucoin({
                 enableRateLimit: true,
-                agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
+                //agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
                 options: { OHLCVLimit: 100, tradesLimit: 1000 }
             });
-            this.cronHandleChanges = cron.schedule("* * * * * *", this.handleTrades.bind(this), {
-                scheduled: false
-            });
+            if (!this.cronHandleChanges)
+                this.cronHandleChanges = cron.schedule("* * * * * *", this.handleTrades.bind(this), {
+                    scheduled: false
+                });
         } else if (this.exchange === "huobipro") {
             this.connector = new ccxtpro.huobipro({
                 enableRateLimit: true,
-                agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
+                //agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
                 options: { OHLCVLimit: 100, tradesLimit: 1000 }
             });
-            this.cronHandleChanges = cron.schedule("* * * * * *", this.handleTrades.bind(this), {
-                scheduled: false
-            });
+            if (!this.cronHandleChanges)
+                this.cronHandleChanges = cron.schedule("* * * * * *", this.handleTrades.bind(this), {
+                    scheduled: false
+                });
         } else throw new Error("Unsupported exchange");
     }
 
@@ -250,7 +255,7 @@ export class ExwatcherBaseService extends BaseService {
                                 await this.connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
                             } catch (e) {
                                 this.log.warn(e, { symbol, timeframe });
-                                if (!e.message.includes("connection closed") || !e.message.includes("timed out"))
+                                if (!e.message.includes("connection closed") && !e.message.includes("timed out"))
                                     await this.events.emit<ExwatcherErrorEvent>({
                                         type: ExwatcherEvents.ERROR,
                                         data: {
@@ -270,7 +275,7 @@ export class ExwatcherBaseService extends BaseService {
                         await this.connector.watchTrades(symbol);
                     } catch (e) {
                         this.log.warn(e, { symbol });
-                        if (!e.message.includes("connection closed") || !e.message.includes("timed out"))
+                        if (!e.message.includes("connection closed") && !e.message.includes("timed out"))
                             await this.events.emit<ExwatcherErrorEvent>({
                                 type: ExwatcherEvents.ERROR,
                                 data: {
@@ -290,9 +295,10 @@ export class ExwatcherBaseService extends BaseService {
 
     async resubscribe() {
         try {
-            const subscriptions = await this.db.pg.many<Exwatcher>(
+            const subscriptions = await this.db.pg.any<Exwatcher>(
                 sql`select * from exwatchers where exchange = ${this.exchange}`
             );
+
             if (subscriptions && Array.isArray(subscriptions) && subscriptions.length > 0) {
                 await Promise.all(
                     subscriptions.map(async ({ id, asset, currency }: Exwatcher) => {
@@ -306,7 +312,7 @@ export class ExwatcherBaseService extends BaseService {
                         }
                     })
                 );
-            }
+            } else this.log.warn(`No ${this.exchange} subscriptions`);
         } catch (e) {
             this.log.error(e);
         }
@@ -315,12 +321,15 @@ export class ExwatcherBaseService extends BaseService {
     async subscribeAll({ exchange }: ExwatcherSubscribeAll) {
         try {
             if (exchange !== this.exchange) return;
-            const markets = await this.db.pg.many<{ asset: string; currency: string }>(sql`
+            const markets = await this.db.pg.any<{ asset: string; currency: string }>(sql`
             SELECT asset, currency 
             FROM markets
             WHERE exchange = ${this.exchange} AND available > 0;
             `);
-
+            if (!markets || !markets?.length) {
+                this.log.warn(`No ${this.exchange} markets`);
+                return;
+            }
             for (const { asset, currency } of markets) {
                 await this.addSubscription({ exchange: this.exchange, asset, currency });
             }
