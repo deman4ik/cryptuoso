@@ -118,6 +118,14 @@ export class PublicConnector {
                     limit = 2000;
                     timeframe = 1440;
                 }
+                if (exchange === "binance_futures") {
+                    dateFrom = dayjs.utc("01.01.2020").toISOString();
+                    limit = 500;
+                }
+                if (exchange === "binance_spot") {
+                    dateFrom = dayjs.utc("01.01.2020").toISOString();
+                    limit = 900;
+                }
 
                 const [firstCandle] = await this.getRawCandles(exchange, asset, currency, timeframe, dateFrom, limit);
                 if (firstCandle) loadFrom = dayjs.utc(firstCandle.timestamp).add(1, "day").startOf("day").toISOString();
@@ -324,6 +332,7 @@ export class PublicConnector {
                 }
             };
             const response: ccxt.OHLCV[] = await retry(call, this.retryOptions);
+
             if (!response || !Array.isArray(response) || response.length === 0) return candles;
 
             candles = response.map((candle) => {
