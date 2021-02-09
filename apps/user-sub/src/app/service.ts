@@ -305,7 +305,7 @@ export default class UserSubService extends HTTPService {
     ) {
         const result = await handler(req.body.input, req.meta?.user);
 
-        res.send({ result: result || "OK" });
+        res.send(result || { result: "OK" });
         res.end();
     }
 
@@ -475,7 +475,10 @@ export default class UserSubService extends HTTPService {
             if (user && !user?.roles?.allowedRoles?.includes(UserRoles.admin) && savedUserPayment?.userId != user?.id)
                 throw new ActionsHandlerError("Wrong user payment", null, "FORBIDDEN", 403);
 
-            if (["COMPLETED", "RESOLVED", "EXPIRED", "CANCELED"].includes(savedUserPayment.status)) return;
+            if (["COMPLETED", "RESOLVED", "EXPIRED", "CANCELED"].includes(savedUserPayment.status))
+                return {
+                    id: savedUserPayment.id
+                };
 
             const charge = await coinbaseCommerce.getCharge(chargeId);
 
@@ -528,8 +531,8 @@ export default class UserSubService extends HTTPService {
             ) {
                 this.log.info(`User payment ${userPayment.status}`, userPayment);
                 //TODO: Send notification
-                return;
             }
+            return { id: userPayment.id };
         } catch (err) {
             this.log.error(err);
             throw err;
