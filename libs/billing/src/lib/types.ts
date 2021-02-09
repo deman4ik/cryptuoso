@@ -58,6 +58,10 @@ export interface UserPayment {
     status: "NEW" | "PENDING" | "COMPLETED" | "UNRESOLVED" | "RESOLVED" | "EXPIRED" | "CANCELED";
     price: number;
     createdAt: string;
+    subscriptionOption?: string;
+    subscriptionFrom?: string;
+    subscriptionTo?: string;
+    url?: string;
     expiresAt?: string;
     addresses?: resources.Charge["addresses"];
     pricing?: resources.Charge["pricing"];

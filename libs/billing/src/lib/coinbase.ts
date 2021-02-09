@@ -18,7 +18,15 @@ class CoinbaseCommerce {
         Client.init(process.env.COINBASE_COMMERCE_API_KEY);
     }
 
-    mapChargeToUserPayment(userId: string, userSubId: string, charge: resources.Charge): UserPayment {
+    mapChargeToUserPayment(
+        userId: string,
+        userSubId: string,
+        subscriptionFrom: string,
+        subscriptionTo: string,
+        subscriptionOption: string,
+        charge: resources.Charge
+    ): UserPayment {
+        //TODO: context for unresolved
         return {
             id: charge.id,
             userId,
@@ -31,7 +39,11 @@ class CoinbaseCommerce {
             pricing: charge.pricing,
             price: +charge.pricing.local.amount,
             info: charge,
-            createdAt: charge.created_at
+            createdAt: charge.created_at,
+            subscriptionFrom,
+            subscriptionTo,
+            subscriptionOption,
+            url: charge.hosted_url
         };
     }
 
@@ -59,6 +71,8 @@ class CoinbaseCommerce {
         userSubId,
         subscriptionId,
         subscriptionOption,
+        subscriptionFrom,
+        subscriptionTo,
         name,
         description,
         price
@@ -67,6 +81,8 @@ class CoinbaseCommerce {
         userSubId: string;
         subscriptionId: string;
         subscriptionOption: string;
+        subscriptionFrom: string;
+        subscriptionTo: string;
         name: string;
         description: string;
         price: number;
@@ -96,7 +112,14 @@ class CoinbaseCommerce {
             };
             const result = await retry(call, this.retryOptions);
 
-            return this.mapChargeToUserPayment(userId, userSubId, result);
+            return this.mapChargeToUserPayment(
+                userId,
+                userSubId,
+                subscriptionFrom,
+                subscriptionTo,
+                subscriptionOption,
+                result
+            );
         } catch (error) {
             logger.error(`Failed to get create charge for #${userSubId} - ${error.message}`, error);
             throw error;

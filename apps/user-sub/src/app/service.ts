@@ -13,6 +13,8 @@ import {
     UserSubEvents,
     UserSubSchema
 } from "@cryptuoso/user-sub-events";
+import { UserRobotRunnerEvents, UserRobotRunnerStop } from "@cryptuoso/user-robot-events";
+import { Job } from "bullmq";
 import { BaseError } from "ccxt";
 import { v4 as uuid } from "uuid";
 
@@ -55,8 +57,142 @@ export default class UserSubService extends HTTPService {
                     handler: this.checkPayment.bind(this)
                 }
             });
+            this.addOnStartHandler(this.onServiceStart);
         } catch (err) {
             this.log.error("Failed to initialize UserSubService", err);
+        }
+    }
+
+    async onServiceStart() {
+        this.createQueue("user-sub");
+
+        this.createWorker("user-sub", this.process);
+        await this.addJob("user-sub", "checkExpiration", null, {
+            jobId: "checkExpiration",
+            repeat: {
+                cron: "0 0 1 * * *"
+            },
+            attempts: 5,
+            backoff: { type: "exponential", delay: 60000 * 10 },
+            removeOnComplete: 1,
+            removeOnFail: 5
+        });
+    }
+
+    async process(job: Job) {
+        switch (job.name) {
+            case "checkExpiration":
+                await this.checkSubscriptions();
+                break;
+            default:
+                this.log.error(`Unknow job ${job.name}`);
+        }
+        return { result: "ok" };
+    }
+
+    async checkSubscriptions() {
+        try {
+            await this.checkExpiration();
+            await this.checkTrial();
+        } catch (error) {
+            this.log.error(`Failed to check subscriptions ${error.message}`, error);
+            throw error;
+        }
+    }
+
+    async checkExpiration() {
+        try {
+            const currentDate = dayjs.utc().toISOString();
+            const expiredSubscriptions = await this.db.pg.any<{ id: string; userId: string }>(sql`
+                        SELECT id, user_id
+                        FROM user_subs
+                        WHERE (status = 'active'
+                        AND active_to < ${currentDate})
+                        OR (status = 'trial'
+                        AND trial_ended  < ${currentDate});`);
+
+            for (const sub of expiredSubscriptions) {
+                const userRobots = await this.db.pg.any<{ id: string }>(sql`
+                            SELECT id 
+                            FROM user_robots 
+                            WHERE user_id = ${sub.userId} 
+                            AND status = 'started';`);
+                if (userRobots && userRobots.length) {
+                    for (const { id } of userRobots) {
+                        await this.events.emit<UserRobotRunnerStop>({
+                            type: UserRobotRunnerEvents.STOP,
+                            data: {
+                                id,
+                                message: "Subscription expired"
+                            }
+                        });
+                    }
+                }
+                await this.db.pg.query(sql`
+                            UPDATE user_subs 
+                            SET status = 'expired'
+                            WHERE id = ${sub.id};`);
+                //TODO: send notification
+            }
+
+            const expirationDate = dayjs.utc(currentDate).startOf("day").add(5, "day").toISOString();
+            const expiringSubscriptions = await this.db.pg.any<{
+                id: string;
+                userId: string;
+                status: UserSub["status"];
+            }>(sql`
+            SELECT id, user_id, status
+            FROM user_subs
+            WHERE  (status = 'active'
+                        AND active_to < ${expirationDate})
+                        OR (status = 'trial'
+                        AND trial_ended  < ${expirationDate});`);
+            for (const sub of expiringSubscriptions) {
+                if (sub.status === "active") {
+                    //TODO: send notification
+                } else if (sub.status === "trial") {
+                    //TODO: send notification
+                }
+            }
+        } catch (error) {
+            this.log.error(`Failed to check expired subscriptions ${error.message}`, error);
+            throw error;
+        }
+    }
+
+    async checkTrial() {
+        try {
+            const trialSubscriptions = await this.db.pg.any<{ id: string; trialEnded: string; userId: string }>(sql`
+            SELECT id, trial_ended, user_id
+            FROM user_subs where status = 'trial';`);
+
+            for (const sub of trialSubscriptions) {
+                if (!sub.trialEnded) {
+                    const userStats = await this.db.pg.maybeOne<{ id: string }>(sql`
+                    SELECT id 
+                      FROM v_user_aggr_stats
+                    WHERE user_id = ${sub.userId}
+                      AND type = 'userRobot'
+                      AND exchange is null
+                      AND asset is null
+                      AND net_profit > 15;
+                    `);
+
+                    if (userStats) {
+                        await this.db.pg.query(sql`
+                        UPDATE user_subs
+                          SET trial_ended = ${dayjs.utc().startOf("day").add(5, "day").toISOString()}
+                        WHERE id = ${sub.id};
+                        `);
+                        //TODO: send notification
+                    }
+                } else {
+                    //TODO: send notification
+                }
+            }
+        } catch (error) {
+            this.log.error(`Failed to check trial subscriptions ${error.message}`, error);
+            throw error;
         }
     }
 
@@ -71,10 +207,13 @@ export default class UserSubService extends HTTPService {
 
     async _getUserPaymentById(chargeId: string): Promise<UserPayment> {
         return this.db.pg.one<UserPayment>(sql`
-        SELECT id, user_id, user_sub_id, provider, status,
-            expires_at, addresses, 
-            code, pricing,
-            price, info, created_at
+        SELECT id, user_id, user_sub_id, provider, code, status,
+               price, created_at, 
+               subscription_from, subscription_to, subscription_option,
+               url, expires_at, 
+               addresses, 
+               pricing,
+               info   
         FROM user_payments where id = ${chargeId};
         `);
     }
@@ -117,23 +256,31 @@ export default class UserSubService extends HTTPService {
         await this.db.pg.query(sql`
         INSERT INTO user_payments
         (
-            id, user_id, user_sub_id, provider, status,
+            id, user_id, user_sub_id, provider, code,
+            status, price,  created_at,
+            subscription_from, subscription_to,
+            subscription_option,
+            url,
             expires_at, addresses, 
-            code, pricing,
-            price, info, created_at
+            pricing,
+            info
         ) VALUES (
             ${charge.id},
             ${charge.userId},
             ${charge.userSubId},
             ${charge.provider},
+            ${charge.code},
             ${charge.status},
+            ${charge.price},
+            ${charge.createdAt || null},
+            ${charge.subscriptionFrom || null},
+            ${charge.subscriptionTo || null},
+            ${charge.subscriptionOption},
+            ${charge.url || null},
             ${charge.expiresAt || null},
             ${JSON.stringify(charge.addresses) || null},
-            ${charge.code},
             ${JSON.stringify(charge.pricing) || null},
-            ${charge.price},
-            ${JSON.stringify(charge.info) || null},
-            ${charge.createdAt || null}
+            ${JSON.stringify(charge.info) || null}
         )  ON CONFLICT ON CONSTRAINT user_payments_pkey
         DO UPDATE SET status = excluded.status,
         info = excluded.info;
@@ -147,7 +294,7 @@ export default class UserSubService extends HTTPService {
     ) {
         const result = await handler(req.meta?.user, req.body.input);
 
-        res.send({ result: result || "OK" });
+        res.send(result || { result: "OK" });
         res.end();
     }
 
@@ -164,20 +311,7 @@ export default class UserSubService extends HTTPService {
 
     async createUserSub(user: User, { subscriptionId, subscriptionOption }: UserSubCreate) {
         try {
-            const sameUserSubs = await this.db.pg.any<{
-                status: UserSub["status"];
-            }>(sql`SELECT status FROM user_subs 
-            WHERE user_id = ${user.id} 
-            AND subscription_id = ${subscriptionId}
-            AND subscription_option = ${subscriptionOption};
-            `);
-            if (
-                sameUserSubs &&
-                sameUserSubs?.length &&
-                sameUserSubs.filter(({ status }) => status !== "canceled" && status !== "expired").length
-            )
-                throw new BaseError("User subscription already exists");
-
+            // Есть ли подписка и опция
             const subscription = await this.db.pg.maybeOne<{ code: string }>(sql`SELECT code 
             FROM subscription_options
             WHERE code = ${subscriptionOption} 
@@ -186,10 +320,42 @@ export default class UserSubService extends HTTPService {
             `);
             if (!subscription) throw new BaseError("Subscription is not available");
 
+            // Есть ли такая же не отмененная подписка пользователя
+            const sameUserSubs = await this.db.pg.any<{
+                status: UserSub["status"];
+            }>(sql`SELECT status FROM user_subs 
+            WHERE user_id = ${user.id} 
+            AND subscription_id = ${subscriptionId}
+            AND subscription_option = ${subscriptionOption};
+            AND status not in (${"canceled"},${"expired"});
+            `);
+            if (sameUserSubs && sameUserSubs?.length) throw new BaseError("User subscription already exists");
+
+            // Есть ли такая же подписка пользователя с другой опцией
+            const sameActiveUserSub = await this.db.pg.maybeOneFirst<{ id: string }>(sql`
+            SELECT id 
+            FROM user_subs
+            WHERE user_id = ${user.id}
+            AND subscription_id = ${subscriptionId}
+            AND subscription_option != ${subscriptionOption}
+            AND status in (${"active"},${"trial"},${"pending"})
+            ORDER BY created_at DESC;
+            `);
+            // Если есть, просто меняем опцию
+            if (sameActiveUserSub) {
+                await this.db.pg.query(sql`
+            UPDATE user_subs SET subscription_option = ${subscriptionOption}
+            WHERE id = ${sameActiveUserSub.id};
+            `);
+                return { id: sameActiveUserSub.id };
+            }
+
+            // Была ли подписка с триалом
             const trialSubscription = await this.db.pg.maybeOneFirst(sql`SELECT id FROM user_subs 
             WHERE user_id = ${user.id}
             AND trial_started IS NOT NULL;`);
             let status: UserSub["status"] = "trial";
+            // Если была, сразу ожидаем оплату
             if (trialSubscription) status = "pending";
 
             const userSub: UserSub = {
@@ -198,10 +364,10 @@ export default class UserSubService extends HTTPService {
                 subscriptionId,
                 subscriptionOption,
                 status,
-                trialStarted: status === "trial" ? dayjs.utc().toISOString() : null
+                trialStarted: status === "trial" ? dayjs.utc().toISOString() : null // если начинаем с триала, устанавливаем дату начала
             };
             await this._saveUserSub(userSub);
-            return userSub.id;
+            return { id: userSub.id };
         } catch (err) {
             this.log.error(err);
             throw err;
@@ -221,10 +387,14 @@ export default class UserSubService extends HTTPService {
         }
     }
 
-    async checkoutUserSub(user: User, { userSubId }: UserSubCheckout): Promise<UserPayment> {
+    async checkoutUserSub(user: User, { userSubId }: UserSubCheckout): Promise<{ id: UserPayment["id"] }> {
         try {
             const userSub: UserSub = await this._getUserSubById(userSubId);
 
+            if (userSub.status === "canceled" || userSub.status === "expired")
+                throw new BaseError(`Subscription is ${userSub.status}. Please create a new one.`);
+
+            // Оставляем возможность админу сгенерировать платеж вручную
             if (!user.roles.allowedRoles.includes(UserRoles.admin) && userSub.userId != user.id)
                 throw new ActionsHandlerError("Wrong user subscription", null, "FORBIDDEN", 403);
 
@@ -239,11 +409,49 @@ export default class UserSubService extends HTTPService {
             AND so.subscription_id = s.id;
             `);
 
-            const userPayment = await coinbaseCommerce.createCharge({
+            let userPayment = await this.db.pg.maybeOneFirst<UserPayment>(sql`
+                SELECT id, user_id, user_sub_id, provider, code, status,
+                       price, created_at, 
+                       subscription_from, subscription_to, subscription_option,
+                       url, expires_at, 
+                       addresses, 
+                       pricing,
+                       info 
+                FROM user_payments 
+                WHERE user_id = ${user.id} 
+                AND user_sub_id = ${userSubId} ORDER BY created_at DESC;`);
+
+            // Если уже есть платеж, за ту же опцию и он еще не истек
+            if (
+                userPayment &&
+                userPayment.subscriptionOption === userSub.subscriptionOption &&
+                dayjs.utc(userPayment.expiresAt).valueOf() > dayjs.utc().valueOf()
+            )
+                // Возвращаем текущий платеж
+                return { id: userPayment.id };
+
+            let subscriptionFrom;
+            // Eсли подписка уже была активна - продлеваем
+            if (
+                userSub.activeTo &&
+                dayjs.utc(userSub.activeTo).startOf("day").valueOf() > dayjs.utc().startOf("day").valueOf()
+            ) {
+                subscriptionFrom = dayjs.utc(userSub.activeTo).toISOString();
+            } else {
+                subscriptionFrom = dayjs.utc().startOf("day").toISOString();
+            }
+
+            userPayment = await coinbaseCommerce.createCharge({
                 userId: userSub.userId,
                 userSubId: userSub.id,
                 subscriptionId: userSub.subscriptionId,
                 subscriptionOption: userSub.subscriptionOption,
+                subscriptionFrom,
+                subscriptionTo: dayjs
+                    .utc(subscriptionFrom)
+                    .add(userSub.subscription.amount, userSub.subscription.unit)
+                    .startOf("day")
+                    .toISOString(),
                 name: `${userSub.subscription.subscriptionName} (${userSub.subscription.name})`,
                 description: userSub.subscription.subscriptionDescription,
                 price: userSub.subscription.priceTotal
@@ -251,7 +459,7 @@ export default class UserSubService extends HTTPService {
 
             await this._saveUserPayment(userPayment);
 
-            return userPayment;
+            return { id: userPayment.id };
         } catch (err) {
             this.log.error(err);
             throw err;
@@ -307,12 +515,17 @@ export default class UserSubService extends HTTPService {
                     userSub.trialEnded = currentTime;
                 }
 
-                if (userSub.status === "trial" || userSub.status === "pending") userSub.activeFrom = currentTime;
-                userSub.activeTo = dayjs.utc(currentTime).add(subscription.amount, subscription.unit).toISOString();
+                if (userSub.status === "trial" || userSub.status === "pending")
+                    userSub.activeFrom = userPayment.subscriptionFrom;
+                userSub.activeTo = userPayment.subscriptionTo;
                 userSub.status = "active";
 
                 await this._saveUserSub(userSub);
-            } else if (userPayment.status === "EXPIRED" || userPayment.status === "CANCELED") {
+            } else if (
+                userPayment.status === "EXPIRED" ||
+                userPayment.status === "CANCELED" ||
+                userPayment.status === "UNRESOLVED"
+            ) {
                 this.log.info(`User payment ${userPayment.status}`, userPayment);
                 //TODO: Send notification
                 return;

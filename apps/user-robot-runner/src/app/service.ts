@@ -12,7 +12,17 @@ import {
     UserRobotRunnerJobType,
     UserRobotStatus
 } from "@cryptuoso/user-robot-state";
-import { UserRobotWorkerEvents, UserRobotWorkerStatus, USER_ROBOT_WORKER_TOPIC } from "@cryptuoso/user-robot-events";
+import {
+    UserRobotRunnerEvents,
+    UserRobotRunnerPause,
+    UserRobotRunnerResume,
+    UserRobotRunnerSchema,
+    UserRobotRunnerStart,
+    UserRobotRunnerStop,
+    UserRobotWorkerEvents,
+    UserRobotWorkerStatus,
+    USER_ROBOT_WORKER_TOPIC
+} from "@cryptuoso/user-robot-events";
 import {
     ConnectorWorkerEvents,
     ConnectorWorkerSchema,
@@ -38,36 +48,23 @@ export default class UserRobotRunnerService extends HTTPService {
                 userRobotStart: {
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
-                    inputSchema: {
-                        id: "uuid"
-                    },
+                    inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.START],
                     handler: this._httpHandler.bind(this, this.start.bind(this))
                 },
                 userRobotStop: {
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
-                    inputSchema: {
-                        id: "uuid"
-                    },
+                    inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.STOP],
                     handler: this._httpHandler.bind(this, this.stop.bind(this))
                 },
                 userRobotPause: {
                     roles: [UserRoles.admin, UserRoles.manager],
-                    inputSchema: {
-                        id: { type: "uuid", optional: true },
-                        userExAccId: { type: "uuid", optional: true },
-                        exchange: { type: "string", optional: true },
-                        message: { type: "string", optional: true }
-                    },
+                    inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.PAUSE],
                     handler: this._httpHandler.bind(this, this.pause.bind(this))
                 },
                 userRobotResume: {
                     roles: [UserRoles.admin, UserRoles.manager],
-                    inputSchema: {
-                        id: { type: "uuid", optional: true },
-                        userExAccId: { type: "uuid", optional: true },
-                        exchange: { type: "string", optional: true }
-                    },
+                    inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.RESUME],
                     handler: this._httpHandler.bind(this, this.resume.bind(this))
                 }
             });
@@ -91,6 +88,10 @@ export default class UserRobotRunnerService extends HTTPService {
                 [ConnectorWorkerEvents.USER_EX_ACC_ERROR]: {
                     handler: this.handleUserExAccError.bind(this),
                     schema: ConnectorWorkerSchema[ConnectorWorkerEvents.USER_EX_ACC_ERROR]
+                },
+                [UserRobotRunnerEvents.STOP]: {
+                    handler: this.stop.bind(this),
+                    schema: UserRobotRunnerSchema[UserRobotRunnerEvents.STOP]
                 }
             });
             this.addOnStartHandler(this.onServiceStart);
@@ -162,15 +163,13 @@ export default class UserRobotRunnerService extends HTTPService {
         req: RequestExtended,
         res: any
     ) {
-        const result = await handler(req.meta.user, req.body.input);
+        const result = await handler(req.body.input, req.meta.user);
 
         res.send({ result: result || "OK" });
         res.end();
     }
 
-    async start(user: User, { id }: { id: string }) {
-        const { id: userId } = user;
-
+    async start({ id, message }: UserRobotRunnerStart, user: User) {
         const userRobot = await this.db.pg.maybeOne<{
             id: UserRobotDB["id"];
             userId: UserRobotDB["userId"];
@@ -184,7 +183,7 @@ export default class UserRobotRunnerService extends HTTPService {
 
         if (!userRobot) throw new ActionsHandlerError("User Robot not found", { userRobotId: id }, "NOT_FOUND", 404);
 
-        if (userRobot.userId !== userId)
+        if (user && userRobot.userId !== user.id)
             throw new ActionsHandlerError(
                 "Current user isn't owner of this User Robot",
                 { userRobotId: id },
@@ -234,7 +233,7 @@ export default class UserRobotRunnerService extends HTTPService {
         await this.db.pg.query(sql`
         UPDATE user_robots 
         SET status = ${UserRobotStatus.started},
-        message = null,
+        message = ${message || null},
         started_at = ${startedAt},
         stopped_at = null
         WHERE id = ${id};
@@ -246,16 +245,14 @@ export default class UserRobotRunnerService extends HTTPService {
                 userRobotId: id,
                 timestamp: startedAt,
                 status: UserRobotStatus.started,
-                message: null
+                message: message || null
             }
         });
 
         return UserRobotStatus.started;
     }
 
-    async stop(user: User, { id }: { id: string }) {
-        const { id: userId } = user;
-
+    async stop({ id, message }: UserRobotRunnerStop, user: User) {
         const userRobot = await this.db.pg.maybeOne<{
             id: UserRobotDB["id"];
             userId: UserRobotDB["userId"];
@@ -268,7 +265,7 @@ export default class UserRobotRunnerService extends HTTPService {
 
         if (!userRobot) throw new ActionsHandlerError("User Robot not found", { userRobotId: id }, "NOT_FOUND", 404);
 
-        if (userRobot.userId !== userId)
+        if (user && userRobot.userId !== user.id)
             throw new ActionsHandlerError(
                 "Current user isn't owner of this User Robot",
                 { userRobotId: id },
@@ -291,7 +288,8 @@ export default class UserRobotRunnerService extends HTTPService {
 
         await this.db.pg.query(sql`
         UPDATE user_robots 
-        SET status = ${UserRobotStatus.stopping}
+        SET status = ${UserRobotStatus.stopping},
+        message = ${message || null}
         WHERE id = ${id};
         `);
 
@@ -300,7 +298,7 @@ export default class UserRobotRunnerService extends HTTPService {
                 userRobotId: id,
                 type: UserRobotJobType.stop,
                 data: {
-                    message: null
+                    message: message || null
                 }
             },
             userRobot.status
@@ -309,17 +307,7 @@ export default class UserRobotRunnerService extends HTTPService {
         return UserRobotStatus.stopping;
     }
 
-    async pause({
-        id,
-        userExAccId,
-        exchange,
-        message
-    }: {
-        id?: string;
-        userExAccId?: string;
-        exchange?: string;
-        message?: string;
-    }) {
+    async pause({ id, userExAccId, exchange, message }: UserRobotRunnerPause) {
         let userRobotsToPause: { id: string; status: UserRobotStatus }[] = [];
         if (id) {
             const userRobot = await this.db.pg.maybeOne<{ id: string; status: UserRobotStatus }>(sql`
@@ -366,7 +354,7 @@ export default class UserRobotRunnerService extends HTTPService {
         return userRobotsToPause.length;
     }
 
-    async resume({ id, userExAccId, exchange }: { id?: string; userExAccId?: string; exchange?: string }) {
+    async resume({ id, userExAccId, exchange, message }: UserRobotRunnerResume) {
         let userRobotsToResume: { id: string }[] = [];
         if (id) {
             const userRobot = await this.db.pg.maybeOne<{ id: string }>(sql`
@@ -424,7 +412,7 @@ export default class UserRobotRunnerService extends HTTPService {
             await this.db.pg.query(sql`
             UPDATE user_robots 
             SET status = ${UserRobotStatus.started},
-            message = null
+            message = ${message || null}
             WHERE id = ${id};
             `);
         }
