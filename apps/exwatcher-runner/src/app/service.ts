@@ -209,7 +209,7 @@ export default class ExwatcherRunnerService extends HTTPService {
                         errors
                     }
                 });
-                throw new Error(`Failed to update ${errors.length} markets of ${markets}`);
+                throw new Error(`Failed to update ${errors.length} markets of ${markets.length}`);
             }
             this.log.info(`Updated ${markets.length} markets!`);
         } catch (error) {
@@ -233,7 +233,7 @@ export default class ExwatcherRunnerService extends HTTPService {
                     ${JSON.stringify(precision)},
                     ${JSON.stringify(limits)},
                     ${averageFee},
-                    ${loadFrom},
+                    ${loadFrom || null},
                     ${available}
                 )
                 ON CONFLICT ON CONSTRAINT markets_exchange_asset_currency_key
