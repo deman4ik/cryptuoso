@@ -326,7 +326,7 @@ export default class UserSubService extends HTTPService {
             }>(sql`SELECT status FROM user_subs 
             WHERE user_id = ${user.id} 
             AND subscription_id = ${subscriptionId}
-            AND subscription_option = ${subscriptionOption};
+            AND subscription_option = ${subscriptionOption}
             AND status not in (${"canceled"},${"expired"});
             `);
             if (sameUserSubs && sameUserSubs?.length) throw new BaseError("User subscription already exists");
