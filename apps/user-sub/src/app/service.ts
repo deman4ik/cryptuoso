@@ -402,14 +402,16 @@ export default class UserSubService extends HTTPService {
             SELECT s.name AS subscription_name, 
             s.description AS subscription_description, 
             so.name,
-            so.price_total
+            so.price_total,
+            so.amount,
+            so.unit
             FROM subscription_options so, subscriptions s 
             WHERE so.code = ${userSub.subscriptionOption} 
             AND so.subscription_id = ${userSub.subscriptionId}
             AND so.subscription_id = s.id;
             `);
 
-            let userPayment = await this.db.pg.maybeOneFirst<UserPayment>(sql`
+            let userPayment = await this.db.pg.maybeOne<UserPayment>(sql`
                 SELECT id, user_id, user_sub_id, provider, code, status,
                        price, created_at, 
                        subscription_from, subscription_to, subscription_option,
@@ -419,7 +421,7 @@ export default class UserSubService extends HTTPService {
                        info 
                 FROM user_payments 
                 WHERE user_id = ${user.id} 
-                AND user_sub_id = ${userSubId} ORDER BY created_at DESC;`);
+                AND user_sub_id = ${userSubId} ORDER BY created_at DESC LIMIT 1;`);
 
             // Если уже есть платеж, за ту же опцию и он еще не истек
             if (
