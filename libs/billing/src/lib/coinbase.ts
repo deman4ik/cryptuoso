@@ -43,7 +43,11 @@ class CoinbaseCommerce {
             subscriptionFrom,
             subscriptionTo,
             subscriptionOption,
-            url: charge.hosted_url
+            url: charge.hosted_url,
+            context:
+                charge.timeline[charge.timeline.length - 1].status === "UNRESOLVED"
+                    ? charge.timeline[charge.timeline.length - 1].context
+                    : null
         };
     }
 

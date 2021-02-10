@@ -1,5 +1,5 @@
 import { Subscription, UserPayment, UserSub, coinbaseCommerce, SubscriptionOption } from "@cryptuoso/billing";
-import dayjs from "@cryptuoso/dayjs";
+import dayjs, { UnitType } from "@cryptuoso/dayjs";
 import { ActionsHandlerError } from "@cryptuoso/errors";
 import { GenericObject } from "@cryptuoso/helpers";
 import { sql } from "@cryptuoso/postgres";
@@ -10,8 +10,12 @@ import {
     UserSubCheckout,
     UserSubCheckPayment,
     UserSubCreate,
-    UserSubEvents,
-    UserSubSchema
+    UserSubErrorEvent,
+    UserSubInEvents,
+    UserSubInSchema,
+    UserSubOutEvents,
+    UserSubPaymentStatusEvent,
+    UserSubStatusEvent
 } from "@cryptuoso/user-sub-events";
 import { UserRobotRunnerEvents, UserRobotRunnerStop } from "@cryptuoso/user-robot-events";
 import { Job } from "bullmq";
@@ -21,39 +25,46 @@ import { v4 as uuid } from "uuid";
 export type UserSubServiceConfig = HTTPServiceConfig;
 
 export default class UserSubService extends HTTPService {
+    #expirationAmount = +process.env.SUB_EXPIRATION_AMOUNT || 5;
+    #expirationUnit: UnitType = (process.env.SUB_EXPIRATION_UNIT as UnitType) || "day";
+
     constructor(config?: UserSubServiceConfig) {
         super(config);
         try {
             this.createRoutes({
                 createUserSub: {
-                    inputSchema: UserSubSchema[UserSubEvents.CREATE],
+                    inputSchema: UserSubInSchema[UserSubInEvents.CREATE],
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     handler: this._httpHandler.bind(this, this.createUserSub.bind(this))
                 },
                 cancelUserSub: {
-                    inputSchema: UserSubSchema[UserSubEvents.CANCEL],
+                    inputSchema: UserSubInSchema[UserSubInEvents.CANCEL],
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     handler: this._httpHandler.bind(this, this.cancelUserSub.bind(this))
                 },
                 checkoutUserSub: {
-                    inputSchema: UserSubSchema[UserSubEvents.CHECKOUT],
+                    inputSchema: UserSubInSchema[UserSubInEvents.CHECKOUT],
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     handler: this._httpHandler.bind(this, this.checkoutUserSub.bind(this))
                 },
                 checkPayment: {
-                    inputSchema: UserSubSchema[UserSubEvents.CHECK_PAYMENT],
+                    inputSchema: UserSubInSchema[UserSubInEvents.CHECK_PAYMENT],
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager, UserRoles.admin],
                     handler: this._checkPaymentHttpHandler.bind(this, this.checkPayment.bind(this))
+                },
+                checkSubscriptions: {
+                    roles: [UserRoles.admin],
+                    handler: this.checkSubscriptions.bind(this)
                 }
             });
 
             this.events.subscribe({
-                [UserSubEvents.CHECK_PAYMENT]: {
-                    schema: UserSubSchema[UserSubEvents.CHECK_PAYMENT],
+                [UserSubInEvents.CHECK_PAYMENT]: {
+                    schema: UserSubInSchema[UserSubInEvents.CHECK_PAYMENT],
                     handler: this.checkPayment.bind(this)
                 }
             });
@@ -103,9 +114,19 @@ export default class UserSubService extends HTTPService {
     async checkExpiration() {
         try {
             const currentDate = dayjs.utc().toISOString();
-            const expiredSubscriptions = await this.db.pg.any<{ id: string; userId: string }>(sql`
-                        SELECT id, user_id
-                        FROM user_subs
+            const expiredSubscriptions = await this.db.pg.any<{
+                id: string;
+                userId: string;
+                status: UserSub["status"];
+                subscriptionName: string;
+                subscriptionOptionName: string;
+                activeTo: string;
+                trialEnded: string;
+            }>(sql`
+                        SELECT id, user_id, status,
+                        subscription_name, subscription_option_name,
+                        active_to, trial_ended
+                        FROM v_user_subs
                         WHERE (status = 'active'
                         AND active_to < ${currentDate})
                         OR (status = 'trial'
@@ -132,27 +153,59 @@ export default class UserSubService extends HTTPService {
                             UPDATE user_subs 
                             SET status = 'expired'
                             WHERE id = ${sub.id};`);
-                //TODO: send notification
+                await this.events.emit<UserSubStatusEvent>({
+                    type: UserSubOutEvents.USER_SUB_STATUS,
+                    data: {
+                        userSubId: sub.id,
+                        userId: sub.userId,
+                        status: "expired",
+                        context: sub.status,
+                        trialEnded: sub.trialEnded,
+                        activeTo: sub.activeTo,
+                        subscriptionName: sub.subscriptionName,
+                        subscriptionOptionName: sub.subscriptionOptionName,
+                        timestamp: dayjs.utc().toISOString()
+                    }
+                });
             }
 
-            const expirationDate = dayjs.utc(currentDate).startOf("day").add(5, "day").toISOString();
+            const expirationDate = dayjs
+                .utc(currentDate)
+                .startOf("day")
+                .add(this.#expirationAmount, this.#expirationUnit)
+                .toISOString();
             const expiringSubscriptions = await this.db.pg.any<{
                 id: string;
                 userId: string;
                 status: UserSub["status"];
+                subscriptionName: string;
+                subscriptionOptionName: string;
+                activeTo: string;
+                trialEnded: string;
             }>(sql`
-            SELECT id, user_id, status
-            FROM user_subs
+            SELECT id, user_id, status, 
+            subscription_name, subscription_option_name,
+                active_to, trial_ended
+            FROM v_user_subs
             WHERE  (status = 'active'
                         AND active_to < ${expirationDate})
                         OR (status = 'trial'
                         AND trial_ended  < ${expirationDate});`);
             for (const sub of expiringSubscriptions) {
-                if (sub.status === "active") {
-                    //TODO: send notification
-                } else if (sub.status === "trial") {
-                    //TODO: send notification
-                }
+                await this.events.emit<UserSubStatusEvent>({
+                    type: UserSubOutEvents.USER_SUB_STATUS,
+                    data: {
+                        userSubId: sub.id,
+                        userId: sub.userId,
+                        status: "expiring",
+                        context: sub.status,
+                        trialEnded: sub.trialEnded,
+                        activeTo: sub.activeTo,
+                        subscriptionName: sub.subscriptionName,
+                        subscriptionOptionName: sub.subscriptionOptionName,
+                        timestamp: dayjs.utc().toISOString()
+                    }
+                });
             }
         } catch (error) {
             this.log.error(`Failed to check expired subscriptions ${error.message}`, error);
@@ -162,9 +215,19 @@ export default class UserSubService extends HTTPService {
 
     async checkTrial() {
         try {
-            const trialSubscriptions = await this.db.pg.any<{ id: string; trialEnded: string; userId: string }>(sql`
-            SELECT id, trial_ended, user_id
-            FROM user_subs where status = 'trial';`);
+            const trialSubscriptions = await this.db.pg.any<{
+                id: string;
+                userId: string;
+                status: UserSub["status"];
+                subscriptionName: string;
+                subscriptionOptionName: string;
+                activeTo: string;
+                trialEnded: string;
+            }>(sql`
+            SELECT id, user_id, status, 
+            subscription_name, subscription_option_name,
+                active_to, trial_ended
+            FROM v_user_subs where status = 'trial';`);
 
             for (const sub of trialSubscriptions) {
                 if (!sub.trialEnded) {
@@ -181,13 +244,43 @@ export default class UserSubService extends HTTPService {
                     if (userStats) {
                         await this.db.pg.query(sql`
                         UPDATE user_subs
-                          SET trial_ended = ${dayjs.utc().startOf("day").add(5, "day").toISOString()}
+                          SET trial_ended = ${dayjs
+                              .utc()
+                              .startOf("day")
+                              .add(this.#expirationAmount, this.#expirationUnit)
+                              .toISOString()}
                         WHERE id = ${sub.id};
                         `);
-                        //TODO: send notification
+                        await this.events.emit<UserSubStatusEvent>({
+                            type: UserSubOutEvents.USER_SUB_STATUS,
+                            data: {
+                                userSubId: sub.id,
+                                userId: sub.userId,
+                                status: "expiring",
+                                context: sub.status,
+                                trialEnded: sub.trialEnded,
+                                activeTo: sub.activeTo,
+                                subscriptionName: sub.subscriptionName,
+                                subscriptionOptionName: sub.subscriptionOptionName,
+                                timestamp: dayjs.utc().toISOString()
+                            }
+                        });
                     }
                 } else {
-                    //TODO: send notification
+                    await this.events.emit<UserSubStatusEvent>({
+                        type: UserSubOutEvents.USER_SUB_STATUS,
+                        data: {
+                            userSubId: sub.id,
+                            userId: sub.userId,
+                            status: "expiring",
+                            context: sub.status,
+                            trialEnded: sub.trialEnded,
+                            activeTo: sub.activeTo,
+                            subscriptionName: sub.subscriptionName,
+                            subscriptionOptionName: sub.subscriptionOptionName,
+                            timestamp: dayjs.utc().toISOString()
+                        }
+                    });
                 }
             }
         } catch (error) {
@@ -210,7 +303,7 @@ export default class UserSubService extends HTTPService {
         SELECT id, user_id, user_sub_id, provider, code, status,
                price, created_at, 
                subscription_from, subscription_to, subscription_option,
-               url, expires_at, 
+               url, context, expires_at, 
                addresses, 
                pricing,
                info   
@@ -260,7 +353,7 @@ export default class UserSubService extends HTTPService {
             status, price,  created_at,
             subscription_from, subscription_to,
             subscription_option,
-            url,
+            url, context,
             expires_at, addresses, 
             pricing,
             info
@@ -277,6 +370,7 @@ export default class UserSubService extends HTTPService {
             ${charge.subscriptionTo || null},
             ${charge.subscriptionOption},
             ${charge.url || null},
+            ${charge.context || null},
             ${charge.expiresAt || null},
             ${JSON.stringify(charge.addresses) || null},
             ${JSON.stringify(charge.pricing) || null},
@@ -412,13 +506,7 @@ export default class UserSubService extends HTTPService {
             `);
 
             let userPayment = await this.db.pg.maybeOne<UserPayment>(sql`
-                SELECT id, user_id, user_sub_id, provider, code, status,
-                       price, created_at, 
-                       subscription_from, subscription_to, subscription_option,
-                       url, expires_at, 
-                       addresses, 
-                       pricing,
-                       info 
+                SELECT id, subscription_option, expires_at
                 FROM user_payments 
                 WHERE user_id = ${user.id} 
                 AND user_sub_id = ${userSubId} ORDER BY created_at DESC LIMIT 1;`);
@@ -498,21 +586,50 @@ export default class UserSubService extends HTTPService {
                 const userSub = { ...savedUserSub };
 
                 if (savedUserSub.status === "canceled" || savedUserSub.status === "expired") {
-                    this.log.error(`New payment for ${savedUserSub.status} subscription`, userPayment);
-                    //TODO: emit error event
+                    this.log.warn(
+                        `New ${userPayment.status} payment for ${savedUserSub.status} subscription`,
+                        userPayment
+                    );
+                    await this.events.emit<UserSubErrorEvent>({
+                        type: UserSubOutEvents.ERROR,
+                        data: {
+                            userSubId: savedUserPayment.id,
+                            userId: savedUserPayment.userId,
+                            error: `New ${userPayment.status} payment for ${savedUserSub.status} subscription. Please contact support.`,
+                            timestamp: dayjs.utc().toISOString(),
+                            userPayment
+                        }
+                    });
+                    throw new BaseError(`New ${userPayment.status} payment for ${savedUserSub.status} subscription`);
                 }
 
                 const subscription = await this.db.pg.one<SubscriptionOption>(sql`
-                SELECT 
+                SELECT so.name, s.name as subscription_name,
                 so.amount, so.unit, so.price_total
-                FROM subscription_options so
-                WHERE code = ${userSub.subscriptionOption} 
-                AND subscription_id = ${userSub.subscriptionId};
+                FROM subscription_options so, subscriptions s
+                WHERE so.code = ${userSub.subscriptionOption} 
+                AND so.subscription_id = ${userSub.subscriptionId}
+                AND so.subscription_id = s.id;
                 `);
 
                 if (subscription.priceTotal > userPayment.price) {
-                    this.log.error("Wrong payment price", userPayment);
-                    //TODO: emit error event
+                    this.log.warn(
+                        `Wrong payment price ${userPayment.price} for subscription (${subscription.priceTotal})`,
+                        userPayment
+                    );
+                    await this.events.emit<UserSubErrorEvent>({
+                        type: UserSubOutEvents.ERROR,
+                        data: {
+                            userSubId: savedUserPayment.id,
+                            userId: savedUserPayment.userId,
+                            error: `Wrong payment price ${userPayment.price} for subscription (${subscription.priceTotal}). Please contact support.`,
+                            timestamp: dayjs.utc().toISOString(),
+                            userPayment
+                        }
+                    });
+                    throw new BaseError(
+                        `Wrong payment price ${userPayment.price} for subscription (${subscription.priceTotal})`
+                    );
                 }
                 const currentTime = dayjs.utc().toISOString();
 
@@ -526,13 +643,65 @@ export default class UserSubService extends HTTPService {
                 userSub.status = "active";
 
                 await this._saveUserSub(userSub);
+
+                await this.events.emit<UserSubStatusEvent>({
+                    type: UserSubOutEvents.USER_SUB_STATUS,
+                    data: {
+                        userSubId: userSub.id,
+                        userId: userSub.userId,
+                        status: userSub.status,
+                        context: null,
+                        trialEnded: userSub.trialEnded,
+                        activeTo: userSub.activeTo,
+                        subscriptionName: subscription.subscriptionName,
+                        subscriptionOptionName: subscription.name,
+                        timestamp: dayjs.utc().toISOString()
+                    }
+                });
+                await this.events.emit<UserSubPaymentStatusEvent>({
+                    type: UserSubOutEvents.PAYMENT_STATUS,
+                    data: {
+                        userSubId: userPayment.userSubId,
+                        userId: userPayment.userId,
+                        userPaymentId: userPayment.id,
+                        status: userPayment.status,
+                        context: null,
+                        price: userPayment.price,
+                        subscriptionName: subscription.subscriptionName,
+                        subscriptionOptionName: subscription.name,
+                        timestamp: dayjs.utc().toISOString()
+                    }
+                });
             } else if (
                 userPayment.status === "EXPIRED" ||
                 userPayment.status === "CANCELED" ||
                 userPayment.status === "UNRESOLVED"
             ) {
                 this.log.info(`User payment ${userPayment.status}`, userPayment);
-                //TODO: Send notification
+
+                const userSub = await this.db.pg.one<{
+                    subscriptionName: string;
+                    subscriptionOptionName: string;
+                }>(sql`
+                SELECT
+                subscription_name, subscription_option_name
+                FROM v_user_subs
+                WHERE  id = ${userPayment.userSubId};`);
+
+                await this.events.emit<UserSubPaymentStatusEvent>({
+                    type: UserSubOutEvents.PAYMENT_STATUS,
+                    data: {
+                        userSubId: userPayment.userSubId,
+                        userId: userPayment.userId,
+                        userPaymentId: userPayment.id,
+                        status: userPayment.status,
+                        context: null,
+                        price: userPayment.price,
+                        subscriptionName: userSub.subscriptionName,
+                        subscriptionOptionName: userSub.subscriptionOptionName,
+                        timestamp: dayjs.utc().toISOString()
+                    }
+                });
             }
             return { id: userPayment.id };
         } catch (err) {
