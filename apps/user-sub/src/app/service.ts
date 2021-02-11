@@ -1,4 +1,4 @@
-import { Subscription, UserPayment, UserSub, coinbaseCommerce, SubscriptionOption } from "@cryptuoso/billing";
+import { UserPayment, UserSub, coinbaseCommerce, SubscriptionOption } from "@cryptuoso/billing";
 import dayjs, { UnitType } from "@cryptuoso/dayjs";
 import { ActionsHandlerError } from "@cryptuoso/errors";
 import { GenericObject } from "@cryptuoso/helpers";
@@ -54,11 +54,11 @@ export default class UserSubService extends HTTPService {
                     inputSchema: UserSubInSchema[UserSubInEvents.CHECK_PAYMENT],
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager, UserRoles.admin],
-                    handler: this._checkPaymentHttpHandler.bind(this, this.checkPayment.bind(this))
+                    handler: this._httpHandler.bind(this, this.checkPayment.bind(this))
                 },
                 checkSubscriptions: {
                     roles: [UserRoles.admin],
-                    handler: this.checkSubscriptions.bind(this)
+                    handler: this._httpHandler.bind(this, this.checkSubscriptions.bind(this))
                 }
             });
 
@@ -105,6 +105,7 @@ export default class UserSubService extends HTTPService {
         try {
             await this.checkExpiration();
             await this.checkTrial();
+            //await this.checkPending();
         } catch (error) {
             this.log.error(`Failed to check subscriptions ${error.message}`, error);
             throw error;
@@ -127,10 +128,10 @@ export default class UserSubService extends HTTPService {
                         subscription_name, subscription_option_name,
                         active_to, trial_ended
                         FROM v_user_subs
-                        WHERE (status = 'active'
+                        WHERE (status = 'active' AND active_to is not null
                         AND active_to < ${currentDate})
                         OR (status = 'trial'
-                        AND trial_ended  < ${currentDate});`);
+                        AND trial_ended is not null AND trial_ended  < ${currentDate});`);
 
             for (const sub of expiredSubscriptions) {
                 const userRobots = await this.db.pg.any<{ id: string }>(sql`
@@ -187,9 +188,9 @@ export default class UserSubService extends HTTPService {
             subscription_name, subscription_option_name,
                 active_to, trial_ended
             FROM v_user_subs
-            WHERE  (status = 'active'
+            WHERE  (status = 'active' AND active_to is not null
                         AND active_to < ${expirationDate})
-                        OR (status = 'trial'
+                        OR (status = 'trial' AND trial_ended is not null
                         AND trial_ended  < ${expirationDate});`);
             for (const sub of expiringSubscriptions) {
                 await this.events.emit<UserSubStatusEvent>({
@@ -282,6 +283,49 @@ export default class UserSubService extends HTTPService {
                         }
                     });
                 }
+            }
+        } catch (error) {
+            this.log.error(`Failed to check trial subscriptions ${error.message}`, error);
+            throw error;
+        }
+    }
+
+    async checkPending() {
+        try {
+            //TODO: period
+            const date = dayjs.utc().startOf("day").toISOString();
+            const pendingSubscriptions = await this.db.pg.any<{
+                id: string;
+                userId: string;
+                status: UserSub["status"];
+                subscriptionName: string;
+                subscriptionOptionName: string;
+                activeTo: string;
+                trialEnded: string;
+            }>(sql`
+            SELECT id, user_id, status, 
+            subscription_name, subscription_option_name,
+                active_to, trial_ended
+            FROM v_user_subs where status in ('pending', 'expired')
+            AND ((active_to is not null and active_to > ${date}) 
+            OR (trial_ended is not null and trial_ended > ${date})
+            );`);
+
+            for (const sub of pendingSubscriptions) {
+                await this.events.emit<UserSubStatusEvent>({
+                    type: UserSubOutEvents.USER_SUB_STATUS,
+                    data: {
+                        userSubId: sub.id,
+                        userId: sub.userId,
+                        status: sub.status,
+                        context: null,
+                        trialEnded: sub.trialEnded,
+                        activeTo: sub.activeTo,
+                        subscriptionName: sub.subscriptionName,
+                        subscriptionOptionName: sub.subscriptionOptionName,
+                        timestamp: dayjs.utc().toISOString()
+                    }
+                });
             }
         } catch (error) {
             this.log.error(`Failed to check trial subscriptions ${error.message}`, error);
@@ -386,24 +430,13 @@ export default class UserSubService extends HTTPService {
         req: RequestExtended,
         res: any
     ) {
-        const result = await handler(req.meta?.user, req.body.input);
-
-        res.send(result || { result: "OK" });
-        res.end();
-    }
-
-    async _checkPaymentHttpHandler(
-        handler: (user: User, params: GenericObject<any>) => Promise<GenericObject<any>>,
-        req: RequestExtended,
-        res: any
-    ) {
         const result = await handler(req.body.input, req.meta?.user);
 
         res.send(result || { result: "OK" });
         res.end();
     }
 
-    async createUserSub(user: User, { subscriptionId, subscriptionOption }: UserSubCreate) {
+    async createUserSub({ subscriptionId, subscriptionOption }: UserSubCreate, user?: User) {
         try {
             // Есть ли подписка и опция
             const subscription = await this.db.pg.maybeOne<{ code: string }>(sql`SELECT code 
@@ -426,15 +459,16 @@ export default class UserSubService extends HTTPService {
             if (sameUserSubs && sameUserSubs?.length) throw new BaseError("User subscription already exists");
 
             // Есть ли такая же подписка пользователя с другой опцией
-            const sameActiveUserSub = await this.db.pg.maybeOneFirst<{ id: string }>(sql`
+            const sameActiveUserSub = await this.db.pg.maybeOne<{ id: string }>(sql`
             SELECT id 
             FROM user_subs
             WHERE user_id = ${user.id}
             AND subscription_id = ${subscriptionId}
             AND subscription_option != ${subscriptionOption}
             AND status in (${"active"},${"trial"},${"pending"})
-            ORDER BY created_at DESC;
+            ORDER BY created_at DESC LIMIT 1;
             `);
+            this.log.info(subscriptionOption, sameActiveUserSub);
             // Если есть, просто меняем опцию
             if (sameActiveUserSub) {
                 await this.db.pg.query(sql`
@@ -445,9 +479,9 @@ export default class UserSubService extends HTTPService {
             }
 
             // Была ли подписка с триалом
-            const trialSubscription = await this.db.pg.maybeOneFirst(sql`SELECT id FROM user_subs 
+            const trialSubscription = await this.db.pg.maybeOne(sql`SELECT id FROM user_subs 
             WHERE user_id = ${user.id}
-            AND trial_started IS NOT NULL;`);
+            AND trial_started IS NOT NULL ORDER BY created_at DESC LIMIT 1;`);
             let status: UserSub["status"] = "trial";
             // Если была, сразу ожидаем оплату
             if (trialSubscription) status = "pending";
@@ -468,7 +502,7 @@ export default class UserSubService extends HTTPService {
         }
     }
 
-    async cancelUserSub(user: User, { userSubId }: UserSubCancel) {
+    async cancelUserSub({ userSubId }: UserSubCancel, user: User) {
         try {
             await this.db.pg.query(sql`UPDATE user_subs
            SET status = ${"canceled"} 
@@ -481,7 +515,7 @@ export default class UserSubService extends HTTPService {
         }
     }
 
-    async checkoutUserSub(user: User, { userSubId }: UserSubCheckout): Promise<{ id: UserPayment["id"] }> {
+    async checkoutUserSub({ userSubId }: UserSubCheckout, user: User): Promise<{ id: UserPayment["id"] }> {
         try {
             const userSub: UserSub = await this._getUserSubById(userSubId);
 
