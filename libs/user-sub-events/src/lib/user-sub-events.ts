@@ -90,6 +90,8 @@ export interface UserSubErrorEvent {
     userId: string;
     error: string;
     timestamp: string;
+    subscriptionName: string;
+    subscriptionOptionName: string;
     userPayment?: UserPayment;
 }
 

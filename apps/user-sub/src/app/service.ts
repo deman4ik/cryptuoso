@@ -56,9 +56,17 @@ export default class UserSubService extends HTTPService {
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager, UserRoles.admin],
                     handler: this._httpHandler.bind(this, this.checkPayment.bind(this))
                 },
-                checkSubscriptions: {
+                checkExpiration: {
                     roles: [UserRoles.admin],
-                    handler: this._httpHandler.bind(this, this.checkSubscriptions.bind(this))
+                    handler: this._httpHandler.bind(this, this.checkExpiration.bind(this))
+                },
+                checkTrial: {
+                    roles: [UserRoles.admin],
+                    handler: this._httpHandler.bind(this, this.checkTrial.bind(this))
+                },
+                checkPending: {
+                    roles: [UserRoles.admin],
+                    handler: this._httpHandler.bind(this, this.checkPending.bind(this))
                 }
             });
 
@@ -81,7 +89,27 @@ export default class UserSubService extends HTTPService {
         await this.addJob("user-sub", "checkExpiration", null, {
             jobId: "checkExpiration",
             repeat: {
-                cron: "0 0 1 * * *"
+                cron: "0 3 1 * * *"
+            },
+            attempts: 5,
+            backoff: { type: "exponential", delay: 60000 * 10 },
+            removeOnComplete: 1,
+            removeOnFail: 5
+        });
+        await this.addJob("user-sub", "checkTrial", null, {
+            jobId: "checkTrial",
+            repeat: {
+                cron: "0 3 * * * *"
+            },
+            attempts: 5,
+            backoff: { type: "exponential", delay: 60000 * 10 },
+            removeOnComplete: 1,
+            removeOnFail: 5
+        });
+        await this.addJob("user-sub", "checkPending", null, {
+            jobId: "checkPending",
+            repeat: {
+                cron: "0 3 2 */5 * *"
             },
             attempts: 5,
             backoff: { type: "exponential", delay: 60000 * 10 },
@@ -93,23 +121,18 @@ export default class UserSubService extends HTTPService {
     async process(job: Job) {
         switch (job.name) {
             case "checkExpiration":
-                await this.checkSubscriptions();
+                await this.checkExpiration();
+                break;
+            case "checkTrial":
+                await this.checkExpiration();
+                break;
+            case "checkPending":
+                await this.checkPending();
                 break;
             default:
                 this.log.error(`Unknow job ${job.name}`);
         }
         return { result: "ok" };
-    }
-
-    async checkSubscriptions() {
-        try {
-            await this.checkExpiration();
-            await this.checkTrial();
-            //await this.checkPending();
-        } catch (error) {
-            this.log.error(`Failed to check subscriptions ${error.message}`, error);
-            throw error;
-        }
     }
 
     async checkExpiration() {
@@ -224,10 +247,13 @@ export default class UserSubService extends HTTPService {
                 subscriptionOptionName: string;
                 activeTo: string;
                 trialEnded: string;
+                subscriptionLimits: {
+                    trialNetProfit: number;
+                };
             }>(sql`
             SELECT id, user_id, status, 
             subscription_name, subscription_option_name,
-                active_to, trial_ended
+                active_to, trial_ended, subscription_limits
             FROM v_user_subs where status = 'trial';`);
 
             for (const sub of trialSubscriptions) {
@@ -239,7 +265,7 @@ export default class UserSubService extends HTTPService {
                       AND type = 'userRobot'
                       AND exchange is null
                       AND asset is null
-                      AND net_profit > 15;
+                      AND net_profit > ${sub.subscriptionLimits?.trialNetProfit || 15};
                     `);
 
                     if (userStats) {
@@ -292,7 +318,6 @@ export default class UserSubService extends HTTPService {
 
     async checkPending() {
         try {
-            //TODO: period
             const date = dayjs.utc().startOf("day").toISOString();
             const pendingSubscriptions = await this.db.pg.any<{
                 id: string;
@@ -306,9 +331,10 @@ export default class UserSubService extends HTTPService {
             SELECT id, user_id, status, 
             subscription_name, subscription_option_name,
                 active_to, trial_ended
-            FROM v_user_subs where status in ('pending', 'expired')
-            AND ((active_to is not null and active_to > ${date}) 
-            OR (trial_ended is not null and trial_ended > ${date})
+            FROM v_user_subs where (status = 'expired'
+            AND ((active_to is not null and active_to < ${date}) 
+            OR (trial_ended is not null and trial_ended < ${date})) 
+            OR status = 'pending'
             );`);
 
             for (const sub of pendingSubscriptions) {
@@ -619,6 +645,15 @@ export default class UserSubService extends HTTPService {
 
                 const userSub = { ...savedUserSub };
 
+                const subscription = await this.db.pg.one<SubscriptionOption>(sql`
+                SELECT so.name, s.name as subscription_name,
+                so.amount, so.unit, so.price_total
+                FROM subscription_options so, subscriptions s
+                WHERE so.code = ${userSub.subscriptionOption} 
+                AND so.subscription_id = ${userSub.subscriptionId}
+                AND so.subscription_id = s.id;
+                `);
+
                 if (savedUserSub.status === "canceled" || savedUserSub.status === "expired") {
                     this.log.warn(
                         `New ${userPayment.status} payment for ${savedUserSub.status} subscription`,
@@ -629,22 +664,15 @@ export default class UserSubService extends HTTPService {
                         data: {
                             userSubId: savedUserPayment.id,
                             userId: savedUserPayment.userId,
-                            error: `New ${userPayment.status} payment for ${savedUserSub.status} subscription. Please contact support.`,
+                            subscriptionName: subscription.subscriptionName,
+                            subscriptionOptionName: subscription.name,
+                            error: `New ${userPayment.status} payment ${userPayment.code} for ${subscription.subscriptionName} ${savedUserSub.status} subscription. Please contact support.`,
                             timestamp: dayjs.utc().toISOString(),
                             userPayment
                         }
                     });
                     throw new BaseError(`New ${userPayment.status} payment for ${savedUserSub.status} subscription`);
                 }
-
-                const subscription = await this.db.pg.one<SubscriptionOption>(sql`
-                SELECT so.name, s.name as subscription_name,
-                so.amount, so.unit, so.price_total
-                FROM subscription_options so, subscriptions s
-                WHERE so.code = ${userSub.subscriptionOption} 
-                AND so.subscription_id = ${userSub.subscriptionId}
-                AND so.subscription_id = s.id;
-                `);
 
                 if (subscription.priceTotal > userPayment.price) {
                     this.log.warn(
@@ -656,7 +684,9 @@ export default class UserSubService extends HTTPService {
                         data: {
                             userSubId: savedUserPayment.id,
                             userId: savedUserPayment.userId,
-                            error: `Wrong payment price ${userPayment.price} for subscription (${subscription.priceTotal}). Please contact support.`,
+                            subscriptionName: subscription.subscriptionName,
+                            subscriptionOptionName: subscription.name,
+                            error: `Wrong payment ${userPayment.code} price ${userPayment.price} for ${subscription.subscriptionName} subscription (${subscription.priceTotal}). Please contact support.`,
                             timestamp: dayjs.utc().toISOString(),
                             userPayment
                         }
