@@ -32,13 +32,14 @@ export const enum UserTradeEvents {
 }
 
 const RunnerSchema = {
-    userRobotId: "uuid",
+    id: "uuid",
     message: { type: "string", optional: true }
 };
 
 const RunnerPauseSchema = {
-    userRobotId: { type: "uuid", optional: true },
-    userExAccId: { type: "string", optional: true },
+    id: { type: "uuid", optional: true },
+    userExAccId: { type: "uuid", optional: true },
+    exchange: { type: "string", optional: true },
     message: { type: "string", optional: true }
 };
 
@@ -48,6 +49,30 @@ export const UserRobotRunnerSchema = {
     [UserRobotRunnerEvents.PAUSE]: RunnerPauseSchema,
     [UserRobotRunnerEvents.RESUME]: RunnerPauseSchema
 };
+
+export interface UserRobotRunnerStart {
+    id: string;
+    message?: string;
+}
+
+export interface UserRobotRunnerStop {
+    id: string;
+    message?: string;
+}
+
+export interface UserRobotRunnerPause {
+    id?: string;
+    userExAccId?: string;
+    exchange?: string;
+    message?: string;
+}
+
+export interface UserRobotRunnerResume {
+    id: string;
+    userExAccId?: string;
+    exchange?: string;
+    message?: string;
+}
 
 const StatusSchema = {
     userRobotId: "uuid",

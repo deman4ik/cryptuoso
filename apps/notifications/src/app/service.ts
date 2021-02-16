@@ -19,10 +19,17 @@ import {
     UserExchangeAccountErrorEvent
 } from "@cryptuoso/connector-events";
 import { UserRobotStatus, UserTradeEvent } from "@cryptuoso/user-robot-state";
+import {
+    UserSubErrorEvent,
+    UserSubOutEvents,
+    UserSubOutSchema,
+    UserSubPaymentStatusEvent,
+    UserSubStatusEvent
+} from "@cryptuoso/user-sub-events";
 import dayjs from "@cryptuoso/dayjs";
 
 export type NotificationsServiceConfig = BaseServiceConfig;
-
+//TODO: enum for notification types
 export default class NotificationsService extends BaseService {
     constructor(config?: NotificationsServiceConfig) {
         super(config);
@@ -64,6 +71,18 @@ export default class NotificationsService extends BaseService {
                 [ConnectorWorkerEvents.USER_EX_ACC_ERROR]: {
                     schema: ConnectorWorkerSchema[ConnectorWorkerEvents.USER_EX_ACC_ERROR],
                     handler: this.handleUserExAccError.bind(this)
+                },
+                [UserSubOutEvents.ERROR]: {
+                    schema: UserSubOutSchema[UserSubOutEvents.ERROR],
+                    handler: this.handleUserSubError.bind(this)
+                },
+                [UserSubOutEvents.PAYMENT_STATUS]: {
+                    schema: UserSubOutSchema[UserSubOutEvents.PAYMENT_STATUS],
+                    handler: this.handlePaymentStatus.bind(this)
+                },
+                [UserSubOutEvents.USER_SUB_STATUS]: {
+                    schema: UserSubOutSchema[UserSubOutEvents.USER_SUB_STATUS],
+                    handler: this.handleUserSubStatus.bind(this)
                 }
             });
         } catch (err) {
@@ -367,6 +386,99 @@ export default class NotificationsService extends BaseService {
             await this.#saveNotifications([notification]);
         } catch (err) {
             this.log.error("Failed to handleUserExAccError", err, event);
+            throw err;
+        }
+    }
+
+    async handleUserSubError(event: UserSubErrorEvent) {
+        try {
+            this.log.info(`Handling user sub error event`, event);
+            const { userId, timestamp } = event;
+
+            const { telegramId, email } = await this.db.pg.one<{
+                telegramId?: number;
+                email?: number;
+            }>(sql`
+                    SELECT 
+                        u.telegram_id,
+                        u.email
+                    FROM users u
+                    WHERE u.id = ${userId};`);
+
+            const notification: Notification = {
+                userId,
+                timestamp,
+                type: "user_sub.error",
+                data: { ...event },
+                sendEmail: !!email,
+                sendTelegram: !!telegramId
+            };
+
+            await this.#saveNotifications([notification]);
+        } catch (err) {
+            this.log.error("Failed to handleUserSubError", err, event);
+            throw err;
+        }
+    }
+
+    async handlePaymentStatus(event: UserSubPaymentStatusEvent) {
+        try {
+            this.log.info(`Handling user payment status event`, event);
+            const { userId, timestamp } = event;
+
+            const { telegramId, email } = await this.db.pg.one<{
+                telegramId?: number;
+                email?: number;
+            }>(sql`
+                    SELECT 
+                        u.telegram_id,
+                        u.email
+                    FROM users u
+                    WHERE u.id = ${userId};`);
+
+            const notification: Notification = {
+                userId,
+                timestamp,
+                type: "user_payment.status",
+                data: { ...event },
+                sendEmail: !!email,
+                sendTelegram: !!telegramId
+            };
+
+            await this.#saveNotifications([notification]);
+        } catch (err) {
+            this.log.error("Failed to handlePaymentStatus", err, event);
+            throw err;
+        }
+    }
+
+    async handleUserSubStatus(event: UserSubStatusEvent) {
+        try {
+            this.log.info(`Handling user sub status event`, event);
+            const { userId, timestamp } = event;
+
+            const { telegramId, email } = await this.db.pg.one<{
+                telegramId?: number;
+                email?: number;
+            }>(sql`
+                    SELECT 
+                        u.telegram_id,
+                        u.email
+                    FROM users u
+                    WHERE u.id = ${userId};`);
+
+            const notification: Notification = {
+                userId,
+                timestamp,
+                type: "user_sub.status",
+                data: { ...event },
+                sendEmail: !!email,
+                sendTelegram: !!telegramId
+            };
+
+            await this.#saveNotifications([notification]);
+        } catch (err) {
+            this.log.error("Failed to handleUserSubStatus", err, event);
             throw err;
         }
     }

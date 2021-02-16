@@ -1,7 +1,7 @@
 import { sql } from "@cryptuoso/postgres";
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import { Webhook } from "coinbase-commerce-node";
-import { UserSubCheckPayment, UserSubEvents } from "@cryptuoso/user-sub-events";
+import { UserSubCheckPayment, UserSubInEvents } from "@cryptuoso/user-sub-events";
 
 export type WebhooksServiceConfig = HTTPServiceConfig;
 
@@ -49,7 +49,7 @@ export default class WebhooksService extends HTTPService {
 
             if (event.type.includes("charge") && event.type !== "charge:created")
                 await this.events.emit<UserSubCheckPayment>({
-                    type: UserSubEvents.CHECK_PAYMENT,
+                    type: UserSubInEvents.CHECK_PAYMENT,
                     data: {
                         chargeId: event.data.id,
                         provider: "coinbase.commerce"

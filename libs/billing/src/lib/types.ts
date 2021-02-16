@@ -39,7 +39,7 @@ export interface UserSub {
     userId: string;
     subscriptionId: string;
     subscriptionOption: SubscriptionOptionKey;
-    status: "active" | "trial" | "expired" | "pending" | "canceled";
+    status: "active" | "trial" | "expired" | "pending" | "canceled" | "expiring";
     activeFrom?: string;
     activeTo?: string;
     trialStarted?: string;
@@ -58,6 +58,11 @@ export interface UserPayment {
     status: "NEW" | "PENDING" | "COMPLETED" | "UNRESOLVED" | "RESOLVED" | "EXPIRED" | "CANCELED";
     price: number;
     createdAt: string;
+    subscriptionOption?: string;
+    subscriptionFrom?: string;
+    subscriptionTo?: string;
+    url?: string;
+    context?: string;
     expiresAt?: string;
     addresses?: resources.Charge["addresses"];
     pricing?: resources.Charge["pricing"];
