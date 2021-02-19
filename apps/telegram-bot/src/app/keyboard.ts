@@ -31,7 +31,7 @@ export const getMainKeyboard = (ctx: any) => {
     const mainKeyboardRobots = ctx.i18n.t("keyboards.mainKeyboard.robots");
     const mainKeyboardSettings = ctx.i18n.t("keyboards.mainKeyboard.settings");
     const mainKeyboardSupport = ctx.i18n.t("keyboards.mainKeyboard.support");
-    const mainKeyboardDonation = ctx.i18n.t("keyboards.mainKeyboard.donation");
+    const mainKeyboardSubscription = ctx.i18n.t("keyboards.mainKeyboard.subscription");
 
     return Extra.HTML().markup((m: any) =>
         m
@@ -39,7 +39,7 @@ export const getMainKeyboard = (ctx: any) => {
             .keyboard([
                 [mainKeyboardSignals, mainKeyboardRobots],
                 [mainKeyboardSettings, mainKeyboardSupport],
-                [mainKeyboardDonation]
+                [mainKeyboardSubscription]
             ])
     );
 };
