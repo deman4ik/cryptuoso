@@ -12,6 +12,7 @@ export interface SubscriptionOption {
     priceMonth: number;
     priceTotal: number;
     discount?: number;
+    freeMonths?: number;
     amount: number;
     unit: UnitType;
     available: number;

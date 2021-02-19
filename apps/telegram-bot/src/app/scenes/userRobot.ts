@@ -1,12 +1,13 @@
 import { BaseService } from "@cryptuoso/service";
 import { BaseScene, Extra } from "telegraf";
-import { ClosedPosition, OpenPosition, Robot, TelegramScene } from "../types";
+import { ClosedPosition, IUserSub, OpenPosition, Robot, TelegramScene } from "../types";
 import { addBaseActions } from "./default";
 import { match } from "@edjopato/telegraf-i18n";
 import { sortAsc } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
 import { getStatisticsText, getVolumeText } from "../helpers";
 import { UserRobotStatus } from "@cryptuoso/user-robot-state";
+import { gql } from "@cryptuoso/graphql-client";
 
 function getUserRobotMenu(ctx: any) {
     const { robot }: { robot: Robot } = ctx.scene.state;
@@ -301,9 +302,57 @@ async function userRobotPositions(ctx: any) {
 
 async function userRobotAdd(ctx: any) {
     try {
+        const {
+            userSubs
+        }: {
+            userSubs: IUserSub[];
+        } = await this.gqlClient.request(
+            gql`
+                query userSub($userId: uuid!) {
+                    userSubs: user_subs(
+                        where: { user_id: { _eq: $userId }, status: { _nin: ["canceled", "expired"] } }
+                        order_by: { created_at: desc_nulls_last }
+                        limit: 1
+                    ) {
+                        id
+                        user_id
+                        status
+                        trial_started
+                        trial_ended
+                        active_from
+                        active_to
+                        subscription {
+                            id
+                            name
+                            description
+                        }
+                        subscriptionOption {
+                            code
+                            name
+                        }
+                        userPayments(order_by: { created_at: desc_nulls_last }, limit: 1) {
+                            code
+                            url
+                            status
+                            price
+                            created_at
+                            expires_at
+                            subscription_from
+                            subscription_to
+                        }
+                    }
+                }
+            `,
+            { userId: ctx.session.user.id },
+            ctx
+        );
+        let userSub;
+        if (userSubs && userSubs.length) [userSub] = userSubs;
+
         ctx.scene.state.silent = true;
         await ctx.scene.enter(TelegramScene.ADD_USER_ROBOT, {
             robot: ctx.scene.state.robot,
+            userSub,
             prevState: { ...ctx.scene.state, silent: false }
         });
     } catch (e) {

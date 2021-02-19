@@ -3,6 +3,7 @@ import { RobotSettings, UserRobotSettings, UserSignalSettings } from "@cryptuoso
 import { BaseStatistics } from "@cryptuoso/stats-calc";
 import { UserRobotStatus } from "@cryptuoso/user-robot-state";
 import { BaseUser } from "@cryptuoso/user-state";
+import { Subscription, SubscriptionOption, UserPayment, UserSub } from "@cryptuoso/billing";
 
 export const enum TelegramScene {
     SIGNALS = "signals",
@@ -33,7 +34,12 @@ export const enum TelegramScene {
     SUPPORT = "support",
     START = "start",
     REGISTRATION = "registration",
-    LOGIN = "login"
+    LOGIN = "login",
+    USER_SUB = "userSub",
+    PAYMENT_HISTORY = "paymentHistory",
+    CREATE_USER_SUB = "createUserSub",
+    CHECKOUT_USER_SUB = "checkoutUserSub",
+    CANCEL_USER_SUB = "cancelUserSub"
 }
 
 export interface TelegramUser extends BaseUser {
@@ -130,4 +136,62 @@ export interface Robot {
     userSignal?: UserSignal;
     userRobot?: UserRobot;
     lastInfoUpdatedAt: string;
+}
+
+export interface IUserSub {
+    id: UserSub["id"];
+    userId: UserSub["userId"];
+    status: UserSub["status"];
+    trial_started: UserSub["trialStarted"];
+    trial_ended: UserSub["trialEnded"];
+    active_from: UserSub["activeFrom"];
+    active_to: UserSub["activeTo"];
+    subscription: {
+        id: Subscription["id"];
+        name: Subscription["name"];
+        description: Subscription["description"];
+    };
+    subscriptionOption: {
+        code: SubscriptionOption["code"];
+        name: SubscriptionOption["name"];
+    };
+    userPayments?: IUserPayment[];
+}
+
+export interface IUserPayment {
+    id: UserPayment["id"];
+    code: UserPayment["code"];
+    url: UserPayment["url"];
+    status: UserPayment["status"];
+    price: UserPayment["price"];
+    created_at: UserPayment["createdAt"];
+    expires_at: UserPayment["expiresAt"];
+    subscription_from: UserPayment["subscriptionFrom"];
+    subscription_to: UserPayment["subscriptionTo"];
+    userSub?: {
+        subscriptionOption: {
+            name: SubscriptionOption["name"];
+        };
+        subscription: {
+            name: Subscription["name"];
+        };
+    };
+}
+
+export interface ISubscription {
+    id: Subscription["id"];
+    name: Subscription["name"];
+    description: Subscription["description"];
+    options: {
+        code: SubscriptionOption["code"];
+        name: SubscriptionOption["name"];
+        sort_order: SubscriptionOption["sortOrder"];
+        unit: SubscriptionOption["unit"];
+        amount: SubscriptionOption["amount"];
+        price_month: SubscriptionOption["priceMonth"];
+        price_total: SubscriptionOption["priceTotal"];
+        discount?: SubscriptionOption["discount"];
+        free_months?: SubscriptionOption["freeMonths"];
+        highlight: SubscriptionOption["highlight"];
+    }[];
 }

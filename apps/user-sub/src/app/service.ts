@@ -530,11 +530,38 @@ export default class UserSubService extends HTTPService {
 
     async cancelUserSub({ userSubId }: UserSubCancel, user: User) {
         try {
+            const { status } = await this.db.pg.maybeOne<{ status: UserSub["status"] }>(sql`select status 
+            FROM  user_subs
+           WHERE id = ${userSubId} 
+           AND user_id = ${user.id};
+           `);
+
+            if (!status) throw new BaseError("User Subscription doesn't exists");
+
+            if (status === "canceled" || status === "expired") throw new BaseError(`User Subscription is ${status}`);
+
             await this.db.pg.query(sql`UPDATE user_subs
            SET status = ${"canceled"} 
            WHERE id = ${userSubId} 
            AND user_id = ${user.id};
            `);
+
+            const userRobots = await this.db.pg.any<{ id: string }>(sql`
+           SELECT id 
+           FROM user_robots 
+           WHERE user_id = ${user.id} 
+           AND status = 'started';`);
+            if (userRobots && userRobots.length) {
+                for (const { id } of userRobots) {
+                    await this.events.emit<UserRobotRunnerStop>({
+                        type: UserRobotRunnerEvents.STOP,
+                        data: {
+                            id,
+                            message: "Subscription canceled"
+                        }
+                    });
+                }
+            }
         } catch (err) {
             this.log.error(err);
             throw err;

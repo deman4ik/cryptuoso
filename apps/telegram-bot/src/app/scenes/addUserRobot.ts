@@ -73,6 +73,13 @@ function getChooseAmountTypeMenu(ctx: any) {
 
 async function addUserRobotEnter(ctx: any) {
     try {
+        if (!ctx.scene.state.userSub) {
+            return ctx.scene.enter(TelegramScene.CREATE_USER_SUB, {
+                userSub: null,
+                prevScene: TelegramScene.ADD_USER_ROBOT,
+                prevState: { ...ctx.scene.state, edit: false }
+            });
+        }
         if (ctx.scene.state.userExAccId) return addUserRobotSelectedAcc.call(this, ctx);
         const {
             robot: { exchange, code }

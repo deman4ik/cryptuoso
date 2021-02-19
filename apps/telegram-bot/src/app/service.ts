@@ -15,6 +15,9 @@ import { sql } from "@cryptuoso/postgres";
 import {
     addUserExAccScene,
     addUserRobotScene,
+    cancelUserSubScene,
+    checkoutUserSubScene,
+    createUserSubScene,
     deleteUserRobotScene,
     editSignalsScene,
     editUserExAccScene,
@@ -22,6 +25,7 @@ import {
     loginScene,
     myRobotsScene,
     mySignalsScene,
+    paymentHistoryScene,
     perfRobotsScene,
     perfSignalsScene,
     registrationScene,
@@ -41,7 +45,8 @@ import {
     unsubscribeSignalsScene,
     userExAccScene,
     userExAccsScene,
-    userRobotScene
+    userRobotScene,
+    userSubScene
 } from "./scenes";
 import { UserMarketState } from "@cryptuoso/market";
 import { SignalEvents } from "@cryptuoso/robot-events";
@@ -115,11 +120,15 @@ export default class TelegramBotService extends BaseService {
             const mainStage = new Stage([
                 addUserExAccScene(this),
                 addUserRobotScene(this),
+                cancelUserSubScene(this),
+                checkoutUserSubScene(this),
+                createUserSubScene(this),
                 deleteUserRobotScene(this),
                 editSignalsScene(this),
                 editUserExAccScene(this),
                 editUserRobotScene(this),
                 mySignalsScene(this),
+                paymentHistoryScene(this),
                 myRobotsScene(this),
                 perfRobotsScene(this),
                 perfSignalsScene(this),
@@ -138,7 +147,8 @@ export default class TelegramBotService extends BaseService {
                 unsubscribeSignalsScene(this),
                 userExAccScene(this),
                 userExAccsScene(this),
-                userRobotScene(this)
+                userRobotScene(this),
+                userSubScene(this)
             ]);
             mainStage.command("cancel", leave());
             this.bot.use(mainStage.middleware());
@@ -150,7 +160,7 @@ export default class TelegramBotService extends BaseService {
             this.bot.hears(match("keyboards.mainKeyboard.robots"), enter(TelegramScene.ROBOTS));
             this.bot.hears(match("keyboards.mainKeyboard.settings"), enter(TelegramScene.SETTINGS));
             this.bot.hears(match("keyboards.mainKeyboard.support"), enter(TelegramScene.SUPPORT));
-            this.bot.hears(match("keyboards.mainKeyboard.donation"), reply("donation", Extra.HTML()));
+            this.bot.hears(match("keyboards.mainKeyboard.subscription"), enter(TelegramScene.USER_SUB));
             this.bot.hears(/(.*?)/, this.defaultHandler.bind(this));
 
             this.addOnStartHandler(this.onServiceStart);

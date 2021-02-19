@@ -15,7 +15,7 @@
             "robots": "🤖 Robots",
             "settings": "⚙️ Settings",
             "support": "❓ Support",
-            "donation": "💰 Donation"
+            "subscription": "💰 Subscription"
         },
         "confirm": {
             "yes": "Yes",
@@ -72,7 +72,7 @@
         },
         "perfSignals": {
             "info": "📊 My Signals Total Performance",
-            "perfNone": "No enough data to calculate Signals Performance yet..."
+            "perfNone": "Not enough data to calculate Signals Performance yet..."
         },
         "robotSignal": {
             "subscribeSignals": "🚥 Subscribe to Signals",
@@ -110,7 +110,7 @@
         },
         "perfRobots": {
             "info": "📊 My trading Robots Total Performance",
-            "perfNone": "No enough data to calculate trading Robots Performance yet..."
+            "perfNone": "Not enough data to calculate trading Robots Performance yet..."
         },
         "searchRobots": {
             "selectExchange": "🔎 Searching Robots\n\nSelect available <b>exchange</b>",
@@ -158,7 +158,7 @@
             "success": "🟢 <b>#${code}</b> robot is starting now..."
         },
         "stopUserRobot": {
-            "confirm": "⛔ Stopping <b>#${code}</b> robot...\n\n⚠️ Are you sure you want to stop <b>#${code}</b> robot now?\n\n If there is any <b>open positions</b> created by this robot they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!",
+            "confirm": "⛔ Stopping <b>#${code}</b> robot...\n\n⚠️ Are you sure you want to stop <b>#${code}</b> robot now?\n\n If there are any <b>open positions</b> created by this robot they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!",
             "failed": "❌ Failed to stop robot #${code} - ${error}",
             "success": "⛔ <b>#${code}</b> robot is stopping now..."
         },
@@ -212,6 +212,36 @@
             "info4": "Also you can <b>type and send your message right now ⬇️ to this bot</b>\n\n(works only while you in Support section)",
             "success": "✅ Your support request have been received.\n\nIf you have any additional information regarding your issue\n\n you can use <b>❓ Support</b> section again!",
             "reply": "❓ New Message from <b>Support Team</b>:\n\n${message}\n\nYou can reply to us in <b>❓ Support</b> section."
+        },
+        "userSub": {
+            "checkout": "🧾 Checkout",
+            "history": "🗄 Payment history",
+            "changePlan": "🕐 Change plan",
+            "startTrial": "⏳ Start trial",
+            "cancel": "❌ Cancel subscription",
+            "info": "<b>Current subscription:</b>\n${name} ${option}\n\n<b>Description:</b>\n<i>${description}</i>\n\n<b>Status:</b> ${status}\n${expires}\n${lastPayment}",
+            "lastPayment": "<b>Last payment:</b>\n<b>Charge Code:</b> ${code}\n<b>Status:</b> ${status}\n<b>Price:</b> ${price}$\n<b>Period:</b> ${period}"
+        },
+        "createUserSub": {
+            "info": "<b>Choose your subscription plan:</b>\n\n<b>${name}</b>\n\n<b>Description:</b> <i>${description}</i>\n\n<b>Options:</b>\n\n${options}",
+            "trial": " - <b>Start Trial</b>",
+            "option": "<b>${name}</b>${highlight} - <b>${priceTotal}$</b>${discount}${subscribed}",
+            "failed": "❌ Failed to create subscription - ${error}",
+            "success": "✅ Subscription created"
+        },
+        "checkoutUserSub": {
+            "info": "<b>Checkout</b>\n\n<b>Charge:</b> ${code}\n\n<b>Subscription:</b> ${subscriptionName} ${subscriptionOption}\n<b>Period:</b> ${subscriptionFrom} - ${subscriptionTo}\n\n<b>Price:</b> ${price}$\n\n<b>Status:</b> ${status}\n<b>Last checked:</b> ${updated}\n<b>Expires:</b> ${expires}\n\n<b><a href='${url}'>BUY WITH CRYPTO</a></b>\n<i>⬆️  Please follow the link to process your payment. ⬆️</i>\n\n<i>⏳ The payment processing and validation on the blockchain may take up to 60 minutes.\n<b>When your payment will be resolved your subscription will be ✳️ activated.</b>\n<a href='https://commerce.coinbase.com/faq#customers'>How it works?</a></i>",
+            "check": "🔄 Check payment status"
+        },
+        "paymentHistory": {
+            "info": "<b>Payments History:</b>\n\n",
+            "none": "<b>No payments yet</b>",
+            "charge": "<b>Charge:</b> ${code}\n<b>Price:</b> ${price}$\n<b>Status:</b> ${status}\n<b>Created:</b> ${created}\n<b>Expires:</b> ${expires}\n<b>Subscription:</b> ${subscription}\n<b>Period:</b> ${subscriptionPeriod}\n\n"
+        },
+        "cancelUserSub": {
+            "confirm": "⚠️ Are you sure you want to cancel your <b>#${name}</b> subscription?\n\nAll robots will be <b>stopped</b>! If there are any <b>open positions</b> they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!",
+            "failed": "❌ Failed to cancel #${name} subscription - ${error}",
+            "success": "⛔ All robots are stopping now..."
         }
     },
     "signal": {
@@ -277,6 +307,23 @@
         "failed": "❌ Failed",
         "resumed": "♻️ Resumed"
     },
+    "userSubStatus": {
+        "active": "✳️ Active",
+        "trial": "✴️ Trial",
+        "expired": "⛔ Expired",
+        "pending": "⏳ Pending",
+        "canceled": "❌ Canceled",
+        "expiring": "⏳ Expiring"
+    },
+    "paymentStatus": {
+        "NEW": "🌀 NEW",
+        "PENDING": "✴️ PENDING",
+        "COMPLETED": "🟢 COMPLETED",
+        "UNRESOLVED": "⛔ UNRESOLVED",
+        "RESOLVED": "✅ RESOLVED",
+        "EXPIRED": "⏳ EXPIRED",
+        "CANCELED": "❌ CANCELED"
+    },
     "orderType": {
         "market": "Market 〽️",
         "limit": "Limit ✴️",
@@ -290,6 +337,12 @@
         "error": "❌ Error occurred while processing robot job.\n\n${error} \n\n🤖 <b>#${code}</b> (${id})\n\n Please contact support.",
         "orderError": "❌ Error occurred while processing order <b>${orderId}</b>.\n\n${error} \n\n🤖 <b>#${code}</b> (${id})\n\n Please check your API Keys and Robot settings or contact support.",
         "status": "🤖 Robot <b>#${code}</b> is ${status} now!\n\n${message}"
+    },
+    "freeSub": {
+        "name": "FREE PLAN",
+        "option": "",
+        "description": "Manual trading\nTrading signals from our robots\n\nUnlimited signals\nCommunity Chat Support",
+        "expires": ""
     },
     "unknownError": "Unknown error",
     "menu": "Please use Menu in Telegram keyboard section ↘️",
