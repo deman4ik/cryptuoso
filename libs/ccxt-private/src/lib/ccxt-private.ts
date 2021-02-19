@@ -148,7 +148,7 @@ export class PrivateConnector {
                 try {
                     return await connector.fetchTicker(this.getSymbol(asset, currency));
                 } catch (e) {
-                    if (e instanceof ccxt.NetworkError) throw e;
+                    if (e instanceof ccxt.NetworkError || e.message.includes("Bad Gateway")) throw e;
                     bail(e);
                 }
             };
@@ -216,7 +216,10 @@ export class PrivateConnector {
                         orderParams
                     );
                 } catch (e) {
-                    if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) {
+                    if (
+                        (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
+                        e.message.includes("Bad Gateway")
+                    ) {
                         this.initConnector();
                         throw e;
                     }
@@ -242,7 +245,10 @@ export class PrivateConnector {
                 try {
                     return await this.connector.cancelOrder(order.id, this.getSymbol(asset, currency));
                 } catch (e) {
-                    if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) {
+                    if (
+                        (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
+                        e.message.includes("Bad Gateway")
+                    ) {
                         this.initConnector();
                         throw e;
                     }
@@ -291,7 +297,7 @@ export class PrivateConnector {
                 try {
                     return this.connector.loadAccounts();
                 } catch (e) {
-                    if (e instanceof ccxt.NetworkError) {
+                    if (e instanceof ccxt.NetworkError || e.message.includes("Bad Gateway")) {
                         await this.initConnector();
                         throw e;
                     }
@@ -375,7 +381,7 @@ export class PrivateConnector {
             try {
                 return connector.loadMarkets();
             } catch (e) {
-                if (e instanceof ccxt.NetworkError) {
+                if (e instanceof ccxt.NetworkError || e.message.includes("Bad Gateway")) {
                     await this.initConnector();
                     throw e;
                 }
@@ -396,7 +402,10 @@ export class PrivateConnector {
             try {
                 return await connector.fetchBalance(params);
             } catch (e) {
-                if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) {
+                if (
+                    (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
+                    e.message.includes("Bad Gateway")
+                ) {
                     await this.initConnector();
                     throw e;
                 }
@@ -464,18 +473,24 @@ export class PrivateConnector {
                 } catch (err) {
                     this.log.error(err, order);
                     if (
-                        err instanceof ccxt.AuthenticationError ||
-                        err instanceof ccxt.InsufficientFunds ||
-                        err instanceof ccxt.InvalidNonce ||
-                        err instanceof ccxt.InvalidOrder ||
-                        err.message.includes("Margin is insufficient") ||
-                        err.message.includes("EOrder:Insufficient initial margin") ||
-                        err.message.includes("EAPI:Invalid key") ||
-                        err.message.includes("Invalid API-key")
+                        (err instanceof ccxt.AuthenticationError ||
+                            err instanceof ccxt.InsufficientFunds ||
+                            err instanceof ccxt.InvalidNonce ||
+                            err instanceof ccxt.InvalidOrder ||
+                            err.message.includes("EAPI:Invalid key") ||
+                            err.message.includes("Invalid API-key")) &&
+                        !err.message.includes("Margin is insufficient") &&
+                        !err.message.includes("EOrder:Insufficient initial margin")
                     ) {
                         throw err;
                     }
-                    if (err instanceof ccxt.ExchangeError || err instanceof ccxt.NetworkError) {
+                    if (
+                        err instanceof ccxt.ExchangeError ||
+                        err instanceof ccxt.NetworkError ||
+                        err.message.includes("Bad Gateway") ||
+                        err.message.includes("Margin is insufficient") ||
+                        err.message.includes("EOrder:Insufficient initial margin")
+                    ) {
                         if (err instanceof ccxt.RequestTimeout) {
                             const existedOrder = await this.checkIfOrderExists(order, creationDate);
                             if (existedOrder) response = existedOrder;
@@ -566,7 +581,10 @@ export class PrivateConnector {
                     try {
                         return await this.connector.fetchOrders(this.getSymbol(asset, currency), creationDate);
                     } catch (e) {
-                        if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) {
+                        if (
+                            (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
+                            e.message.includes("Bad Gateway")
+                        ) {
                             await this.initConnector();
                             throw e;
                         }
@@ -579,7 +597,10 @@ export class PrivateConnector {
                     try {
                         return await this.connector.fetchOpenOrders(this.getSymbol(asset, currency), creationDate);
                     } catch (e) {
-                        if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) {
+                        if (
+                            (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
+                            e.message.includes("Bad Gateway")
+                        ) {
                             await this.initConnector();
                             throw e;
                         }
@@ -590,7 +611,10 @@ export class PrivateConnector {
                     try {
                         return await this.connector.fetchClosedOrders(this.getSymbol(asset, currency), creationDate);
                     } catch (e) {
-                        if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) {
+                        if (
+                            (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
+                            e.message.includes("Bad Gateway")
+                        ) {
                             await this.initConnector();
                             throw e;
                         }
@@ -657,7 +681,10 @@ export class PrivateConnector {
                 try {
                     return await this.connector.fetchOrder(exId, this.getSymbol(asset, currency));
                 } catch (e) {
-                    if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) {
+                    if (
+                        (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
+                        e.message.includes("Bad Gateway")
+                    ) {
                         await this.initConnector();
                         throw e;
                     }
@@ -716,7 +743,12 @@ export class PrivateConnector {
             };
         } catch (err) {
             this.log.error(err, order);
-            if (err instanceof ccxt.NetworkError || !order.nextJob?.retries || order.nextJob?.retries < 5) {
+            if (
+                err instanceof ccxt.NetworkError ||
+                err.message.includes("Bad Gateway") ||
+                !order.nextJob?.retries ||
+                order.nextJob?.retries < 5
+            ) {
                 return {
                     order: {
                         ...order,
@@ -756,7 +788,10 @@ export class PrivateConnector {
                 try {
                     return await this.connector.cancelOrder(exId, this.getSymbol(asset, currency));
                 } catch (e) {
-                    if (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) {
+                    if (
+                        (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
+                        e.message.includes("Bad Gateway")
+                    ) {
                         await this.initConnector();
                         throw e;
                     }
@@ -777,7 +812,11 @@ export class PrivateConnector {
             if (err instanceof ccxt.InvalidOrder) {
                 return this.checkOrder(order);
             }
-            if (err instanceof ccxt.ExchangeError || err instanceof ccxt.NetworkError) {
+            if (
+                err instanceof ccxt.ExchangeError ||
+                err instanceof ccxt.NetworkError ||
+                err.message.includes("Bad Gateway")
+            ) {
                 return {
                     order: {
                         ...order,
