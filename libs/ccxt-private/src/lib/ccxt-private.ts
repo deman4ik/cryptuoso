@@ -473,23 +473,34 @@ export class PrivateConnector {
                 } catch (err) {
                     this.log.error(err, order);
                     if (
-                        (err instanceof ccxt.AuthenticationError ||
-                            err instanceof ccxt.InsufficientFunds ||
-                            err instanceof ccxt.InvalidNonce ||
-                            err instanceof ccxt.InvalidOrder ||
-                            err.message.includes("EAPI:Invalid key") ||
-                            err.message.includes("Invalid API-key")) &&
-                        !err.message.includes("Margin is insufficient") &&
-                        !err.message.includes("EOrder:Insufficient initial margin")
+                        err.message.includes("Margin is insufficient") ||
+                        err.message.includes("EOrder:Insufficient initial margin")
+                    ) {
+                        return {
+                            order: {
+                                ...order,
+                                exId: null,
+                                exTimestamp: dayjs.utc(creationDate).toISOString(),
+                                status: OrderStatus.canceled,
+                                error: PrivateConnector.getErrorMessage(err)
+                            },
+                            nextJob: null
+                        };
+                    }
+                    if (
+                        err instanceof ccxt.AuthenticationError ||
+                        err instanceof ccxt.InsufficientFunds ||
+                        err instanceof ccxt.InvalidNonce ||
+                        err instanceof ccxt.InvalidOrder ||
+                        err.message.includes("EAPI:Invalid key") ||
+                        err.message.includes("Invalid API-key")
                     ) {
                         throw err;
                     }
                     if (
                         err instanceof ccxt.ExchangeError ||
                         err instanceof ccxt.NetworkError ||
-                        err.message.includes("Bad Gateway") ||
-                        err.message.includes("Margin is insufficient") ||
-                        err.message.includes("EOrder:Insufficient initial margin")
+                        err.message.includes("Bad Gateway")
                     ) {
                         if (err instanceof ccxt.RequestTimeout) {
                             const existedOrder = await this.checkIfOrderExists(order, creationDate);
