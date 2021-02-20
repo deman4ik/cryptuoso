@@ -382,12 +382,12 @@ export class RobotPosition {
 
     public static checkLimit(action: TradeAction, price: number, currentCandle: DBCandle, isBacktest = false): number {
         if (action === TradeAction.long || action === TradeAction.closeShort) {
-            if (+currentCandle.high <= +price) {
+            if (+currentCandle.low <= +price) {
                 if (!isBacktest) return +Math.min(+currentCandle.close, +price);
                 else return +Math.min(+currentCandle.open, +price);
             }
         } else if (action === TradeAction.short || action === TradeAction.closeLong) {
-            if (+currentCandle.low >= +price) {
+            if (+currentCandle.high >= +price) {
                 if (!isBacktest) return +Math.max(+currentCandle.close, +price);
                 else return +Math.max(+currentCandle.open, +price);
             }
