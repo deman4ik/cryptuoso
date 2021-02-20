@@ -356,15 +356,22 @@ export default class RobotWorkerService extends BaseService {
 
             if (type === RobotJobType.tick) {
                 if (robot.hasAlerts) {
-                    const currentCandle: DBCandle = await this.db.pg.one(sql`
+                    const currentTime = Timeframe.getCurrentSince(1, robot.timeframe);
+                    const currentCandle: DBCandle = await this.db.pg.maybeOne(sql`
                 SELECT * 
                 FROM ${sql.identifier([`candles${robot.timeframe}`])}
                 WHERE exchange = ${robot.exchange}
                 AND asset = ${robot.asset}
                 AND currency = ${robot.currency}
-                ORDER BY time DESC
-                LIMIT 1;`);
-
+                and time = ${currentTime};`);
+                    if (!currentCandle) {
+                        this.log.error(
+                            `Robot #${robotId} - Failed to load ${robot.exchange}-${robot.asset}-${robot.currency}-${
+                                robot.timeframe
+                            }-${dayjs.utc(currentTime).toISOString()} current candle`
+                        );
+                        return robot.status;
+                    }
                     robot.setStrategy(null);
                     const { success, error } = robot.handleCurrentCandle({
                         ...currentCandle,
