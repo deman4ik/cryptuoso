@@ -472,10 +472,7 @@ export class PrivateConnector {
                     );
                 } catch (err) {
                     this.log.error(err, order);
-                    if (
-                        err.message.includes("Margin is insufficient") ||
-                        err.message.includes("EOrder:Insufficient initial margin")
-                    ) {
+                    if (err.message.toLowerCase().includes("margin")) {
                         return {
                             order: {
                                 ...order,

@@ -484,10 +484,11 @@ export default class UserRobotRunnerService extends HTTPService {
         this.log.info(
             `New ${ConnectorWorkerEvents.ORDER_ERROR} event for User Robot #${event.userRobotId}. Order #${event.orderId} is invalid - ${event.error}`
         );
-        await this.pause({
-            id: event.userRobotId,
-            message: `Order #${event.orderId} error - ${event.error}. Please contact support.`
-        });
+        if (!event.error.toLowerCase().includes("margin"))
+            await this.pause({
+                id: event.userRobotId,
+                message: `Order #${event.orderId} error - ${event.error}. Please contact support.`
+            });
     }
 
     async handleUserExAccError(event: UserExchangeAccountErrorEvent) {
