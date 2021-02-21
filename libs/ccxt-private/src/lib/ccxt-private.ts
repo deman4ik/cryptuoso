@@ -309,13 +309,13 @@ export class PrivateConnector {
             this.config.options = {
                 defaultType: "future",
                 adjustForTimeDifference: true,
-                recvWindow: 10000000
+                recvWindow: 50000
             };
             this.connector = new ccxt.binance(this.config);
         } else if (this.exchange === "binance_spot") {
             this.config.options = {
                 adjustForTimeDifference: true,
-                recvWindow: 10000000
+                recvWindow: 50000
             };
             this.connector = new ccxt.binance(this.config);
         } else throw new Error("Unsupported exchange");
