@@ -3,7 +3,7 @@ import { Job } from "bullmq";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import dayjs from "@cryptuoso/dayjs";
 import { BaseError } from "@cryptuoso/errors";
-import { BacktesterState, Backtester } from "@cryptuoso/backtester-state";
+import { BacktesterState, Backtester, Status } from "@cryptuoso/backtester-state";
 
 import {
     BacktesterWorkerCancel,
@@ -89,7 +89,7 @@ export default class BacktesterWorkerService extends BaseService {
         }
     };
 
-    async process(job: Job<BacktesterState, BacktesterState>): Promise<BacktesterState> {
+    async process(job: Job<BacktesterState, Status>): Promise<Status> {
         try {
             this.log.info(`Processing job ${job.id}`);
             const beacon = this.lightship.createBeacon();
@@ -143,7 +143,7 @@ export default class BacktesterWorkerService extends BaseService {
                     );
                 }
 
-                return backtester.state;
+                return backtester.status;
             } finally {
                 await Thread.terminate(backtesterWorker);
                 await beacon.die();

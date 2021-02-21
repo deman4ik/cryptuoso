@@ -2,8 +2,7 @@ import { spawn, Worker as ThreadsWorker, Thread } from "threads";
 import { Job } from "bullmq";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
-import { Importer, ImporterState } from "@cryptuoso/importer-state";
-
+import { Importer, ImporterState, Status } from "@cryptuoso/importer-state";
 import { BaseError } from "@cryptuoso/errors";
 import {
     ImporterWorkerFailed,
@@ -85,7 +84,7 @@ export default class ImporterWorkerService extends BaseService {
         `);
     }
 
-    async process(job: Job<ImporterState, ImporterState>): Promise<ImporterState> {
+    async process(job: Job<ImporterState, Status>): Promise<Status> {
         try {
             this.log.info(`Processing job ${job.id}`);
             const beacon = this.lightship.createBeacon();
@@ -141,7 +140,7 @@ export default class ImporterWorkerService extends BaseService {
                         }
                     });
                 this.log.info(`Job ${job.id} processed - Importer is ${importer.status}!`);
-                return importer.state;
+                return importer.status;
             } finally {
                 await Thread.terminate(importerWorker);
                 await beacon.die();

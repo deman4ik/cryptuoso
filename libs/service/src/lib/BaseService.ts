@@ -305,7 +305,7 @@ export class BaseService {
             instance: new Queue(name, {
                 ...queueOpts,
                 connection: this.redis.duplicate(),
-                streams: { events: { maxLen: 100 } }
+                streams: { events: { maxLen: 0 } }
             }),
             scheduler: new QueueScheduler(name, {
                 stalledInterval: 60000,

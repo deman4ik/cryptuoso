@@ -10,7 +10,7 @@ import { CONNECTOR_RUNNER_TOPIC, CONNECTOR_WORKER_TOPIC } from "@cryptuoso/conne
 import { IN_EXWATCHER_TOPIC, OUT_EXWATCHER_TOPIC } from "@cryptuoso/exwatcher-events";
 import { IMPORTER_RUNNER_TOPIC, IN_IMPORTER_WORKER_TOPIC, OUT_IMPORTER_WORKER_TOPIC } from "@cryptuoso/importer-events";
 import { USER_ROBOT_RUNNER_TOPIC, USER_ROBOT_WORKER_TOPIC, USER_TRADE_TOPIC } from "@cryptuoso/user-robot-events";
-//import { IN_USER_SUB_TOPIC, OUT_USER_SUB_TOPIC } from "@cryptuoso/user-sub-events";
+import { IN_USER_SUB_TOPIC, OUT_USER_SUB_TOPIC } from "@cryptuoso/user-sub-events";
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
@@ -62,9 +62,9 @@ export const eventsManagementConfig: {
             [`${OUR_STATS_CALC_TOPIC}.*`]: new TopicConfig(),
             [`${USER_ROBOT_RUNNER_TOPIC}.*`]: new TopicConfig(),
             [`${USER_ROBOT_WORKER_TOPIC}.*`]: new TopicConfig(),
-            [`${USER_TRADE_TOPIC}.*`]: new TopicConfig()
-            // TODO [`${IN_USER_SUB_TOPIC}.*`]: new TopicConfig(),
-            // TODO [`${OUT_USER_SUB_TOPIC}.*`]: new TopicConfig()
+            [`${USER_TRADE_TOPIC}.*`]: new TopicConfig(),
+            [`${IN_USER_SUB_TOPIC}.*`]: new TopicConfig(),
+            [`${OUT_USER_SUB_TOPIC}.*`]: new TopicConfig()
         })
     }
 };
