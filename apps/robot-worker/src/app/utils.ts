@@ -1,6 +1,6 @@
 import { expose } from "threads/worker";
 import { sql, pg } from "@cryptuoso/postgres";
-import { RobotPosition, RobotStatus } from "@cryptuoso/robot-state";
+import { RobotPosition, RobotPositionState, RobotStatus } from "@cryptuoso/robot-state";
 import { AlertInfo, DBCandle, OrderType, RobotPositionStatus, Timeframe, ValidTimeframe } from "@cryptuoso/market";
 import dayjs from "@cryptuoso/dayjs";
 import { sortAsc } from "@cryptuoso/helpers";
@@ -13,28 +13,24 @@ async function checkAlerts(
     timeframe: ValidTimeframe
 ): Promise<{ result: { robotId: string; status: RobotStatus }[]; error: string }> {
     try {
-        const positions = await pg.any<{
+        const robots = await pg.any<{
             robotId: string;
-            exchange: string;
-            asset: string;
-            currency: string;
             status: RobotStatus;
-            alerts: { [key: string]: AlertInfo };
-            timeframe: ValidTimeframe;
+            positions: RobotPositionState[];
         }>(sql`
-    SELECT rp.robot_id, rp.alerts, r.exchange, r.asset, r.currency, r.timeframe, r.status
-    FROM robot_positions rp, robots r
-    WHERE rp.robot_id = r.id
-    AND rp.status in (${RobotPositionStatus.new},${RobotPositionStatus.open})
-    AND r.has_alerts = true
-    AND rp.alerts is not null AND rp.alerts != '{}'
-    AND r.status in (${RobotStatus.started}, ${RobotStatus.starting}, ${RobotStatus.paused})
-    AND r.exchange = ${exchange}
-    AND r.asset = ${asset}
-    and r.currency = ${currency}
-    and r.timeframe = ${timeframe};`);
+        SELECT r.id as robot_id, 
+         r.state->'positions' as positions,
+         r.status
+         FROM robots r 
+         WHERE r.has_alerts = true
+         AND r.status = ${RobotStatus.started}
+         AND r.exchange = ${exchange}
+         AND r.asset = ${asset}
+         AND r.currency = ${currency}
+         AND r.timeframe = ${timeframe};
+        `);
 
-        if (positions && positions.length) {
+        if (robots && robots.length) {
             const currentTime = Timeframe.getCurrentSince(1, timeframe);
             const candle = await pg.maybeOne<DBCandle>(sql`
         SELECT * 
@@ -59,28 +55,31 @@ async function checkAlerts(
                     error: null
                 };
             }
-            const robots = positions
-                .filter(({ alerts }) => {
+            const robotsWithTrades = robots
+                .filter(({ positions }) => {
                     let nextPrice = null;
-                    for (const key of Object.keys(alerts).sort((a, b) => sortAsc(+a, +b))) {
-                        const alert = alerts[key];
-                        const { orderType, action, price } = alert;
+                    for (const pos of positions) {
+                        for (const key of Object.keys(pos.alerts).sort((a, b) => sortAsc(+a, +b))) {
+                            const alert = pos.alerts[key];
+                            const { orderType, action, price } = alert;
 
-                        switch (orderType) {
-                            case OrderType.stop: {
-                                nextPrice = RobotPosition.checkStop(action, price, candle);
-                                break;
+                            switch (orderType) {
+                                case OrderType.stop: {
+                                    nextPrice = RobotPosition.checkStop(action, price, candle);
+                                    break;
+                                }
+                                case OrderType.limit: {
+                                    nextPrice = RobotPosition.checkLimit(action, price, candle);
+                                    break;
+                                }
+                                case OrderType.market: {
+                                    nextPrice = RobotPosition.checkMarket(action, price, candle);
+                                    break;
+                                }
+                                default:
+                                    throw new Error(`Unknown order type ${orderType}`);
                             }
-                            case OrderType.limit: {
-                                nextPrice = RobotPosition.checkLimit(action, price, candle);
-                                break;
-                            }
-                            case OrderType.market: {
-                                nextPrice = RobotPosition.checkMarket(action, price, candle);
-                                break;
-                            }
-                            default:
-                                throw new Error(`Unknown order type ${orderType}`);
+                            if (nextPrice) break;
                         }
                         if (nextPrice) break;
                     }
@@ -89,7 +88,7 @@ async function checkAlerts(
                     return false;
                 })
                 .map(({ robotId, status }) => ({ robotId, status }));
-            return { result: robots, error: null };
+            return { result: robotsWithTrades, error: null };
         }
         return { result: null, error: null };
     } catch (err) {
