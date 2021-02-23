@@ -35,7 +35,7 @@ export class BaseService {
     #redLock: RedLock;
     #db: { sql: typeof sql; pg: typeof pg; util: typeof pgUtil };
     #events: Events;
-    #queues: { [key: string]: { instance: Queue<any>; scheduler: QueueScheduler; events: QueueEvents } } = {};
+    #queues: { [key: string]: { instance: Queue<any>; scheduler: QueueScheduler; events?: QueueEvents } } = {};
     #workers: { [key: string]: Worker } = {};
     #workerConcurrency = +process.env.WORKER_CONCURRENCY || 10;
     #lockers = new Map<string, { unlock(): Promise<void> }>();
@@ -311,20 +311,21 @@ export class BaseService {
                 stalledInterval: 60000,
                 ...schedulerOpts,
                 connection: this.redis.duplicate()
-            }),
-            events: new QueueEvents(name, {
+            })
+            /*   events: new QueueEvents(name, {
                 ...eventsOpts,
                 connection: this.redis.duplicate()
-            })
+            })*/
         };
         /*this.#queues[name].events.on("completed", ({ jobId, returnvalue }) =>
             this.#jobCompletedLogger(name, jobId, returnvalue)
         );*/
-        this.#queues[name].events.on("failed", ({ jobId, failedReason }) =>
+        /*this.#queues[name].events.on("failed", ({ jobId, failedReason }) =>
             this.#jobErrorLogger(name, jobId, failedReason)
         );
         this.#queues[name].events.on("stalled", ({ jobId }) => this.#jobStalledLogger(name, jobId));
         this.#queues[name].events.on("progress", ({ jobId, data }) => this.#jobProgressLogger(name, jobId, data));
+       */
         this.#queuesClean.start();
     };
 
