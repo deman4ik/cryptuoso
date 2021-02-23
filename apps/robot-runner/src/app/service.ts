@@ -17,7 +17,7 @@ import { StrategySettings } from "@cryptuoso/robot-settings";
 import { equals, robotExchangeName, sortDesc, uniqueElementsBy } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
 import { CandleType, DBCandle, RobotPositionStatus, Timeframe, ValidTimeframe } from "@cryptuoso/market";
-import { Event } from "@cryptuoso/events";
+import { BaseServiceError, BaseServiceEvents, Event } from "@cryptuoso/events";
 import { UserRoles } from "@cryptuoso/user-state";
 export type RobotRunnerServiceConfig = HTTPServiceConfig;
 
@@ -567,7 +567,17 @@ export default class RobotRunnerService extends HTTPService {
 
     async handleRobotWorkerEvents(event: Event) {
         const { robotId } = event.data as { robotId: string };
-
+        if (!robotId) {
+            await this.events.emit<BaseServiceError>({
+                type: BaseServiceEvents.ERROR,
+                data: {
+                    service: this.name,
+                    error: "robotId required in robot worker events",
+                    event
+                }
+            });
+            return;
+        }
         const type = event.type.replace("com.cryptuoso.", "");
         const historyType = type.replace(`${ROBOT_WORKER_TOPIC}.`, "");
         this.log.info(`Robot's #${robotId} ${historyType} event`, JSON.stringify(event.data));

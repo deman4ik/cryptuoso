@@ -5,7 +5,7 @@ import {
 } from "@cryptuoso/backtester-events";
 import { OUR_STATS_CALC_TOPIC, STATS_CALC_TOPIC } from "@cryptuoso/stats-calc-events";
 import { ALERT_TOPIC, ROBOT_RUNNER_TOPIC, ROBOT_WORKER_TOPIC, SIGNAL_TOPIC } from "@cryptuoso/robot-events";
-import { BASE_REDIS_PREFIX, DEAD_LETTER_TOPIC } from "@cryptuoso/events";
+import { BASE_REDIS_PREFIX, BASE_SERVICE_TOPIC, DEAD_LETTER_TOPIC } from "@cryptuoso/events";
 import { CONNECTOR_RUNNER_TOPIC, CONNECTOR_WORKER_TOPIC } from "@cryptuoso/connector-events";
 import { IN_EXWATCHER_TOPIC, OUT_EXWATCHER_TOPIC } from "@cryptuoso/exwatcher-events";
 import { IMPORTER_RUNNER_TOPIC, IN_IMPORTER_WORKER_TOPIC, OUT_IMPORTER_WORKER_TOPIC } from "@cryptuoso/importer-events";
@@ -58,6 +58,7 @@ export const eventsManagementConfig: {
             [`${ROBOT_WORKER_TOPIC}.*`]: new TopicConfig(),
             [`${ALERT_TOPIC}.*`]: new TopicConfig(),
             [`${SIGNAL_TOPIC}.*`]: new TopicConfig(),
+            [`${BASE_SERVICE_TOPIC}.*`]: new TopicConfig(),
             [`${STATS_CALC_TOPIC}.*`]: new TopicConfig(),
             [`${OUR_STATS_CALC_TOPIC}.*`]: new TopicConfig(),
             [`${USER_ROBOT_RUNNER_TOPIC}.*`]: new TopicConfig(),

@@ -1,5 +1,5 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
-import { BASE_REDIS_PREFIX, DEAD_LETTER_TOPIC, DeadLetter, Event } from "@cryptuoso/events";
+import { BASE_REDIS_PREFIX, DEAD_LETTER_TOPIC, DeadLetter, Event, BaseServiceEvents } from "@cryptuoso/events";
 import { UserRoles } from "@cryptuoso/user-state";
 import { JSONParse } from "@cryptuoso/helpers";
 import dayjs from "dayjs";
@@ -89,6 +89,10 @@ export default class EventsManager extends HTTPService {
                 handler: this.#errorHandler.bind(this)
             },
             [UserRobotWorkerEvents.ERROR]: {
+                passFullEvent: true,
+                handler: this.#errorHandler.bind(this)
+            },
+            [BaseServiceEvents.ERROR]: {
                 passFullEvent: true,
                 handler: this.#errorHandler.bind(this)
             }
