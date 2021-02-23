@@ -305,27 +305,26 @@ export class BaseService {
             instance: new Queue(name, {
                 ...queueOpts,
                 connection: this.redis.duplicate(),
-                streams: { events: { maxLen: 0 } }
+                streams: { events: { maxLen: 1000 } }
             }),
             scheduler: new QueueScheduler(name, {
                 stalledInterval: 60000,
                 ...schedulerOpts,
                 connection: this.redis.duplicate()
-            })
-            /*   events: new QueueEvents(name, {
+            }),
+            events: new QueueEvents(name, {
                 ...eventsOpts,
                 connection: this.redis.duplicate()
-            })*/
+            })
         };
-        /*this.#queues[name].events.on("completed", ({ jobId, returnvalue }) =>
+        this.#queues[name].events.on("completed", ({ jobId, returnvalue }) =>
             this.#jobCompletedLogger(name, jobId, returnvalue)
-        );*/
-        /*this.#queues[name].events.on("failed", ({ jobId, failedReason }) =>
+        );
+        this.#queues[name].events.on("failed", ({ jobId, failedReason }) =>
             this.#jobErrorLogger(name, jobId, failedReason)
         );
         this.#queues[name].events.on("stalled", ({ jobId }) => this.#jobStalledLogger(name, jobId));
         this.#queues[name].events.on("progress", ({ jobId, data }) => this.#jobProgressLogger(name, jobId, data));
-       */
         this.#queuesClean.start();
     };
 

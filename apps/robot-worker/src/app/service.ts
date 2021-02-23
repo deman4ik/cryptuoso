@@ -19,6 +19,7 @@ import { RobotWorkerError, RobotWorkerEvents, Signal } from "@cryptuoso/robot-ev
 import dayjs from "dayjs";
 import { BaseError } from "@cryptuoso/errors";
 import { Utils } from "./utils";
+import { BaseServiceError, BaseServiceEvents } from "@cryptuoso/events";
 
 export type RobotWorkerServiceConfig = BaseServiceConfig;
 
@@ -170,10 +171,14 @@ export default class RobotWorkerService extends BaseService {
 
             const { result, error } = await this.checkAlertsUtils(exchange, asset, currency, timeframe);
             if (error) {
-                await this.events.emit<RobotWorkerError>({
-                    type: RobotWorkerEvents.ERROR,
+                await this.events.emit<BaseServiceError>({
+                    type: BaseServiceEvents.ERROR,
                     data: {
-                        ...job.data,
+                        service: this.name,
+                        exchange,
+                        asset,
+                        currency,
+                        timeframe,
                         error
                     }
                 });
