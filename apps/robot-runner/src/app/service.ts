@@ -413,12 +413,9 @@ export default class RobotRunnerService extends HTTPService {
                 timeframe: ValidTimeframe;
             }>(sql`
             SELECT distinct r.exchange, r.asset, r.currency, r.timeframe
-            FROM robot_positions rp, robots r
-            WHERE rp.robot_id = r.id
-            AND rp.status in (${RobotPositionStatus.new},${RobotPositionStatus.open})
-            AND r.has_alerts = true
-            AND rp.alerts is not null AND rp.alerts != '{}'
-            AND r.status in (${RobotStatus.started}, ${RobotStatus.starting}, ${RobotStatus.paused});`);
+            FROM robots r
+            WHERE r.has_alerts = true
+            AND r.status = ${RobotStatus.started};`);
 
             if (entities && Array.isArray(entities) && entities.length > 0) {
                 await Promise.all(
