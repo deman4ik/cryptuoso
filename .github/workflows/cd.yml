@@ -100,7 +100,7 @@ jobs:
               run: doctl kubernetes cluster kubeconfig show cpz-cluster > $GITHUB_WORKSPACE/.kubeconfig
 
             - name: Login to Docker
-              run: doctl registry login --expiry-seconds 600
+              run: doctl registry login --expiry-seconds 1800
 
             - name: Push image to Docker Hub
               run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do docker push registry.digitalocean.com/cpz/${i}:$(echo $GITHUB_SHA | head -c7); done;
