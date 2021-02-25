@@ -107,6 +107,7 @@ export class StatisticsClass implements Statistics {
 
 export interface TradeStats {
     statistics: Statistics;
+    firstPositionEntryDate: string;
     lastPositionExitDate: string;
     lastUpdatedAt: string;
     equity: PerformanceVals;
@@ -115,6 +116,7 @@ export interface TradeStats {
 
 export class TradeStatsClass implements TradeStats {
     statistics = new StatisticsClass();
+    firstPositionEntryDate = "";
     lastPositionExitDate = "";
     lastUpdatedAt = "";
     equity: PerformanceVals = [];

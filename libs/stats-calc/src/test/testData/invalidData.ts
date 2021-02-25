@@ -31,6 +31,7 @@ export const invalidStatistics: TradeStats = {
         rating: null
     },
     lastUpdatedAt: null,
+    firstPositionEntryDate: null,
     lastPositionExitDate: null,
     equity: null,
     equityAvg: null
@@ -39,6 +40,7 @@ export const invalidStatistics: TradeStats = {
 export const invalidPosition: BasePosition = {
     id: null,
     direction: null,
+    entryDate: null,
     exitDate: null,
     profit: null,
     barsHeld: null

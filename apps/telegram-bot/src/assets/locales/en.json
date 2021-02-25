@@ -168,12 +168,12 @@
             "setEmail": "📨 Set Email",
             "changeEmail": "📨 Change Email",
             "userExAccs": "🔐 My Exchange API Keys",
-            "telegramNewsNotifOn": "📰 Telegram news notifications is ON 🔔",
-            "telegramNewsNotifOff": "📰 Telegram news notifications is OFF 🔕",
-            "telegramSingalsNotifOn": "🚦 Telegram signals notifications is ON 🔔",
-            "telegramSingalsNotifOff": "🚦 Telegram signals notifications is OFF 🔕",
-            "telegramTradingNotifOn": "🤖 Telegram trading notifications is ON 🔔",
-            "telegramTradingNotifOff": "🤖 Telegram trading notifications is OFF 🔕",
+            "telegramNewsNotifOn": "📰 News notifications is ON 🔔",
+            "telegramNewsNotifOff": "📰 News notifications is OFF 🔕",
+            "telegramSingalsNotifOn": "🚦 Signals notifications is ON 🔔",
+            "telegramSingalsNotifOff": "🚦 Signals notifications is OFF 🔕",
+            "telegramTradingNotifOn": "🤖 Trading notifications is ON 🔔",
+            "telegramTradingNotifOff": "🤖 Trading notifications is OFF 🔕",
             "notifError": "❌ Failed to change notifications - ${error}"
         },
         "userExAccs": {

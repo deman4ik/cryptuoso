@@ -27,8 +27,8 @@ class BacktesterWorker {
     #log: Logger;
     #backtester: Backtester;
     #db: { sql: typeof sql; pg: typeof pg; util: typeof pgUtil };
-    defaultChunkSize = 10000;
-    defaultInsertChunkSize = 1000;
+    defaultChunkSize = 100000;
+    defaultInsertChunkSize = 10000;
     constructor(state: BacktesterState) {
         this.#log = logger;
         this.#db = {
@@ -349,6 +349,7 @@ class BacktesterWorker {
                     statistics,
                     equity,
                     equityAvg,
+                    firstPositionEntryDate,
                     lastPositionExitDate,
                     lastUpdatedAt
                 } = stats;
@@ -357,11 +358,11 @@ class BacktesterWorker {
                 await this.db.pg.query(sql`
         INSERT INTO backtest_stats 
         (backtest_id, robot_id, 
-        statistics, equity, equity_avg, 
+        statistics, equity, equity_avg, first_position_entry_date,
         last_position_exit_date, last_updated_at) VALUES (
             ${backtestId}, ${robotId}, ${JSON.stringify(statistics)}, ${JSON.stringify(equity)}, ${JSON.stringify(
                     equityAvg
-                )},
+                )}, ${firstPositionEntryDate},
             ${lastPositionExitDate},${lastUpdatedAt}
         )
         `);
@@ -630,15 +631,23 @@ class BacktesterWorker {
             this.log.info(`Robot #${robotId} - Saving stats`);
             await this.db.pg.query(sql`DELETE FROM robot_stats where robot_id = ${robotId}`);
             if (stats && stats?.statistics) {
-                const { robotId, statistics, equity, equityAvg, lastPositionExitDate, lastUpdatedAt } = stats;
+                const {
+                    robotId,
+                    statistics,
+                    equity,
+                    equityAvg,
+                    firstPositionEntryDate,
+                    lastPositionExitDate,
+                    lastUpdatedAt
+                } = stats;
 
                 await this.db.pg.query(sql`
         INSERT INTO robot_stats 
         (robot_id, 
-        statistics, equity, equity_avg, 
+        statistics, equity, equity_avg, first_position_entry_date,
         last_position_exit_date, last_updated_at) VALUES (
             ${robotId}, ${JSON.stringify(statistics)}, ${JSON.stringify(equity)}, ${JSON.stringify(equityAvg)},
-            ${lastPositionExitDate},${lastUpdatedAt}
+            ${firstPositionEntryDate}, ${lastPositionExitDate},${lastUpdatedAt}
         )
         `);
             }

@@ -145,7 +145,7 @@ export function handleUserExAccError(notification: Notification & { telegramId: 
         telegramId: notification.telegramId,
         message: this.i18n.t(LANG, `userExAcc.error`, {
             name,
-            error
+            error: error.split("<html>")[0]
         })
     };
 }
@@ -163,7 +163,7 @@ export function handleUserRobotError(notification: Notification & { telegramId: 
         message: this.i18n.t(LANG, `userRobot.error`, {
             id: userRobotId,
             code,
-            error
+            error: error.split("<html>")[0]
         })
     };
 }
@@ -180,7 +180,7 @@ export function handleUserRobotStatus(notification: Notification & { telegramId:
         telegramId: notification.telegramId,
         message: this.i18n.t(LANG, `userRobot.status`, {
             code,
-            message: message || "",
+            message: message.split("<html>")[0] || "",
             status
         })
     };
@@ -198,7 +198,7 @@ export function handleOrderError(notification: Notification & { telegramId: numb
             id: userRobotId,
             code,
             orderId,
-            error
+            error: error.split("<html>")[0]
         })
     };
 }

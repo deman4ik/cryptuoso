@@ -37,9 +37,11 @@ const result: TradeStats = {
             short: 0
         }
     },
+    firstPositionEntryDate: "2017-04-12T16:00:00.000",
     lastPositionExitDate: "2020-03-12T16:00:10.443",
     lastUpdatedAt: "2019-01-01T13:17:00.000Z",
     equity: [
+        { x: 1492012800000, y: 0 },
         { x: 1492012800000, y: -0.5 },
         { x: 1492243200000, y: -1.26 },
         { x: 1492560000000, y: -1.08 },

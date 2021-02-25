@@ -4,6 +4,7 @@ const positions: BasePosition[] = [
     {
         id: "71a0941a-1b74-437d-a22d-c97a4b649cf5",
         direction: "long",
+        entryDate: "2017-04-12T16:00:00.000",
         exitDate: "2017-04-12T16:00:00",
         profit: -0.5,
         barsHeld: 4

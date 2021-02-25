@@ -152,6 +152,7 @@ describe("getCalcFromAndInitStats function", () => {
 
             expect(initStats.equity).toStrictEqual(rightStats.equity);
             expect(initStats.equityAvg).toStrictEqual(rightStats.equityAvg);
+            expect(initStats.firstPositionEntryDate).toStrictEqual(rightStats.firstPositionEntryDate);
             expect(initStats.lastPositionExitDate).toStrictEqual(rightStats.lastPositionExitDate);
             expect(initStats.lastUpdatedAt).toStrictEqual(rightStats.lastUpdatedAt);
             expect(initStats.statistics).toStrictEqual(rightStats.statistics);
