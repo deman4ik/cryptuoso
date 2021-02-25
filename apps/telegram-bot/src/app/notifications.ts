@@ -4,8 +4,9 @@ import { SignalType, TradeAction } from "@cryptuoso/market";
 import { Signal } from "@cryptuoso/robot-events";
 import { UserPositionStatus, UserRobotStatus, UserTradeEvent } from "@cryptuoso/user-robot-state";
 import { Notification } from "@cryptuoso/user-state";
+import { UserSubErrorEvent, UserSubPaymentStatusEvent, UserSubStatusEvent } from "@cryptuoso/user-sub-events";
 
-export function handleSignal(notification: Notification & { telegramId: number }) {
+export function handleSignal(notification: Notification<any> & { telegramId: number }) {
     const signal = notification.data as Signal & {
         robotCode: string;
         volume: number;
@@ -83,7 +84,7 @@ export function handleSignal(notification: Notification & { telegramId: number }
     };
 }
 
-export function handleUserRobotTrade(notification: Notification & { telegramId: number }) {
+export function handleUserRobotTrade(notification: Notification<any> & { telegramId: number }) {
     const {
         robotCode,
         status,
@@ -137,7 +138,7 @@ export function handleUserRobotTrade(notification: Notification & { telegramId: 
     };
 }
 
-export function handleUserExAccError(notification: Notification & { telegramId: number }) {
+export function handleUserExAccError(notification: Notification<any> & { telegramId: number }) {
     const { name, error } = notification.data as UserExchangeAccountErrorEvent & { name: string };
     //TODO: Set lang from DB
     const LANG = "en";
@@ -150,7 +151,7 @@ export function handleUserExAccError(notification: Notification & { telegramId: 
     };
 }
 
-export function handleUserRobotError(notification: Notification & { telegramId: number }) {
+export function handleUserRobotError(notification: Notification<any> & { telegramId: number }) {
     const { userRobotId, robotCode: code, error } = notification.data as {
         userRobotId: string;
         robotCode: string;
@@ -168,7 +169,7 @@ export function handleUserRobotError(notification: Notification & { telegramId: 
     };
 }
 
-export function handleUserRobotStatus(notification: Notification & { telegramId: number }) {
+export function handleUserRobotStatus(notification: Notification<any> & { telegramId: number }) {
     const { status, message, robotCode: code } = notification.data as {
         status: UserRobotStatus;
         message?: string;
@@ -186,7 +187,7 @@ export function handleUserRobotStatus(notification: Notification & { telegramId:
     };
 }
 
-export function handleOrderError(notification: Notification & { telegramId: number }) {
+export function handleOrderError(notification: Notification<any> & { telegramId: number }) {
     const { userRobotId, error, orderId, robotCode: code } = notification.data as OrdersErrorEvent & {
         robotCode: string;
     };
@@ -203,7 +204,7 @@ export function handleOrderError(notification: Notification & { telegramId: numb
     };
 }
 
-export function handleBroadcastMessage(notification: Notification & { telegramId: number }) {
+export function handleBroadcastMessage(notification: Notification<any> & { telegramId: number }) {
     const { message } = notification.data as { message: string };
 
     return {
@@ -212,11 +213,59 @@ export function handleBroadcastMessage(notification: Notification & { telegramId
     };
 }
 
-export function handleMessageSupportReply(notification: Notification & { telegramId: number }) {
+export function handleMessageSupportReply(notification: Notification<any> & { telegramId: number }) {
     const { message } = notification.data as { message: string };
     const LANG = "en";
     return {
         telegramId: notification.telegramId,
         message: this.i18n.t(LANG, "scenes.support.reply", { message })
+    };
+}
+
+export function handleUserSubStatus(notification: Notification<UserSubStatusEvent> & { telegramId: number }) {
+    const { subscriptionName, trialEnded, activeTo, status } = notification.data;
+    const LANG = "en";
+    let message = "";
+    if (status === "expired" || status === "canceled") {
+        message = this.i18n.t(LANG, "userSubscription.expired");
+    } else if (status === "expiring") {
+        message = this.i18n.t(LANG, "userSubscription.expiring", {
+            date: `Expires in ${dayjs.utc().diff(activeTo || trialEnded, "day")} days`
+        });
+    }
+    return {
+        telegramId: notification.telegramId,
+        message: this.i18n.t(LANG, "userSubscription.status", {
+            name: subscriptionName,
+            status: this.i18n.t(LANG, `userSubStatus.${status}`),
+            message
+        })
+    };
+}
+
+export function handleUserSubError(notification: Notification<UserSubErrorEvent> & { telegramId: number }) {
+    const { error } = notification.data;
+    const LANG = "en";
+
+    return {
+        telegramId: notification.telegramId,
+        message: this.i18n.t(LANG, "userSubscription.error", {
+            error
+        })
+    };
+}
+
+export function handlePaymentStatus(notification: Notification<UserSubPaymentStatusEvent> & { telegramId: number }) {
+    const { subscriptionName, status, code, context } = notification.data;
+    const LANG = "en";
+
+    return {
+        telegramId: notification.telegramId,
+        message: this.i18n.t(LANG, "userPayment.status", {
+            code,
+            name: subscriptionName,
+            status: this.i18n.t(LANG, `paymentStatus.${status}`),
+            context: `${context || ""}`
+        })
     };
 }

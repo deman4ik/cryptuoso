@@ -27,13 +27,15 @@ import {
     UserSubStatusEvent
 } from "@cryptuoso/user-sub-events";
 import dayjs from "@cryptuoso/dayjs";
+import mailUtil from "@cryptuoso/mail";
 
 export type NotificationsServiceConfig = BaseServiceConfig;
 //TODO: enum for notification types
 export default class NotificationsService extends BaseService {
+    #mailUtil: typeof mailUtil;
     constructor(config?: NotificationsServiceConfig) {
         super(config);
-
+        this.#mailUtil = mailUtil;
         try {
             this.events.subscribe({
                 [SignalEvents.ALERT]: {
@@ -90,7 +92,7 @@ export default class NotificationsService extends BaseService {
         }
     }
 
-    #saveNotifications = async (notifications: Notification[]) => {
+    #saveNotifications = async (notifications: Notification<any>[]) => {
         if (!notifications?.length) return;
 
         try {
@@ -249,7 +251,7 @@ export default class NotificationsService extends BaseService {
                 }
             } = await this.#getUserRobotInfo(userRobotId);
 
-            const notification: Notification = {
+            const notification: Notification<any> = {
                 userId,
                 timestamp,
                 type: `user-robot.${status}`,
@@ -278,7 +280,7 @@ export default class NotificationsService extends BaseService {
 
             const { robotCode, telegramId, email, userId } = await this.#getUserRobotInfo(userRobotId);
 
-            const notification: Notification = {
+            const notification: Notification<any> = {
                 userId,
                 timestamp,
                 type: "user-robot.error",
@@ -313,7 +315,7 @@ export default class NotificationsService extends BaseService {
                 }
             } = await this.#getUserRobotInfo(userRobotId);
 
-            const notification: Notification = {
+            const notification: Notification<any> = {
                 userId,
                 timestamp: exitDate || entryDate || dayjs.utc().toISOString(),
                 type: "user-robot.trade",
@@ -337,7 +339,7 @@ export default class NotificationsService extends BaseService {
 
             const { robotCode, telegramId, email, userId } = await this.#getUserRobotInfo(userRobotId);
 
-            const notification: Notification = {
+            const notification: Notification<any> = {
                 userId,
                 timestamp,
                 type: "order.error",
@@ -363,7 +365,7 @@ export default class NotificationsService extends BaseService {
                 userId: string;
                 name: string;
                 telegramId?: number;
-                email?: number;
+                email?: string;
             }>(sql`
         SELECT 
             u.id as user_id,
@@ -374,7 +376,7 @@ export default class NotificationsService extends BaseService {
         WHERE uea.user_id = u.id
         AND uea.id = ${userExAccId};`);
 
-            const notification: Notification = {
+            const notification: Notification<any> = {
                 userId,
                 timestamp,
                 type: "user_ex_acc.error",
@@ -397,7 +399,7 @@ export default class NotificationsService extends BaseService {
 
             const { telegramId, email } = await this.db.pg.one<{
                 telegramId?: number;
-                email?: number;
+                email?: string;
             }>(sql`
                     SELECT 
                         u.telegram_id,
@@ -405,7 +407,7 @@ export default class NotificationsService extends BaseService {
                     FROM users u
                     WHERE u.id = ${userId};`);
 
-            const notification: Notification = {
+            const notification: Notification<any> = {
                 userId,
                 timestamp,
                 type: "user_sub.error",
@@ -428,7 +430,7 @@ export default class NotificationsService extends BaseService {
 
             const { telegramId, email } = await this.db.pg.one<{
                 telegramId?: number;
-                email?: number;
+                email?: string;
             }>(sql`
                     SELECT 
                         u.telegram_id,
@@ -436,7 +438,7 @@ export default class NotificationsService extends BaseService {
                     FROM users u
                     WHERE u.id = ${userId};`);
 
-            const notification: Notification = {
+            const notification: Notification<any> = {
                 userId,
                 timestamp,
                 type: "user_payment.status",
@@ -455,11 +457,11 @@ export default class NotificationsService extends BaseService {
     async handleUserSubStatus(event: UserSubStatusEvent) {
         try {
             this.log.info(`Handling user sub status event`, event);
-            const { userId, timestamp } = event;
+            const { userId, timestamp, subscriptionName, activeTo, trialEnded, status } = event;
 
             const { telegramId, email } = await this.db.pg.one<{
                 telegramId?: number;
-                email?: number;
+                email?: string;
             }>(sql`
                     SELECT 
                         u.telegram_id,
@@ -467,16 +469,45 @@ export default class NotificationsService extends BaseService {
                     FROM users u
                     WHERE u.id = ${userId};`);
 
-            const notification: Notification = {
+            const notification: Notification<any> = {
                 userId,
                 timestamp,
                 type: "user_sub.status",
                 data: { ...event },
-                sendEmail: !!email,
+                sendEmail: false,
                 sendTelegram: !!telegramId
             };
 
             await this.#saveNotifications([notification]);
+
+            if (email) {
+                let message = "";
+
+                if (status === "expired" || status === "canceled") {
+                    message =
+                        "<p>All robots are <b>stopping</b> now! If there are any <b>open positions</b> they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!</p>";
+                } else if (status === "expiring") {
+                    let date;
+                    if (activeTo || trialEnded) {
+                        date = `Expires in ${dayjs.utc().diff(activeTo || trialEnded, "day")} days`;
+                    }
+
+                    message = `<p>${
+                        date || ""
+                    }</p><p>Please renew you subscription.</p><p>After subscription expires all robots will be <b>stopped</b>! If there are any <b>open positions</b> they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!</p>`;
+                }
+                await this.#mailUtil.send({
+                    to: email,
+                    subject: `Cryptuoso Subscription Status Update - ${status}`,
+                    variables: {
+                        body: `<p>Greetings!</p>
+                    <p>Your subscription <a href="https://cryptuoso.com/profile">${subscriptionName}</a> is <b>${status}</b></p>
+                    ${message}
+                    <p>If you have any questions please <a href="https://cryptuoso.com/support">contact support</a></p>`
+                    },
+                    tags: ["subscription"]
+                });
+            }
         } catch (err) {
             this.log.error("Failed to handleUserSubStatus", err, event);
             throw err;
