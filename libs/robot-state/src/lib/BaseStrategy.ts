@@ -154,8 +154,8 @@ export class BaseStrategy {
             if (position.hasAlertsToPublish) {
                 position.alertsToPublish.forEach((signal) => this._createSignalEvent(signal, SignalEvents.ALERT));
                 position._clearAlertsToPublish();
-                this._positionsToSave.push(position.state);
             }
+            this._positionsToSave.push(position.state);
         });
     }
 
@@ -164,8 +164,8 @@ export class BaseStrategy {
             if (position.hasTradeToPublish) {
                 this._createSignalEvent(position.tradeToPublish, SignalEvents.TRADE);
                 position._clearTradeToPublish();
-                this._positionsToSave.push(position.state);
             }
+            this._positionsToSave.push(position.state);
         });
     }
 
