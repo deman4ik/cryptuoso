@@ -553,7 +553,6 @@ export default class UserRobotRunnerService extends HTTPService {
                AND uo.action IN (${TradeAction.closeLong}, ${TradeAction.closeShort})))
               AND up.status NOT IN (${UserPositionStatus.closed}, ${UserPositionStatus.closedAuto}, 
                                     ${UserPositionStatus.canceled})
-              AND up.position_id IS NOT NULL
               AND ur.status in (${UserRobotStatus.started},${UserRobotStatus.stopping})
               AND uo.updated_at < ${dayjs.utc().add(-30, "second").toISOString()};
             `);
