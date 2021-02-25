@@ -412,7 +412,7 @@ export default class TelegramBotService extends BaseService {
     }
 
     async getNotifations() {
-        return this.db.pg.any<Notification & { telegramId: number }[]>(sql`
+        return this.db.pg.any<Notification<any> & { telegramId: number }[]>(sql`
         SELECT u.telegram_id, n.* FROM notifications n, users u
         WHERE n.user_id = u.id 
         AND n.send_telegram = true
