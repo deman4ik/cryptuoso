@@ -130,6 +130,9 @@ export default class StatisticsCalculator {
 
         this.setPosition(0);
         this.setTradeStats(prevTradeStats);
+        if (this.currentTradeStats.firstPositionEntryDate === "") {
+            this.currentTradeStats.firstPositionEntryDate = this.positions[0].entryDate;
+        }
     }
 
     public async getStats(): Promise<TradeStats> {
@@ -662,9 +665,14 @@ export default class StatisticsCalculator {
         //validateArguments(profit, exitDate);
 
         const newPerformance = [...prevPerformance];
-        const prevSum = prevPerformance.length > 0 ? prevPerformance[prevPerformance.length - 1].y : 0;
+        if (!prevPerformance.length) {
+            newPerformance.push({ x: dayjs.utc(this.currentTradeStats.firstPositionEntryDate).valueOf(), y: 0 });
+        }
 
-        newPerformance.push({ x: dayjs.utc(exitDate).valueOf(), y: round(prevSum + profit, 2) });
+        newPerformance.push({
+            x: dayjs.utc(exitDate).valueOf(),
+            y: round(newPerformance[newPerformance.length - 1].y + profit, 2)
+        });
 
         return newPerformance;
     }

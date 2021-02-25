@@ -30,6 +30,7 @@ export function getCalcFromAndInitStats(stats?: TradeStats, calcAll?: boolean) {
     if (!calcAll && stats && checkTradeStats(stats) === true) {
         initStats = {
             statistics: stats.statistics,
+            firstPositionEntryDate: stats.firstPositionEntryDate,
             lastPositionExitDate: stats.lastPositionExitDate,
             lastUpdatedAt: stats.lastUpdatedAt,
             equity: stats.equity,
@@ -237,6 +238,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             await this.db.pg.query(sql`
                 UPDATE ${params.table}
                 SET statistics = ${JSON.stringify(stats.statistics)},
+                    first_position_entry_date = ${stats.firstPositionEntryDate},
                     last_position_exit_date = ${stats.lastPositionExitDate},
                     last_updated_at = ${stats.lastUpdatedAt},
                     equity = ${sql.json(stats.equity)},
@@ -247,6 +249,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             await this.db.pg.query(sql`
                 INSERT INTO ${params.table} (
                     statistics,
+                    first_position_entry_date,
                     last_position_exit_date,
                     last_updated_at,
                     equity,
@@ -255,6 +258,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     ${params.addFields ? sql`, ${params.addFields}` : sql``}
                 ) VALUES (
                     ${JSON.stringify(stats.statistics)},
+                    ${stats.firstPositionEntryDate},
                     ${stats.lastPositionExitDate},
                     ${stats.lastUpdatedAt},
                     ${sql.json(stats.equity)},
@@ -359,6 +363,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             const prevRobotsAggrStats = await this.db.pg.maybeOne<TradeStatsWithId>(sql`
             SELECT id,
                 statistics,
+                first_position_entry_date,
                 last_position_exit_date,
                 last_updated_at,
                 equity,
@@ -479,6 +484,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             const prevUsersRobotsAggrStats = await this.db.pg.maybeOne<TradeStatsWithId>(sql`
             SELECT id,
                 statistics,
+                first_position_entry_date,
                 last_position_exit_date,
                 last_updated_at,
                 equity,
@@ -653,6 +659,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             const userSignal = await this.db.pg.maybeOne<UserSignalStats>(sql`
             SELECT us.id, us.user_id, us.robot_id, us.subscribed_at,
                 uss.statistics,
+                uss.first_position_entry_date,
                 uss.last_position_exit_date,
                 uss.last_updated_at,
                 uss.equity,
@@ -689,6 +696,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             const userSignals = await this.db.pg.any<UserSignalStats>(sql`
             SELECT us.id, us.user_id, us.robot_id, us.subscribed_at,
                 uss.statistics,
+                uss.first_position_entry_date,
                 uss.last_position_exit_date,
                 uss.last_updated_at,
                 uss.equity,
@@ -740,6 +748,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             const prevUserAggrStats = await this.db.pg.maybeOne<TradeStatsWithId>(sql`
             SELECT id,
                 statistics,
+                first_position_entry_date,
                 last_position_exit_date,
                 last_updated_at,
                 equity,
@@ -854,6 +863,7 @@ export default class StatisticCalcWorkerService extends BaseService {
         try {
             const prevTradeStats = await this.db.pg.maybeOne<TradeStats>(sql`
             SELECT urs.statistics,
+                urs.first_position_entry_date,
                 urs.last_position_exit_date,
                 urs.last_updated_at,
                 urs.equity,
@@ -944,6 +954,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             const prevUserAggrStats = await this.db.pg.maybeOne<TradeStatsWithId>(sql`
             SELECT id,
                 statistics,
+                first_position_entry_date,
                 last_position_exit_date,
                 last_updated_at,
                 equity,

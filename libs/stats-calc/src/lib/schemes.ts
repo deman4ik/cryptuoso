@@ -128,6 +128,7 @@ export const TradeStatsSchema: ValidationSchema = {
     type: "object",
     props: {
         statistics: StatisticsSchema,
+        firstPositionEntryDate: "string",
         lastPositionExitDate: {
             type: "string" /* ,
             optional: true */
