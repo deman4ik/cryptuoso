@@ -122,7 +122,7 @@ export class PrivateConnector {
         } else {
             message = error.message;
         }
-        return message;
+        return message.split("<html>")[0];
     }
 
     getCloseOrderDate(exchange: string, orderResponse: ccxt.Order) {
@@ -148,7 +148,7 @@ export class PrivateConnector {
                 try {
                     return await connector.fetchTicker(this.getSymbol(asset, currency));
                 } catch (e) {
-                    if (e instanceof ccxt.NetworkError || e.message.includes("Bad Gateway")) throw e;
+                    if (e instanceof ccxt.NetworkError || e.message.includes("Gateway")) throw e;
                     bail(e);
                 }
             };
@@ -218,7 +218,7 @@ export class PrivateConnector {
                 } catch (e) {
                     if (
                         (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
-                        e.message.includes("Bad Gateway")
+                        e.message.includes("Gateway")
                     ) {
                         this.initConnector();
                         throw e;
@@ -247,7 +247,7 @@ export class PrivateConnector {
                 } catch (e) {
                     if (
                         (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
-                        e.message.includes("Bad Gateway")
+                        e.message.includes("Gateway")
                     ) {
                         this.initConnector();
                         throw e;
@@ -297,7 +297,7 @@ export class PrivateConnector {
                 try {
                     return this.connector.loadAccounts();
                 } catch (e) {
-                    if (e instanceof ccxt.NetworkError || e.message.includes("Bad Gateway")) {
+                    if (e instanceof ccxt.NetworkError || e.message.includes("Gateway")) {
                         await this.initConnector();
                         throw e;
                     }
@@ -381,7 +381,7 @@ export class PrivateConnector {
             try {
                 return connector.loadMarkets();
             } catch (e) {
-                if (e instanceof ccxt.NetworkError || e.message.includes("Bad Gateway")) {
+                if (e instanceof ccxt.NetworkError || e.message.includes("Gateway")) {
                     await this.initConnector();
                     throw e;
                 }
@@ -404,7 +404,7 @@ export class PrivateConnector {
             } catch (e) {
                 if (
                     (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
-                    e.message.includes("Bad Gateway")
+                    e.message.includes("Gateway")
                 ) {
                     await this.initConnector();
                     throw e;
@@ -497,12 +497,14 @@ export class PrivateConnector {
                     if (
                         err instanceof ccxt.ExchangeError ||
                         err instanceof ccxt.NetworkError ||
-                        err.message.includes("Bad Gateway")
+                        err.message.includes("Gateway")
                     ) {
                         if (err instanceof ccxt.RequestTimeout) {
                             const existedOrder = await this.checkIfOrderExists(order, creationDate);
                             if (existedOrder) response = existedOrder;
                         }
+
+                        await this.initConnector();
 
                         if (!response)
                             return {
@@ -591,7 +593,7 @@ export class PrivateConnector {
                     } catch (e) {
                         if (
                             (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
-                            e.message.includes("Bad Gateway")
+                            e.message.includes("Gateway")
                         ) {
                             await this.initConnector();
                             throw e;
@@ -607,7 +609,7 @@ export class PrivateConnector {
                     } catch (e) {
                         if (
                             (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
-                            e.message.includes("Bad Gateway")
+                            e.message.includes("Gateway")
                         ) {
                             await this.initConnector();
                             throw e;
@@ -621,7 +623,7 @@ export class PrivateConnector {
                     } catch (e) {
                         if (
                             (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
-                            e.message.includes("Bad Gateway")
+                            e.message.includes("Gateway")
                         ) {
                             await this.initConnector();
                             throw e;
@@ -691,7 +693,7 @@ export class PrivateConnector {
                 } catch (e) {
                     if (
                         (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
-                        e.message.includes("Bad Gateway")
+                        e.message.includes("Gateway")
                     ) {
                         await this.initConnector();
                         throw e;
@@ -753,7 +755,7 @@ export class PrivateConnector {
             this.log.error(err, order);
             if (
                 err instanceof ccxt.NetworkError ||
-                err.message.includes("Bad Gateway") ||
+                err.message.includes("Gateway") ||
                 !order.nextJob?.retries ||
                 order.nextJob?.retries < 5
             ) {
@@ -798,7 +800,7 @@ export class PrivateConnector {
                 } catch (e) {
                     if (
                         (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
-                        e.message.includes("Bad Gateway")
+                        e.message.includes("Gateway")
                     ) {
                         await this.initConnector();
                         throw e;
@@ -823,7 +825,7 @@ export class PrivateConnector {
             if (
                 err instanceof ccxt.ExchangeError ||
                 err instanceof ccxt.NetworkError ||
-                err.message.includes("Bad Gateway")
+                err.message.includes("Gateway")
             ) {
                 return {
                     order: {
