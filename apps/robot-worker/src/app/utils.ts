@@ -1,7 +1,7 @@
 import { expose } from "threads/worker";
 import { sql, pg } from "@cryptuoso/postgres";
 import { RobotPosition, RobotPositionState, RobotStatus } from "@cryptuoso/robot-state";
-import { AlertInfo, DBCandle, OrderType, RobotPositionStatus, Timeframe, ValidTimeframe } from "@cryptuoso/market";
+import { DBCandle, OrderType, Timeframe, ValidTimeframe } from "@cryptuoso/market";
 import dayjs from "@cryptuoso/dayjs";
 import { sortAsc } from "@cryptuoso/helpers";
 import logger from "@cryptuoso/logger";
@@ -40,7 +40,7 @@ async function checkAlerts(
         AND currency = ${currency}
         AND time = ${currentTime};`);
             if (!candle) {
-                if (dayjs.utc().diff(dayjs.utc(currentTime), "second") > 20) {
+                if (dayjs.utc().diff(currentTime, "second") > 60) {
                     const error = `Failed to load ${exchange}-${asset}-${currency}-${timeframe}-${dayjs
                         .utc(currentTime)
                         .toISOString()} current candle`;

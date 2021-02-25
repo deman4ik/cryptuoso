@@ -102,7 +102,47 @@ describe("Test 'Timeframe' class", () => {
             expect(Timeframe.getCurrentSince(1, 1440)).toBe(validSince);
         });
     });
+    describe("Test 'getCurrentSince' now", () => {
+        beforeAll(() => {
+            MockDate.set(new Date(Date.UTC(2019, 0, 1, 13, 0)));
+        });
 
+        afterAll(() => {
+            MockDate.reset();
+        });
+        /*  it("should return valid time for timeframe 1 and amount 1", () => {
+      const validSince = dayjs.utc("2019-01-01T13:00:00.000Z").valueOf();
+      expect(Timeframe.getCurrentSince(1, 1)).toBe(validSince);
+    }); */
+        it("should return valid time for timeframe 5 and amount 1", () => {
+            const validSince = dayjs.utc("2019-01-01T13:00:00.000Z").valueOf();
+            expect(Timeframe.getCurrentSince(1, 5)).toBe(validSince);
+        });
+        it("should return valid time for timeframe 15 and amount 1", () => {
+            const validSince = dayjs.utc("2019-01-01T13:00:00.000Z").valueOf();
+            expect(Timeframe.getCurrentSince(1, 15)).toBe(validSince);
+        });
+        it("should return valid time for timeframe 30 and amount 1", () => {
+            const validSince = dayjs.utc("2019-01-01T13:00:00.000Z").valueOf();
+            expect(Timeframe.getCurrentSince(1, 30)).toBe(validSince);
+        });
+        it("should return valid time for timeframe 60 and amount 1", () => {
+            const validSince = dayjs.utc("2019-01-01T13:00:00.000Z").valueOf();
+            expect(Timeframe.getCurrentSince(1, 60)).toBe(validSince);
+        });
+        it("should return valid time for timeframe 120 and amount 1", () => {
+            const validSince = dayjs.utc("2019-01-01T12:00:00.000Z").valueOf();
+            expect(Timeframe.getCurrentSince(1, 120)).toBe(validSince);
+        });
+        it("should return valid time for timeframe 240 and amount 1", () => {
+            const validSince = dayjs.utc("2019-01-01T12:00:00.000Z").valueOf();
+            expect(Timeframe.getCurrentSince(1, 240)).toBe(validSince);
+        });
+        it("should return valid time for timeframe 1440 and amount 1", () => {
+            const validSince = dayjs.utc("2019-01-01T00:00:00.000Z").valueOf();
+            expect(Timeframe.getCurrentSince(1, 1440)).toBe(validSince);
+        });
+    });
     describe("Test 'timeframesByDate", () => {
         /*it("should return array with 1 minute timeframe", () => {
       const currentTimeframes = Timeframe.timeframesByDate(
