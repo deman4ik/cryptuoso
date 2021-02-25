@@ -27,8 +27,8 @@ class BacktesterWorker {
     #log: Logger;
     #backtester: Backtester;
     #db: { sql: typeof sql; pg: typeof pg; util: typeof pgUtil };
-    defaultChunkSize = 10000;
-    defaultInsertChunkSize = 1000;
+    defaultChunkSize = 100000;
+    defaultInsertChunkSize = 10000;
     constructor(state: BacktesterState) {
         this.#log = logger;
         this.#db = {
