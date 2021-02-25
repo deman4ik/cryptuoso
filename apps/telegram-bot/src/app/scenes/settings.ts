@@ -95,10 +95,10 @@ function getSettingsMenu(ctx: any) {
 
 async function settingsEnter(ctx: any) {
     try {
-        if (ctx.scene.state.reload) {
-            const settings = await this.getUserSettings(ctx);
-            ctx.session.user.settings = settings;
-        }
+        // if (ctx.scene.state.reload) {
+        const settings = await this.getUserSettings(ctx);
+        ctx.session.user.settings = settings;
+        //   }
 
         const { email }: User = ctx.session.user;
 
