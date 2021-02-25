@@ -290,7 +290,7 @@ export default class StatisticCalcWorkerService extends BaseService {
 
             const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
             const querySelectPart = sql`
-            SELECT id, direction, exit_date, profit, bars_held
+            SELECT id, direction, entry_date, exit_date, profit, bars_held
         `;
             const queryFromAndConditionPart = sql`
             FROM v_robot_positions
@@ -407,7 +407,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             const conditionAsset = !asset ? sql`` : sql`AND r.asset = ${asset}`;
             const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
             const querySelectPart = sql`
-            SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held
+            SELECT p.id, p.direction, p.entry_date, p.exit_date, p.profit, p.bars_held
         `;
             const queryFromAndConditionPart = sql`
             FROM v_robot_positions p,
@@ -521,7 +521,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             const conditionAsset = !asset ? sql`` : sql`AND asset = ${asset}`;
             const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
             const querySelectPart = sql`
-            SELECT id, direction, exit_date, profit, bars_held
+            SELECT id, direction, entry_date, exit_date, profit, bars_held
         `;
             const queryFromAndConditionPart = sql`
             FROM user_positions
@@ -596,7 +596,7 @@ export default class StatisticCalcWorkerService extends BaseService {
 
             const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
             const querySelectPart = sql`
-                SELECT id, direction, exit_date, profit, bars_held
+                SELECT id, direction, entry_date, exit_date, profit, bars_held
             `;
             const queryFromAndConditionPart = sql`
                 FROM v_user_signal_positions
@@ -788,7 +788,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             const conditionAsset = !asset ? sql`` : sql`AND r.asset = ${asset}`;
             const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
             const querySelectPart = sql`
-            SELECT p.id, p.direction, p.exit_date, p.profit, p.bars_held
+            SELECT p.id, p.direction, p.entry_date, p.exit_date, p.profit, p.bars_held
         `;
 
             const queryFromAndConditionPart = sql`
@@ -879,7 +879,7 @@ export default class StatisticCalcWorkerService extends BaseService {
 
             const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
             const querySelectPart = sql`
-            SELECT id, direction, exit_date, profit, bars_held
+            SELECT id, direction, entry_date, exit_date, profit, bars_held
         `;
             const queryFromAndConditionPart = sql`
             FROM user_positions
@@ -994,7 +994,7 @@ export default class StatisticCalcWorkerService extends BaseService {
             const conditionAsset = !asset ? sql`` : sql`AND asset = ${asset}`;
             const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
             const querySelectPart = sql`
-            SELECT id, direction, exit_date, profit, bars_held
+            SELECT id, direction, entry_date, exit_date, profit, bars_held
         `;
             const queryFromAndConditionPart = sql`
             FROM user_positions p

@@ -130,7 +130,7 @@ export default class StatisticsCalculator {
 
         this.setPosition(0);
         this.setTradeStats(prevTradeStats);
-        if (this.currentTradeStats.firstPositionEntryDate === "") {
+        if (!this.currentTradeStats.firstPositionEntryDate || this.currentTradeStats.firstPositionEntryDate === "") {
             this.currentTradeStats.firstPositionEntryDate = this.positions[0].entryDate;
         }
     }

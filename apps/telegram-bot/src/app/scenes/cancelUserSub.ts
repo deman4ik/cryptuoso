@@ -34,13 +34,13 @@ async function cancelUserSubYes(ctx: any) {
                 cancelUserSub: { result }
             } = await this.gqlClient.request(
                 gql`
-                    mutation CancelUserSub($id: uuid!) {
-                        cancelUserSub(id: $id) {
+                    mutation cancelUserSub($userSubId: uuid!) {
+                        cancelUserSub(userSubId: $userSubId) {
                             result
                         }
                     }
                 `,
-                { id: userSub.id },
+                { userSubId: userSub.id },
                 ctx
             ));
         } catch (err) {
