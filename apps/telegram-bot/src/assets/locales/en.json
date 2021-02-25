@@ -283,6 +283,15 @@
         "statsLosses": "<b>🌋 Losses</b> \n\n<b>Loss Rate:</b> ${lossRate}%\n<b>Gross Loss:</b> ${grossLoss} $ \n<b>Average Loss:</b> ${avgLoss} $ \n<b>Average Bars held:</b> ${avgBarsHeldLosing} \n<b>Max. Consecutive Losses:</b> ${maxConsecLosses} \n\n",
         "statsNone": "Robot has no statistics yet...\n\n"
     },
+    "userSubscription": {
+        "error": "❌  Error occured while processing your payment\n${error}",
+        "status": "💰 Subscription <b>${name}</b> is <b>${status}</b>${message}",
+        "expiring": "\n${date}\nPlease renew you subscription.\bAfter subscription expires all robots will be <b>stopped</b>! If there are any <b>open positions</b> they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!",
+        "expired": "\nAll robots are <b>stopping</b> now! If there are any <b>open positions</b> they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!"
+    },
+    "userPayment": {
+        "status": "🧾  Your charge <b>${code}</b> for subscription <b>${name}</b> is <b>${status}</b>${context}"
+    },
     "tradeAction": {
         "long": "BUY ⬆️ (Long ✳️)",
         "short": "SELL ⬇️ (Short 🔴)",

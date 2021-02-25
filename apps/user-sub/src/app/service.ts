@@ -735,6 +735,22 @@ export default class UserSubService extends HTTPService {
 
                 await this._saveUserSub(userSub);
 
+                await this.events.emit<UserSubPaymentStatusEvent>({
+                    type: UserSubOutEvents.PAYMENT_STATUS,
+                    data: {
+                        userSubId: userPayment.userSubId,
+                        userId: userPayment.userId,
+                        userPaymentId: userPayment.id,
+                        code: userPayment.code,
+                        status: userPayment.status,
+                        context: null,
+                        price: userPayment.price,
+                        subscriptionName: subscription.subscriptionName,
+                        subscriptionOptionName: subscription.name,
+                        timestamp: dayjs.utc().toISOString()
+                    }
+                });
+
                 await this.events.emit<UserSubStatusEvent>({
                     type: UserSubOutEvents.USER_SUB_STATUS,
                     data: {
@@ -744,20 +760,6 @@ export default class UserSubService extends HTTPService {
                         context: null,
                         trialEnded: userSub.trialEnded,
                         activeTo: userSub.activeTo,
-                        subscriptionName: subscription.subscriptionName,
-                        subscriptionOptionName: subscription.name,
-                        timestamp: dayjs.utc().toISOString()
-                    }
-                });
-                await this.events.emit<UserSubPaymentStatusEvent>({
-                    type: UserSubOutEvents.PAYMENT_STATUS,
-                    data: {
-                        userSubId: userPayment.userSubId,
-                        userId: userPayment.userId,
-                        userPaymentId: userPayment.id,
-                        status: userPayment.status,
-                        context: null,
-                        price: userPayment.price,
                         subscriptionName: subscription.subscriptionName,
                         subscriptionOptionName: subscription.name,
                         timestamp: dayjs.utc().toISOString()
@@ -785,6 +787,7 @@ export default class UserSubService extends HTTPService {
                         userSubId: userPayment.userSubId,
                         userId: userPayment.userId,
                         userPaymentId: userPayment.id,
+                        code: userPayment.code,
                         status: userPayment.status,
                         context: null,
                         price: userPayment.price,

@@ -99,6 +99,7 @@ export interface UserSubPaymentStatusEvent {
     userSubId: string;
     userId: string;
     userPaymentId: string;
+    code: string;
     status: UserPayment["status"];
     context?: string;
     price?: number;

@@ -36,6 +36,7 @@ import { Job } from "bullmq";
 import { Signal, SignalEvents, SignalSchema } from "@cryptuoso/robot-events";
 import { Event } from "@cryptuoso/events";
 import { OrderStatus, SignalEvent, TradeAction } from "@cryptuoso/market";
+import { UserSub } from "@cryptuoso/billing";
 
 export type UserRobotRunnerServiceConfig = HTTPServiceConfig;
 
@@ -228,6 +229,16 @@ export default class UserRobotRunnerService extends HTTPService {
                 403
             );
         }
+
+        const userSub = await this.db.pg.maybeOne<{ id: UserSub["id"] }>(sql`
+        SELECT id 
+        FROM users_subs
+        WHERE user_id = ${userRobot.userId}
+        AND status in (${"active"},${"trial"});
+        `);
+
+        if (!userSub)
+            throw new ActionsHandlerError(`Your Cryptuoso Subscription is not Active.`, null, "FORBIDDEN", 403);
 
         const startedAt = dayjs.utc().toISOString();
         await this.db.pg.query(sql`

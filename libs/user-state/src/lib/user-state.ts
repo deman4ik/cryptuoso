@@ -80,12 +80,12 @@ export interface User extends BaseUser {
     refreshTokenExpireAt?: string;
 }
 
-export interface Notification {
+export interface Notification<T> {
     id?: string;
     userId: string;
     timestamp: string;
     type: string;
-    data: GenericObject<any>;
+    data: T;
     sendTelegram: boolean;
     sendEmail: boolean;
     readed?: boolean;
