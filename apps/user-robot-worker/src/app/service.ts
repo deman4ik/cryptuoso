@@ -8,7 +8,9 @@ import {
     UserRobotStatus,
     UserRobot,
     UserPositionDB,
-    UserRobotStateExt
+    UserRobotStateExt,
+    UserPositionState,
+    UserPositionStatus
 } from "@cryptuoso/user-robot-state";
 import { UserRobotWorkerError, UserRobotWorkerEvents, UserTradeEvents } from "@cryptuoso/user-robot-events";
 import { Job } from "bullmq";
@@ -387,7 +389,28 @@ WHERE p.user_robot_id =${userRobotId}
             if (type === UserRobotJobType.signal) {
                 userRobot.handleSignal(data as SignalEvent);
             } else if (type === UserRobotJobType.order) {
-                userRobot.handleOrder(data as OrdersStatusEvent);
+                const order = data as OrdersStatusEvent;
+                const position = await this.db.pg.maybeOne<{ id: string; status: UserPositionStatus }>(sql`
+                SELECT id, status
+                FROM user_positions 
+                WHERE user_robot_id = ${userRobotId}
+                and id = ${order.userPositionId}
+                `);
+                if (!position)
+                    throw new BaseError(
+                        "Position not found",
+                        {
+                            order,
+                            userRobotId
+                        },
+                        "ERR_NOT_FOUND"
+                    );
+                if (
+                    [UserPositionStatus.new, UserPositionStatus.open, UserPositionStatus.delayed].includes(
+                        position.status
+                    )
+                )
+                    userRobot.handleOrder(order);
             } else if (type === UserRobotJobType.stop) {
                 if (userRobot.status === UserRobotStatus.stopped) return userRobot.status;
                 userRobot.stop(data as { message?: string });
