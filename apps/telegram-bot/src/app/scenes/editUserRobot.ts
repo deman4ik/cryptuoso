@@ -31,13 +31,13 @@ function getChooseAmountTypeMenu(ctx: any) {
                     false
                 )
             ],
-            [
+            /* [
                 m.callbackButton(
                     ctx.i18n.t("volumeType.assetDynamicDelta"),
                     JSON.stringify({ a: "volumeType", p: "assetDynamicDelta" }),
                     false
                 )
-            ],
+            ],*/
             [
                 m.callbackButton(
                     ctx.i18n.t("volumeType.balancePercent"),
