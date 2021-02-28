@@ -164,7 +164,7 @@ export function handleUserRobotError(notification: Notification<any> & { telegra
         message: this.i18n.t(LANG, `userRobot.error`, {
             id: userRobotId,
             code,
-            error: error.split("<html>")[0]
+            error: error ? error.split("<html>")[0] : ""
         })
     };
 }
@@ -181,7 +181,7 @@ export function handleUserRobotStatus(notification: Notification<any> & { telegr
         telegramId: notification.telegramId,
         message: this.i18n.t(LANG, `userRobot.status`, {
             code,
-            message: message.split("<html>")[0] || "",
+            message: message ? message.split("<html>")[0] : "",
             status
         })
     };
@@ -199,7 +199,7 @@ export function handleOrderError(notification: Notification<any> & { telegramId:
             id: userRobotId,
             code,
             orderId,
-            error: error.split("<html>")[0]
+            error: error ? error.split("<html>")[0] : ""
         })
     };
 }
