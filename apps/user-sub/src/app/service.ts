@@ -21,6 +21,7 @@ import { UserRobotRunnerEvents, UserRobotRunnerStop } from "@cryptuoso/user-robo
 import { Job } from "bullmq";
 import { BaseError } from "ccxt";
 import { v4 as uuid } from "uuid";
+import { GA } from "@cryptuoso/analytics";
 
 export type UserSubServiceConfig = HTTPServiceConfig;
 
@@ -521,6 +522,7 @@ export default class UserSubService extends HTTPService {
                 trialStarted: status === "trial" ? dayjs.utc().toISOString() : null // если начинаем с триала, устанавливаем дату начала
             };
             await this._saveUserSub(userSub);
+            GA.event(user.id, "subscription", "create");
             return { id: userSub.id };
         } catch (err) {
             this.log.error(err);
@@ -562,6 +564,8 @@ export default class UserSubService extends HTTPService {
                     });
                 }
             }
+
+            GA.event(user.id, "subscription", "cancel");
         } catch (err) {
             this.log.error(err);
             throw err;
@@ -635,7 +639,7 @@ export default class UserSubService extends HTTPService {
             });
 
             await this._saveUserPayment(userPayment);
-
+            GA.event(user.id, "subscription", "checkout");
             return { id: userPayment.id };
         } catch (err) {
             this.log.error(err);
@@ -681,7 +685,9 @@ export default class UserSubService extends HTTPService {
                 AND so.subscription_id = s.id;
                 `);
 
-                if (savedUserSub.status === "canceled" || savedUserSub.status === "expired") {
+                if (savedUserSub.status === "active") {
+                    if (savedUserSub.activeTo === userPayment.subscriptionTo) return { id: userPayment.id };
+                } else if (savedUserSub.status === "canceled" || savedUserSub.status === "expired") {
                     this.log.warn(
                         `New ${userPayment.status} payment for ${savedUserSub.status} subscription`,
                         userPayment
@@ -765,6 +771,13 @@ export default class UserSubService extends HTTPService {
                         timestamp: dayjs.utc().toISOString()
                     }
                 });
+
+                GA.purchase(
+                    userSub.userId,
+                    userPayment.code,
+                    userPayment.price,
+                    `${subscription.subscriptionName} ${subscription.name}`
+                );
             } else if (
                 userPayment.status === "EXPIRED" ||
                 userPayment.status === "CANCELED" ||

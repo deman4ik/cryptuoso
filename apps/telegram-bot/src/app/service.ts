@@ -55,13 +55,17 @@ import {
     handleBroadcastMessage,
     handleMessageSupportReply,
     handleOrderError,
+    handlePaymentStatus,
     handleSignal,
     handleUserExAccError,
     handleUserRobotError,
     handleUserRobotStatus,
-    handleUserRobotTrade
+    handleUserRobotTrade,
+    handleUserSubError,
+    handleUserSubStatus
 } from "./notifications";
 import { UserRobotStatus } from "@cryptuoso/user-robot-state";
+import { GA } from "@cryptuoso/analytics";
 
 export type TelegramBotServiceConfig = BaseServiceConfig;
 
@@ -238,6 +242,15 @@ export default class TelegramBotService extends BaseService {
                         case "message.support-reply":
                             messageToSend = handleMessageSupportReply.call(this, notification);
                             break;
+                        case "user_sub.error":
+                            messageToSend = handleUserSubError.call(this, notification);
+                            break;
+                        case "user_payment.status":
+                            messageToSend = handlePaymentStatus.call(this, notification);
+                            break;
+                        case "user_sub.status":
+                            messageToSend = handleUserSubStatus.call(this, notification);
+                            break;
                         default:
                             continue;
                     }
@@ -371,6 +384,7 @@ export default class TelegramBotService extends BaseService {
 
     async start(ctx: any) {
         try {
+            GA.view(null, "start");
             const params = ctx.update.message.text.replace("/start ", "");
             if (params && params !== "") {
                 const [scene, robotId] = params.split("_");

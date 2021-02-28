@@ -6,6 +6,7 @@ import { gql } from "@cryptuoso/graphql-client";
 import { User } from "@cryptuoso/user-state";
 import { getBackKeyboard } from "../keyboard";
 import { sleep } from "@cryptuoso/helpers";
+import { GA } from "@cryptuoso/analytics";
 
 function getSettingsMenu(ctx: any) {
     const {
@@ -95,6 +96,7 @@ function getSettingsMenu(ctx: any) {
 
 async function settingsEnter(ctx: any) {
     try {
+        GA.view(ctx.session.user.id, TelegramScene.SETTINGS);
         // if (ctx.scene.state.reload) {
         const settings = await this.getUserSettings(ctx);
         ctx.session.user.settings = settings;

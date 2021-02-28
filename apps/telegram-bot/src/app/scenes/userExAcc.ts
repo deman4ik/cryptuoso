@@ -5,6 +5,7 @@ import { addBaseActions } from "./default";
 import { match } from "@edjopato/telegraf-i18n";
 import { UserExchangeAccountInfo, UserExchangeAccStatus } from "@cryptuoso/user-state";
 import { gql } from "@cryptuoso/graphql-client";
+import { GA } from "@cryptuoso/analytics";
 
 function getUserExAccMenu(ctx: any) {
     const { status }: UserExchangeAccountInfo = ctx.scene.state.userExAcc;
@@ -26,6 +27,7 @@ function getUserExAccMenu(ctx: any) {
 
 async function userExAccEnter(ctx: any) {
     try {
+        GA.view(ctx.session.user.id, TelegramScene.USER_EXCHANGE_ACC);
         if (ctx.scene.state.reload) {
             ctx.scene.state.userExAcc = this.getUserExchangeAcc(ctx);
         }

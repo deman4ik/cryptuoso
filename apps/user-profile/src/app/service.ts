@@ -32,6 +32,7 @@ import {
     VolumeSettingsType
 } from "@cryptuoso/robot-settings";
 import { PrivateConnector } from "@cryptuoso/ccxt-private";
+import { GA } from "@cryptuoso/analytics";
 
 export type UserProfileServiceConfig = HTTPServiceConfig;
 
@@ -398,6 +399,7 @@ export default class UserProfileService extends HTTPService {
             newSettings.volumeType === VolumeSettingsType.assetStatic
                 ? newSettings.volume
                 : newSettings.volumeInCurrency;
+        GA.event(user.id, "signals", "subscribe");
         return volume;
     }
 
@@ -457,6 +459,7 @@ export default class UserProfileService extends HTTPService {
             newSettings.volumeType === VolumeSettingsType.assetStatic
                 ? newSettings.volume
                 : newSettings.volumeInCurrency;
+        GA.event(user.id, "signals", "edit");
         return volume;
     }
 
@@ -483,6 +486,7 @@ export default class UserProfileService extends HTTPService {
                 robotId
             }
         });
+        GA.event(user.id, "signals", "unsubscribe");
     }
 
     //#endregion "User Signals"
@@ -650,7 +654,7 @@ export default class UserProfileService extends HTTPService {
                 );
             `);
         }
-
+        GA.event(user.id, "exAcc", "upsert");
         return exchangeAcc.id;
     }
 
@@ -747,6 +751,7 @@ export default class UserProfileService extends HTTPService {
             FROM user_exchange_accs
             WHERE id = ${id};
         `);
+        GA.event(user.id, "exAcc", "delete");
     }
 
     //#endregion "User Exchange Account"
@@ -905,7 +910,7 @@ export default class UserProfileService extends HTTPService {
                     ${JSON.stringify(newUserRobotSettings)}
                 );
         `);
-
+        GA.event(user.id, "robot", "add");
         return userRobotId;
     }
 
@@ -988,6 +993,7 @@ export default class UserProfileService extends HTTPService {
                 ${JSON.stringify(newUserRobotSettings)}
             );
         `);
+        GA.event(user.id, "robot", "edit");
     }
 
     async userRobotDelete(user: User, { id }: { id: string }) {
@@ -1028,6 +1034,7 @@ export default class UserProfileService extends HTTPService {
             type: StatsCalcRunnerEvents.USER_ROBOT_DELETED,
             data: { userId, robotId: userRobotExists.robotId }
         });
+        GA.event(user.id, "robot", "delete");
     }
 
     //#endregion "User Robots"

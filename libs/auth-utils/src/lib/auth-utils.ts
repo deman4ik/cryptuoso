@@ -9,6 +9,7 @@ import { Bcrypt } from "./types";
 import bcrypt from "bcrypt";
 import { pg, sql } from "@cryptuoso/postgres";
 import crypto from "crypto";
+import { GA } from "@cryptuoso/analytics";
 
 export class Auth {
     #bcrypt: Bcrypt;
@@ -100,7 +101,7 @@ export class Auth {
             WHERE id = ${user.id}
         `);
         }
-
+        GA.event(user.id, "auth", "login");
         return {
             accessToken: this.generateAccessToken(user),
             refreshToken,
@@ -154,7 +155,7 @@ export class Auth {
             refreshToken = user.refreshToken;
             refreshTokenExpireAt = user.refreshTokenExpireAt;
         }
-
+        GA.event(user.id, "auth", "login");
         return {
             accessToken,
             refreshToken,
@@ -286,7 +287,7 @@ export class Auth {
             userId: newUser.id,
             secretCode: newUser.secretCode
         });
-
+        GA.event(newUser.id, "auth", "register");
         await this.#mailUtil.send({
             to: email,
             subject: "🚀 Welcome to Cryptuoso Robots - Please confirm your email.",
@@ -355,7 +356,7 @@ export class Auth {
                 ${newUser.lastActiveAt}
             );
     `);
-
+        GA.event(newUser.id, "auth", "register");
         return { user: newUser, accessToken: this.generateAccessToken(newUser) };
     }
 
@@ -468,7 +469,7 @@ export class Auth {
                 );
         `);
         }
-
+        GA.event(user.id, "auth", "register");
         await this.#mailUtil.send({
             to: email,
             subject: "🚀 Cryptuoso Robots - Please confirm your email.",

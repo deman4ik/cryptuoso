@@ -14,6 +14,7 @@ import {
 import { UserMarketState } from "@cryptuoso/market";
 import { BaseError } from "@cryptuoso/errors";
 import { UserExchangeAccountInfo } from "@cryptuoso/user-state";
+import { GA } from "@cryptuoso/analytics";
 
 function getUserExAccsMenu(ctx: any) {
     const {
@@ -91,7 +92,7 @@ async function addUserRobotEnter(ctx: any) {
 
         if (userExAccs && userExAccs.length) {
             ctx.scene.state.userExAccs = userExAccs;
-
+            GA.view(ctx.session.user.id, TelegramScene.ADD_USER_ROBOT);
             if (ctx.scene.state.edit) {
                 ctx.scene.state.edit = false;
                 return ctx.editMessageText(

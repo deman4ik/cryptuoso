@@ -13,6 +13,7 @@ import {
 } from "@cryptuoso/robot-settings";
 import { UserMarketState } from "@cryptuoso/market";
 import { BaseError } from "@cryptuoso/errors";
+import { GA } from "@cryptuoso/analytics";
 
 function getChooseAmountTypeMenu(ctx: any) {
     return Extra.HTML().markup((m: any) => {
@@ -51,6 +52,7 @@ function getChooseAmountTypeMenu(ctx: any) {
 
 async function editUserRobotEnter(ctx: any) {
     try {
+        GA.view(ctx.session.user.id, TelegramScene.EDIT_USER_ROBOT);
         const {
             robot
         }: {

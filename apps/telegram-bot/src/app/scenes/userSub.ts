@@ -6,6 +6,7 @@ import { BaseScene, Extra } from "telegraf";
 import { getBackKeyboard } from "../keyboard";
 import { IUserSub, TelegramScene } from "../types";
 import { addBaseActions } from "./default";
+import { GA } from "@cryptuoso/analytics";
 
 function getUserSubMenu(ctx: any) {
     const { userSub } = ctx.scene.state;
@@ -30,6 +31,7 @@ function getUserSubMenu(ctx: any) {
 
 async function userSubEnter(ctx: any) {
     try {
+        GA.view(ctx.session.user.id, TelegramScene.USER_SUB);
         const {
             userSubs
         }: {

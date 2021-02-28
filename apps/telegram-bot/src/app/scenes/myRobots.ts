@@ -5,6 +5,7 @@ import { addBaseActions } from "./default";
 import { match } from "@edjopato/telegraf-i18n";
 import { gql } from "@cryptuoso/graphql-client";
 import { UserRobotStatus } from "@cryptuoso/user-robot-state";
+import { GA } from "@cryptuoso/analytics";
 
 const PAGE_SIZE = 7;
 
@@ -49,6 +50,7 @@ function getRobotsListMenu(ctx: any) {
 
 async function myRobotsEnter(ctx: any) {
     try {
+        GA.view(ctx.session.user.id, TelegramScene.MY_ROBOTS);
         let myRobots;
         if (ctx.scene.state.myRobots && !ctx.scene.state.reload) myRobots = ctx.scene.state.myRobots;
         else

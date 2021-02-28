@@ -5,6 +5,7 @@ import { addBaseActions, getExchangesMenu } from "./default";
 import { match } from "@edjopato/telegraf-i18n";
 import { gql } from "@cryptuoso/graphql-client";
 import { formatExchange, round } from "@cryptuoso/helpers";
+import { GA } from "@cryptuoso/analytics";
 
 function getSignalsListMenu(ctx: any) {
     const robots: {
@@ -37,6 +38,7 @@ function getSignalsListMenu(ctx: any) {
 
 async function topSignalsEnter(ctx: any) {
     try {
+        GA.view(ctx.session.user.id, TelegramScene.TOP_SIGNALS);
         if (ctx.scene.state.stage === "selectRobot") {
             return topSignalsSelectRobot.call(this, ctx);
         }

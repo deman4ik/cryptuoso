@@ -109,6 +109,11 @@ spec:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
                                 key: JWT_TOKEN_EXPIRES
+                      - name: GA_UA_TRACKING_ID
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: GA_UA_TRACKING_ID
                   ports:
                       - containerPort: 3000
                         protocol: TCP

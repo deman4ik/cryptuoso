@@ -84,6 +84,11 @@ spec:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
                                 key: MAILGUN_DOMAIN
+                      - name: GA_UA_TRACKING_ID
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: GA_UA_TRACKING_ID
                   ports:
                       - containerPort: 3000
                         protocol: TCP

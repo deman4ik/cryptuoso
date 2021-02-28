@@ -4,9 +4,11 @@ import { Robot, TelegramScene } from "../types";
 import { addBaseActions, getConfirmMenu } from "./default";
 import { match } from "@edjopato/telegraf-i18n";
 import { gql } from "@cryptuoso/graphql-client";
+import { GA } from "@cryptuoso/analytics";
 
 async function unsubscribeSignalsEnter(ctx: any) {
     try {
+        GA.view(ctx.session.user.id, TelegramScene.UNSUBSCRIBE_SIGNALS);
         const { robot }: { robot: Robot } = ctx.scene.state;
 
         return ctx.reply(

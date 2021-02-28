@@ -6,6 +6,7 @@ import { getStatisticsText } from "../helpers";
 import { TelegramScene } from "../types";
 import { addBaseActions } from "./default";
 import { match } from "@edjopato/telegraf-i18n";
+import { GA } from "@cryptuoso/analytics";
 
 function getPerfSignalsMenu(ctx: any) {
     return Extra.HTML().markup((m: any) => {
@@ -19,6 +20,7 @@ function getPerfSignalsMenu(ctx: any) {
 
 async function perfSignalsEnter(ctx: any) {
     try {
+        GA.view(ctx.session.user.id, TelegramScene.PERFORMANCE_SIGNALS);
         const { stats }: { stats: BaseStatistics[] } = await this.gqlClient.request(
             gql`
                 query UserSignalsProfit($userId: uuid!) {
