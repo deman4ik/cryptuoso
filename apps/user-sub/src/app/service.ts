@@ -125,7 +125,7 @@ export default class UserSubService extends HTTPService {
                 await this.checkExpiration();
                 break;
             case "checkTrial":
-                await this.checkExpiration();
+                await this.checkTrial();
                 break;
             case "checkPending":
                 await this.checkPending();
@@ -270,13 +270,14 @@ export default class UserSubService extends HTTPService {
                     `);
 
                     if (userStats) {
+                        const trialEnded = dayjs
+                            .utc()
+                            .startOf("day")
+                            .add(this.#expirationAmount, this.#expirationUnit)
+                            .toISOString();
                         await this.db.pg.query(sql`
                         UPDATE user_subs
-                          SET trial_ended = ${dayjs
-                              .utc()
-                              .startOf("day")
-                              .add(this.#expirationAmount, this.#expirationUnit)
-                              .toISOString()}
+                          SET trial_ended = trialEnded
                         WHERE id = ${sub.id};
                         `);
                         await this.events.emit<UserSubStatusEvent>({
@@ -286,8 +287,8 @@ export default class UserSubService extends HTTPService {
                                 userId: sub.userId,
                                 status: "expiring",
                                 context: sub.status,
-                                trialEnded: sub.trialEnded,
-                                activeTo: sub.activeTo,
+                                trialEnded: trialEnded,
+                                activeTo: null,
                                 subscriptionName: sub.subscriptionName,
                                 subscriptionOptionName: sub.subscriptionOptionName,
                                 timestamp: dayjs.utc().toISOString()
@@ -303,7 +304,7 @@ export default class UserSubService extends HTTPService {
                             status: "expiring",
                             context: sub.status,
                             trialEnded: sub.trialEnded,
-                            activeTo: sub.activeTo,
+                            activeTo: null,
                             subscriptionName: sub.subscriptionName,
                             subscriptionOptionName: sub.subscriptionOptionName,
                             timestamp: dayjs.utc().toISOString()
@@ -319,7 +320,7 @@ export default class UserSubService extends HTTPService {
 
     async checkPending() {
         try {
-            const date = dayjs.utc().startOf("day").toISOString();
+            const date = dayjs.utc().startOf("day").add(-7, "day").toISOString();
             const pendingSubscriptions = await this.db.pg.any<{
                 id: string;
                 userId: string;
@@ -332,10 +333,8 @@ export default class UserSubService extends HTTPService {
             SELECT id, user_id, status, 
             subscription_name, subscription_option_name,
                 active_to, trial_ended
-            FROM v_user_subs where (status = 'expired'
-            AND ((active_to is not null and active_to < ${date}) 
-            OR (trial_ended is not null and trial_ended < ${date})) 
-            OR status = 'pending'
+            FROM v_user_subs where status = 'pending'
+            AND updated_at > ${date}
             );`);
 
             for (const sub of pendingSubscriptions) {
@@ -711,6 +710,11 @@ export default class UserSubService extends HTTPService {
                 info: charge
             };
 
+            if (savedUserPayment.status === userPayment.status)
+                return {
+                    id: savedUserPayment.id
+                };
+
             await this._saveUserPayment(userPayment);
 
             if (userPayment.status === "COMPLETED" || userPayment.status === "RESOLVED") {
@@ -749,27 +753,6 @@ export default class UserSubService extends HTTPService {
                     throw new BaseError(`New ${userPayment.status} payment for ${savedUserSub.status} subscription`);
                 }
 
-                if (subscription.priceTotal > userPayment.price) {
-                    this.log.warn(
-                        `Wrong payment price ${userPayment.price} for subscription (${subscription.priceTotal})`,
-                        userPayment
-                    );
-                    await this.events.emit<UserSubErrorEvent>({
-                        type: UserSubOutEvents.ERROR,
-                        data: {
-                            userSubId: savedUserPayment.id,
-                            userId: savedUserPayment.userId,
-                            subscriptionName: subscription.subscriptionName,
-                            subscriptionOptionName: subscription.name,
-                            error: `Wrong payment ${userPayment.code} price ${userPayment.price} for ${subscription.subscriptionName} subscription (${subscription.priceTotal}). Please contact support.`,
-                            timestamp: dayjs.utc().toISOString(),
-                            userPayment
-                        }
-                    });
-                    throw new BaseError(
-                        `Wrong payment price ${userPayment.price} for subscription (${subscription.priceTotal})`
-                    );
-                }
                 const currentTime = dayjs.utc().toISOString();
 
                 if (userSub.status === "trial") {
@@ -823,7 +806,8 @@ export default class UserSubService extends HTTPService {
             } else if (
                 userPayment.status === "EXPIRED" ||
                 userPayment.status === "CANCELED" ||
-                userPayment.status === "UNRESOLVED"
+                userPayment.status === "UNRESOLVED" ||
+                userPayment.status === "PENDING"
             ) {
                 this.log.info(`User payment ${userPayment.status}`, userPayment);
 
