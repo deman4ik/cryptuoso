@@ -489,7 +489,7 @@ export default class NotificationsService extends BaseService {
                 } else if (status === "expiring") {
                     let date;
                     if (activeTo || trialEnded) {
-                        date = `Expires in ${dayjs.utc().diff(activeTo || trialEnded, "day")} days`;
+                        date = `Expires in ${dayjs.utc(activeTo || trialEnded).diff(dayjs.utc(), "day")} days`;
                     }
 
                     message = `<p>${
