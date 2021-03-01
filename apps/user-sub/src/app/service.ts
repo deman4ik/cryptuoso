@@ -295,21 +295,6 @@ export default class UserSubService extends HTTPService {
                             }
                         });
                     }
-                } else {
-                    await this.events.emit<UserSubStatusEvent>({
-                        type: UserSubOutEvents.USER_SUB_STATUS,
-                        data: {
-                            userSubId: sub.id,
-                            userId: sub.userId,
-                            status: "expiring",
-                            context: sub.status,
-                            trialEnded: sub.trialEnded,
-                            activeTo: null,
-                            subscriptionName: sub.subscriptionName,
-                            subscriptionOptionName: sub.subscriptionOptionName,
-                            timestamp: dayjs.utc().toISOString()
-                        }
-                    });
                 }
             }
         } catch (error) {

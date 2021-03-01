@@ -69,6 +69,16 @@ spec:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
                                 key: REDISCS
+                      - name: MAILGUN_API_KEY
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: MAILGUN_API_KEY
+                      - name: MAILGUN_DOMAIN
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: MAILGUN_DOMAIN
                       - name: GA_UA_TRACKING_ID
                         valueFrom:
                             secretKeyRef:
