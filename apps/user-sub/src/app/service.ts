@@ -466,11 +466,16 @@ export default class UserSubService extends HTTPService {
     async createUserSub({ subscriptionId, subscriptionOption }: UserSubCreate, user?: User) {
         try {
             // Есть ли подписка и опция
-            const subscription = await this.db.pg.maybeOne<{ code: string }>(sql`SELECT code 
-            FROM subscription_options
-            WHERE code = ${subscriptionOption} 
-            AND subscription_id = ${subscriptionId}
-            AND available >= ${user.access};
+            const subscription = await this.db.pg.maybeOne<{
+                code: string;
+                name: string;
+                subscriptionName: string;
+            }>(sql`SELECT so.code, so.name, s.name as subscription_name
+            FROM subscription_options so , subscriptions s 
+            WHERE so.code = ${subscriptionOption} 
+            AND so.subscription_id = ${subscriptionId}
+            AND so.available >= ${user.access}
+            AND so.subscription_id = s.id;
             `);
             if (!subscription) throw new BaseError("Subscription is not available");
 
@@ -522,6 +527,20 @@ export default class UserSubService extends HTTPService {
                 trialStarted: status === "trial" ? dayjs.utc().toISOString() : null // если начинаем с триала, устанавливаем дату начала
             };
             await this._saveUserSub(userSub);
+            await this.events.emit<UserSubStatusEvent>({
+                type: UserSubOutEvents.USER_SUB_STATUS,
+                data: {
+                    userSubId: userSub.id,
+                    userId: userSub.userId,
+                    status: userSub.status,
+                    context: null,
+                    trialEnded: null,
+                    activeTo: null,
+                    subscriptionName: subscription.subscriptionName,
+                    subscriptionOptionName: subscription.name,
+                    timestamp: dayjs.utc().toISOString()
+                }
+            });
             GA.event(user.id, "subscription", "create");
             return { id: userSub.id };
         } catch (err) {
@@ -532,10 +551,20 @@ export default class UserSubService extends HTTPService {
 
     async cancelUserSub({ userSubId }: UserSubCancel, user: User) {
         try {
-            const { status } = await this.db.pg.maybeOne<{ status: UserSub["status"] }>(sql`select status 
-            FROM  user_subs
-           WHERE id = ${userSubId} 
-           AND user_id = ${user.id};
+            const { id, userId, status, name, subscriptionName } = await this.db.pg.maybeOne<{
+                id: UserSub["id"];
+                userId: UserSub["userId"];
+                status: UserSub["status"];
+                name: string;
+                subscriptionName: string;
+            }>(sql`select us.id, us.user_id, us.status,
+            so.name, s.name as subscription_name
+            FROM  user_subs us, subscription_options so, subscriptions s 
+           WHERE us.id = ${userSubId} 
+           AND us.user_id = ${user.id}
+           AND us.subscription_option = so.code
+           AND us.subscription_id = so.subscription_id
+           AND so.subscription_id = s.id;
            `);
 
             if (!status) throw new BaseError("User Subscription doesn't exists");
@@ -564,7 +593,20 @@ export default class UserSubService extends HTTPService {
                     });
                 }
             }
-
+            await this.events.emit<UserSubStatusEvent>({
+                type: UserSubOutEvents.USER_SUB_STATUS,
+                data: {
+                    userSubId: id,
+                    userId: userId,
+                    status: status,
+                    context: null,
+                    trialEnded: null,
+                    activeTo: null,
+                    subscriptionName: subscriptionName,
+                    subscriptionOptionName: name,
+                    timestamp: dayjs.utc().toISOString()
+                }
+            });
             GA.event(user.id, "subscription", "cancel");
         } catch (err) {
             this.log.error(err);
