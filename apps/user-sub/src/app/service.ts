@@ -120,6 +120,7 @@ export default class UserSubService extends HTTPService {
     }
 
     async process(job: Job) {
+        this.log.info(`Processing ${job.name}`);
         switch (job.name) {
             case "checkExpiration":
                 await this.checkExpiration();
@@ -158,6 +159,7 @@ export default class UserSubService extends HTTPService {
                         AND trial_ended is not null AND trial_ended  < ${currentDate});`);
 
             for (const sub of expiredSubscriptions) {
+                this.log.info(`Subscription #${sub.id} for user #${sub.userId} expired`);
                 const userRobots = await this.db.pg.any<{ id: string }>(sql`
                             SELECT id 
                             FROM user_robots 
@@ -217,6 +219,7 @@ export default class UserSubService extends HTTPService {
                         OR (status = 'trial' AND trial_ended is not null
                         AND trial_ended  < ${expirationDate});`);
             for (const sub of expiringSubscriptions) {
+                this.log.info(`Subscription #${sub.id} for user #${sub.userId} is expiring`);
                 await this.events.emit<UserSubStatusEvent>({
                     type: UserSubOutEvents.USER_SUB_STATUS,
                     data: {
@@ -255,11 +258,11 @@ export default class UserSubService extends HTTPService {
             SELECT id, user_id, status, 
             subscription_name, subscription_option_name,
                 active_to, trial_ended, subscription_limits
-            FROM v_user_subs where status = 'trial';`);
+            FROM v_user_subs where status = 'trial' and trial_ended is null;`);
 
             for (const sub of trialSubscriptions) {
-                if (!sub.trialEnded) {
-                    const userStats = await this.db.pg.maybeOne<{ id: string }>(sql`
+                this.log.info(`Trial Subscription #${sub.id} for user #${sub.userId} is expiring`);
+                const userStats = await this.db.pg.maybeOne<{ id: string }>(sql`
                     SELECT id 
                       FROM v_user_aggr_stats
                     WHERE user_id = ${sub.userId}
@@ -269,32 +272,31 @@ export default class UserSubService extends HTTPService {
                       AND net_profit > ${sub.subscriptionLimits?.trialNetProfit || 15};
                     `);
 
-                    if (userStats) {
-                        const trialEnded = dayjs
-                            .utc()
-                            .startOf("day")
-                            .add(this.#expirationAmount, this.#expirationUnit)
-                            .toISOString();
-                        await this.db.pg.query(sql`
+                if (userStats) {
+                    const trialEnded = dayjs
+                        .utc()
+                        .startOf("day")
+                        .add(this.#expirationAmount, this.#expirationUnit)
+                        .toISOString();
+                    await this.db.pg.query(sql`
                         UPDATE user_subs
                           SET trial_ended = trialEnded
                         WHERE id = ${sub.id};
                         `);
-                        await this.events.emit<UserSubStatusEvent>({
-                            type: UserSubOutEvents.USER_SUB_STATUS,
-                            data: {
-                                userSubId: sub.id,
-                                userId: sub.userId,
-                                status: "expiring",
-                                context: sub.status,
-                                trialEnded: trialEnded,
-                                activeTo: null,
-                                subscriptionName: sub.subscriptionName,
-                                subscriptionOptionName: sub.subscriptionOptionName,
-                                timestamp: dayjs.utc().toISOString()
-                            }
-                        });
-                    }
+                    await this.events.emit<UserSubStatusEvent>({
+                        type: UserSubOutEvents.USER_SUB_STATUS,
+                        data: {
+                            userSubId: sub.id,
+                            userId: sub.userId,
+                            status: "expiring",
+                            context: sub.status,
+                            trialEnded: trialEnded,
+                            activeTo: null,
+                            subscriptionName: sub.subscriptionName,
+                            subscriptionOptionName: sub.subscriptionOptionName,
+                            timestamp: dayjs.utc().toISOString()
+                        }
+                    });
                 }
             }
         } catch (error) {
