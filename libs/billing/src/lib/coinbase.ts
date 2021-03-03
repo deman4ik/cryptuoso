@@ -98,7 +98,7 @@ class CoinbaseCommerce {
                         name,
                         description,
                         local_price: {
-                            amount: `${2}`, //TODO: price
+                            amount: `${price}`,
                             currency: "USD"
                         },
                         pricing_type: "fixed_price",

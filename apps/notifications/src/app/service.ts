@@ -483,26 +483,23 @@ export default class NotificationsService extends BaseService {
             if (email) {
                 try {
                     let message = "";
-
+                    let date = "";
                     if (status === "expired" || status === "canceled") {
                         message =
                             "<p>All robots are <b>stopping</b> now! If there are any <b>open positions</b> they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!</p>";
                     } else if (status === "expiring") {
-                        let date;
                         if (activeTo || trialEnded) {
-                            date = `Expires in ${dayjs.utc(activeTo || trialEnded).diff(dayjs.utc(), "day")} days`;
+                            date = ` in ${dayjs.utc(activeTo || trialEnded).diff(dayjs.utc(), "day")} days`;
                         }
 
-                        message = `<p>${
-                            date || ""
-                        }</p><p>Please renew you subscription.</p><p>After subscription expires all robots will be <b>stopped</b>! If there are any <b>open positions</b> they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!</p>`;
+                        message = `<p>Please renew you subscription.</p><p>After subscription expires all robots will be <b>stopped</b>! If there are any <b>open positions</b> they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!</p>`;
                     }
                     await this.#mailUtil.send({
                         to: email,
                         subject: `Cryptuoso Subscription Status Update - ${status}`,
                         variables: {
                             body: `<p>Greetings!</p>
-                    <p>Your subscription <a href="https://cryptuoso.com/profile">${subscriptionName}</a> is <b>${status}</b></p>
+                    <p>Your subscription <a href="https://cryptuoso.com/profile">${subscriptionName}</a> is <b>${status}</b>${date}</p>
                     ${message}
                     <p>If you have any questions please <a href="https://cryptuoso.com/support">contact support</a></p>`
                         },
