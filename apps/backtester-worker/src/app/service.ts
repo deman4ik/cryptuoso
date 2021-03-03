@@ -139,7 +139,7 @@ export default class BacktesterWorkerService extends BaseService {
                     this.log.info(
                         `Backtester #${backtester.id} finished in ${dayjs
                             .utc(backtester.finishedAt)
-                            .diff(dayjs.utc(backtester.startedAt), "second")} seconds`
+                            .to(backtester.startedAt)}`
                     );
                 }
 

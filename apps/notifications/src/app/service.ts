@@ -489,7 +489,7 @@ export default class NotificationsService extends BaseService {
                             "<p>All robots are <b>stopping</b> now! If there are any <b>open positions</b> they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!</p>";
                     } else if (status === "expiring") {
                         if (activeTo || trialEnded) {
-                            date = ` in ${dayjs.utc(activeTo || trialEnded).diff(dayjs.utc(), "day")} days`;
+                            date = ` ${dayjs.utc().to(activeTo || trialEnded)}`;
                         }
 
                         message = `<p>Please renew you subscription.</p><p>After subscription expires all robots will be <b>stopped</b>! If there are any <b>open positions</b> they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!</p>`;
