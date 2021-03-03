@@ -85,9 +85,9 @@ async function userSubEnter(ctx: any) {
             const lastPayment = userSub.userPayments && userSub.userPayments.length && userSub.userPayments[0];
             let expires = "";
             if (userSub.status === "trial" && userSub.trial_ended)
-                expires = `Expires in ${dayjs.utc().diff(userSub.trial_ended, "day")} days`;
+                expires = `Expires in ${dayjs.utc().to(userSub.trial_ended)} days`;
             else if (userSub.status === "active" && userSub.active_to)
-                expires = `Expires in ${dayjs.utc().diff(userSub.active_to, "day")} days`;
+                expires = `Expires in ${dayjs.utc().to(userSub.active_to)} days`;
             currentSub = {
                 name: userSub.subscription.name,
                 option: userSub.subscriptionOption.name,
