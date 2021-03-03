@@ -5,11 +5,13 @@ import { addBaseActions, getExchangesMenu } from "./default";
 import { match } from "@edjopato/telegraf-i18n";
 import { gql } from "@cryptuoso/graphql-client";
 import { formatExchange } from "@cryptuoso/helpers";
+import { GA } from "@cryptuoso/analytics";
 
 async function addUserExAccEnter(ctx: any) {
     try {
         if (ctx.scene.state.selectedExchange) return addUserExAccSelectedExchange.call(this, ctx);
         if (!ctx.scene.state.exchanges) ctx.scene.state.exchanges = await this.getExchanges(ctx);
+        GA.view(ctx.session.user.id, TelegramScene.ADD_USER_EX_ACC);
         if (ctx.scene.state.edit) {
             return ctx.editMessageText(ctx.i18n.t("scenes.addUserExAcc.chooseExchange"), getExchangesMenu(ctx));
         }

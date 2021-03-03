@@ -4,6 +4,7 @@ import { TelegramScene } from "../types";
 import { addBaseActions } from "./default";
 import { match } from "@edjopato/telegraf-i18n";
 import { gql } from "@cryptuoso/graphql-client";
+import { GA } from "@cryptuoso/analytics";
 
 const PAGE_SIZE = 7;
 
@@ -38,6 +39,7 @@ function getSignalsListMenu(ctx: any) {
 
 async function mySignalsEnter(ctx: any) {
     try {
+        GA.view(ctx.session.user.id, TelegramScene.MY_SIGNALS);
         let myRobots;
         if (ctx.scene.state.myRobots && !ctx.scene.state.reload) myRobots = ctx.scene.state.myRobots;
         else

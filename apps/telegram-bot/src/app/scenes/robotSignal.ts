@@ -6,6 +6,7 @@ import { match } from "@edjopato/telegraf-i18n";
 import { round, sortAsc } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
 import { getStatisticsText, getVolumeText } from "../helpers";
+import { GA } from "@cryptuoso/analytics";
 
 function getSignalRobotMenu(ctx: any) {
     const subscribed = !!ctx.scene.state.robot.userSignal;
@@ -37,6 +38,7 @@ function getSignalRobotMenu(ctx: any) {
 
 async function robotSignalInfo(ctx: any) {
     try {
+        GA.view(ctx.session.user.id, TelegramScene.ROBOT_SIGNAL);
         if (ctx.scene.state.edit && ctx.scene.state.page && ctx.scene.state.page === "info") {
             if (
                 ctx.scene.state.robot &&

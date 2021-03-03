@@ -1,3 +1,4 @@
+import { GA } from "@cryptuoso/analytics";
 import { sleep } from "@cryptuoso/helpers";
 import { sql } from "@cryptuoso/postgres";
 import { BaseService } from "@cryptuoso/service";
@@ -20,6 +21,7 @@ async function loginEnter(ctx: any) {
 
 async function loginInput(ctx: any) {
     try {
+        GA.view(null, TelegramScene.LOGIN);
         const email = ctx.scene.state.email;
         const secretCode = ctx.scene.state.secretCode;
         if (!secretCode) {

@@ -5,6 +5,7 @@ import { addBaseActions, getAssetsMenu, getExchangesMenu } from "./default";
 import { match } from "@edjopato/telegraf-i18n";
 import { gql } from "@cryptuoso/graphql-client";
 import { formatExchange } from "@cryptuoso/helpers";
+import { GA } from "@cryptuoso/analytics";
 
 function getSignalsListMenu(ctx: any) {
     const robots: { id: string; name: string }[] = ctx.scene.state.robots;
@@ -28,6 +29,7 @@ function getSignalsListMenu(ctx: any) {
 
 async function searchSignalsEnter(ctx: any) {
     try {
+        GA.view(ctx.session.user.id, TelegramScene.SEARCH_SIGNALS);
         if (ctx.scene.state.stage === "selectRobot") {
             return searchSignalsSelectRobot.call(this, ctx);
         }

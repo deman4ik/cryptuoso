@@ -4,11 +4,12 @@ import { IUserSub, TelegramScene } from "../types";
 import { addBaseActions, getConfirmMenu } from "./default";
 import { match } from "@edjopato/telegraf-i18n";
 import { gql } from "@cryptuoso/graphql-client";
+import { GA } from "@cryptuoso/analytics";
 
 async function cancelUserSubEnter(ctx: any) {
     try {
         const { userSub }: { userSub: IUserSub } = ctx.scene.state;
-
+        GA.view(ctx.session.user.id, TelegramScene.ADD_USER_EX_ACC);
         return ctx.reply(
             ctx.i18n.t("scenes.cancelUserSub.confirm", {
                 name: userSub.subscription.name

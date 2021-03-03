@@ -4,6 +4,7 @@ import { TelegramScene } from "../types";
 import { addBaseActions } from "./default";
 import { match } from "@edjopato/telegraf-i18n";
 import { UserExchangeAccountInfo, UserExchangeAccStatus } from "@cryptuoso/user-state";
+import { GA } from "@cryptuoso/analytics";
 
 function getUserExAccsMenu(ctx: any) {
     const { userExAccs }: { userExAccs: UserExchangeAccountInfo[] } = ctx.scene.state;
@@ -35,6 +36,7 @@ function getUserExAccsAddMenu(ctx: any) {
 
 async function userExAccsEnter(ctx: any) {
     try {
+        GA.view(ctx.session.user.id, TelegramScene.USER_EXCHANGE_ACCS);
         const userExAccs = await this.getUserExchangeAccs(ctx);
         if (!userExAccs && !Array.isArray(userExAccs) && userExAccs.length === 0) {
             if (ctx.scene.state.edit) {

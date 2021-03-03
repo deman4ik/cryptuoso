@@ -8,6 +8,7 @@ import dayjs from "@cryptuoso/dayjs";
 import { getStatisticsText, getVolumeText } from "../helpers";
 import { UserRobotStatus } from "@cryptuoso/user-robot-state";
 import { gql } from "@cryptuoso/graphql-client";
+import { GA } from "@cryptuoso/analytics";
 
 function getUserRobotMenu(ctx: any) {
     const { robot }: { robot: Robot } = ctx.scene.state;
@@ -54,6 +55,7 @@ function getUserRobotMenu(ctx: any) {
 
 async function userRobotInfo(ctx: any) {
     try {
+        GA.view(ctx.session.user.id, TelegramScene.USER_ROBOT);
         if (ctx.scene.state.edit && ctx.scene.state.page && ctx.scene.state.page === "info") {
             if (
                 ctx.scene.state.robot &&

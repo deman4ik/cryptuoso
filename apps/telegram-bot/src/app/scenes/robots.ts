@@ -1,3 +1,4 @@
+import { GA } from "@cryptuoso/analytics";
 import { gql } from "@cryptuoso/graphql-client";
 import { sleep } from "@cryptuoso/helpers";
 import { BaseService } from "@cryptuoso/service";
@@ -22,6 +23,7 @@ function getRobotsMenu(ctx: any) {
 
 async function robotsEnter(ctx: any) {
     try {
+        GA.view(ctx.session.user.id, TelegramScene.ROBOTS);
         const { stats }: { stats: { profit: number }[] } = await this.gqlClient.request(
             gql`
                 query UserRobotsProfit($userId: uuid!) {

@@ -5,6 +5,7 @@ import { BaseScene, Extra } from "telegraf";
 import { match } from "@edjopato/telegraf-i18n";
 import { ISubscription, IUserSub, TelegramScene } from "../types";
 import { addBaseActions } from "./default";
+import { GA } from "@cryptuoso/analytics";
 
 function getCreateUserSubMenu(ctx: any) {
     const { userSub, sub }: { userSub?: IUserSub; sub: ISubscription } = ctx.scene.state;
@@ -30,6 +31,7 @@ function getCreateUserSubMenu(ctx: any) {
 
 async function createUserSubEnter(ctx: any) {
     try {
+        GA.view(ctx.session.user.id, TelegramScene.CREATE_USER_SUB);
         const {
             subscriptions
         }: {

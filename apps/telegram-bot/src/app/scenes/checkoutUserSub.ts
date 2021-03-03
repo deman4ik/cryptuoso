@@ -5,6 +5,7 @@ import { addBaseActions } from "./default";
 import { match } from "@edjopato/telegraf-i18n";
 import { gql } from "@cryptuoso/graphql-client";
 import dayjs from "@cryptuoso/dayjs";
+import { GA } from "@cryptuoso/analytics";
 
 export function getCheckMenu(ctx: any) {
     const { userPayment }: { userPayment: IUserPayment } = ctx.scene.state;
@@ -24,6 +25,7 @@ export function getCheckMenu(ctx: any) {
 
 async function checkoutUserSubEnter(ctx: any) {
     try {
+        GA.view(ctx.session.user.id, TelegramScene.CHECKOUT_USER_SUB);
         const { userSub }: { userSub: IUserSub } = ctx.scene.state;
 
         const {

@@ -13,6 +13,7 @@ import {
 } from "@cryptuoso/robot-settings";
 import { BaseError } from "@cryptuoso/errors";
 import { UserMarketState } from "@cryptuoso/market";
+import { GA } from "@cryptuoso/analytics";
 
 function getChooseAmountTypeMenu(ctx: any) {
     return Extra.HTML().markup((m: any) => {
@@ -37,6 +38,7 @@ function getChooseAmountTypeMenu(ctx: any) {
 
 async function subscribeSignalsEnter(ctx: any) {
     try {
+        GA.view(ctx.session.user.id, TelegramScene.SUBSCRIBE_SIGNALS);
         const { robot } = ctx.scene.state;
         ctx.scene.state.edit = true;
         return ctx.reply(

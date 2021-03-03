@@ -5,6 +5,7 @@ import { addBaseActions, getAssetsMenu, getExchangesMenu } from "./default";
 import { match } from "@edjopato/telegraf-i18n";
 import { gql } from "@cryptuoso/graphql-client";
 import { formatExchange } from "@cryptuoso/helpers";
+import { GA } from "@cryptuoso/analytics";
 
 function getRobotsListMenu(ctx: any) {
     const robots: { id: string; name: string }[] = ctx.scene.state.robots;
@@ -28,6 +29,7 @@ function getRobotsListMenu(ctx: any) {
 
 async function searchRobotsEnter(ctx: any) {
     try {
+        GA.view(ctx.session.user.id, TelegramScene.SEARCH_ROBOTS);
         if (ctx.scene.state.stage === "selectRobot") return searchRobotsSelectRobot.call(this, ctx);
         if (!ctx.scene.state.exchanges || ctx.scene.state.reload) {
             ctx.scene.state.exchanges = await this.getExchanges(ctx);

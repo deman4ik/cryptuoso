@@ -5,9 +5,11 @@ import { addBaseActions } from "./default";
 import { gql } from "@cryptuoso/graphql-client";
 import { getBackKeyboard } from "../keyboard";
 import { sleep } from "@cryptuoso/helpers";
+import { GA } from "@cryptuoso/analytics";
 
 async function supportEnter(ctx: any) {
     try {
+        GA.view(ctx.session.user.id, TelegramScene.SUPPORT);
         const message = `${ctx.i18n.t("scenes.support.info1")}${ctx.i18n.t("scenes.support.info2")}${ctx.i18n.t(
             "scenes.support.info3"
         )}${ctx.i18n.t("scenes.support.info4")}`;

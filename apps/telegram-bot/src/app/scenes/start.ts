@@ -1,3 +1,4 @@
+import { GA } from "@cryptuoso/analytics";
 import { sleep } from "@cryptuoso/helpers";
 import { BaseService } from "@cryptuoso/service";
 import { BaseScene, Extra, Stage } from "telegraf";
@@ -19,6 +20,7 @@ function getStartMenu(ctx: any) {
 
 async function startEnter(ctx: any) {
     try {
+        GA.view(null, TelegramScene.START);
         ctx.scene.state.silent = true;
         await ctx.reply(ctx.i18n.t("scenes.start.enter", { username: this.formatName(ctx) }), getBackKeyboard(ctx));
         await sleep(100);

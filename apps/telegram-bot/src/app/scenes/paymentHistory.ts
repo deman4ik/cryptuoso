@@ -5,6 +5,7 @@ import { addBaseActions } from "./default";
 import { match } from "@edjopato/telegraf-i18n";
 import { gql } from "@cryptuoso/graphql-client";
 import dayjs from "@cryptuoso/dayjs";
+import { GA } from "@cryptuoso/analytics";
 
 function getPaymentHistoryMenu(ctx: any) {
     return Extra.HTML().markup((m: any) => {
@@ -18,6 +19,7 @@ function getPaymentHistoryMenu(ctx: any) {
 
 async function paymentHistoryEnter(ctx: any) {
     try {
+        GA.view(ctx.session.user.id, TelegramScene.PAYMENT_HISTORY);
         const {
             userPayments
         }: {

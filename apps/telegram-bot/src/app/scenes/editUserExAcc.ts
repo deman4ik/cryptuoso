@@ -6,9 +6,11 @@ import { match } from "@edjopato/telegraf-i18n";
 import { gql } from "@cryptuoso/graphql-client";
 import { UserExchangeAccountInfo } from "@cryptuoso/user-state";
 import { formatExchange } from "@cryptuoso/helpers";
+import { GA } from "@cryptuoso/analytics";
 
 async function editUserExAccEnter(ctx: any) {
     try {
+        GA.view(ctx.session.user.id, TelegramScene.EDIT_USER_EX_ACC);
         const { name, exchange }: UserExchangeAccountInfo = ctx.scene.state.userExAcc;
         ctx.scene.state.stage = "key";
         if (ctx.scene.state.edit) {

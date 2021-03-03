@@ -37,6 +37,7 @@ import { Signal, SignalEvents, SignalSchema } from "@cryptuoso/robot-events";
 import { Event } from "@cryptuoso/events";
 import { OrderStatus, SignalEvent, TradeAction } from "@cryptuoso/market";
 import { UserSub } from "@cryptuoso/billing";
+import { GA } from "@cryptuoso/analytics";
 
 export type UserRobotRunnerServiceConfig = HTTPServiceConfig;
 
@@ -259,7 +260,7 @@ export default class UserRobotRunnerService extends HTTPService {
                 message: message || null
             }
         });
-
+        GA.event(user.id, "robot", "start");
         return UserRobotStatus.started;
     }
 
@@ -314,7 +315,7 @@ export default class UserRobotRunnerService extends HTTPService {
             },
             userRobot.status
         );
-
+        GA.event(user.id, "robot", "stop");
         return UserRobotStatus.stopping;
     }
 

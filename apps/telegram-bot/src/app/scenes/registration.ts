@@ -1,3 +1,4 @@
+import { GA } from "@cryptuoso/analytics";
 import { sql } from "@cryptuoso/postgres";
 import { BaseService } from "@cryptuoso/service";
 import { BaseScene, Extra } from "telegraf";
@@ -7,6 +8,7 @@ import { addBaseActions, getConfirmMenu } from "./default";
 
 async function registrationEnter(ctx: any) {
     try {
+        GA.view(null, TelegramScene.REGISTRATION);
         return ctx.reply(ctx.i18n.t("scenes.registration.enter"), getConfirmMenu(ctx));
     } catch (e) {
         this.log.error(e);
