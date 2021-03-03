@@ -73,7 +73,7 @@ export default class SupportService extends HTTPService {
     )
     `);
 
-    #saveNotifications = async (notifications: Notification[]) => {
+    #saveNotifications = async (notifications: Notification<any>[]) => {
         if (!notifications?.length) return;
 
         try {
@@ -131,7 +131,7 @@ export default class SupportService extends HTTPService {
         };
         await this.#saveSupportMessage(newMessage);
 
-        const notification: Notification = {
+        const notification: Notification<SupportMessage> = {
             userId: to,
             timestamp: newMessage.timestamp,
             type: "message.support-reply",
@@ -155,7 +155,7 @@ export default class SupportService extends HTTPService {
             WHERE status > 0;`
         );
         const timestamp = dayjs.utc().toISOString();
-        const notifications: Notification[] = users.map(
+        const notifications: Notification<any>[] = users.map(
             ({
                 userId,
                 telegramId,
