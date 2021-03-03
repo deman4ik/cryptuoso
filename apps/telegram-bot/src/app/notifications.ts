@@ -230,7 +230,7 @@ export function handleUserSubStatus(notification: Notification<UserSubStatusEven
         message = this.i18n.t(LANG, "userSubscription.expired");
     } else if (status === "expiring") {
         message = this.i18n.t(LANG, "userSubscription.expiring", {
-            date: ` <b>${dayjs.utc().to(activeTo || trialEnded)} </b>!`
+            date: ` <b>${dayjs.utc().to(activeTo || trialEnded)}</b>!`
         });
     }
     return {
