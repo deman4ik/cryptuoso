@@ -156,7 +156,7 @@ export default class UserSubService extends HTTPService {
                         WHERE (status = 'active' AND active_to is not null
                         AND active_to < ${currentDate})
                         OR (status = 'trial'
-                        AND trial_ended is not null AND trial_ended  < ${currentDate});`);
+                        AND trial_ended is not null AND trial_ended < ${currentDate});`);
 
             for (const sub of expiredSubscriptions) {
                 this.log.info(`Subscription #${sub.id} for user #${sub.userId} expired`);
@@ -280,7 +280,7 @@ export default class UserSubService extends HTTPService {
                         .toISOString();
                     await this.db.pg.query(sql`
                         UPDATE user_subs
-                          SET trial_ended = trialEnded
+                          SET trial_ended = ${trialEnded}
                         WHERE id = ${sub.id};
                         `);
                     await this.events.emit<UserSubStatusEvent>({
