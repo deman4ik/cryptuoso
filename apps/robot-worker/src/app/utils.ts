@@ -40,7 +40,7 @@ async function checkAlerts(
         AND currency = ${currency}
         AND time = ${currentTime};`);
             if (!candle) {
-                if (dayjs.utc().diff(currentTime, "second") > 60) {
+                if (dayjs.utc().diff(currentTime, "minute") > 20) {
                     const error = `Failed to load ${exchange}-${asset}-${currency}-${timeframe}-${dayjs
                         .utc(currentTime)
                         .toISOString()} current candle`;
