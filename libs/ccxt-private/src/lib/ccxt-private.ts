@@ -111,7 +111,7 @@ export class PrivateConnector {
     }
 
     static getErrorMessage(error: Error) {
-        let message = error.message;
+        let message = error?.message || "Unknown";
         if (error instanceof ccxt.BaseError) {
             try {
                 message = valuesString(JSON.parse(message.substring(message.indexOf("{"))));
@@ -120,9 +120,9 @@ export class PrivateConnector {
                 message = error.message;
             }
         } else {
-            message = error.message;
+            message = error?.message || "Unknown";
         }
-        return message.split("<html>")[0];
+        return JSON.stringify(message?.split("<html>")[0]);
     }
 
     getCloseOrderDate(exchange: string, orderResponse: ccxt.Order) {
