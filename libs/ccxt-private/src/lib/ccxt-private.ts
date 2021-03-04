@@ -77,7 +77,7 @@ export class PrivateConnector {
                 // clientOrderId: id
             };
         }
-        /* if (this.exchange === "bitfinex") {
+        if (this.exchange === "bitfinex") {
             if (type === OrderType.market || type === OrderType.forceMarket)
                 return {
                     type: "MARKET"
@@ -85,7 +85,7 @@ export class PrivateConnector {
             return {
                 type: "LIMIT"
             };
-        }*/
+        }
         if (this.exchange === "kucoin") {
             return {
                 tradeType: "MARGIN_TRADE"
