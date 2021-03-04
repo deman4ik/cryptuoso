@@ -80,10 +80,10 @@ export class PrivateConnector {
         if (this.exchange === "bitfinex") {
             if (type === OrderType.market || type === OrderType.forceMarket)
                 return {
-                    type: "MARKET"
+                    type: OrderType.market
                 };
             return {
-                type: "LIMIT"
+                type: "limit"
             };
         }
         if (this.exchange === "kucoin") {
@@ -288,7 +288,7 @@ export class PrivateConnector {
         if (this.exchange === "kraken") {
             this.connector = new ccxt.kraken(this.config);
         } else if (this.exchange === "bitfinex") {
-            this.connector = new ccxt.bitfinex2(this.config);
+            this.connector = new ccxt.bitfinex(this.config);
         } else if (this.exchange === "kucoin") {
             this.connector = new ccxt.kucoin(this.config);
         } else if (this.exchange === "huobipro") {
