@@ -341,7 +341,7 @@ export default class UserSubService extends HTTPService {
                 });
             }
         } catch (error) {
-            this.log.error(`Failed to check trial subscriptions ${error.message}`, error);
+            this.log.error(`Failed to check pending subscriptions ${error.message}`, error);
             throw error;
         }
     }
