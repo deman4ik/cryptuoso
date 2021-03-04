@@ -77,15 +77,15 @@ export class PrivateConnector {
                 // clientOrderId: id
             };
         }
-        if (this.exchange === "bitfinex") {
+        /* if (this.exchange === "bitfinex") {
             if (type === OrderType.market || type === OrderType.forceMarket)
                 return {
-                    type: OrderType.market
+                    type: "MARKET"
                 };
             return {
-                type: "limit"
+                type: "LIMIT"
             };
-        }
+        }*/
         if (this.exchange === "kucoin") {
             return {
                 tradeType: "MARGIN_TRADE"
