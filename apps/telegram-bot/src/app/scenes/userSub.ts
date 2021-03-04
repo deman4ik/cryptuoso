@@ -21,7 +21,7 @@ function getUserSubMenu(ctx: any) {
                     false
                 )
             ],
-            [m.callbackButton(ctx.i18n.t("scenes.userSub.cancel"), JSON.stringify({ a: "cancel" }), !userSub)],
+            // [m.callbackButton(ctx.i18n.t("scenes.userSub.cancel"), JSON.stringify({ a: "cancel" }), !userSub)],
             [m.callbackButton(ctx.i18n.t("keyboards.backKeyboard.back"), JSON.stringify({ a: "back" }), false)]
         ];
 
