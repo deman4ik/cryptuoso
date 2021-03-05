@@ -132,6 +132,7 @@ export class PublicConnector {
             }
             const currentPrice = await this.getCurrentPrice(exchange, asset, currency);
 
+            const averageFee = response.taker * 100;
             return {
                 exchange,
                 asset,
@@ -145,7 +146,7 @@ export class PublicConnector {
                     }
                 },
                 precision: response.precision,
-                averageFee: response.taker
+                averageFee: averageFee > 0.3 ? response.taker : averageFee
             };
         } catch (e) {
             if (e instanceof ccxt.ExchangeNotAvailable) throw new Error("ExchangeNotAvailable");
