@@ -233,7 +233,7 @@ export default class UserRobotRunnerService extends HTTPService {
 
         const userSub = await this.db.pg.maybeOne<{ id: UserSub["id"] }>(sql`
         SELECT id 
-        FROM users_subs
+        FROM user_subs
         WHERE user_id = ${userRobot.userId}
         AND status in (${"active"},${"trial"});
         `);
