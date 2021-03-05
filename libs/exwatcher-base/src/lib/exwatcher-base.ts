@@ -267,6 +267,7 @@ export class ExwatcherBaseService extends BaseService {
                                             error: `${e.message}`
                                         }
                                     });
+                                await this.initConnector();
                             }
                         })
                     );
@@ -287,6 +288,7 @@ export class ExwatcherBaseService extends BaseService {
                                     error: `${e.message}`
                                 }
                             });
+                        await this.initConnector();
                     }
                 }
             })
