@@ -214,7 +214,9 @@ export function handleBroadcastMessage(notification: Notification<any> & { teleg
 }
 
 export function handleMessageSupportReply(notification: Notification<any> & { telegramId: number }) {
-    const { message } = notification.data as { message: string };
+    const {
+        data: { message }
+    } = notification.data as { data: { message: string } };
     const LANG = "en";
     return {
         telegramId: notification.telegramId,
