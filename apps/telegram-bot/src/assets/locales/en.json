@@ -263,7 +263,7 @@
         "profit": "<b>Profit:</b> ${profit} $\n\n",
         "volume": "<b>Amount:</b> ${volume}\n<b>Amount type:</b> ${type}\n\n",
         "subscribedAt": "<b>Subscribed at:</b> ${subscribedAt}\n\n",
-        "active": "<b>Active:</b> ${period}\n\n",
+        "active": "<b>Started</b> ${period}\n\n",
         "startedAt": "<b>Started at:</b> ${startedAt}\n\n",
         "stoppedAt": "<b>Stopped at:</b> ${stoppedAt}\n\n",
         "lastInfoUpdatedAt": "\nInfo updated: ${lastInfoUpdatedAt}\n",
