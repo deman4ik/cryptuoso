@@ -505,6 +505,8 @@ export default class TelegramBotService extends BaseService {
                             avgBarsHeldLosing: avg_bars_held_losing
                             maxConsecLosses: max_consec_losses
                             lastUpdatedAt: last_updated_at
+                            firstPositionEntryDate: first_position_entry_date
+                            lastPositionExitDate: last_position_exit_date
                         }
                         openPositions: robot_positions(
                             where: { status: { _eq: "open" } }
@@ -574,6 +576,8 @@ export default class TelegramBotService extends BaseService {
                                 avgBarsHeldLosing: avg_bars_held_losing
                                 maxConsecLosses: max_consec_losses
                                 lastUpdatedAt: last_updated_at
+                                firstPositionEntryDate: first_position_entry_date
+                                lastPositionExitDate: last_position_exit_date
                             }
                             openPositions: user_signal_positions(
                                 where: { status: { _eq: "open" } }
@@ -677,6 +681,8 @@ export default class TelegramBotService extends BaseService {
                             avgBarsHeldLosing: avg_bars_held_losing
                             maxConsecLosses: max_consec_losses
                             lastUpdatedAt: last_updated_at
+                            firstPositionEntryDate: first_position_entry_date
+                            lastPositionExitDate: last_position_exit_date
                         }
                         openPositions: robot_positions(
                             where: { status: { _eq: "open" } }
@@ -752,6 +758,8 @@ export default class TelegramBotService extends BaseService {
                                 avgBarsHeldLosing: avg_bars_held_losing
                                 maxConsecLosses: max_consec_losses
                                 lastUpdatedAt: last_updated_at
+                                firstPositionEntryDate: first_position_entry_date
+                                lastPositionExitDate: last_position_exit_date
                             }
                             openPositions: user_positions(
                                 where: { status: { _eq: "open" } }

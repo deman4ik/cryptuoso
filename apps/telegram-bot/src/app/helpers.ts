@@ -24,8 +24,13 @@ export function getStatisticsText(
 
     return `${volumeText}${ctx.i18n.t("robot.statsProfit", {
         ...statistics,
-        maxDrawdownDate:
-            statistics.maxDrawdownDate && dayjs.utc(statistics.maxDrawdownDate).format("YYYY-MM-DD HH:mm UTC")
+        firstPositionEntryDate: statistics.firstPositionEntryDate
+            ? dayjs.utc().to(statistics.firstPositionEntryDate)
+            : "",
+        lastPositionExitDate: statistics.lastPositionExitDate ? dayjs.utc().to(statistics.lastPositionExitDate) : "",
+        maxDrawdownDate: statistics.maxDrawdownDate
+            ? dayjs.utc(statistics.maxDrawdownDate).format("YYYY-MM-DD HH:mm UTC")
+            : "-"
     })}${ctx.i18n.t("robot.statsWinners", statistics)}${ctx.i18n.t("robot.statsLosses", statistics)}${ctx.i18n.t(
         "robot.statsLastUpdatedAt",
         {

@@ -52,6 +52,8 @@ async function perfRobotsEnter(ctx: any) {
                         avgBarsHeldLosing: avg_bars_held_losing
                         maxConsecLosses: max_consec_losses
                         lastUpdatedAt: last_updated_at
+                        firstPositionEntryDate: first_position_entry_date
+                        lastPositionExitDate: last_position_exit_date
                     }
                 }
             `,

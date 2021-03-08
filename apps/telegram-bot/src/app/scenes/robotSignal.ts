@@ -58,6 +58,10 @@ async function robotSignalInfo(ctx: any) {
             subscribedAtText = ctx.i18n.t("robot.subscribedAt", {
                 subscribedAt: dayjs.utc(subscribedAt).format("YYYY-MM-DD HH:mm UTC")
             });
+        } else {
+            subscribedAtText = ctx.i18n.t("robot.active", {
+                period: dayjs.utc().to(robot.startedAt)
+            });
         }
 
         let volumeText = "";

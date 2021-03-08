@@ -45,6 +45,8 @@ export interface BaseStatistics {
     payoffRatio: number;
     rating: number;
     lastUpdatedAt: string;
+    firstPositionEntryDate?: string;
+    lastPositionExitDate?: string;
 }
 
 export interface Statistics {
