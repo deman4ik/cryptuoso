@@ -263,6 +263,7 @@
         "profit": "<b>Profit:</b> ${profit} $\n\n",
         "volume": "<b>Amount:</b> ${volume}\n<b>Amount type:</b> ${type}\n\n",
         "subscribedAt": "<b>Subscribed at:</b> ${subscribedAt}\n\n",
+        "active": "<b>Active:</b> ${period}\n\n",
         "startedAt": "<b>Started at:</b> ${startedAt}\n\n",
         "stoppedAt": "<b>Stopped at:</b> ${stoppedAt}\n\n",
         "lastInfoUpdatedAt": "\nInfo updated: ${lastInfoUpdatedAt}\n",
@@ -278,7 +279,7 @@
         "positionClosed": "-------\n<b>Position:</b> ${code}\n\n<b>Entry:</b> ${entryAction}\n<b>Entry Date:</b> ${entryDate}\n<b>Entry Price:</b> ${entryPrice} $\n\n<b>Exit:</b> ${exitAction}\n<b>Exit Date:</b> ${exitDate}\n<b>Exit Price:</b> ${exitPrice} $\n\n<b>Bars Held:</b> ${barsHeld}\n<b>Profit:</b> ${profit} $\n",
         "positionsNone": "Robot has no positions yet...\n\n",
         "statsLastUpdatedAt": "<b>Stats last updated at:</b> ${lastUpdatedAt}\n",
-        "statsProfit": "<b>💰 Profit</b> \n\n<b>Net Profit:</b> ${netProfit} $ \n<b>Number of Trades:</b> ${tradesCount} \n<b>Average Profit:</b> ${avgNetProfit} $ \n<b>Average Bars held:</b> ${avgBarsHeld} \n<b>Profit Factor:</b> ${profitFactor} \n<b>Recovery Factor:</b> ${recoveryFactor} \n<b>Payoff Ratio:</b> ${payoffRatio} \n<b>Maximum Drawdown:</b> ${maxDrawdown} $ \n<b>Maximum Drawdown Date:</b> ${maxDrawdownDate} \n\n",
+        "statsProfit": "<b>First trade</b> ${firstPositionEntryDate}\n<b>Last trade</b> ${lastPositionExitDate}\n\n<b>💰 Profit</b> \n\n<b>Net Profit:</b> ${netProfit} $ \n<b>Number of Trades:</b> ${tradesCount} \n<b>Average Profit:</b> ${avgNetProfit} $ \n<b>Average Bars held:</b> ${avgBarsHeld} \n<b>Profit Factor:</b> ${profitFactor} \n<b>Recovery Factor:</b> ${recoveryFactor} \n<b>Payoff Ratio:</b> ${payoffRatio} \n<b>Maximum Drawdown:</b> ${maxDrawdown} $ \n<b>Maximum Drawdown Date:</b> ${maxDrawdownDate} \n\n",
         "statsWinners": "<b>🏆 Winners</b> \n\n<b>Win Rate:</b> ${winRate}%\n<b>Gross Profit:</b> ${grossProfit} $ \n<b>Average Profit:</b> ${avgProfit} $ \n<b>Average Bars held:</b> ${avgBarsHeldWinning} \n<b>Max. Consecutive Winners:</b> ${maxConsecWins} \n\n",
         "statsLosses": "<b>🌋 Losses</b> \n\n<b>Loss Rate:</b> ${lossRate}%\n<b>Gross Loss:</b> ${grossLoss} $ \n<b>Average Loss:</b> ${avgLoss} $ \n<b>Average Bars held:</b> ${avgBarsHeldLosing} \n<b>Max. Consecutive Losses:</b> ${maxConsecLosses} \n\n",
         "statsNone": "Robot has no statistics yet...\n\n"

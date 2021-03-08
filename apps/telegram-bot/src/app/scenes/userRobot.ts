@@ -94,6 +94,10 @@ async function userRobotInfo(ctx: any) {
                     stoppedAt: dayjs.utc(stoppedAt).format("YYYY-MM-DD HH:mm UTC")
                 })}`;
             }
+        } else {
+            statusText = ctx.i18n.t("robot.active", {
+                period: dayjs.utc().to(robot.startedAt)
+            });
         }
 
         let volumeText = "";
