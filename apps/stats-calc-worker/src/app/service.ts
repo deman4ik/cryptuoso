@@ -53,7 +53,7 @@ export interface StatisticCalcWorkerServiceConfig extends BaseServiceConfig {
 
 export default class StatisticCalcWorkerService extends BaseService {
     private pool: Pool<any>;
-
+    private dummy = "-";
     private routes: {
         [K in StatsCalcJobType]?: {
             validate: (params: StatsCalcJob) => true | ValidationError[];
@@ -239,8 +239,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     last_position_exit_date,
                     last_updated_at,
                     equity,
-                    equity_avg,
-                                        
+                    equity_avg          
                     ${params.addFields ? sql`, ${params.addFields}` : sql``}
                 ) VALUES (
                     ${JSON.stringify(stats.statistics)},
@@ -249,7 +248,6 @@ export default class StatisticCalcWorkerService extends BaseService {
                     ${stats.lastUpdatedAt},
                     ${JSON.stringify(stats.equity)},
                     ${JSON.stringify(stats.equityAvg)}
-
                     ${params.addFieldsValues ? sql`, ${params.addFieldsValues}` : sql``}
                 ) ON CONFLICT ON CONSTRAINT ${params.constraint}
                 DO UPDATE SET statistics = excluded.statistics,
@@ -325,6 +323,13 @@ export default class StatisticCalcWorkerService extends BaseService {
             return true;
         } catch (err) {
             this.log.error("Failed to calcRobot stats", err);
+            this.log.debug({
+                method: "calcRobot",
+                robotId,
+                calcAll,
+                timestamp: dayjs.utc().toISOString(),
+                error: err.message
+            });
             await this.events.emit<StatsCalcWorkerErrorEvent>({
                 type: StatsCalcWorkerEvents.ERROR,
                 data: {
@@ -349,6 +354,8 @@ export default class StatisticCalcWorkerService extends BaseService {
         calcAll?: boolean;
     }) {
         try {
+            const exchangeCondition = exchange || this.dummy;
+            const assetCondition = asset || this.dummy;
             const prevRobotsAggrStats = await this.db.pg.maybeOne<TradeStatsWithId>(sql`
             SELECT id,
                 statistics,
@@ -358,8 +365,8 @@ export default class StatisticCalcWorkerService extends BaseService {
                 equity,
                 equity_avg
             FROM robot_aggr_stats
-            WHERE exchange = ${exchange || "-"}
-              AND asset ${asset || "-"};
+            WHERE exchange = ${exchangeCondition}
+              AND asset = ${assetCondition};
         `);
 
             if (prevRobotsAggrStats) {
@@ -392,8 +399,8 @@ export default class StatisticCalcWorkerService extends BaseService {
 
             const { calcFrom, initStats } = getCalcFromAndInitStats(prevRobotsAggrStats, calcAll);
 
-            const conditionExchange = !exchange ? sql`` : sql`AND exchange = ${exchange}`;
-            const conditionAsset = !asset ? sql`` : sql`AND asset = ${asset}`;
+            const conditionExchange = !exchange ? sql`` : sql`AND r.exchange = ${exchange}`;
+            const conditionAsset = !asset ? sql`` : sql`AND r.asset = ${asset}`;
             const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
             const querySelectPart = sql`
             SELECT p.id, p.direction, p.entry_date, p.exit_date, p.profit, p.bars_held
@@ -435,7 +442,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     table: sql`robot_aggr_stats`,
                     constraint: sql`robot_aggr_stats_exchange_asset_key`,
                     addFields: sql`exchange, asset`,
-                    addFieldsValues: sql`${exchange || "-"}, ${asset || "-"}`
+                    addFieldsValues: sql`${exchangeCondition}, ${assetCondition}`
                 },
                 newStats
             );
@@ -443,6 +450,14 @@ export default class StatisticCalcWorkerService extends BaseService {
             return true;
         } catch (err) {
             this.log.error("Failed to calcRobotsAggr stats", err);
+            this.log.debug({
+                method: "calcRobotsAggr",
+                exchange,
+                asset,
+                calcAll,
+                timestamp: dayjs.utc().toISOString(),
+                error: err.message
+            });
             await this.events.emit<StatsCalcWorkerErrorEvent>({
                 type: StatsCalcWorkerEvents.ERROR,
                 data: {
@@ -468,6 +483,8 @@ export default class StatisticCalcWorkerService extends BaseService {
         calcAll?: boolean;
     }) {
         try {
+            const exchangeCondition = exchange || this.dummy;
+            const assetCondition = asset || this.dummy;
             const prevUsersRobotsAggrStats = await this.db.pg.maybeOne<TradeStatsWithId>(sql`
             SELECT id,
                 statistics,
@@ -477,8 +494,8 @@ export default class StatisticCalcWorkerService extends BaseService {
                 equity,
                 equity_avg
             FROM user_robot_aggr_stats
-            WHERE exchange ${exchange || "-"}
-                AND asset = ${asset || "-"};
+            WHERE exchange = ${exchangeCondition}
+                AND asset = ${assetCondition};
         `);
 
             if (prevUsersRobotsAggrStats) {
@@ -545,7 +562,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     table: sql`user_robot_aggr_stats`,
                     constraint: sql`user_robot_aggr_stats_exchange_asset_key`,
                     addFields: sql`exchange, asset`,
-                    addFieldsValues: sql`${exchange || "-"}, ${asset || "-"}`
+                    addFieldsValues: sql`${exchangeCondition}, ${assetCondition}`
                 },
                 newStats
             );
@@ -553,6 +570,14 @@ export default class StatisticCalcWorkerService extends BaseService {
             return true;
         } catch (err) {
             this.log.error("Failed to calcUsersRobotsAggr stats", err);
+            this.log.debug({
+                method: "calcUsersRobotsAggr",
+                exchange,
+                asset,
+                calcAll,
+                timestamp: dayjs.utc().toISOString(),
+                error: err.message
+            });
             await this.events.emit<StatsCalcWorkerErrorEvent>({
                 type: StatsCalcWorkerEvents.ERROR,
                 data: {
@@ -659,6 +684,14 @@ export default class StatisticCalcWorkerService extends BaseService {
             return await this._calcDownloadedUserSignal(userSignal, calcAll);
         } catch (err) {
             this.log.error("Failed to calcUserSignal stats", err);
+            this.log.debug({
+                method: "calcUserSignal",
+                userId,
+                robotId,
+                calcAll,
+                timestamp: dayjs.utc().toISOString(),
+                error: err.message
+            });
             await this.events.emit<StatsCalcWorkerErrorEvent>({
                 type: StatsCalcWorkerEvents.ERROR,
                 data: {
@@ -705,6 +738,13 @@ export default class StatisticCalcWorkerService extends BaseService {
             return res;
         } catch (err) {
             this.log.error("Failed to calcUserSignal stats", err);
+            this.log.debug({
+                method: "calcUserSignal",
+                robotId,
+                calcAll,
+                timestamp: dayjs.utc().toISOString(),
+                error: err.message
+            });
             await this.events.emit<StatsCalcWorkerErrorEvent>({
                 type: StatsCalcWorkerEvents.ERROR,
                 data: {
@@ -731,6 +771,8 @@ export default class StatisticCalcWorkerService extends BaseService {
         calcAll?: boolean;
     }) {
         try {
+            const exchangeCondition = exchange || this.dummy;
+            const assetCondition = asset || this.dummy;
             const prevUserAggrStats = await this.db.pg.maybeOne<TradeStatsWithId>(sql`
             SELECT id,
                 statistics,
@@ -742,8 +784,8 @@ export default class StatisticCalcWorkerService extends BaseService {
             FROM user_aggr_stats
             WHERE user_id = ${userId}
                 AND type = ${UserAggrStatsTypes.signal}
-                AND exchange ${exchange || "-"}
-                AND asset = ${asset || "-"};
+                AND exchange = ${exchangeCondition}
+                AND asset = ${assetCondition};
         `);
 
             if (prevUserAggrStats) {
@@ -819,7 +861,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     table: sql`user_aggr_stats`,
                     constraint: sql`user_aggr_stats_user_id_exchange_asset_type_key`,
                     addFields: sql`user_id, exchange, asset, type`,
-                    addFieldsValues: sql`${userId}, ${exchange || "-"}, ${asset || "-"}, ${UserAggrStatsTypes.signal}`
+                    addFieldsValues: sql`${userId}, ${exchangeCondition}, ${assetCondition}, ${UserAggrStatsTypes.signal}`
                 },
                 newStats
             );
@@ -827,6 +869,15 @@ export default class StatisticCalcWorkerService extends BaseService {
             return true;
         } catch (err) {
             this.log.error("Failed to calcUserSignalsAggr stats", err);
+            this.log.debug({
+                method: "calcUserSignalsAggr",
+                userId,
+                exchange,
+                asset,
+                calcAll,
+                timestamp: dayjs.utc().toISOString(),
+                error: err.message
+            });
             await this.events.emit<StatsCalcWorkerErrorEvent>({
                 type: StatsCalcWorkerEvents.ERROR,
                 data: {
@@ -907,6 +958,13 @@ export default class StatisticCalcWorkerService extends BaseService {
             return true;
         } catch (err) {
             this.log.error("Failed to calcUserRobot stats", err);
+            this.log.debug({
+                method: "calcUserRobot",
+                userRobotId,
+                calcAll,
+                timestamp: dayjs.utc().toISOString(),
+                error: err.message
+            });
             await this.events.emit<StatsCalcWorkerErrorEvent>({
                 type: StatsCalcWorkerEvents.ERROR,
                 data: {
@@ -933,6 +991,8 @@ export default class StatisticCalcWorkerService extends BaseService {
         calcAll?: boolean;
     }) {
         try {
+            const exchangeCondition = exchange || this.dummy;
+            const assetCondition = asset || this.dummy;
             const prevUserAggrStats = await this.db.pg.maybeOne<TradeStatsWithId>(sql`
             SELECT id,
                 statistics,
@@ -944,8 +1004,8 @@ export default class StatisticCalcWorkerService extends BaseService {
             FROM user_aggr_stats
             WHERE user_id = ${userId}
                 AND type = ${UserAggrStatsTypes.userRobot}
-                AND exchange = ${exchange || "-"}
-                AND asset = ${asset || "-"};
+                AND exchange = ${exchangeCondition}
+                AND asset = ${assetCondition};
         `);
 
             if (prevUserAggrStats) {
@@ -972,8 +1032,8 @@ export default class StatisticCalcWorkerService extends BaseService {
 
             const { calcFrom, initStats } = getCalcFromAndInitStats(prevUserAggrStats, calcAll);
 
-            const conditionExchange = sql`AND exchange = ${exchange || "-"}`;
-            const conditionAsset = sql`AND asset = ${asset || "-"}`;
+            const conditionExchange = !exchange ? sql`` : sql`AND exchange = ${exchange}`;
+            const conditionAsset = !asset ? sql`` : sql`AND asset = ${asset}`;
             const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
             const querySelectPart = sql`
             SELECT id, direction, entry_date, exit_date, profit, bars_held
@@ -1014,9 +1074,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     table: sql`user_aggr_stats`,
                     constraint: sql`user_aggr_stats_user_id_exchange_asset_type_key`,
                     addFields: sql`user_id, exchange, asset, type`,
-                    addFieldsValues: sql`${userId}, ${exchange || "-"}, ${asset || "-"}, ${
-                        UserAggrStatsTypes.userRobot
-                    }`
+                    addFieldsValues: sql`${userId}, ${exchangeCondition}, ${assetCondition}, ${UserAggrStatsTypes.userRobot}`
                 },
                 newStats
             );
@@ -1024,6 +1082,15 @@ export default class StatisticCalcWorkerService extends BaseService {
             return true;
         } catch (err) {
             this.log.error("Failed to calcUserRobotsAggr stats", err);
+            this.log.debug({
+                method: "calcUserRobotsAggr",
+                userId,
+                exchange,
+                asset,
+                calcAll,
+                timestamp: dayjs.utc().toISOString(),
+                error: err.message
+            });
             await this.events.emit<StatsCalcWorkerErrorEvent>({
                 type: StatsCalcWorkerEvents.ERROR,
                 data: {

@@ -1,5 +1,6 @@
 import { createPool, sql, ClientConfigurationInputType, createTypeParserPreset } from "slonik";
 import { createFieldNameTransformationInterceptor } from "slonik-interceptor-field-name-transformation";
+import { createQueryLoggingInterceptor } from "slonik-interceptor-query-logging";
 import dayjs from "@cryptuoso/dayjs";
 import { prepareUnnest } from "./helpers";
 
@@ -8,6 +9,11 @@ const interceptors = [
         format: "CAMEL_CASE"
     })
 ];
+
+if (process.env.ROARR_LOG) {
+    interceptors.push(createQueryLoggingInterceptor());
+}
+
 const parseDate = (value: string) => (!value ? value : dayjs.utc(value + "+0000").toISOString());
 
 const typeParsers = [

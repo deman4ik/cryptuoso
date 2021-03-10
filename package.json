@@ -124,6 +124,7 @@
         "scramjet": "^4.35.12",
         "slonik": "^23.6.2",
         "slonik-interceptor-field-name-transformation": "^1.5.3",
+        "slonik-interceptor-query-logging": "^1.3.9",
         "telegraf": "^3.38.0",
         "telegraf-throttler": "^0.2.0",
         "threads": "^1.6.3",
