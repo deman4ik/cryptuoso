@@ -226,48 +226,39 @@ export default class StatisticCalcWorkerService extends BaseService {
     private async upsertStats(
         params: {
             table: QueryType;
-            fieldId: QueryType;
-            id: string;
+            constraint: QueryType;
             addFields?: QueryType;
             addFieldsValues?: QueryType;
         },
-        stats: TradeStats,
-        prevStats?: TradeStats
+        stats: TradeStats
     ): Promise<void> {
-        if (params.id && prevStats && checkTradeStats(prevStats) === true) {
-            await this.db.pg.query(sql`
-                UPDATE ${params.table}
-                SET statistics = ${JSON.stringify(stats.statistics)},
-                    first_position_entry_date = ${stats.firstPositionEntryDate},
-                    last_position_exit_date = ${stats.lastPositionExitDate},
-                    last_updated_at = ${stats.lastUpdatedAt},
-                    equity = ${sql.json(stats.equity)},
-                    equity_avg = ${sql.json(stats.equityAvg)}
-                WHERE ${params.fieldId} = ${params.id};
-            `);
-        } else {
-            await this.db.pg.query(sql`
+        await this.db.pg.query(sql`
                 INSERT INTO ${params.table} (
                     statistics,
                     first_position_entry_date,
                     last_position_exit_date,
                     last_updated_at,
                     equity,
-                    equity_avg
-                    
+                    equity_avg,
+                                        
                     ${params.addFields ? sql`, ${params.addFields}` : sql``}
                 ) VALUES (
                     ${JSON.stringify(stats.statistics)},
                     ${stats.firstPositionEntryDate},
                     ${stats.lastPositionExitDate},
                     ${stats.lastUpdatedAt},
-                    ${sql.json(stats.equity)},
-                    ${sql.json(stats.equityAvg)}
+                    ${JSON.stringify(stats.equity)},
+                    ${JSON.stringify(stats.equityAvg)}
 
                     ${params.addFieldsValues ? sql`, ${params.addFieldsValues}` : sql``}
-                );
+                ) ON CONFLICT ON CONSTRAINT ${params.constraint}
+                DO UPDATE SET statistics = excluded.statistics,
+                    first_position_entry_date = excluded.first_position_entry_date,
+                    last_position_exit_date = excluded.last_position_exit_date,
+                    last_updated_at = excluded.last_updated_at,
+                    equity = excluded.equity,
+                    equity_avg = excluded.equity_avg;
             `);
-        }
     }
 
     async calcStatistics(prevStats: TradeStats, positions: BasePosition[]) {
@@ -324,13 +315,11 @@ export default class StatisticCalcWorkerService extends BaseService {
             await this.upsertStats(
                 {
                     table: sql`robot_stats`,
-                    fieldId: sql`robot_id`,
-                    id: robotId,
+                    constraint: sql`robots_stats_pkey`,
                     addFields: sql`robot_id`,
                     addFieldsValues: sql`${robotId}`
                 },
-                newStats,
-                prevTradeStats
+                newStats
             );
 
             return true;
@@ -369,8 +358,8 @@ export default class StatisticCalcWorkerService extends BaseService {
                 equity,
                 equity_avg
             FROM robot_aggr_stats
-            WHERE exchange ${!exchange ? sql`IS NULL` : sql`= ${exchange}`}
-                AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
+            WHERE exchange = ${exchange || "-"}
+              AND asset ${asset || "-"};
         `);
 
             if (prevRobotsAggrStats) {
@@ -403,8 +392,8 @@ export default class StatisticCalcWorkerService extends BaseService {
 
             const { calcFrom, initStats } = getCalcFromAndInitStats(prevRobotsAggrStats, calcAll);
 
-            const conditionExchange = !exchange ? sql`` : sql`AND r.exchange = ${exchange}`;
-            const conditionAsset = !asset ? sql`` : sql`AND r.asset = ${asset}`;
+            const conditionExchange = !exchange ? sql`` : sql`AND exchange = ${exchange}`;
+            const conditionAsset = !asset ? sql`` : sql`AND asset = ${asset}`;
             const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
             const querySelectPart = sql`
             SELECT p.id, p.direction, p.entry_date, p.exit_date, p.profit, p.bars_held
@@ -444,13 +433,11 @@ export default class StatisticCalcWorkerService extends BaseService {
             await this.upsertStats(
                 {
                     table: sql`robot_aggr_stats`,
-                    fieldId: sql`id`,
-                    id: prevRobotsAggrStats?.id,
+                    constraint: sql`robot_aggr_stats_exchange_asset_key`,
                     addFields: sql`exchange, asset`,
-                    addFieldsValues: sql`${exchange}, ${asset}`
+                    addFieldsValues: sql`${exchange || "-"}, ${asset || "-"}`
                 },
-                newStats,
-                prevRobotsAggrStats
+                newStats
             );
 
             return true;
@@ -490,8 +477,8 @@ export default class StatisticCalcWorkerService extends BaseService {
                 equity,
                 equity_avg
             FROM user_robot_aggr_stats
-            WHERE exchange ${!exchange ? sql`IS NULL` : sql`= ${exchange}`}
-                AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
+            WHERE exchange ${exchange || "-"}
+                AND asset = ${asset || "-"};
         `);
 
             if (prevUsersRobotsAggrStats) {
@@ -556,13 +543,11 @@ export default class StatisticCalcWorkerService extends BaseService {
             await this.upsertStats(
                 {
                     table: sql`user_robot_aggr_stats`,
-                    fieldId: sql`id`,
-                    id: prevUsersRobotsAggrStats?.id,
+                    constraint: sql`user_robot_aggr_stats_exchange_asset_key`,
                     addFields: sql`exchange, asset`,
-                    addFieldsValues: sql`${exchange}, ${asset}`
+                    addFieldsValues: sql`${exchange || "-"}, ${asset || "-"}`
                 },
-                newStats,
-                prevUsersRobotsAggrStats
+                newStats
             );
 
             return true;
@@ -635,13 +620,11 @@ export default class StatisticCalcWorkerService extends BaseService {
             await this.upsertStats(
                 {
                     table: sql`user_signal_stats`,
-                    fieldId: sql`user_signal_id`,
-                    id: userSignal.id,
+                    constraint: sql`user_signals_stats_pkey`,
                     addFields: sql`user_signal_id`,
                     addFieldsValues: sql`${userSignal.id}`
                 },
-                newStats,
-                userSignal
+                newStats
             );
 
             await locker.unlock();
@@ -694,7 +677,10 @@ export default class StatisticCalcWorkerService extends BaseService {
     async calcUserSignals({ robotId, calcAll = false }: { robotId: string; calcAll?: boolean }) {
         try {
             const userSignals = await this.db.pg.any<UserSignalStats>(sql`
-            SELECT us.id, us.user_id, us.robot_id, us.subscribed_at,
+            SELECT us.id, 
+                us.user_id, 
+                us.robot_id, 
+                us.subscribed_at,
                 uss.statistics,
                 uss.first_position_entry_date,
                 uss.last_position_exit_date,
@@ -756,8 +742,8 @@ export default class StatisticCalcWorkerService extends BaseService {
             FROM user_aggr_stats
             WHERE user_id = ${userId}
                 AND type = ${UserAggrStatsTypes.signal}
-                AND exchange ${!exchange ? sql`IS NULL` : sql`= ${exchange}`}
-                AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
+                AND exchange ${exchange || "-"}
+                AND asset = ${asset || "-"};
         `);
 
             if (prevUserAggrStats) {
@@ -831,13 +817,11 @@ export default class StatisticCalcWorkerService extends BaseService {
             await this.upsertStats(
                 {
                     table: sql`user_aggr_stats`,
-                    fieldId: sql`id`,
-                    id: prevUserAggrStats?.id,
+                    constraint: sql`user_aggr_stats_user_id_exchange_asset_type_key`,
                     addFields: sql`user_id, exchange, asset, type`,
-                    addFieldsValues: sql`${userId}, ${exchange}, ${asset}, ${UserAggrStatsTypes.signal}`
+                    addFieldsValues: sql`${userId}, ${exchange || "-"}, ${asset || "-"}, ${UserAggrStatsTypes.signal}`
                 },
-                newStats,
-                prevUserAggrStats
+                newStats
             );
 
             return true;
@@ -913,13 +897,11 @@ export default class StatisticCalcWorkerService extends BaseService {
             await this.upsertStats(
                 {
                     table: sql`user_robot_stats`,
-                    fieldId: sql`user_robot_id`,
-                    id: userRobotId,
+                    constraint: sql`user_robot_stats_pkey`,
                     addFields: sql`user_robot_id`,
                     addFieldsValues: sql`${userRobotId}`
                 },
-                newStats,
-                prevTradeStats
+                newStats
             );
 
             return true;
@@ -962,8 +944,8 @@ export default class StatisticCalcWorkerService extends BaseService {
             FROM user_aggr_stats
             WHERE user_id = ${userId}
                 AND type = ${UserAggrStatsTypes.userRobot}
-                AND exchange ${!exchange ? sql`IS NULL` : sql`= ${exchange}`}
-                AND asset ${!asset ? sql`IS NULL` : sql`= ${asset}`};
+                AND exchange = ${exchange || "-"}
+                AND asset = ${asset || "-"};
         `);
 
             if (prevUserAggrStats) {
@@ -990,8 +972,8 @@ export default class StatisticCalcWorkerService extends BaseService {
 
             const { calcFrom, initStats } = getCalcFromAndInitStats(prevUserAggrStats, calcAll);
 
-            const conditionExchange = !exchange ? sql`` : sql`AND exchange = ${exchange}`;
-            const conditionAsset = !asset ? sql`` : sql`AND asset = ${asset}`;
+            const conditionExchange = sql`AND exchange = ${exchange || "-"}`;
+            const conditionAsset = sql`AND asset = ${asset || "-"}`;
             const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
             const querySelectPart = sql`
             SELECT id, direction, entry_date, exit_date, profit, bars_held
@@ -1030,13 +1012,13 @@ export default class StatisticCalcWorkerService extends BaseService {
             await this.upsertStats(
                 {
                     table: sql`user_aggr_stats`,
-                    fieldId: sql`id`,
-                    id: prevUserAggrStats?.id,
+                    constraint: sql`user_aggr_stats_user_id_exchange_asset_type_key`,
                     addFields: sql`user_id, exchange, asset, type`,
-                    addFieldsValues: sql`${userId}, ${exchange}, ${asset}, ${UserAggrStatsTypes.userRobot}`
+                    addFieldsValues: sql`${userId}, ${exchange || "-"}, ${asset || "-"}, ${
+                        UserAggrStatsTypes.userRobot
+                    }`
                 },
-                newStats,
-                prevUserAggrStats
+                newStats
             );
 
             return true;

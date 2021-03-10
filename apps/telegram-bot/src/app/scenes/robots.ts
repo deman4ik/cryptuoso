@@ -31,8 +31,8 @@ async function robotsEnter(ctx: any) {
                         where: {
                             user_id: { _eq: $userId }
                             type: { _eq: "userRobot" }
-                            exchange: { _is_null: true }
-                            asset: { _is_null: true }
+                            exchange: { _eq: "-" }
+                            asset: { _eq: "-" }
                         }
                     ) {
                         profit: net_profit
