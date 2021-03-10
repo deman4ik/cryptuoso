@@ -28,8 +28,8 @@ async function perfSignalsEnter(ctx: any) {
                         where: {
                             user_id: { _eq: $userId }
                             type: { _eq: "signal" }
-                            exchange: { _is_null: true }
-                            asset: { _is_null: true }
+                            exchange: { _eq: "-" }
+                            asset: { _eq: "-" }
                         }
                     ) {
                         netProfit: net_profit
