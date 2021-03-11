@@ -564,7 +564,8 @@ export class PrivateConnector {
                     nextJob: {
                         type: OrderJobType.check
                     },
-                    error: null
+                    error: null,
+                    info: response
                 },
                 nextJob: {
                     type: OrderJobType.check,
@@ -737,7 +738,8 @@ export class PrivateConnector {
                                   type: OrderJobType.check
                               },
 
-                    error: null
+                    error: null,
+                    info: response
                 },
                 nextJob:
                     status === OrderStatus.canceled || status === OrderStatus.closed

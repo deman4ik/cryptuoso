@@ -1,3 +1,4 @@
+import ccxt from "ccxt";
 import { TradeAction } from "./market";
 
 export const enum OrderType {
@@ -69,4 +70,5 @@ export interface Order {
     lastCheckedAt?: string;
     error?: any;
     nextJob?: OrderJob;
+    info?: ccxt.Order;
 }
