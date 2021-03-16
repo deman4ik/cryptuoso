@@ -122,6 +122,21 @@ export class PublicConnector {
                 }
                 if (exchange === "binance_futures") {
                     dateFrom = dayjs.utc("01.01.2020").toISOString();
+                    if (asset === "XLM") dateFrom = dayjs.utc("01.11.2020").toISOString();
+                    if (asset === "TRX") dateFrom = dayjs.utc("01.06.2020").toISOString();
+                    if (
+                        asset === "BAT" ||
+                        asset === "NEO" ||
+                        asset === "XMR" ||
+                        asset === "XTZ" ||
+                        asset === "ATOM" ||
+                        asset === "ETC" ||
+                        asset === "ZEC" ||
+                        asset === "DASH" ||
+                        asset === "LINK"
+                    )
+                        dateFrom = dayjs.utc("01.01.2021").toISOString();
+
                     limit = 500;
                     feeRate = 0.0004; //TODO: remove when ccxt update exchange fee values
                 }
@@ -132,6 +147,7 @@ export class PublicConnector {
 
                 const [firstCandle] = await this.getRawCandles(exchange, asset, currency, timeframe, dateFrom, limit);
                 if (firstCandle) loadFrom = dayjs.utc(firstCandle.timestamp).add(1, "day").startOf("day").toISOString();
+                else loadFrom = dateFrom;
             }
             const currentPrice = await this.getCurrentPrice(exchange, asset, currency);
 
