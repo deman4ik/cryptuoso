@@ -48,17 +48,17 @@ export const calcPositionProfit = (
     entryPrice: number,
     exitPrice: number,
     volume: number,
-    fee?: number
+    feeRate = 0
 ): number => {
     let profit: number;
+    const entryBalance = entryPrice * volume - entryPrice * volume * feeRate;
+    const exitBalance = exitPrice * volume - exitPrice * volume * feeRate;
     if (direction === "long") {
-        profit = (exitPrice - entryPrice) * volume;
+        profit = exitBalance - entryBalance;
     } else {
-        profit = (entryPrice - exitPrice) * volume;
+        profit = entryBalance - exitBalance;
     }
     profit = round(profit, 6);
-    if (fee) {
-        profit = round(profit - profit * fee, 6);
-    }
+
     return profit;
 };

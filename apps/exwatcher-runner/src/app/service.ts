@@ -221,26 +221,32 @@ export default class ExwatcherRunnerService extends HTTPService {
     async updateMarket(params: { exchange: string; asset: string; currency: string }) {
         const { exchange, asset, currency } = params;
         this.log.debug(`Updating ${exchange}.${asset}.${currency} market...`);
-        const { precision, limits, averageFee, loadFrom } = await this.connector.getMarket(exchange, asset, currency);
-        this.log.debug({ exchange, asset, currency, precision, limits, averageFee, loadFrom });
+        const { precision, limits, feeRate, loadFrom, info } = await this.connector.getMarket(
+            exchange,
+            asset,
+            currency
+        );
+        this.log.debug({ exchange, asset, currency, precision, limits, feeRate, loadFrom });
         const available = 15;
         await this.db.pg.query(sql`INSERT INTO markets (
-                exchange, asset, currency, precision, limits, average_fee, load_from, available )
+                exchange, asset, currency, precision, limits, fee_rate, load_from, available, info )
                 VALUES (
                     ${exchange},
                     ${asset},
                     ${currency},
                     ${JSON.stringify(precision)},
                     ${JSON.stringify(limits)},
-                    ${averageFee},
+                    ${feeRate},
                     ${loadFrom || null},
-                    ${available}
+                    ${available},
+                    ${JSON.stringify(info)}
                 )
                 ON CONFLICT ON CONSTRAINT markets_exchange_asset_currency_key
                 DO UPDATE SET precision = excluded.precision, 
                 limits = excluded.limits,
-                average_fee = excluded.average_fee,
-                load_from = excluded.load_from;
+                fee_rate = excluded.fee_rate,
+                load_from = excluded.load_from,
+                info = excluded.info;
             `);
         this.log.debug(`${exchange}.${asset}.${currency} market updated!`);
     }

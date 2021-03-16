@@ -110,6 +110,20 @@ export class PrivateConnector {
         return {};
     }
 
+    async getOrderFee(asset: string, currency: string, price: number, amount: number) {
+        let feeRate;
+        if (this.exchange === "binance_futures") {
+            const { takerCommissionRate } = await this.connector.fapiPrivateGetCommissionRate({
+                symbol: `${asset}${currency}`
+            });
+            feeRate = takerCommissionRate;
+        } else {
+            const market = this.connector.market(this.getSymbol(asset, currency));
+            feeRate = market.taker;
+        }
+        return price * amount * feeRate;
+    }
+
     static getErrorMessage(error: Error) {
         let message = error?.message || "Unknown";
         if (error instanceof ccxt.BaseError) {
@@ -190,9 +204,7 @@ export class PrivateConnector {
                 price = currentPrice / 1.3;
                 amount = round(5 / price, 3) + market.limits.amount.min;
             }
-            if (this.exchange === "huobipro") {
-                amount = round(5 / price, 3) + market.limits.amount.min;
-            }
+
             const type = OrderType.limit;
             const orderParams = this.getOrderParams(null, {}, type);
 
@@ -299,7 +311,7 @@ export class PrivateConnector {
                     return this.connector.loadAccounts();
                 } catch (e) {
                     if (e instanceof ccxt.NetworkError || e.message.includes("Gateway")) {
-                        await this.initConnector();
+                        this.connector = new ccxt.huobipro(this.config);
                         throw e;
                     }
                     bail(e);
@@ -320,6 +332,17 @@ export class PrivateConnector {
             };
             this.connector = new ccxt.binance(this.config);
         } else throw new Error("Unsupported exchange");
+        const call = async (bail: (e: Error) => void) => {
+            try {
+                return this.connector.loadMarkets();
+            } catch (e) {
+                if (e instanceof ccxt.NetworkError || e.message.includes("Gateway")) {
+                    throw e;
+                }
+                bail(e);
+            }
+        };
+        await retry(call, this.retryOptions);
     }
 
     async calcTotalBalance(connector: Exchange, exchange: string, balances: any): Promise<UserExchangeAccBalances> {
@@ -547,6 +570,8 @@ export class PrivateConnector {
                     : <OrderStatus>orderStatus || exId
                     ? OrderStatus.open
                     : order.status;
+            const orderPrice = (average && +average) || (price && +price) || signalPrice;
+            const feeCost = (fee && fee.cost) || (await this.getOrderFee(asset, currency, orderPrice, executed));
             return {
                 order: {
                     ...order,
@@ -556,11 +581,11 @@ export class PrivateConnector {
                     exTimestamp: exTimestamp && dayjs.utc(exTimestamp).toISOString(),
                     exLastTradeAt: this.getCloseOrderDate(<string>exchange, response),
                     status,
-                    price: (average && +average) || (price && +price) || signalPrice,
+                    price: orderPrice,
                     volume: volume && +volume,
                     remaining: remaining && +remaining,
                     executed,
-                    fee: (fee && fee.cost) || 0,
+                    fee: feeCost,
                     lastCheckedAt: dayjs.utc().toISOString(),
                     nextJob: {
                         type: OrderJobType.check
@@ -720,17 +745,20 @@ export class PrivateConnector {
                 orderStatus === OrderStatus.canceled && executed && executed > 0
                     ? OrderStatus.closed
                     : <OrderStatus>orderStatus;
+            const orderPrice = (average && +average) || (price && +price);
+            const feeCost =
+                order.fee || (fee && fee.cost) || (await this.getOrderFee(asset, currency, orderPrice, executed));
             return {
                 order: {
                     ...order,
                     exTimestamp: exTimestamp && dayjs.utc(exTimestamp).toISOString(),
                     exLastTradeAt: this.getCloseOrderDate(<string>exchange, response),
                     status,
-                    price: (average && +average) || (price && +price),
+                    price: orderPrice,
                     volume: volume && +volume,
                     remaining: remaining && +remaining,
                     executed,
-                    fee: (fee && fee.cost) || 0,
+                    fee: feeCost,
                     lastCheckedAt: dayjs.utc().toISOString(),
                     nextJob:
                         status === OrderStatus.canceled || status === OrderStatus.closed

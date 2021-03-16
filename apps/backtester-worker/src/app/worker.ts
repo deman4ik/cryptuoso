@@ -716,12 +716,12 @@ class BacktesterWorker {
                 this.backtester.handleHistoryCandles(historyCandles);
 
                 // Load average fee
-                const { averageFee } = await this.db.pg.one<{ averageFee: number }>(sql`
-                    SELECT average_fee FROM markets
+                const { feeRate } = await this.db.pg.one<{ feeRate: number }>(sql`
+                    SELECT fee_rate FROM markets
                     WHERE exchange = ${this.backtester.exchange} 
                     and asset = ${this.backtester.asset} 
                     and currency = ${this.backtester.currency};`);
-                this.backtester.averageFee = averageFee;
+                this.backtester.feeRate = feeRate;
 
                 await this.#saveState(this.backtester.state);
 
