@@ -86,7 +86,7 @@ export class Backtester {
     #currency: string;
     #timeframe: ValidTimeframe;
     #strategy: string;
-    #averageFee: number;
+    #feeRate: number;
     #dateFrom: string;
     #dateTo: string;
     #settings?: BacktesterSettings;
@@ -229,8 +229,8 @@ export class Backtester {
         return this.#status === Status.started;
     }
 
-    set averageFee(averageFee: number) {
-        this.#averageFee = averageFee;
+    set feeRate(feeRate: number) {
+        this.#feeRate = feeRate;
     }
 
     start() {
@@ -455,7 +455,7 @@ export class Backtester {
                     pos.entryPrice,
                     pos.exitPrice,
                     volume,
-                    this.#averageFee
+                    this.#feeRate
                 );
                 return { ...pos, volume, profit };
             });
@@ -522,7 +522,7 @@ export class Backtester {
                         pos.entryPrice,
                         pos.exitPrice,
                         volume,
-                        this.#averageFee
+                        this.#feeRate
                     );
                     return { ...pos, volume, profit };
                 });

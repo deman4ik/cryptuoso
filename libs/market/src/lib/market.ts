@@ -1,3 +1,5 @@
+import ccxt from "ccxt";
+
 interface MinMax {
     min: number;
     max: number | undefined;
@@ -27,8 +29,9 @@ export interface Market {
     currency: string;
     precision: { base: number; quote: number; amount: number; price: number };
     limits: { amount: MinMax; amountCurrency: MinMax; price: MinMax; cost?: MinMax };
-    averageFee: number;
+    feeRate: number;
     loadFrom: string;
+    info: ccxt.Market;
 }
 
 interface UserMarketAmount {

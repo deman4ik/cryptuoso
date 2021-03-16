@@ -94,8 +94,10 @@ export class PublicConnector {
     async getMarket(exchange: string, asset: string, currency: string): Promise<Market> {
         try {
             await this.initConnector(exchange);
-            const response: ccxt.Market = await this.connectors[exchange].market(this.getSymbol(asset, currency));
+            const market: ccxt.Market = this.connectors[exchange].market(this.getSymbol(asset, currency));
+
             let loadFrom;
+            let feeRate = +market.taker;
             if (exchange === "kraken") {
                 const [firstTrade] = await this.getTrades(
                     exchange,
@@ -120,7 +122,23 @@ export class PublicConnector {
                 }
                 if (exchange === "binance_futures") {
                     dateFrom = dayjs.utc("01.01.2020").toISOString();
+                    if (asset === "XLM") dateFrom = dayjs.utc("01.11.2020").toISOString();
+                    if (asset === "TRX") dateFrom = dayjs.utc("01.06.2020").toISOString();
+                    if (
+                        asset === "BAT" ||
+                        asset === "NEO" ||
+                        asset === "XMR" ||
+                        asset === "XTZ" ||
+                        asset === "ATOM" ||
+                        asset === "ETC" ||
+                        asset === "ZEC" ||
+                        asset === "DASH" ||
+                        asset === "LINK"
+                    )
+                        dateFrom = dayjs.utc("01.01.2021").toISOString();
+
                     limit = 500;
+                    feeRate = 0.0004; //TODO: remove when ccxt update exchange fee values
                 }
                 if (exchange === "binance_spot") {
                     dateFrom = dayjs.utc("01.01.2020").toISOString();
@@ -129,24 +147,25 @@ export class PublicConnector {
 
                 const [firstCandle] = await this.getRawCandles(exchange, asset, currency, timeframe, dateFrom, limit);
                 if (firstCandle) loadFrom = dayjs.utc(firstCandle.timestamp).add(1, "day").startOf("day").toISOString();
+                else loadFrom = dateFrom;
             }
             const currentPrice = await this.getCurrentPrice(exchange, asset, currency);
 
-            const averageFee = response.taker * 100;
             return {
                 exchange,
                 asset,
                 currency,
                 loadFrom,
                 limits: {
-                    ...response.limits,
+                    ...market.limits,
                     amountCurrency: {
-                        min: currentPrice?.price * response.limits?.amount.min,
-                        max: currentPrice?.price * response.limits?.amount.max
+                        min: currentPrice?.price * market.limits?.amount.min,
+                        max: currentPrice?.price * market.limits?.amount.max
                     }
                 },
-                precision: response.precision,
-                averageFee: averageFee > 0.3 ? response.taker : averageFee
+                precision: market.precision,
+                feeRate,
+                info: market
             };
         } catch (e) {
             if (e instanceof ccxt.ExchangeNotAvailable) throw new Error("ExchangeNotAvailable");
