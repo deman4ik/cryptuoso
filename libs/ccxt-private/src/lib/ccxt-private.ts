@@ -121,7 +121,7 @@ export class PrivateConnector {
             const market = this.connector.market(this.getSymbol(asset, currency));
             feeRate = market.taker;
         }
-        return price * amount * feeRate;
+        return round(price * amount * feeRate, 6);
     }
 
     static getErrorMessage(error: Error) {
