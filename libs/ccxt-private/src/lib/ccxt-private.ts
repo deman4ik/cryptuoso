@@ -188,6 +188,7 @@ export class PrivateConnector {
                 const { price: currentPrice } = await this.getCurrentPrice(this.connector, asset, currency);
 
                 price = currentPrice / 1.3;
+                amount = round(5 / price, 3) + market.limits.amount.min;
             }
             if (this.exchange === "huobipro") {
                 amount = round(5 / price, 3) + market.limits.amount.min;
@@ -564,7 +565,8 @@ export class PrivateConnector {
                     nextJob: {
                         type: OrderJobType.check
                     },
-                    error: null
+                    error: null,
+                    info: response
                 },
                 nextJob: {
                     type: OrderJobType.check,
@@ -737,7 +739,8 @@ export class PrivateConnector {
                                   type: OrderJobType.check
                               },
 
-                    error: null
+                    error: null,
+                    info: response
                 },
                 nextJob:
                     status === OrderStatus.canceled || status === OrderStatus.closed

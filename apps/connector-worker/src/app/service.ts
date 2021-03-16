@@ -139,7 +139,8 @@ export default class ConnectorRunnerService extends BaseService {
          fee = ${order.fee || null},
          last_checked_at = ${order.lastCheckedAt || null},
          error = ${JSON.stringify(order.error) || null},
-         next_job = ${JSON.stringify(order.nextJob) || null}
+         next_job = ${JSON.stringify(order.nextJob) || null},
+         info = ${JSON.stringify(order.info) || null}
          WHERE id = ${order.id}
         `);
         } catch (error) {
