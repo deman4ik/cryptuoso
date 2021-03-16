@@ -188,6 +188,7 @@ export class PrivateConnector {
                 const { price: currentPrice } = await this.getCurrentPrice(this.connector, asset, currency);
 
                 price = currentPrice / 1.3;
+                amount = round(5 / price, 3) + market.limits.amount.min;
             }
             if (this.exchange === "huobipro") {
                 amount = round(5 / price, 3) + market.limits.amount.min;
