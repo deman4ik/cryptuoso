@@ -10,6 +10,7 @@ module.exports = {
         "<rootDir>/libs/billing",
         "<rootDir>/libs/analytics",
         "<rootDir>/apps/webhooks",
-        "<rootDir>/libs/user-sub-events"
+        "<rootDir>/libs/user-sub-events",
+        "<rootDir>/libs/trade-stats"
     ]
 };
