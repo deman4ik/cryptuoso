@@ -339,7 +339,7 @@ class ImporterWorker {
                         "varchar"
                     ]
                 )}
-                ON CONFLICT ON (timestamp, exchange, asset, currency)
+                ON CONFLICT (timestamp, exchange, asset, currency)
                 DO UPDATE SET open = excluded.open,
                 high = excluded.high,
                 low = excluded.low,
