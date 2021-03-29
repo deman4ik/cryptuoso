@@ -339,7 +339,7 @@ class ImporterWorker {
                         "varchar"
                     ]
                 )}
-                ON CONFLICT ON CONSTRAINT ${sql.identifier([`candles${timeframe}_time_exchange_asset_currency_key`])}
+                ON CONFLICT ON (timestamp, exchange, asset, currency)
                 DO UPDATE SET open = excluded.open,
                 high = excluded.high,
                 low = excluded.low,
