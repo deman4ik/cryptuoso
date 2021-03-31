@@ -305,17 +305,16 @@ class ImporterWorker {
     async upsertCandles(candles: ExchangeCandle[]): Promise<void> {
         try {
             if (candles && Array.isArray(candles) && candles.length > 0) {
-                const timeframe = candles[0].timeframe;
-
                 await this.db.pg.query(sql`
-                insert into ${sql.identifier([`candles${timeframe}`])} 
-                (exchange, asset, currency, open, high, low, close, volume, time, timestamp, type)
+                insert into candles
+                (exchange, asset, currency, timeframe, open, high, low, close, volume, time, timestamp, type)
                 SELECT *
                 FROM ${sql.unnest(
                     this.db.util.prepareUnnest(candles, [
                         "exchange",
                         "asset",
                         "currency",
+                        "timeframe",
                         "open",
                         "high",
                         "low",
@@ -329,6 +328,7 @@ class ImporterWorker {
                         "varchar",
                         "varchar",
                         "varchar",
+                        "int8",
                         "numeric",
                         "numeric",
                         "numeric",
@@ -339,7 +339,7 @@ class ImporterWorker {
                         "varchar"
                     ]
                 )}
-                ON CONFLICT (timestamp, exchange, asset, currency)
+                ON CONFLICT (timestamp, exchange, asset, currency, timeframe)
                 DO UPDATE SET open = excluded.open,
                 high = excluded.high,
                 low = excluded.low,

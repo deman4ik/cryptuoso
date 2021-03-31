@@ -98,13 +98,14 @@ class BacktesterWorker {
         try {
             const requiredCandles = <DBCandle[]>await this.db.pg.many<DBCandle>(
                 sql`select *
-                from ${sql.identifier([`candles${timeframe}`])}
+                from candles
                 where
                 exchange = ${exchange}
                 and asset = ${asset}
                 and currency = ${currency}
-                and time < ${dayjs.utc(loadFrom).valueOf()}
-                    order by time desc
+                and timeframe = ${timeframe}
+                and timestamp < ${dayjs.utc(loadFrom).toISOString()}
+                    order by timestamp desc
                     limit ${limit};`
             );
             return requiredCandles
@@ -744,20 +745,21 @@ class BacktesterWorker {
 
     async run(): Promise<void> {
         try {
-            const query = sql`${sql.identifier([`candles${this.backtester.timeframe}`])} 
+            const query = sql`FROM candles 
               WHERE exchange = ${this.backtester.exchange}
               AND asset = ${this.backtester.asset}
               AND currency = ${this.backtester.currency} 
+              AND timeframe = ${this.backtester.timeframe}
               AND timestamp >= ${this.backtester.dateFrom}
               AND timestamp <= ${this.backtester.dateTo}
               AND type != ${CandleType.previous}`;
             const candlesCount: number = +(await this.db.pg.oneFirst(sql`
-               SELECT COUNT(1) FROM ${query}`));
+               SELECT COUNT(1) ${query}`));
             this.backtester.init(candlesCount);
             await DataStream.from(
                 makeChunksGenerator(
                     this.db.pg,
-                    sql`SELECT * FROM ${query} ORDER BY time`,
+                    sql`SELECT * ${query} ORDER BY time`,
                     candlesCount > this.defaultChunkSize ? this.defaultChunkSize : candlesCount
                 ),
                 { maxParallel: 1 }

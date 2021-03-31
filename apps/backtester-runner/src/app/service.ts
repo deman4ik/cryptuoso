@@ -96,13 +96,14 @@ export default class BacktesterRunnerService extends HTTPService {
     ): Promise<number> =>
         +(await this.db.pg.query<string>(
             sql`SELECT count(1) FROM (SELECT id
-            FROM ${sql.identifier([`candles${timeframe}`])}
+            FROM candles
             WHERE exchange = ${exchange}
               AND asset = ${asset}
               AND currency = ${currency}
+              AND timeframe = ${timeframe}
               AND type != ${CandleType.previous}
-              AND time < ${dayjs.utc(loadFrom).valueOf()}
-            ORDER BY time DESC
+              AND timestamp < ${dayjs.utc(loadFrom).toISOString()}
+            ORDER BY timestamp DESC
             LIMIT ${limit}) t`
         ));
 

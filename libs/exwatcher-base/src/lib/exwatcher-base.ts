@@ -959,10 +959,10 @@ export class ExwatcherBaseService extends BaseService {
     async handleCandlesToSave() {
         try {
             if (this.candlesToSave.size > 0) {
-                const grouped: { [key: string]: ExchangeCandle[] } = groupBy(
-                    [...this.candlesToSave.values()],
-                    "timeframe"
-                );
+                const candles = [...this.candlesToSave.values()];
+
+                //TODO: DELETE
+                const grouped: { [key: string]: ExchangeCandle[] } = groupBy(candles, "timeframe");
 
                 for (const [timeframe, candles] of [...Object.entries(grouped)]) {
                     try {
@@ -1013,13 +1013,60 @@ export class ExwatcherBaseService extends BaseService {
                         close = excluded.close,
                         volume = excluded.volume,
                         type = excluded.type;`);
-
-                        candles.forEach((candle) => {
-                            this.candlesToSave.delete(this.getCandleMapKey(candle));
-                        });
                     } catch (e) {
                         this.log.error(e);
                     }
+                }
+                //TODO: DELETE END
+                // NEW
+                try {
+                    await this.db.pg.query(sql`
+                    insert into candles
+                    (exchange, asset, currency, timeframe, open, high, low, close, volume, time, timestamp, type)
+                    SELECT *
+                    FROM ${sql.unnest(
+                        this.db.util.prepareUnnest(candles, [
+                            "exchange",
+                            "asset",
+                            "currency",
+                            "timeframe",
+                            "open",
+                            "high",
+                            "low",
+                            "close",
+                            "volume",
+                            "time",
+                            "timestamp",
+                            "type"
+                        ]),
+                        [
+                            "varchar",
+                            "varchar",
+                            "varchar",
+                            "int8",
+                            "numeric",
+                            "numeric",
+                            "numeric",
+                            "numeric",
+                            "numeric",
+                            "int8",
+                            "timestamp",
+                            "varchar"
+                        ]
+                    )}
+                    ON CONFLICT (timestamp, exchange, asset, currency, timeframe)
+                    DO UPDATE SET open = excluded.open,
+                    high = excluded.high,
+                    low = excluded.low,
+                    close = excluded.close,
+                    volume = excluded.volume,
+                    type = excluded.type;`);
+
+                    candles.forEach((candle) => {
+                        this.candlesToSave.delete(this.getCandleMapKey(candle));
+                    });
+                } catch (e) {
+                    this.log.error(e);
                 }
             }
         } catch (error) {
