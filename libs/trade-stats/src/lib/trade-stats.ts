@@ -39,6 +39,15 @@ export class TradeStatsCalc implements TradeStats {
         return ["robot", "userSignal", "userRobot", "userExAcc", "portfolio"].includes(type || this.meta.type);
     }
 
+    private roundStats(stats: Stats | FullStats) {
+        const roundedStats = { ...stats };
+
+        Object.entries(stats).forEach(([key, value]) => {
+            if (typeof value === "number") (roundedStats as any)[key] = round(value, 2);
+        });
+        return roundedStats;
+    }
+
     private initStats(prevStats?: Stats): Stats {
         return {
             initialBalance: prevStats?.initialBalance || null,
@@ -277,7 +286,7 @@ export class TradeStatsCalc implements TradeStats {
             stats.avgPercentGrossLossMonths,
             ...months.map(({ stats: { percentGrossLoss } }) => percentGrossLoss)
         );
-        return stats;
+        return this.roundStats(stats) as FullStats;
     }
 
     private calcPeriodStats(
@@ -332,6 +341,7 @@ export class TradeStatsCalc implements TradeStats {
                     meta,
                     periodStats.year[year.key].stats
                 );
+                periodStats.year[year.key].stats = this.roundStats(periodStats.year[year.key].stats);
             } catch (err) {
                 logger.error(err);
                 logger.debug(year);
@@ -382,6 +392,7 @@ export class TradeStatsCalc implements TradeStats {
                     meta,
                     periodStats.quarter[quarter.key].stats
                 );
+                periodStats.quarter[quarter.key].stats = this.roundStats(periodStats.quarter[quarter.key].stats);
             } catch (err) {
                 logger.error(err);
                 logger.debug(quarter);
@@ -430,6 +441,7 @@ export class TradeStatsCalc implements TradeStats {
                     meta,
                     periodStats.month[month.key].stats
                 );
+                periodStats.month[month.key].stats = this.roundStats(periodStats.month[month.key].stats);
             } catch (err) {
                 logger.error(err);
                 logger.debug(month);
