@@ -759,7 +759,7 @@ class BacktesterWorker {
             await DataStream.from(
                 makeChunksGenerator(
                     this.db.pg,
-                    sql`SELECT * ${query} ORDER BY time`,
+                    sql`SELECT * ${query} ORDER BY timestamp`,
                     candlesCount > this.defaultChunkSize ? this.defaultChunkSize : candlesCount
                 ),
                 { maxParallel: 1 }
