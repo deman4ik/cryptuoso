@@ -960,7 +960,14 @@ export class ExwatcherBaseService extends BaseService {
         try {
             if (this.candlesToSave.size > 0) {
                 const candles = [...this.candlesToSave.values()];
-
+                this.log.debug(
+                    `Saving candles ${candles
+                        .map(
+                            ({ asset, currency, timeframe, timestamp }) =>
+                                `${asset}.${currency}.${timeframe}.${timestamp}`
+                        )
+                        .join(" ")}`
+                );
                 try {
                     await this.db.pg.query(sql`
                     insert into candles
