@@ -961,64 +961,6 @@ export class ExwatcherBaseService extends BaseService {
             if (this.candlesToSave.size > 0) {
                 const candles = [...this.candlesToSave.values()];
 
-                //TODO: DELETE
-                const grouped: { [key: string]: ExchangeCandle[] } = groupBy(candles, "timeframe");
-
-                for (const [timeframe, candles] of [...Object.entries(grouped)]) {
-                    try {
-                        this.log.debug(
-                            `Saving candles ${candles
-                                .map(
-                                    ({ asset, currency, timeframe, timestamp }) =>
-                                        `${asset}.${currency}.${timeframe}.${timestamp}`
-                                )
-                                .join(" ")}`
-                        );
-                        await this.db.pg.query(sql`
-                        insert into ${sql.identifier([`candles${timeframe}`])}
-                        (exchange, asset, currency, open, high, low, close, volume, time, timestamp, type)
-                        SELECT *
-                        FROM ${sql.unnest(
-                            this.db.util.prepareUnnest(candles, [
-                                "exchange",
-                                "asset",
-                                "currency",
-                                "open",
-                                "high",
-                                "low",
-                                "close",
-                                "volume",
-                                "time",
-                                "timestamp",
-                                "type"
-                            ]),
-                            [
-                                "varchar",
-                                "varchar",
-                                "varchar",
-                                "numeric",
-                                "numeric",
-                                "numeric",
-                                "numeric",
-                                "numeric",
-                                "int8",
-                                "timestamp",
-                                "varchar"
-                            ]
-                        )}
-                        ON CONFLICT (timestamp, exchange, asset, currency)
-                        DO UPDATE SET open = excluded.open,
-                        high = excluded.high,
-                        low = excluded.low,
-                        close = excluded.close,
-                        volume = excluded.volume,
-                        type = excluded.type;`);
-                    } catch (e) {
-                        this.log.error(e);
-                    }
-                }
-                //TODO: DELETE END
-                // NEW
                 try {
                     await this.db.pg.query(sql`
                     insert into candles
