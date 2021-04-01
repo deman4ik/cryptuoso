@@ -232,12 +232,13 @@ export default class RobotWorkerService extends BaseService {
         try {
             const requiredCandles = <DBCandle[]>await this.db.pg.many<DBCandle>(sql`
             SELECT *
-            FROM ${sql.identifier([`candles${timeframe}`])}
+            FROM candles
             WHERE exchange = ${exchange}
               AND asset = ${asset}
               AND currency = ${currency}
-              AND time <= ${Timeframe.getPrevSince(dayjs.utc().toISOString(), timeframe)}
-            ORDER BY time DESC
+              AND timeframe = ${timeframe}
+              AND timestamp <= ${dayjs.utc(Timeframe.getPrevSince(dayjs.utc().toISOString(), timeframe)).toISOString()}
+            ORDER BY timestamp DESC
             LIMIT ${limit};`);
             return requiredCandles
                 .sort((a, b) => sortAsc(a.time, b.time))
@@ -361,19 +362,18 @@ export default class RobotWorkerService extends BaseService {
 
             if (type === RobotJobType.tick) {
                 if (robot.hasAlerts) {
-                    const currentTime = Timeframe.getCurrentSince(1, robot.timeframe);
+                    const currentTime = dayjs.utc(Timeframe.getCurrentSince(1, robot.timeframe)).toISOString();
                     const currentCandle: DBCandle = await this.db.pg.maybeOne(sql`
                 SELECT * 
-                FROM ${sql.identifier([`candles${robot.timeframe}`])}
+                FROM candles
                 WHERE exchange = ${robot.exchange}
                 AND asset = ${robot.asset}
                 AND currency = ${robot.currency}
-                and time = ${currentTime};`);
+                AND timeframe = ${robot.timeframe}
+                and timestamp = ${currentTime};`);
                     if (!currentCandle) {
                         this.log.error(
-                            `Robot #${robotId} - Failed to load ${robot.exchange}-${robot.asset}-${robot.currency}-${
-                                robot.timeframe
-                            }-${dayjs.utc(currentTime).toISOString()} current candle`
+                            `Robot #${robotId} - Failed to load ${robot.exchange}-${robot.asset}-${robot.currency}-${robot.timeframe}-${currentTime} current candle`
                         );
                         return robot.status;
                     }

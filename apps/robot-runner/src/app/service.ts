@@ -305,12 +305,13 @@ export default class RobotRunnerService extends HTTPService {
 
         const firstCandle = await this.db.pg.maybeOne<{ timestamp: string }>(sql`
             SELECT timestamp 
-            FROM ${sql.identifier([`candles${timeframe}`])}
+            FROM candles
             WHERE exchange = ${exchange}
               AND asset = ${asset} 
               AND currency = ${currency}
+              AND timeframe = ${timeframe}
               AND type != ${CandleType.previous}
-            ORDER BY time  
+            ORDER BY timestamp  
             OFFSET ${strategySettings.requiredHistoryMaxBars}
             LIMIT 1;
         `);
@@ -319,12 +320,13 @@ export default class RobotRunnerService extends HTTPService {
         else {
             const lastCandle = await this.db.pg.maybeOne<{ timestamp: string }>(sql`
             SELECT timestamp 
-            FROM ${sql.identifier([`candles${timeframe}`])}
+            FROM candles
             WHERE exchange = ${exchange}
               AND asset = ${asset} 
               AND currency = ${currency}
+              AND timeframe = ${timeframe}
               AND type != ${CandleType.previous}
-            ORDER BY time DESC  
+            ORDER BY timestamp DESC  
             LIMIT 1;
         `);
             historyDateFrom = lastCandle.timestamp;
@@ -482,11 +484,12 @@ export default class RobotRunnerService extends HTTPService {
                                 const prevTime = Timeframe.getPrevSince(currentDate, timeframe);
                                 const candle = await this.db.pg.maybeOne<DBCandle>(sql`
                             SELECT * 
-                            FROM ${sql.identifier([`candles${timeframe}`])}
+                            FROM candles
                             WHERE exchange = ${exchange}
                             AND asset = ${asset}
                             AND currency = ${currency}
-                            AND time = ${prevTime};`);
+                            AND timeframe = ${timeframe}
+                            AND timestamp = ${dayjs.utc(prevTime).toISOString()};`);
 
                                 if (!candle) {
                                     this.log.error(

@@ -1,5 +1,5 @@
 module.exports = {
-    displayName: "graphql-client",
+    displayName: "trade-stats",
     preset: "../../jest.preset.js",
     globals: {
         "ts-jest": {
@@ -10,5 +10,5 @@ module.exports = {
         "^.+\\.[tj]sx?$": "ts-jest"
     },
     moduleFileExtensions: ["ts", "tsx", "js", "jsx"],
-    coverageDirectory: "../../coverage/libs/graphql-client"
+    coverageDirectory: "../../coverage/libs/trade-stats"
 };

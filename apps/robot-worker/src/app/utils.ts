@@ -31,19 +31,18 @@ async function checkAlerts(
         `);
 
         if (robots && robots.length) {
-            const currentTime = Timeframe.getCurrentSince(1, timeframe);
+            const currentTime = dayjs.utc(Timeframe.getCurrentSince(1, timeframe)).toISOString();
             const candle = await pg.maybeOne<DBCandle>(sql`
         SELECT * 
-        FROM ${sql.identifier([`candles${timeframe}`])}
+        FROM candles
         WHERE exchange = ${exchange}
         AND asset = ${asset}
         AND currency = ${currency}
-        AND time = ${currentTime};`);
+        and timeframe = ${timeframe}
+        AND timestamp = ${currentTime};`);
             if (!candle) {
                 if (dayjs.utc().diff(currentTime, "minute") > 20) {
-                    const error = `Failed to load ${exchange}-${asset}-${currency}-${timeframe}-${dayjs
-                        .utc(currentTime)
-                        .toISOString()} current candle`;
+                    const error = `Failed to load ${exchange}-${asset}-${currency}-${timeframe}-${currentTime} current candle`;
                     logger.error(error);
                     return {
                         result: null,

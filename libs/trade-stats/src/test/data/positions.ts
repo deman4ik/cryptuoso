@@ -1,0 +1,323 @@
+import { BasePosition } from "@cryptuoso/market";
+
+export const positions: BasePosition[] = [
+    {
+        id: "0d6b54a9-bd1b-496b-a3f2-82c30a1b6744",
+        direction: "long",
+        entryDate: "2019-11-04T16:00:00",
+        entryPrice: 9292.68,
+        exitDate: "2019-11-08T00:00:00",
+        exitPrice: 9221.63,
+        volume: 1,
+        profit: -71.05000000000109,
+        barsHeld: 11
+    },
+    {
+        id: "d8055978-5abe-4c18-8a06-599288656b3d",
+        direction: "long",
+        entryDate: "2020-01-13T16:00:00",
+        entryPrice: 8085.86,
+        exitDate: "2020-01-21T00:00:00",
+        exitPrice: 8650,
+        volume: 1,
+        profit: 564.1400000000003,
+        barsHeld: 23
+    },
+    {
+        id: "976ea0ec-d8a5-485a-8536-648d99667002",
+        direction: "long",
+        entryDate: "2020-01-22T00:00:00",
+        entryPrice: 8742.78,
+        exitDate: "2020-01-25T08:00:00",
+        exitPrice: 8319.68,
+        volume: 1,
+        profit: -423.10000000000036,
+        barsHeld: 11
+    },
+    {
+        id: "9f82c162-2390-4470-a38d-6f99c96e55c2",
+        direction: "long",
+        entryDate: "2020-01-27T00:00:00",
+        entryPrice: 8611.21,
+        exitDate: "2020-02-04T16:00:00",
+        exitPrice: 9208.56,
+        volume: 1,
+        profit: 597.3500000000004,
+        barsHeld: 27
+    },
+    {
+        id: "8ce8c045-d643-4cd4-aa5d-75c5b0a70845",
+        direction: "long",
+        entryDate: "2020-02-05T16:00:00",
+        entryPrice: 9500.28,
+        exitDate: "2020-02-15T16:00:00",
+        exitPrice: 9983.03,
+        volume: 1,
+        profit: 482.75,
+        barsHeld: 31
+    },
+    {
+        id: "c6926024-39e8-4e0b-b2ce-fac054c9a195",
+        direction: "long",
+        entryDate: "2020-02-19T00:00:00",
+        entryPrice: 10174.53,
+        exitDate: "2020-02-22T08:00:00",
+        exitPrice: 9596.01,
+        volume: 1,
+        profit: -578.5200000000004,
+        barsHeld: 11
+    },
+    {
+        id: "1f74db44-8f6b-42fd-b317-858e34dc2923",
+        direction: "long",
+        entryDate: "2020-02-23T08:00:00",
+        entryPrice: 9889.57,
+        exitDate: "2020-02-26T16:00:00",
+        exitPrice: 9004.08,
+        volume: 1,
+        profit: -885.4899999999998,
+        barsHeld: 11
+    },
+    {
+        id: "99fd0f95-06bb-46cc-a70c-9e842d5c668c",
+        direction: "long",
+        entryDate: "2020-04-19T00:00:00",
+        entryPrice: 7242.49,
+        exitDate: "2020-04-22T08:00:00",
+        exitPrice: 6934.66,
+        volume: 1,
+        profit: -307.8299999999999,
+        barsHeld: 11
+    },
+    {
+        id: "a30c8811-e341-477f-a770-67b2671e66f4",
+        direction: "long",
+        entryDate: "2020-04-22T16:00:00",
+        entryPrice: 7105.7,
+        exitDate: "2020-05-10T08:00:00",
+        exitPrice: 8805.67,
+        volume: 1,
+        profit: 1699.9700000000003,
+        barsHeld: 54
+    },
+    {
+        id: "dc6c67e0-1667-4b76-9871-4c7301d53430",
+        direction: "long",
+        entryDate: "2020-05-14T00:00:00",
+        entryPrice: 9305.91,
+        exitDate: "2020-05-20T16:00:00",
+        exitPrice: 9410.02,
+        volume: 1,
+        profit: 104.11000000000058,
+        barsHeld: 21
+    },
+    {
+        id: "e0abd23e-a17e-4217-8b3f-6d0cd83aed49",
+        direction: "long",
+        entryDate: "2020-05-21T00:00:00",
+        entryPrice: 9508,
+        exitDate: "2020-05-24T08:00:00",
+        exitPrice: 9251.22,
+        volume: 1,
+        profit: -256.78000000000065,
+        barsHeld: 11
+    },
+    {
+        id: "d48c4695-6bb3-475a-b71b-5fc5f251c3a9",
+        direction: "long",
+        entryDate: "2020-05-28T00:00:00",
+        entryPrice: 9197.32,
+        exitDate: "2020-06-06T00:00:00",
+        exitPrice: 9616.64,
+        volume: 1,
+        profit: 419.3199999999997,
+        barsHeld: 28
+    },
+    {
+        id: "6ed2e8a8-bf03-4de1-966a-0d186b4328ad",
+        direction: "long",
+        entryDate: "2020-06-06T16:00:00",
+        entryPrice: 9649.01,
+        exitDate: "2020-06-11T16:00:00",
+        exitPrice: 9525.02,
+        volume: 1,
+        profit: -123.98999999999978,
+        barsHeld: 16
+    },
+    {
+        id: "86c9dca6-e689-4e82-a5cd-0414b6fb82d8",
+        direction: "long",
+        entryDate: "2020-07-30T00:00:00",
+        entryPrice: 11113.01,
+        exitDate: "2020-08-05T00:00:00",
+        exitPrice: 11200.06,
+        volume: 1,
+        profit: 87.04999999999927,
+        barsHeld: 19
+    },
+    {
+        id: "3a7ecb93-f502-4d9a-b2f3-d0e431d434b9",
+        direction: "long",
+        entryDate: "2020-08-05T08:00:00",
+        entryPrice: 11286.62,
+        exitDate: "2020-08-11T16:00:00",
+        exitPrice: 11493.15,
+        volume: 1,
+        profit: 206.52999999999884,
+        barsHeld: 20
+    },
+    {
+        id: "5897031f-b9ea-438f-b033-d27c7454fb21",
+        direction: "long",
+        entryDate: "2020-08-14T00:00:00",
+        entryPrice: 11790,
+        exitDate: "2020-08-19T16:00:00",
+        exitPrice: 11735.02,
+        volume: 1,
+        profit: -54.97999999999956,
+        barsHeld: 18
+    },
+    {
+        id: "3f7c07d5-97e5-4adf-8ed0-e4621992b485",
+        direction: "long",
+        entryDate: "2020-08-20T16:00:00",
+        entryPrice: 11861,
+        exitDate: "2020-08-24T00:00:00",
+        exitPrice: 11654,
+        volume: 1,
+        profit: -207,
+        barsHeld: 11
+    },
+    {
+        id: "6487b486-791b-48b8-89ac-8aeedb57d2be",
+        direction: "long",
+        entryDate: "2020-08-29T08:00:00",
+        entryPrice: 11558.99,
+        exitDate: "2020-09-02T16:00:00",
+        exitPrice: 11340.84,
+        volume: 1,
+        profit: -218.14999999999964,
+        barsHeld: 14
+    },
+    {
+        id: "b4d4992c-ce53-40f4-8b80-3d8306191e76",
+        direction: "long",
+        entryDate: "2020-10-12T16:00:00",
+        entryPrice: 11551.67,
+        exitDate: "2020-10-17T00:00:00",
+        exitPrice: 11319.51,
+        volume: 1,
+        profit: -232.15999999999985,
+        barsHeld: 14
+    },
+    {
+        id: "77fae3f1-ac6e-434e-8a18-54fc0ad25e87",
+        direction: "long",
+        entryDate: "2020-10-18T08:00:00",
+        entryPrice: 11452.45,
+        exitDate: "2020-11-03T08:00:00",
+        exitPrice: 13436.34,
+        volume: 1,
+        profit: 1983.8899999999994,
+        barsHeld: 49
+    },
+    {
+        id: "25c3ed8f-5166-4fa1-8938-197a8f887d81",
+        direction: "long",
+        entryDate: "2020-11-03T16:00:00",
+        entryPrice: 13701.33,
+        exitDate: "2020-11-26T08:00:00",
+        exitPrice: 17646.2,
+        volume: 1,
+        profit: 3944.870000000001,
+        barsHeld: 69
+    },
+    {
+        id: "3ea6b8ba-ffc2-43c4-9b70-41eac8987ed7",
+        direction: "long",
+        entryDate: "2020-11-29T16:00:00",
+        entryPrice: 18113.44,
+        exitDate: "2020-12-08T08:00:00",
+        exitPrice: 19151.51,
+        volume: 1,
+        profit: 1038.0699999999997,
+        barsHeld: 27
+    },
+    {
+        id: "7ceeaa63-a4f7-47c0-b7a2-17c5b5fc827c",
+        direction: "long",
+        entryDate: "2020-12-13T00:00:00",
+        entryPrice: 18800,
+        exitDate: "2021-01-11T08:00:00",
+        exitPrice: 34399.95,
+        volume: 1,
+        profit: 15599.949999999997,
+        barsHeld: 89
+    },
+    {
+        id: "be8a2106-4e22-4ab9-9d11-54b2cab03846",
+        direction: "long",
+        entryDate: "2021-01-14T00:00:00",
+        entryPrice: 37416.34,
+        exitDate: "2021-01-17T08:00:00",
+        exitPrice: 34787.76,
+        volume: 1,
+        profit: -2628.5799999999945,
+        barsHeld: 11
+    },
+    {
+        id: "67bf7643-1700-45ae-8869-6a3a46854e7b",
+        direction: "long",
+        entryDate: "2021-01-18T16:00:00",
+        entryPrice: 36448.41,
+        exitDate: "2021-01-22T00:00:00",
+        exitPrice: 30875.77,
+        volume: 1,
+        profit: -5572.640000000003,
+        barsHeld: 11
+    },
+    {
+        id: "cdda0417-fbe2-42cf-96f2-e9aacb573203",
+        direction: "long",
+        entryDate: "2021-01-25T16:00:00",
+        entryPrice: 34509.01,
+        exitDate: "2021-02-23T08:00:00",
+        exitPrice: 49680,
+        volume: 1,
+        profit: 15170.989999999998,
+        barsHeld: 87
+    },
+    {
+        id: "3972c70b-78e1-4e6a-8a14-b75a23927e5e",
+        direction: "long",
+        entryDate: "2021-03-02T00:01:15.075",
+        entryPrice: 49594.99,
+        exitDate: "2021-03-05T08:00:59.442",
+        exitPrice: 47394.41,
+        volume: 1,
+        profit: -2200.5799999999945,
+        barsHeld: 11
+    },
+    {
+        id: "a7d26199-6513-4132-85fd-d7b2818c2006",
+        direction: "long",
+        entryDate: "2021-03-05T16:00:49.461",
+        entryPrice: 47888.11,
+        exitDate: "2021-03-16T00:00:58.425",
+        exitPrice: 55646.61,
+        volume: 1,
+        profit: 7758.5,
+        barsHeld: 32
+    },
+    {
+        id: "5ac23804-6776-4067-b635-ee501e980f70",
+        direction: "long",
+        entryDate: "2021-03-17T00:01:09.16",
+        entryPrice: 56953.23,
+        exitDate: "2021-03-21T08:00:48.197",
+        exitPrice: 57011.46,
+        volume: 1,
+        profit: 58.229999999995925,
+        barsHeld: 14
+    }
+];

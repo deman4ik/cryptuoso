@@ -75,7 +75,8 @@
         "billing": { "tags": [] },
         "analytics": { "tags": [] },
         "webhooks": { "tags": [] },
-        "user-sub-events": { "tags": [] }
+        "user-sub-events": { "tags": [] },
+        "trade-stats": { "tags": [] }
     },
     "affected": { "defaultBase": "master" }
 }

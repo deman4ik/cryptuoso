@@ -111,17 +111,22 @@ export class PrivateConnector {
     }
 
     async getOrderFee(asset: string, currency: string, price: number, amount: number) {
-        let feeRate;
-        if (this.exchange === "binance_futures") {
-            const { takerCommissionRate } = await this.connector.fapiPrivateGetCommissionRate({
-                symbol: `${asset}${currency}`
-            });
-            feeRate = takerCommissionRate;
-        } else {
-            const market = this.connector.market(this.getSymbol(asset, currency));
-            feeRate = market.taker;
+        try {
+            let feeRate;
+            if (this.exchange === "binance_futures") {
+                const { takerCommissionRate } = await this.connector.fapiPrivateGetCommissionRate({
+                    symbol: `${asset}${currency}`
+                });
+                feeRate = takerCommissionRate;
+            } else {
+                const market = this.connector.market(this.getSymbol(asset, currency));
+                feeRate = market.taker;
+            }
+            return round(price * amount * feeRate, 6);
+        } catch (err) {
+            this.log.error(err);
+            return 0;
         }
-        return round(price * amount * feeRate, 6);
     }
 
     static getErrorMessage(error: Error) {

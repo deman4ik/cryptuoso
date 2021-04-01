@@ -32,7 +32,7 @@ export const roundOld = (n: number, decimals = 0): number => +Number(`${Math.rou
  * @example
  * sum(1,2,3,4,5); // 15
  */
-export const sum = (...nums: number[]) => nums.reduce((acc, val) => acc + val, 0);
+export const sum = (...nums: number[]) => nums.filter((n) => typeof n === "number").reduce((acc, val) => acc + val, 0);
 
 /**
  * Returns the average of numbers provided.
@@ -41,7 +41,7 @@ export const sum = (...nums: number[]) => nums.reduce((acc, val) => acc + val, 0
  * @example
  * average(1,2,3); // 2
  */
-export const average = (...nums: number[]) => sum(...nums) / nums.length;
+export const average = (...nums: number[]) => sum(...nums) / nums.filter((n) => typeof n === "number").length;
 
 /**
  * Returns the average of numbers rounded to 0 decimals.
@@ -51,6 +51,15 @@ export const average = (...nums: number[]) => sum(...nums) / nums.length;
  * averageRound(2,5,10); // 6
  */
 export const averageRound = (...nums: number[]) => +round(average(...nums));
+
+export const max = (...nums: number[]) => Math.max(...nums.filter((n) => typeof n === "number"));
+export const min = (...nums: number[]) => Math.min(...nums.filter((n) => typeof n === "number"));
+
+export function divide(a: number, b: number) {
+    if (a === 0) return 0;
+    if (!a || !b || b === 0) return null;
+    return a / b;
+}
 
 /**
  * Returns the ratio of a to b rounded to 2 decimals.
