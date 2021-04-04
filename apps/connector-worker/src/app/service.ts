@@ -242,10 +242,11 @@ export default class ConnectorRunnerService extends BaseService {
             this.log.error(`Error while processing job ${job.id}`, e);
             if (
                 e instanceof ccxt.AuthenticationError ||
-                e instanceof ccxt.InsufficientFunds ||
+                // e instanceof ccxt.InsufficientFunds ||
                 e instanceof ccxt.InvalidNonce ||
-                e.message.includes("Margin is insufficient") ||
-                e.message.includes("EOrder:Insufficient initial margin") ||
+                //e.message.includes("Margin is insufficient") ||
+                //e.message.includes("EOrder:Insufficient initial margin") ||
+                //e.message.includes("balance-insufficient") ||
                 e.message.includes("EAPI:Invalid key") ||
                 e.message.includes("Invalid API-key") ||
                 e.message.includes("Failed to save order")
