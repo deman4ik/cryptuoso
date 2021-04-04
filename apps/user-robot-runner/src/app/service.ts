@@ -496,7 +496,7 @@ export default class UserRobotRunnerService extends HTTPService {
         this.log.info(
             `New ${ConnectorWorkerEvents.ORDER_ERROR} event for User Robot #${event.userRobotId}. Order #${event.orderId} is invalid - ${event.error}`
         );
-        if (!event.error.toLowerCase().includes("margin"))
+        if (!event.error.toLowerCase().includes("margin") || !event.error.toLowerCase().includes("insufficient"))
             await this.pause({
                 id: event.userRobotId,
                 message: `Order #${event.orderId} error - ${event.error}. Please contact support.`
