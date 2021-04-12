@@ -9,8 +9,9 @@ export const positions: BasePosition[] = [
         exitDate: "2019-11-08T00:00:00",
         exitPrice: 9221.63,
         volume: 1,
-        profit: -71.05000000000109,
-        barsHeld: 11
+        worstProfit: -71.02158,
+        profit: -71.02158,
+        barsHeld: 10
     },
     {
         id: "d8055978-5abe-4c18-8a06-599288656b3d",
@@ -20,8 +21,9 @@ export const positions: BasePosition[] = [
         exitDate: "2020-01-21T00:00:00",
         exitPrice: 8650,
         volume: 1,
-        profit: 564.1400000000003,
-        barsHeld: 23
+        worstProfit: null,
+        profit: 563.914344,
+        barsHeld: 22
     },
     {
         id: "976ea0ec-d8a5-485a-8536-648d99667002",
@@ -31,8 +33,9 @@ export const positions: BasePosition[] = [
         exitDate: "2020-01-25T08:00:00",
         exitPrice: 8319.68,
         volume: 1,
-        profit: -423.10000000000036,
-        barsHeld: 11
+        worstProfit: -495.581688,
+        profit: -422.93076,
+        barsHeld: 10
     },
     {
         id: "9f82c162-2390-4470-a38d-6f99c96e55c2",
@@ -42,8 +45,9 @@ export const positions: BasePosition[] = [
         exitDate: "2020-02-04T16:00:00",
         exitPrice: 9208.56,
         volume: 1,
-        profit: 597.3500000000004,
-        barsHeld: 27
+        worstProfit: -46.191516,
+        profit: 597.11106,
+        barsHeld: 26
     },
     {
         id: "8ce8c045-d643-4cd4-aa5d-75c5b0a70845",
@@ -53,8 +57,9 @@ export const positions: BasePosition[] = [
         exitDate: "2020-02-15T16:00:00",
         exitPrice: 9983.03,
         volume: 1,
-        profit: 482.75,
-        barsHeld: 31
+        worstProfit: null,
+        profit: 482.5569,
+        barsHeld: 30
     },
     {
         id: "c6926024-39e8-4e0b-b2ce-fac054c9a195",
@@ -64,8 +69,9 @@ export const positions: BasePosition[] = [
         exitDate: "2020-02-22T08:00:00",
         exitPrice: 9596.01,
         volume: 1,
-        profit: -578.5200000000004,
-        barsHeld: 11
+        worstProfit: -881.107416,
+        profit: -578.288592,
+        barsHeld: 10
     },
     {
         id: "1f74db44-8f6b-42fd-b317-858e34dc2923",
@@ -75,8 +81,9 @@ export const positions: BasePosition[] = [
         exitDate: "2020-02-26T16:00:00",
         exitPrice: 9004.08,
         volume: 1,
-        profit: -885.4899999999998,
-        barsHeld: 11
+        worstProfit: -908.146596,
+        profit: -885.135804,
+        barsHeld: 10
     },
     {
         id: "99fd0f95-06bb-46cc-a70c-9e842d5c668c",
@@ -86,8 +93,9 @@ export const positions: BasePosition[] = [
         exitDate: "2020-04-22T08:00:00",
         exitPrice: 6934.66,
         volume: 1,
-        profit: -307.8299999999999,
-        barsHeld: 11
+        worstProfit: -506.337384,
+        profit: -307.706868,
+        barsHeld: 10
     },
     {
         id: "a30c8811-e341-477f-a770-67b2671e66f4",
@@ -97,8 +105,9 @@ export const positions: BasePosition[] = [
         exitDate: "2020-05-10T08:00:00",
         exitPrice: 8805.67,
         volume: 1,
-        profit: 1699.9700000000003,
-        barsHeld: 54
+        worstProfit: -85.66572,
+        profit: 1699.290012,
+        barsHeld: 53
     },
     {
         id: "dc6c67e0-1667-4b76-9871-4c7301d53430",
@@ -108,8 +117,9 @@ export const positions: BasePosition[] = [
         exitDate: "2020-05-20T16:00:00",
         exitPrice: 9410.02,
         volume: 1,
-        profit: 104.11000000000058,
-        barsHeld: 21
+        worstProfit: -205.827636,
+        profit: 104.068356,
+        barsHeld: 20
     },
     {
         id: "e0abd23e-a17e-4217-8b3f-6d0cd83aed49",
@@ -119,8 +129,9 @@ export const positions: BasePosition[] = [
         exitDate: "2020-05-24T08:00:00",
         exitPrice: 9251.22,
         volume: 1,
-        profit: -256.78000000000065,
-        barsHeld: 11
+        worstProfit: -695.52168,
+        profit: -256.677288,
+        barsHeld: 10
     },
     {
         id: "d48c4695-6bb3-475a-b71b-5fc5f251c3a9",
@@ -130,8 +141,9 @@ export const positions: BasePosition[] = [
         exitDate: "2020-06-06T00:00:00",
         exitPrice: 9616.64,
         volume: 1,
-        profit: 419.3199999999997,
-        barsHeld: 28
+        worstProfit: -86.31546,
+        profit: 419.152272,
+        barsHeld: 27
     },
     {
         id: "6ed2e8a8-bf03-4de1-966a-0d186b4328ad",
@@ -141,8 +153,9 @@ export const positions: BasePosition[] = [
         exitDate: "2020-06-11T16:00:00",
         exitPrice: 9525.02,
         volume: 1,
-        profit: -123.98999999999978,
-        barsHeld: 16
+        worstProfit: -275.899596,
+        profit: -123.940404,
+        barsHeld: 15
     },
     {
         id: "86c9dca6-e689-4e82-a5cd-0414b6fb82d8",
@@ -152,8 +165,9 @@ export const positions: BasePosition[] = [
         exitDate: "2020-08-05T00:00:00",
         exitPrice: 11200.06,
         volume: 1,
-        profit: 87.04999999999927,
-        barsHeld: 19
+        worstProfit: -622.760796,
+        profit: 87.01518,
+        barsHeld: 18
     },
     {
         id: "3a7ecb93-f502-4d9a-b2f3-d0e431d434b9",
@@ -163,8 +177,9 @@ export const positions: BasePosition[] = [
         exitDate: "2020-08-11T16:00:00",
         exitPrice: 11493.15,
         volume: 1,
-        profit: 206.52999999999884,
-        barsHeld: 20
+        worstProfit: null,
+        profit: 206.447388,
+        barsHeld: 19
     },
     {
         id: "5897031f-b9ea-438f-b033-d27c7454fb21",
@@ -174,8 +189,9 @@ export const positions: BasePosition[] = [
         exitDate: "2020-08-19T16:00:00",
         exitPrice: 11735.02,
         volume: 1,
-        profit: -54.97999999999956,
-        barsHeld: 18
+        worstProfit: -169.932,
+        profit: -54.958008,
+        barsHeld: 17
     },
     {
         id: "3f7c07d5-97e5-4adf-8ed0-e4621992b485",
@@ -185,8 +201,9 @@ export const positions: BasePosition[] = [
         exitDate: "2020-08-24T00:00:00",
         exitPrice: 11654,
         volume: 1,
-        profit: -207,
-        barsHeld: 11
+        worstProfit: -475.749624,
+        profit: -206.9172,
+        barsHeld: 10
     },
     {
         id: "6487b486-791b-48b8-89ac-8aeedb57d2be",
@@ -196,8 +213,9 @@ export const positions: BasePosition[] = [
         exitDate: "2020-09-02T16:00:00",
         exitPrice: 11340.84,
         volume: 1,
-        profit: -218.14999999999964,
-        barsHeld: 14
+        worstProfit: -402.828804,
+        profit: -218.06274,
+        barsHeld: 13
     },
     {
         id: "b4d4992c-ce53-40f4-8b80-3d8306191e76",
@@ -207,8 +225,9 @@ export const positions: BasePosition[] = [
         exitDate: "2020-10-17T00:00:00",
         exitPrice: 11319.51,
         volume: 1,
-        profit: -232.15999999999985,
-        barsHeld: 14
+        worstProfit: -376.519332,
+        profit: -232.067136,
+        barsHeld: 13
     },
     {
         id: "77fae3f1-ac6e-434e-8a18-54fc0ad25e87",
@@ -218,8 +237,9 @@ export const positions: BasePosition[] = [
         exitDate: "2020-11-03T08:00:00",
         exitPrice: 13436.34,
         volume: 1,
-        profit: 1983.8899999999994,
-        barsHeld: 49
+        worstProfit: -48.420624,
+        profit: 1983.096444,
+        barsHeld: 48
     },
     {
         id: "25c3ed8f-5166-4fa1-8938-197a8f887d81",
@@ -229,8 +249,9 @@ export const positions: BasePosition[] = [
         exitDate: "2020-11-26T08:00:00",
         exitPrice: 17646.2,
         volume: 1,
-        profit: 3944.870000000001,
-        barsHeld: 69
+        worstProfit: -189.254268,
+        profit: 3943.292052,
+        barsHeld: 68
     },
     {
         id: "3ea6b8ba-ffc2-43c4-9b70-41eac8987ed7",
@@ -240,8 +261,9 @@ export const positions: BasePosition[] = [
         exitDate: "2020-12-08T08:00:00",
         exitPrice: 19151.51,
         volume: 1,
-        profit: 1038.0699999999997,
-        barsHeld: 27
+        worstProfit: -63.414624,
+        profit: 1037.654772,
+        barsHeld: 26
     },
     {
         id: "7ceeaa63-a4f7-47c0-b7a2-17c5b5fc827c",
@@ -251,8 +273,9 @@ export const positions: BasePosition[] = [
         exitDate: "2021-01-11T08:00:00",
         exitPrice: 34399.95,
         volume: 1,
-        profit: 15599.949999999997,
-        barsHeld: 89
+        worstProfit: null,
+        profit: 15593.71002,
+        barsHeld: 88
     },
     {
         id: "be8a2106-4e22-4ab9-9d11-54b2cab03846",
@@ -262,8 +285,9 @@ export const positions: BasePosition[] = [
         exitDate: "2021-01-17T08:00:00",
         exitPrice: 34787.76,
         volume: 1,
-        profit: -2628.5799999999945,
-        barsHeld: 11
+        worstProfit: -2937.164664,
+        profit: -2627.528568,
+        barsHeld: 10
     },
     {
         id: "67bf7643-1700-45ae-8869-6a3a46854e7b",
@@ -273,8 +297,9 @@ export const positions: BasePosition[] = [
         exitDate: "2021-01-22T00:00:00",
         exitPrice: 30875.77,
         volume: 1,
-        profit: -5572.640000000003,
-        barsHeld: 11
+        worstProfit: -6375.958596,
+        profit: -5570.410944,
+        barsHeld: 10
     },
     {
         id: "cdda0417-fbe2-42cf-96f2-e9aacb573203",
@@ -284,8 +309,9 @@ export const positions: BasePosition[] = [
         exitDate: "2021-02-23T08:00:00",
         exitPrice: 49680,
         volume: 1,
-        profit: 15170.989999999998,
-        barsHeld: 87
+        worstProfit: -5266.902396,
+        profit: 15164.921604,
+        barsHeld: 86
     },
     {
         id: "3972c70b-78e1-4e6a-8a14-b75a23927e5e",
@@ -295,8 +321,9 @@ export const positions: BasePosition[] = [
         exitDate: "2021-03-05T08:00:59.442",
         exitPrice: 47394.41,
         volume: 1,
-        profit: -2200.5799999999945,
-        barsHeld: 11
+        worstProfit: -3273.680004,
+        profit: -2199.699768,
+        barsHeld: 10
     },
     {
         id: "a7d26199-6513-4132-85fd-d7b2818c2006",
@@ -306,8 +333,9 @@ export const positions: BasePosition[] = [
         exitDate: "2021-03-16T00:00:58.425",
         exitPrice: 55646.61,
         volume: 1,
-        profit: 7758.5,
-        barsHeld: 32
+        worstProfit: -797.790756,
+        profit: 7755.3966,
+        barsHeld: 31
     },
     {
         id: "5ac23804-6776-4067-b635-ee501e980f70",
@@ -317,7 +345,8 @@ export const positions: BasePosition[] = [
         exitDate: "2021-03-21T08:00:48.197",
         exitPrice: 57011.46,
         volume: 1,
-        profit: 58.229999999995925,
-        barsHeld: 14
+        worstProfit: -2797.18068,
+        profit: 58.206708,
+        barsHeld: 13
     }
 ];

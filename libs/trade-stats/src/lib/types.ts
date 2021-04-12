@@ -77,28 +77,107 @@ export interface TradeStats {
     };
 }
 
-export type StatsCalcType =
+export type TradeStatsType =
     | "robot"
-    | "robotsAggr"
-    | "userSignal"
-    | "userSignalsAggr"
-    | "userRobot"
-    | "userRobotsAggr"
-    | "userExAcс"
     | "portfolio"
-    | "portfoliosAgrr"
-    | "userAggr";
+    | "userSignal"
+    | "userRobot"
+    | "userPortfolio"
+    | "userSignalsAggr"
+    | "userRobotsAggr"
+    | "allRobotsAggr"
+    | "allUserRobotsAggr"
+    | "allPortfoliosAggr"
+    | "allUserPortfoliosAggr";
 
-export interface StatsMeta {
-    type: StatsCalcType;
-    userId?: string;
-    userInitialBalance?: number;
-    robotId?: string;
-    portfolioId?: string;
-    userSignalId?: string;
-    userRobotId?: string;
-    userPosrtfolioId?: string;
+interface BaseTradeStatsJob {
+    type: TradeStatsType;
+    recalc: boolean;
+}
+
+export interface TradeStatsRobot extends BaseTradeStatsJob {
+    type: "robot";
+    robotId: string;
+}
+
+export interface TradeStatsPortfolio extends BaseTradeStatsJob {
+    type: "portfolio";
+    portfolioId: string;
+}
+
+export interface TradeStatsUserSignal extends BaseTradeStatsJob {
+    type: "userSignal";
+    userSignalId: string;
+}
+
+export interface TradeStatsUserRobot extends BaseTradeStatsJob {
+    type: "userRobot";
+    userRobotId: string;
+}
+
+export interface TradeStatsUserPortfolio extends BaseTradeStatsJob {
+    type: "userPortfolio";
+    userPortfolioId: string;
+}
+
+export interface TradeStatsUserSignalsAggr extends BaseTradeStatsJob {
+    type: "userSignalsAggr";
+    userId: string;
     exchange?: string;
     asset?: string;
-    currency?: string;
+}
+
+export interface TradeStatsUserRobotsAggr extends BaseTradeStatsJob {
+    type: "userRobotsAggr";
+    userId: string;
+    exchange?: string;
+    asset?: string;
+}
+
+export interface TradeStatsAllRobotsAggr extends BaseTradeStatsJob {
+    type: "allRobotsAggr";
+    exchange?: string;
+    asset?: string;
+}
+
+export interface TradeStatsAllUserRobotsAggr extends BaseTradeStatsJob {
+    type: "allUserRobotsAggr";
+    exchange?: string;
+    asset?: string;
+}
+
+export interface TradeStatsAllPortfoliosAggr extends BaseTradeStatsJob {
+    type: "allPortfoliosAggr";
+    exchange?: string;
+}
+
+export interface TradeStatsAllUserPortfoliosAggr extends BaseTradeStatsJob {
+    type: "allUserPortfoliosAggr";
+    exchange?: string;
+}
+
+export type TradeStatsJob =
+    | TradeStatsRobot
+    | TradeStatsPortfolio
+    | TradeStatsUserSignal
+    | TradeStatsUserRobot
+    | TradeStatsUserPortfolio
+    | TradeStatsUserSignalsAggr
+    | TradeStatsUserRobotsAggr
+    | TradeStatsAllRobotsAggr
+    | TradeStatsAllUserRobotsAggr
+    | TradeStatsAllPortfoliosAggr
+    | TradeStatsAllUserPortfoliosAggr;
+
+export type TradeStatsAggrJob =
+    | TradeStatsUserSignalsAggr
+    | TradeStatsUserRobotsAggr
+    | TradeStatsAllRobotsAggr
+    | TradeStatsAllUserRobotsAggr
+    | TradeStatsAllPortfoliosAggr
+    | TradeStatsAllUserPortfoliosAggr;
+
+export interface StatsMeta {
+    job: TradeStatsJob;
+    userInitialBalance?: number;
 }

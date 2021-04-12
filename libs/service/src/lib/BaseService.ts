@@ -386,4 +386,8 @@ export class BaseService {
     get createWorker() {
         return this.#createWorker;
     }
+
+    get workerConcurrency() {
+        return this.#workerConcurrency;
+    }
 }

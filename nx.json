@@ -76,7 +76,10 @@
         "analytics": { "tags": [] },
         "webhooks": { "tags": [] },
         "user-sub-events": { "tags": [] },
-        "trade-stats": { "tags": [] }
+        "trade-stats": { "tags": [] },
+        "trade-stats-runner": { "tags": [] },
+        "trade-stats-worker": { "tags": [] },
+        "trade-stats-events": { "tags": [] }
     },
     "affected": { "defaultBase": "master" }
 }

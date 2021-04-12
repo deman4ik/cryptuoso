@@ -437,7 +437,8 @@ export default class RobotWorkerService extends BaseService {
             });
 
             if (robot.hasClosedPositions) {
-                await this.events.emit({
+                // <StatsCalcRunnerRobot>
+                await this.events.emit<any>({
                     type: StatsCalcRunnerEvents.ROBOT,
                     data: {
                         robotId

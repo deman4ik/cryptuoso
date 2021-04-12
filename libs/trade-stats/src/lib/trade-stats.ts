@@ -2,7 +2,7 @@ import dayjs from "@cryptuoso/dayjs";
 import { average, chunkArray, divide, round, sortAsc, sum } from "@cryptuoso/helpers";
 import { BasePosition } from "@cryptuoso/market";
 import { createDatesPeriod } from "./helpers";
-import { FullStats, PerformanceVals, Stats, StatsMeta, TradeStats } from "./types";
+import { FullStats, PerformanceVals, Stats, TradeStatsType, StatsMeta, TradeStats } from "./types";
 import logger from "@cryptuoso/logger";
 
 export class TradeStatsCalc implements TradeStats {
@@ -35,8 +35,8 @@ export class TradeStatsCalc implements TradeStats {
         };
     }
 
-    private hasBalance(type?: StatsMeta["type"]) {
-        return ["robot", "userSignal", "userRobot", "userExAcc", "portfolio"].includes(type || this.meta.type);
+    private hasBalance(type?: TradeStatsType) {
+        return ["robot", "userSignal", "userRobot", "portfolio"].includes(type || this.meta.job.type);
     }
 
     private roundStats(stats: Stats | FullStats) {
@@ -105,7 +105,7 @@ export class TradeStatsCalc implements TradeStats {
             avgPercentGrossLossMonths: fullStats?.avgPercentGrossLossMonths || null
         };
         if (!stats.firstPosition) stats.firstPosition = positions[0];
-        if (this.hasBalance(meta.type) && stats.initialBalance === null)
+        if (this.hasBalance(meta.job.type) && stats.initialBalance === null)
             stats.initialBalance =
                 meta.userInitialBalance || stats.firstPosition.volume * stats.firstPosition.entryPrice;
 
@@ -167,7 +167,7 @@ export class TradeStatsCalc implements TradeStats {
             });
         }
 
-        for (const { profit, exitDate } of positions) {
+        for (const { profit, worstProfit, exitDate } of positions) {
             if (profit > 0) {
                 stats.currentWinSequence += 1;
                 stats.currentLossSequence = 0;
@@ -178,13 +178,22 @@ export class TradeStatsCalc implements TradeStats {
                 if (stats.currentLossSequence > stats.maxConsecLosses)
                     stats.maxConsecLosses = stats.currentLossSequence;
             }
-
+            const prevNetProfit = stats.netProfit;
+            const prevLocalMax = stats.localMax;
             stats.netProfit += profit;
             if (stats.netProfit > stats.localMax) stats.localMax = stats.netProfit;
             const drawdown = stats.netProfit - stats.localMax;
             if (stats.maxDrawdown > drawdown) {
                 stats.maxDrawdown = drawdown;
                 stats.maxDrawdownDate = exitDate;
+            }
+
+            if (worstProfit) {
+                const worstNetProfit = prevNetProfit + worstProfit;
+                const worstDrawdown = worstNetProfit - prevLocalMax;
+                if (stats.maxDrawdown > worstDrawdown) {
+                    stats.maxDrawdown = worstDrawdown;
+                }
             }
 
             stats.equity.push({
@@ -319,16 +328,14 @@ export class TradeStatsCalc implements TradeStats {
                     );
                     if (currentPositions.length) {
                         if (!periodStats.year[year.key].stats.firstPosition)
-                            periodStats.year[year.key].stats.firstPosition = positions.filter(({ exitDate }) =>
-                                dayjs.utc(exitDate).isBetween(year.dateFrom, year.dateTo)
-                            )[0];
-                        if (this.hasBalance(meta.type) && periodStats.year[year.key].stats.initialBalance === null)
+                            periodStats.year[year.key].stats.firstPosition = currentPositions[0];
+                        if (this.hasBalance(meta.job.type) && periodStats.year[year.key].stats.initialBalance === null)
                             periodStats.year[year.key].stats.initialBalance =
                                 prevPeriodStats?.stats?.currentBalance ||
                                 meta.userInitialBalance ||
                                 periodStats.year[year.key].stats.firstPosition.volume *
                                     periodStats.year[year.key].stats.firstPosition.entryPrice;
-                    } else if (this.hasBalance(meta.type)) {
+                    } else if (this.hasBalance(meta.job.type)) {
                         periodStats.year[year.key].stats.initialBalance =
                             prevPeriodStats?.stats?.currentBalance || null;
                         periodStats.quarter[year.year].stats.currentBalance =
@@ -367,11 +374,9 @@ export class TradeStatsCalc implements TradeStats {
                     );
                     if (currentPositions.length) {
                         if (!periodStats.quarter[quarter.key].stats.firstPosition)
-                            periodStats.quarter[quarter.key].stats.firstPosition = positions.filter(({ exitDate }) =>
-                                dayjs.utc(exitDate).isBetween(quarter.dateFrom, quarter.dateTo)
-                            )[0];
+                            periodStats.quarter[quarter.key].stats.firstPosition = currentPositions[0];
                         if (
-                            this.hasBalance(meta.type) &&
+                            this.hasBalance(meta.job.type) &&
                             periodStats.quarter[quarter.key].stats.initialBalance === null
                         )
                             periodStats.quarter[quarter.key].stats.initialBalance =
@@ -379,7 +384,7 @@ export class TradeStatsCalc implements TradeStats {
                                 meta.userInitialBalance ||
                                 periodStats.quarter[quarter.key].stats.firstPosition.volume *
                                     periodStats.quarter[quarter.key].stats.firstPosition.entryPrice;
-                    } else if (this.hasBalance(meta.type)) {
+                    } else if (this.hasBalance(meta.job.type)) {
                         periodStats.quarter[quarter.key].stats.initialBalance =
                             prevPeriodStats?.stats?.currentBalance || null;
                         periodStats.quarter[quarter.key].stats.currentBalance =
@@ -419,16 +424,17 @@ export class TradeStatsCalc implements TradeStats {
                     );
                     if (currentPositions.length) {
                         if (!periodStats.month[month.key].stats.firstPosition)
-                            periodStats.month[month.key].stats.firstPosition = positions.filter(({ exitDate }) =>
-                                dayjs.utc(exitDate).isBetween(month.dateFrom, month.dateTo)
-                            )[0];
-                        if (this.hasBalance(meta.type) && periodStats.month[month.key].stats.initialBalance === null)
+                            periodStats.month[month.key].stats.firstPosition = currentPositions[0];
+                        if (
+                            this.hasBalance(meta.job.type) &&
+                            periodStats.month[month.key].stats.initialBalance === null
+                        )
                             periodStats.month[month.key].stats.initialBalance =
                                 prevPeriodStats?.stats?.currentBalance ||
                                 meta.userInitialBalance ||
                                 periodStats.month[month.key].stats.firstPosition.volume *
                                     periodStats.month[month.key].stats.firstPosition.entryPrice;
-                    } else if (this.hasBalance(meta.type)) {
+                    } else if (this.hasBalance(meta.job.type)) {
                         periodStats.month[month.key].stats.initialBalance =
                             prevPeriodStats?.stats?.currentBalance || null;
                         periodStats.month[month.key].stats.currentBalance =

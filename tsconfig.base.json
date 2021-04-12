@@ -53,7 +53,8 @@
             "@cryptuoso/billing": ["libs/billing/src/index.ts"],
             "@cryptuoso/analytics": ["libs/analytics/src/index.ts"],
             "@cryptuoso/user-sub-events": ["libs/user-sub-events/src/index.ts"],
-            "@cryptuoso/trade-stats": ["libs/trade-stats/src/index.ts"]
+            "@cryptuoso/trade-stats": ["libs/trade-stats/src/index.ts"],
+            "@cryptuoso/trade-stats-events": ["libs/trade-stats-events/src/index.ts"]
         }
     },
     "exclude": ["node_modules", "tmp"]
