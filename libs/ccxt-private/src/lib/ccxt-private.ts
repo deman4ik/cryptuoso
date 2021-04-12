@@ -167,7 +167,12 @@ export class PrivateConnector {
                 try {
                     return await connector.fetchTicker(this.getSymbol(asset, currency));
                 } catch (e) {
-                    if (e instanceof ccxt.NetworkError || e.message.includes("Gateway")) throw e;
+                    if (
+                        e instanceof ccxt.NetworkError ||
+                        e.message.includes("Gateway") ||
+                        e.message.includes("getaddrinfo")
+                    )
+                        throw e;
                     bail(e);
                 }
             };
@@ -236,7 +241,8 @@ export class PrivateConnector {
                 } catch (e) {
                     if (
                         (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
-                        e.message.includes("Gateway")
+                        e.message.includes("Gateway") ||
+                        e.message.includes("getaddrinfo")
                     ) {
                         this.initConnector();
                         throw e;
@@ -265,7 +271,8 @@ export class PrivateConnector {
                 } catch (e) {
                     if (
                         (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
-                        e.message.includes("Gateway")
+                        e.message.includes("Gateway") ||
+                        e.message.includes("getaddrinfo")
                     ) {
                         this.initConnector();
                         throw e;
@@ -315,7 +322,11 @@ export class PrivateConnector {
                 try {
                     return this.connector.loadAccounts();
                 } catch (e) {
-                    if (e instanceof ccxt.NetworkError || e.message.includes("Gateway")) {
+                    if (
+                        e instanceof ccxt.NetworkError ||
+                        e.message.includes("Gateway") ||
+                        e.message.includes("getaddrinfo")
+                    ) {
                         this.connector = new ccxt.huobipro(this.config);
                         throw e;
                     }
@@ -341,7 +352,11 @@ export class PrivateConnector {
             try {
                 return this.connector.loadMarkets();
             } catch (e) {
-                if (e instanceof ccxt.NetworkError || e.message.includes("Gateway")) {
+                if (
+                    e instanceof ccxt.NetworkError ||
+                    e.message.includes("Gateway") ||
+                    e.message.includes("getaddrinfo")
+                ) {
                     throw e;
                 }
                 bail(e);
@@ -410,7 +425,11 @@ export class PrivateConnector {
             try {
                 return connector.loadMarkets();
             } catch (e) {
-                if (e instanceof ccxt.NetworkError || e.message.includes("Gateway")) {
+                if (
+                    e instanceof ccxt.NetworkError ||
+                    e.message.includes("Gateway") ||
+                    e.message.includes("getaddrinfo")
+                ) {
                     await this.initConnector();
                     throw e;
                 }
@@ -433,7 +452,8 @@ export class PrivateConnector {
             } catch (e) {
                 if (
                     (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
-                    e.message.includes("Gateway")
+                    e.message.includes("Gateway") ||
+                    e.message.includes("getaddrinfo")
                 ) {
                     await this.initConnector();
                     throw e;
@@ -526,7 +546,8 @@ export class PrivateConnector {
                     if (
                         err instanceof ccxt.ExchangeError ||
                         err instanceof ccxt.NetworkError ||
-                        err.message.includes("Gateway")
+                        err.message.includes("Gateway") ||
+                        err.message.includes("getaddrinfo")
                     ) {
                         if (err instanceof ccxt.RequestTimeout) {
                             const existedOrder = await this.checkIfOrderExists(order, creationDate);
@@ -625,7 +646,8 @@ export class PrivateConnector {
                     } catch (e) {
                         if (
                             (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
-                            e.message.includes("Gateway")
+                            e.message.includes("Gateway") ||
+                            e.message.includes("getaddrinfo")
                         ) {
                             await this.initConnector();
                             throw e;
@@ -641,7 +663,8 @@ export class PrivateConnector {
                     } catch (e) {
                         if (
                             (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
-                            e.message.includes("Gateway")
+                            e.message.includes("Gateway") ||
+                            e.message.includes("getaddrinfo")
                         ) {
                             await this.initConnector();
                             throw e;
@@ -655,7 +678,8 @@ export class PrivateConnector {
                     } catch (e) {
                         if (
                             (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
-                            e.message.includes("Gateway")
+                            e.message.includes("Gateway") ||
+                            e.message.includes("getaddrinfo")
                         ) {
                             await this.initConnector();
                             throw e;
@@ -725,7 +749,8 @@ export class PrivateConnector {
                 } catch (e) {
                     if (
                         (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
-                        e.message.includes("Gateway")
+                        e.message.includes("Gateway") ||
+                        e.message.includes("getaddrinfo")
                     ) {
                         await this.initConnector();
                         throw e;
@@ -792,6 +817,7 @@ export class PrivateConnector {
             if (
                 err instanceof ccxt.NetworkError ||
                 err.message.includes("Gateway") ||
+                err.message.includes("getaddrinfo") ||
                 !order.nextJob?.retries ||
                 order.nextJob?.retries < 5
             ) {
@@ -836,7 +862,8 @@ export class PrivateConnector {
                 } catch (e) {
                     if (
                         (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
-                        e.message.includes("Gateway")
+                        e.message.includes("Gateway") ||
+                        e.message.includes("getaddrinfo")
                     ) {
                         await this.initConnector();
                         throw e;
@@ -861,7 +888,8 @@ export class PrivateConnector {
             if (
                 err instanceof ccxt.ExchangeError ||
                 err instanceof ccxt.NetworkError ||
-                err.message.includes("Gateway")
+                err.message.includes("Gateway") ||
+                err.message.includes("getaddrinfo")
             ) {
                 return {
                     order: {
