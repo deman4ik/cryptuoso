@@ -92,6 +92,10 @@
         "serve:telegram-bot": "nx serve telegram-bot --watch=false",
         "build:webhooks": "nx build webhooks --prod",
         "serve:webhooks": "nx serve webhooks --watch=false",
+        "build:portfolio-manager": "nx build portfolio-manager --prod",
+        "serve:portfolio-manager": "nx serve portfolio-manager --watch=false",
+        "build:user-portfolio-manager": "nx build user-portfolio-manager --prod",
+        "serve:user-portfolio-manager": "nx serve user-portfolio-manager --watch=false",
         "workspace-generator": "nx workspace-generator"
     },
     "private": true,

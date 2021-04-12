@@ -79,7 +79,9 @@
         "trade-stats": { "tags": [] },
         "trade-stats-runner": { "tags": [] },
         "trade-stats-worker": { "tags": [] },
-        "trade-stats-events": { "tags": [] }
+        "trade-stats-events": { "tags": [] },
+        "portfolio-manager": { "tags": [] },
+        "user-portfolio-manager": { "tags": [] }
     },
     "affected": { "defaultBase": "master" }
 }
