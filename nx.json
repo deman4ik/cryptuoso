@@ -81,7 +81,9 @@
         "trade-stats-worker": { "tags": [] },
         "trade-stats-events": { "tags": [] },
         "portfolio-manager": { "tags": [] },
-        "user-portfolio-manager": { "tags": [] }
+        "user-portfolio-manager": { "tags": [] },
+        "portfolio-state": { "tags": [] },
+        "user-portfolio-state": { "tags": [] }
     },
     "affected": { "defaultBase": "master" }
 }

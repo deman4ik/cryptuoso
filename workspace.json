@@ -2525,7 +2525,8 @@
                         "outputPath": "dist/apps/portfolio-manager",
                         "main": "apps/portfolio-manager/src/main.ts",
                         "tsConfig": "apps/portfolio-manager/tsconfig.app.json",
-                        "assets": ["apps/portfolio-manager/src/assets"]
+                        "assets": ["apps/portfolio-manager/src/assets"],
+                        "webpackConfig": "apps/portfolio-manager/webpack.config.js"
                     },
                     "configurations": {
                         "production": {
@@ -2609,6 +2610,48 @@
                     "outputs": ["coverage/apps/user-portfolio-manager"],
                     "options": {
                         "jestConfig": "apps/user-portfolio-manager/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "portfolio-state": {
+            "root": "libs/portfolio-state",
+            "sourceRoot": "libs/portfolio-state/src",
+            "projectType": "library",
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["libs/portfolio-state/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/libs/portfolio-state"],
+                    "options": {
+                        "jestConfig": "libs/portfolio-state/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "user-portfolio-state": {
+            "root": "libs/user-portfolio-state",
+            "sourceRoot": "libs/user-portfolio-state/src",
+            "projectType": "library",
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["libs/user-portfolio-state/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/libs/user-portfolio-state"],
+                    "options": {
+                        "jestConfig": "libs/user-portfolio-state/jest.config.js",
                         "passWithNoTests": true
                     }
                 }
