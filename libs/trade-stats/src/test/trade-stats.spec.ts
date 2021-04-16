@@ -35,7 +35,7 @@ describe("Test 'trade-stats'", () => {
             );
             const prevStats = prevTradeStatsCalculator.calculate();
 
-            console.log(prevStats.fullStats);
+            //  console.log(prevStats.fullStats);
 
             const tradeStatsCalculator = new TradeStatsCalc(
                 positions.filter(
@@ -48,7 +48,7 @@ describe("Test 'trade-stats'", () => {
             );
             const stats = tradeStatsCalculator.calculate();
 
-            console.log(stats.fullStats);
+            //  console.log(stats.fullStats);
             // expect(stats.fullStats).toEqual(result.fullStats);
             // console.log(util.inspect(stats.periodStats.month, false, null, true));
             //  const data = JSON.stringify(stats);

@@ -13,12 +13,19 @@ export interface Stats {
     tradesLosing: number;
     winRate: number;
     lossRate: number;
+    sumBarsHeld: number | null;
     avgBarsHeld: number | null;
+    sumBarsHeldWinning: number | null;
     avgBarsHeldWinning: number | null;
+    sumBarsHeldLosing: number | null;
     avgBarsHeldLosing: number | null;
     netProfit: number;
     avgNetProfit: number | null;
     percentNetProfit: number | null;
+    sumPercentNetProfit: number | null;
+    avgPercentNetProfit: number | null;
+    sumPercentNetProfitSqDiff: number | null;
+    stdDevPercentNetProfit: number | null;
     localMax: number;
     grossProfit: number;
     grossLoss: number;
@@ -35,6 +42,7 @@ export interface Stats {
     profitFactor: number | null;
     recoveryFactor: number | null;
     payoffRatio: number | null;
+    sharpeRatio: number | null;
     rating: number | null;
     lastUpdatedAt: string | null;
     firstPosition: BasePosition | null;
