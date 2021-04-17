@@ -17,8 +17,14 @@ export class TradeStatsCalc implements TradeStats {
         this.positions = positions.sort((a, b) =>
             sortAsc(dayjs.utc(a.exitDate).valueOf(), dayjs.utc(b.exitDate).valueOf())
         );
-        this.meta = meta;
-        this.fullStats = this.initFullStats(this.positions, meta, prevStats?.fullStats);
+        this.meta = {
+            ...meta,
+            job: {
+                ...meta.job,
+                round: meta.job.round === true || meta.job.round === false ? meta.job.round : true
+            }
+        };
+        this.fullStats = this.initFullStats(this.positions, prevStats?.fullStats);
         this.periodStats = this.initPeriodStats(prevStats?.periodStats);
 
         this.prevFullStats = { ...this.fullStats };
@@ -26,8 +32,8 @@ export class TradeStatsCalc implements TradeStats {
     }
 
     public calculate(): TradeStats {
-        this.periodStats = this.calcPeriodStats(this.positions, this.meta, this.prevPeriodStats);
-        this.fullStats = this.calcFullStats(this.positions, this.meta, this.prevFullStats, this.periodStats);
+        this.periodStats = this.calcPeriodStats(this.positions, this.prevPeriodStats);
+        this.fullStats = this.calcFullStats(this.positions, this.prevFullStats, this.periodStats);
 
         return {
             fullStats: this.fullStats,
@@ -40,6 +46,7 @@ export class TradeStatsCalc implements TradeStats {
     }
 
     private roundStats(stats: Stats | FullStats) {
+        if (!this.meta.job.round) return stats;
         const roundedStats = { ...stats };
 
         Object.entries(stats).forEach(([key, value]) => {
@@ -57,7 +64,7 @@ export class TradeStatsCalc implements TradeStats {
             tradesLosing: prevStats?.tradesLosing || 0,
             winRate: prevStats?.winRate || 0,
             lossRate: prevStats?.lossRate || 0,
-            sumBarsHeld: prevStats?.avgBarsHeld || null,
+            sumBarsHeld: prevStats?.sumBarsHeld || null,
             avgBarsHeld: prevStats?.avgBarsHeld || null,
             sumBarsHeldWinning: prevStats?.sumBarsHeldWinning || null,
             avgBarsHeldWinning: prevStats?.avgBarsHeldWinning || null,
@@ -65,6 +72,7 @@ export class TradeStatsCalc implements TradeStats {
             avgBarsHeldLosing: prevStats?.avgBarsHeldLosing || null,
             netProfit: prevStats?.netProfit || 0,
             avgNetProfit: prevStats?.avgNetProfit || null,
+            positionsProfitPercents: prevStats?.positionsProfitPercents || [],
             percentNetProfit: prevStats?.percentNetProfit || null,
             sumPercentNetProfit: prevStats?.sumPercentNetProfit || null,
             avgPercentNetProfit: prevStats?.avgPercentNetProfit || null,
@@ -96,7 +104,7 @@ export class TradeStatsCalc implements TradeStats {
         };
     }
 
-    private initFullStats(positions: BasePosition[], meta: StatsMeta, fullStats: FullStats): FullStats {
+    private initFullStats(positions: BasePosition[], fullStats: FullStats): FullStats {
         const stats = {
             ...this.initStats(fullStats),
             avgTradesCountYears: fullStats?.avgTradesCountYears || null,
@@ -115,7 +123,7 @@ export class TradeStatsCalc implements TradeStats {
         if (!stats.firstPosition) stats.firstPosition = positions[0];
         if (this.hasBalance && stats.initialBalance === null)
             stats.initialBalance =
-                meta.userInitialBalance || stats.firstPosition.volume * stats.firstPosition.entryPrice;
+                this.meta.userInitialBalance || stats.firstPosition.volume * stats.firstPosition.entryPrice;
 
         return stats;
     }
@@ -156,7 +164,7 @@ export class TradeStatsCalc implements TradeStats {
         }));
     }
 
-    private calcStats(allPositions: BasePosition[], meta: StatsMeta, prevStats: Stats): Stats {
+    private calcStats(allPositions: BasePosition[], prevStats: Stats): Stats {
         const stats = { ...prevStats };
 
         const positions = allPositions.filter(({ exitDate }) =>
@@ -174,7 +182,6 @@ export class TradeStatsCalc implements TradeStats {
                 y: 0
             });
         }
-        const profitPercents = [];
         for (const { profit, worstProfit, exitDate } of positions) {
             if (profit > 0) {
                 stats.currentWinSequence += 1;
@@ -190,10 +197,10 @@ export class TradeStatsCalc implements TradeStats {
             const prevLocalMax = stats.localMax;
             if (this.hasBalance) {
                 const percentProfit = (profit * 100) / stats.initialBalance;
-                profitPercents.push(percentProfit);
+                stats.positionsProfitPercents.push(percentProfit);
                 stats.sumPercentNetProfit = sum(stats.sumPercentNetProfit, percentProfit);
             }
-            stats.netProfit += profit;
+            stats.netProfit = sum(stats.netProfit, profit);
 
             if (stats.netProfit > stats.localMax) stats.localMax = stats.netProfit;
             const drawdown = stats.netProfit - stats.localMax;
@@ -223,9 +230,9 @@ export class TradeStatsCalc implements TradeStats {
         stats.lossRate = (stats.tradesLosing / stats.tradesCount) * 100;
         stats.sumBarsHeld = sum(stats.sumBarsHeld, ...positions.map(({ barsHeld }) => barsHeld));
         stats.avgBarsHeld = stats.sumBarsHeld / stats.tradesCount;
-        stats.sumBarsHeldWinning = sum(stats.avgBarsHeldWinning, ...winningPositions.map(({ barsHeld }) => barsHeld));
+        stats.sumBarsHeldWinning = sum(stats.sumBarsHeldWinning, ...winningPositions.map(({ barsHeld }) => barsHeld));
         stats.avgBarsHeldWinning = stats.sumBarsHeldWinning / stats.tradesCount;
-        stats.sumBarsHeldLosing = sum(stats.avgBarsHeldLosing, ...lossingPositions.map(({ barsHeld }) => barsHeld));
+        stats.sumBarsHeldLosing = sum(stats.sumBarsHeldLosing, ...lossingPositions.map(({ barsHeld }) => barsHeld));
         stats.avgBarsHeldLosing = stats.sumBarsHeldLosing / stats.tradesCount;
 
         stats.avgNetProfit = stats.netProfit / stats.tradesCount;
@@ -245,7 +252,8 @@ export class TradeStatsCalc implements TradeStats {
             stats.percentGrossProfit = (stats.grossProfit / stats.initialBalance) * 100;
             stats.percentGrossLoss = (stats.grossLoss / stats.initialBalance) * 100;
 
-            for (const percent of profitPercents) {
+            stats.sumPercentNetProfitSqDiff = null;
+            for (const percent of stats.positionsProfitPercents) {
                 const percentProfitSqDiff = Math.pow(percent - stats.avgPercentNetProfit, 2);
                 stats.sumPercentNetProfitSqDiff = sum(stats.sumPercentNetProfitSqDiff, percentProfitSqDiff);
             }
@@ -263,11 +271,11 @@ export class TradeStatsCalc implements TradeStats {
 
     private calcFullStats(
         positions: BasePosition[],
-        meta: StatsMeta,
+
         prevStats: FullStats,
         periodStats: TradeStats["periodStats"]
     ): FullStats {
-        const stats = { ...prevStats, ...this.calcStats(positions, meta, prevStats) };
+        const stats = { ...prevStats, ...this.calcStats(positions, prevStats) };
         const years = Object.values(periodStats.year);
         const quarters = Object.values(periodStats.quarter);
         const months = Object.values(periodStats.month);
@@ -298,7 +306,7 @@ export class TradeStatsCalc implements TradeStats {
 
     private calcPeriodStats(
         positions: BasePosition[],
-        meta: StatsMeta,
+
         prevPeriodStats: TradeStats["periodStats"]
     ): TradeStats["periodStats"] {
         const periodStats = { ...prevPeriodStats };
@@ -330,7 +338,7 @@ export class TradeStatsCalc implements TradeStats {
                         if (this.hasBalance && periodStats.year[year.key].stats.initialBalance === null)
                             periodStats.year[year.key].stats.initialBalance =
                                 prevPeriodStats?.stats?.currentBalance ||
-                                meta.userInitialBalance ||
+                                this.meta.userInitialBalance ||
                                 periodStats.year[year.key].stats.firstPosition.volume *
                                     periodStats.year[year.key].stats.firstPosition.entryPrice;
                     } else if (this.hasBalance) {
@@ -343,7 +351,7 @@ export class TradeStatsCalc implements TradeStats {
 
                 periodStats.year[year.key].stats = this.calcStats(
                     currentPositions,
-                    meta,
+
                     periodStats.year[year.key].stats
                 );
                 periodStats.year[year.key].stats = this.roundStats(periodStats.year[year.key].stats);
@@ -376,7 +384,7 @@ export class TradeStatsCalc implements TradeStats {
                         if (this.hasBalance && periodStats.quarter[quarter.key].stats.initialBalance === null)
                             periodStats.quarter[quarter.key].stats.initialBalance =
                                 prevPeriodStats?.stats?.currentBalance ||
-                                meta.userInitialBalance ||
+                                this.meta.userInitialBalance ||
                                 periodStats.quarter[quarter.key].stats.firstPosition.volume *
                                     periodStats.quarter[quarter.key].stats.firstPosition.entryPrice;
                     } else if (this.hasBalance) {
@@ -389,7 +397,7 @@ export class TradeStatsCalc implements TradeStats {
 
                 periodStats.quarter[quarter.key].stats = this.calcStats(
                     currentPositions,
-                    meta,
+
                     periodStats.quarter[quarter.key].stats
                 );
                 periodStats.quarter[quarter.key].stats = this.roundStats(periodStats.quarter[quarter.key].stats);
@@ -423,7 +431,7 @@ export class TradeStatsCalc implements TradeStats {
                         if (this.hasBalance && periodStats.month[month.key].stats.initialBalance === null)
                             periodStats.month[month.key].stats.initialBalance =
                                 prevPeriodStats?.stats?.currentBalance ||
-                                meta.userInitialBalance ||
+                                this.meta.userInitialBalance ||
                                 periodStats.month[month.key].stats.firstPosition.volume *
                                     periodStats.month[month.key].stats.firstPosition.entryPrice;
                     } else if (this.hasBalance) {
@@ -436,7 +444,7 @@ export class TradeStatsCalc implements TradeStats {
 
                 periodStats.month[month.key].stats = this.calcStats(
                     currentPositions,
-                    meta,
+
                     periodStats.month[month.key].stats
                 );
                 periodStats.month[month.key].stats = this.roundStats(periodStats.month[month.key].stats);

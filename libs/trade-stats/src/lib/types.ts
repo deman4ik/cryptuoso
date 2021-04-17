@@ -21,6 +21,7 @@ export interface Stats {
     avgBarsHeldLosing: number | null;
     netProfit: number;
     avgNetProfit: number | null;
+    positionsProfitPercents: number[];
     percentNetProfit: number | null;
     sumPercentNetProfit: number | null;
     avgPercentNetProfit: number | null;
@@ -101,6 +102,7 @@ export type TradeStatsType =
 interface BaseTradeStatsJob {
     type: TradeStatsType;
     recalc: boolean;
+    round?: boolean;
 }
 
 export interface TradeStatsRobot extends BaseTradeStatsJob {

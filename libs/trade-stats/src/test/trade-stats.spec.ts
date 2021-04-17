@@ -9,7 +9,8 @@ describe("Test 'trade-stats'", () => {
     describe("Test calc with no previous statistics", () => {
         it("Should calculate statistics", async () => {
             const tradeStatsCalculator = new TradeStatsCalc(positions, {
-                job: { robotId: "test", type: "robot", recalc: true }
+                job: { robotId: "test", type: "robot", recalc: true },
+                userInitialBalance: 1000
             });
             const stats = tradeStatsCalculator.calculate();
 
@@ -30,7 +31,8 @@ describe("Test 'trade-stats'", () => {
                     ({ exitDate }) => dayjs.utc(exitDate).valueOf() < dayjs.utc("2021-03-16T00:00:58.425").valueOf()
                 ),
                 {
-                    job: { robotId: "test", type: "robot", recalc: false }
+                    job: { robotId: "test", type: "robot", recalc: false, round: false },
+                    userInitialBalance: 1000
                 }
             );
             const prevStats = prevTradeStatsCalculator.calculate();
@@ -42,12 +44,20 @@ describe("Test 'trade-stats'", () => {
                     ({ exitDate }) => dayjs.utc(exitDate).valueOf() >= dayjs.utc("2021-03-16T00:00:58.425").valueOf()
                 ),
                 {
-                    job: { robotId: "test", type: "robot", recalc: false }
+                    job: { robotId: "test", type: "robot", recalc: false, round: false },
+                    userInitialBalance: 1000
                 },
                 prevStats
             );
             const stats = tradeStatsCalculator.calculate();
 
+            const tradeStatsCalculatorAll = new TradeStatsCalc(positions, {
+                job: { robotId: "test", type: "robot", recalc: true, round: false },
+                userInitialBalance: 1000
+            });
+            const statsAll = tradeStatsCalculatorAll.calculate();
+
+            expect(stats).toEqual(statsAll);
             //  console.log(stats.fullStats);
             // expect(stats.fullStats).toEqual(result.fullStats);
             // console.log(util.inspect(stats.periodStats.month, false, null, true));
