@@ -11,6 +11,13 @@ module.exports = {
         "<rootDir>/libs/analytics",
         "<rootDir>/apps/webhooks",
         "<rootDir>/libs/user-sub-events",
-        "<rootDir>/libs/trade-stats"
+        "<rootDir>/libs/trade-stats",
+        "<rootDir>/apps/trade-stats-runner",
+        "<rootDir>/apps/trade-stats-worker",
+        "<rootDir>/libs/trade-stats-events",
+        "<rootDir>/apps/portfolio-manager",
+        "<rootDir>/apps/user-portfolio-manager",
+        "<rootDir>/libs/portfolio-state",
+        "<rootDir>/libs/user-portfolio-state"
     ]
 };

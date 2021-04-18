@@ -301,4 +301,22 @@ export class HTTPService extends BaseService {
     get createWebhooks() {
         return this._createWebhooks;
     }
+
+    async HTTPHandler<T>(
+        handler: {
+            (params: T): Promise<any>;
+        },
+        req: {
+            body: {
+                input: T;
+            };
+        },
+        res: any
+    ) {
+        const result = await handler(req.body.input);
+
+        res.send(result || { result: "OK" });
+
+        res.end();
+    }
 }

@@ -2387,6 +2387,275 @@
                     }
                 }
             }
+        },
+        "trade-stats-runner": {
+            "root": "apps/trade-stats-runner",
+            "sourceRoot": "apps/trade-stats-runner/src",
+            "projectType": "application",
+            "prefix": "trade-stats-runner",
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "outputs": ["{options.outputPath}"],
+                    "options": {
+                        "outputPath": "dist/apps/trade-stats-runner",
+                        "main": "apps/trade-stats-runner/src/main.ts",
+                        "tsConfig": "apps/trade-stats-runner/tsconfig.app.json",
+                        "assets": ["apps/trade-stats-runner/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/trade-stats-runner/src/environments/environment.ts",
+                                    "with": "apps/trade-stats-runner/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "trade-stats-runner:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["apps/trade-stats-runner/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/apps/trade-stats-runner"],
+                    "options": {
+                        "jestConfig": "apps/trade-stats-runner/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "trade-stats-worker": {
+            "root": "apps/trade-stats-worker",
+            "sourceRoot": "apps/trade-stats-worker/src",
+            "projectType": "application",
+            "prefix": "trade-stats-worker",
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "outputs": ["{options.outputPath}"],
+                    "options": {
+                        "outputPath": "dist/apps/trade-stats-worker",
+                        "main": "apps/trade-stats-worker/src/main.ts",
+                        "tsConfig": "apps/trade-stats-worker/tsconfig.app.json",
+                        "assets": ["apps/trade-stats-worker/src/assets"],
+                        "webpackConfig": "apps/trade-stats-worker/webpack.config.js"
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/trade-stats-worker/src/environments/environment.ts",
+                                    "with": "apps/trade-stats-worker/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "trade-stats-worker:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["apps/trade-stats-worker/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/apps/trade-stats-worker"],
+                    "options": {
+                        "jestConfig": "apps/trade-stats-worker/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "trade-stats-events": {
+            "root": "libs/trade-stats-events",
+            "sourceRoot": "libs/trade-stats-events/src",
+            "projectType": "library",
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["libs/trade-stats-events/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/libs/trade-stats-events"],
+                    "options": {
+                        "jestConfig": "libs/trade-stats-events/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "portfolio-manager": {
+            "root": "apps/portfolio-manager",
+            "sourceRoot": "apps/portfolio-manager/src",
+            "projectType": "application",
+            "prefix": "portfolio-manager",
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "outputs": ["{options.outputPath}"],
+                    "options": {
+                        "outputPath": "dist/apps/portfolio-manager",
+                        "main": "apps/portfolio-manager/src/main.ts",
+                        "tsConfig": "apps/portfolio-manager/tsconfig.app.json",
+                        "assets": ["apps/portfolio-manager/src/assets"],
+                        "webpackConfig": "apps/portfolio-manager/webpack.config.js"
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/portfolio-manager/src/environments/environment.ts",
+                                    "with": "apps/portfolio-manager/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "portfolio-manager:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["apps/portfolio-manager/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/apps/portfolio-manager"],
+                    "options": {
+                        "jestConfig": "apps/portfolio-manager/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "user-portfolio-manager": {
+            "root": "apps/user-portfolio-manager",
+            "sourceRoot": "apps/user-portfolio-manager/src",
+            "projectType": "application",
+            "prefix": "user-portfolio-manager",
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "outputs": ["{options.outputPath}"],
+                    "options": {
+                        "outputPath": "dist/apps/user-portfolio-manager",
+                        "main": "apps/user-portfolio-manager/src/main.ts",
+                        "tsConfig": "apps/user-portfolio-manager/tsconfig.app.json",
+                        "assets": ["apps/user-portfolio-manager/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/user-portfolio-manager/src/environments/environment.ts",
+                                    "with": "apps/user-portfolio-manager/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "user-portfolio-manager:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["apps/user-portfolio-manager/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/apps/user-portfolio-manager"],
+                    "options": {
+                        "jestConfig": "apps/user-portfolio-manager/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "portfolio-state": {
+            "root": "libs/portfolio-state",
+            "sourceRoot": "libs/portfolio-state/src",
+            "projectType": "library",
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["libs/portfolio-state/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/libs/portfolio-state"],
+                    "options": {
+                        "jestConfig": "libs/portfolio-state/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "user-portfolio-state": {
+            "root": "libs/user-portfolio-state",
+            "sourceRoot": "libs/user-portfolio-state/src",
+            "projectType": "library",
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["libs/user-portfolio-state/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/libs/user-portfolio-state"],
+                    "options": {
+                        "jestConfig": "libs/user-portfolio-state/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
         }
     },
     "cli": {

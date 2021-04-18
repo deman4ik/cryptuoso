@@ -478,8 +478,8 @@ export default class UserProfileService extends HTTPService {
             FROM user_signals
             WHERE id = ${userSignal.id};
         `);
-
-        await this.events.emit({
+        // <StatsCalcRunnerUserSignalDeleted>
+        await this.events.emit<any>({
             type: StatsCalcRunnerEvents.USER_SIGNAL_DELETED,
             data: {
                 userId: user.id,
@@ -1029,8 +1029,8 @@ export default class UserProfileService extends HTTPService {
                 FROM user_robots
                 WHERE id = ${id};
         `);
-
-        await this.events.emit({
+        //<StatsCalcRunnerUserRobotDeleted>
+        await this.events.emit<any>({
             type: StatsCalcRunnerEvents.USER_ROBOT_DELETED,
             data: { userId, robotId: userRobotExists.robotId }
         });

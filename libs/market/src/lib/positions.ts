@@ -19,6 +19,7 @@ export const enum RobotTradeStatus {
 
 export interface BasePosition {
     id?: string;
+    robotId?: string;
     timeframe?: ValidTimeframe;
     prefix?: string;
     code?: string;
@@ -38,6 +39,7 @@ export interface BasePosition {
     exitAction?: TradeAction;
     exitCandleTimestamp?: string;
     volume?: number;
+    worstProfit?: number;
     profit?: number;
     barsHeld?: number;
     fee?: number;

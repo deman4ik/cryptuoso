@@ -323,7 +323,20 @@ export default class ConnectorRunnerService extends BaseService {
                 throw new BaseError(`Failed to save order #${order.id} - ${error.message}`, { order, nextJob });
             }
 
-            if (order.error) {
+            if (order.status === OrderStatus.closed || order.status === OrderStatus.canceled) {
+                await this.events.emit<OrdersStatusEvent>({
+                    type: ConnectorWorkerEvents.ORDER_STATUS,
+                    data: {
+                        orderId: order.id,
+                        timestamp: dayjs.utc().toISOString(),
+                        userExAccId: order.userExAccId,
+                        userRobotId: order.userRobotId,
+                        userPositionId: order.userPositionId,
+                        positionId: order.positionId,
+                        status: order.status
+                    }
+                });
+            } else if (order.error) {
                 await this.events.emit<OrdersErrorEvent>({
                     type: ConnectorWorkerEvents.ORDER_ERROR,
                     data: {
@@ -339,19 +352,6 @@ export default class ConnectorRunnerService extends BaseService {
                 });
 
                 if (errorToThrow) throw errorToThrow;
-            } else if (order.status === OrderStatus.closed || order.status === OrderStatus.canceled) {
-                await this.events.emit<OrdersStatusEvent>({
-                    type: ConnectorWorkerEvents.ORDER_STATUS,
-                    data: {
-                        orderId: order.id,
-                        timestamp: dayjs.utc().toISOString(),
-                        userExAccId: order.userExAccId,
-                        userRobotId: order.userRobotId,
-                        userPositionId: order.userPositionId,
-                        positionId: order.positionId,
-                        status: order.status
-                    }
-                });
             }
 
             this.log.info(`UserExAcc #${order.userExAccId} processed order ${order.id}`, order);

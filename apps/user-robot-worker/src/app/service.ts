@@ -10,9 +10,15 @@ import {
     UserPositionDB,
     UserRobotStateExt,
     UserPositionState,
-    UserPositionStatus
+    UserPositionStatus,
+    UserTradeEvent
 } from "@cryptuoso/user-robot-state";
-import { UserRobotWorkerError, UserRobotWorkerEvents, UserTradeEvents } from "@cryptuoso/user-robot-events";
+import {
+    UserRobotWorkerError,
+    UserRobotWorkerEvents,
+    UserRobotWorkerStatus,
+    UserTradeEvents
+} from "@cryptuoso/user-robot-events";
 import { Job } from "bullmq";
 import { Order, SignalEvent } from "@cryptuoso/market";
 import { ConnectorRunnerEvents, OrdersStatusEvent } from "@cryptuoso/connector-events";
@@ -418,7 +424,7 @@ WHERE p.user_robot_id =${userRobotId}
                 if (userRobot.status === UserRobotStatus.paused || userRobot.status === UserRobotStatus.stopped)
                     return userRobot.status;
                 userRobot.pause(data as { message?: string });
-                eventsToSend.push({
+                const pausedEvent: NewEvent<UserRobotWorkerStatus> = {
                     type: UserRobotWorkerEvents.PAUSED,
                     data: {
                         userRobotId,
@@ -426,12 +432,13 @@ WHERE p.user_robot_id =${userRobotId}
                         status: UserRobotStatus.paused,
                         message: userRobot.message
                     }
-                });
+                };
+                eventsToSend.push(pausedEvent);
             } else throw new BaseError(`Unknown user robot job type "${type}"`, job);
 
             if (userRobot.status === UserRobotStatus.stopping && !userRobot.hasActivePositions) {
                 userRobot.setStop();
-                eventsToSend.push({
+                const stoppedEvent: NewEvent<UserRobotWorkerStatus> = {
                     type: UserRobotWorkerEvents.STOPPED,
                     data: {
                         userRobotId,
@@ -439,7 +446,8 @@ WHERE p.user_robot_id =${userRobotId}
                         status: UserRobotStatus.stopped,
                         message: userRobot.message
                     }
-                });
+                };
+                eventsToSend.push(stoppedEvent);
                 this.log.info(`User Robot #${userRobot.id} stopped!`);
             }
 
@@ -461,20 +469,23 @@ WHERE p.user_robot_id =${userRobotId}
                     this.log.info(
                         `User Robot #${userRobot.id} has closed positions, sending ${StatsCalcRunnerEvents.USER_ROBOT} event.`
                     );
-                    eventsToSend.push({
+                    // <StatsCalcRunnerUserRobot>
+                    const statsCalcEvent: NewEvent<any> = {
                         type: StatsCalcRunnerEvents.USER_ROBOT,
                         data: {
                             userRobotId: userRobot.id
                         }
-                    });
+                    };
+                    eventsToSend.push(statsCalcEvent);
                 }
 
                 if (userRobot.recentTrades.length) {
                     for (const trade of userRobot.recentTrades) {
-                        eventsToSend.push({
+                        const tradeEvent: NewEvent<UserTradeEvent> = {
                             type: UserTradeEvents.TRADE,
                             data: trade
-                        });
+                        };
+                        eventsToSend.push(tradeEvent);
                     }
                 }
             }
