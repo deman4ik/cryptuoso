@@ -16,9 +16,9 @@ export class PrivateConnector {
     #orderCheckTimeout = 5;
     connector: Exchange;
     retryOptions = {
-        retries: 100,
-        minTimeout: 500,
-        maxTimeout: 1000,
+        retries: 10,
+        minTimeout: 1000,
+        maxTimeout: 10000,
         onRetry: (err: any, i: number) => {
             if (err) {
                 this.log.warn(`Retry ${i} - ${err.message}`);
