@@ -301,6 +301,7 @@ export class TradeStatsCalc implements TradeStats {
             ...quarters.map(({ stats: { percentGrossLoss } }) => percentGrossLoss)
         );
         stats.avgPercentGrossLossMonths = average(...months.map(({ stats: { percentGrossLoss } }) => percentGrossLoss));
+
         return this.roundStats(stats) as FullStats;
     }
 
