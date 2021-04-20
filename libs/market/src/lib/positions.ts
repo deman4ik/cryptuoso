@@ -40,6 +40,7 @@ export interface BasePosition {
     exitCandleTimestamp?: string;
     volume?: number;
     worstProfit?: number;
+    maxPrice?: number;
     profit?: number;
     barsHeld?: number;
     fee?: number;

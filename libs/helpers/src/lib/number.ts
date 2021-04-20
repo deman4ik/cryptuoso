@@ -88,3 +88,16 @@ export function addPercent(num: number, perc: number) {
     const percent = +perc || 0;
     return round(number + (number / 100) * percent, 6);
 }
+
+export function getPercentagePos(startPos: number, endPos: number, currentPos: number) {
+    const distance = endPos - startPos;
+    const displacement = currentPos - startPos;
+    const result = (displacement / distance) * 100;
+    return result;
+}
+
+export function percentBetween(a: number, b: number) {
+    if (a === b) return 0;
+    else if (a > 0) return ((b - a) * 100) / a;
+    else if (a < 0) return ((a - b) * 100) / a;
+}
