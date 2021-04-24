@@ -336,7 +336,7 @@ async function userRobotAdd(ctx: any) {
                             code
                             name
                         }
-                        userPayments(order_by: { created_at: desc_nulls_last }, limit: 1) {
+                        userPayments: user_payments(order_by: { created_at: desc_nulls_last }, limit: 1) {
                             code
                             url
                             status

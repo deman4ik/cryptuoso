@@ -47,7 +47,7 @@ export default class PortfolioManagerService extends HTTPService {
             risk: [true, false],
             moneyManagement: [true, false],
             winRate: [true, false],
-            recovery: [true, false]
+            efficiency: [true, false]
         };
 
         return combinate(values).slice(0, -1);
@@ -71,7 +71,8 @@ export default class PortfolioManagerService extends HTTPService {
             available: 5,
             settings: {
                 options,
-                minBalance: 0
+                minBalance: 0,
+                initialBalance: 1000
             }
         }));
         await this.db.pg.query(sql`

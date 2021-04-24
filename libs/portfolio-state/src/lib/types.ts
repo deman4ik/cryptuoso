@@ -6,12 +6,13 @@ export interface PortfolioOptions {
     risk: boolean;
     moneyManagement: boolean;
     winRate: boolean;
-    recovery: boolean;
+    efficiency: boolean;
 }
 
 export interface PortfolioSettings {
     options: PortfolioOptions;
     minBalance: number;
+    initialBalance: number;
 }
 
 export interface PortfolioDB {
@@ -28,6 +29,7 @@ export interface PortfolioRobot {
     robotId: string;
     active: boolean;
     share: number;
+    amountInCurrency: number;
 }
 
 export interface PortfolioState extends PortfolioDB {
