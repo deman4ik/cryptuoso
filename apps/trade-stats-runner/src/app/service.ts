@@ -10,14 +10,12 @@ import {
     TradeStatsRunnerRobot,
     TradeStatsRunnerSchema,
     TradeStatsRunnerUserPortfolio,
-    TradeStatsRunnerUserRobot,
-    TradeStatsRunnerUserSignal,
-    TradeStatsRunnerUserSignalDeleted
+    TradeStatsRunnerUserRobot
 } from "@cryptuoso/trade-stats-events";
 import { RobotStatus } from "@cryptuoso/robot-state";
 import { UserRoles } from "@cryptuoso/user-state";
-import { TradeStatsJob, TradeStatsAggrJob } from "@cryptuoso/trade-stats";
-import { uniqueElementsBy } from "@cryptuoso/helpers";
+import { TradeStatsJob } from "@cryptuoso/trade-stats";
+import { sql } from "@cryptuoso/postgres";
 
 export type StatisticCalcWorkerServiceConfig = HTTPServiceConfig;
 
@@ -35,11 +33,6 @@ export default class StatisticCalcRunnerService extends HTTPService {
                     inputSchema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.PORTFOLIO],
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this._HTTPHandler.bind(this, this.handleStatsCalcPortfolioEvent.bind(this))
-                },
-                calcStatsUserSignal: {
-                    inputSchema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.USER_SIGNAL],
-                    roles: [UserRoles.admin, UserRoles.manager],
-                    handler: this._HTTPHandler.bind(this, this.handleCalcUserSignalEvent.bind(this))
                 },
                 calcStatsUserRobot: {
                     inputSchema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.USER_ROBOT],
@@ -60,17 +53,19 @@ export default class StatisticCalcRunnerService extends HTTPService {
                     inputSchema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.RECALC_ALL_USER_ROBOTS],
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this._HTTPHandler.bind(this, this.handleRecalcAllUserRobotsEvent.bind(this))
+                },
+                recalcStatsAllPortfolios: {
+                    inputSchema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.RECALC_ALL_PORTFOLIOS],
+                    roles: [UserRoles.admin, UserRoles.manager],
+                    handler: this._HTTPHandler.bind(this, this.handleRecalcAllPorfoliosEvent.bind(this))
+                },
+                recalcStatsAllUserPortfolios: {
+                    inputSchema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.RECALC_ALL_USER_PORTFOLIOS],
+                    roles: [UserRoles.admin, UserRoles.manager],
+                    handler: this._HTTPHandler.bind(this, this.handleRecalcAllUserPortfoliosEvent.bind(this))
                 }
             });
             this.events.subscribe({
-                [TradeStatsRunnerEvents.USER_SIGNAL_DELETED]: {
-                    schema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.USER_SIGNAL_DELETED],
-                    handler: this.handleUserSignalDeletedEvent.bind(this)
-                },
-                [TradeStatsRunnerEvents.USER_ROBOT_DELETED]: {
-                    schema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.USER_ROBOT_DELETED],
-                    handler: this.handleUserRobotDeletedEvent.bind(this)
-                },
                 [TradeStatsRunnerEvents.ROBOT]: {
                     schema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.ROBOT],
                     handler: this.handleStatsCalcRobotEvent.bind(this)
@@ -124,14 +119,6 @@ export default class StatisticCalcRunnerService extends HTTPService {
         });
     }
 
-    async queueAggrJob(job: TradeStatsAggrJob, exchange?: string, asset?: string) {
-        await this.queueJob(job);
-        if (exchange) await this.queueJob({ ...job, exchange });
-        if (job.type === "allPortfoliosAggr" || job.type === "allUserPortfoliosAggr") return;
-        if (asset) await this.queueJob({ ...job, asset });
-        if (exchange && asset) await this.queueJob({ ...job, exchange, asset });
-    }
-
     async handleStatsCalcRobotEvent(params: TradeStatsRunnerRobot) {
         const { recalc, robotId } = params;
 
@@ -145,66 +132,44 @@ export default class StatisticCalcRunnerService extends HTTPService {
 
         if (!robot) return;
 
-        const { exchange, asset } = robot;
-        /*   await this.queueJob({ type: "robot", recalc, robotId });
+        await this.queueJob({ type: "robot", recalc, robotId });
 
-        const userSignals = await this.db.pg.any<{
-            userSignalId: string;
-            userId: string;
-        }>(this.db.sql`
-            SELECT us.id as user_signal_id, us.user_id
-            FROM user_signals us
-            WHERE us.robot_id = ${robotId};
-        `);
-
-        for (const { userSignalId } of userSignals) {
-            await this.queueJob({ type: "userSignal", recalc, userSignalId });
+        const portfolios = await this.db.pg.any<{ portfolioId: string }>(
+            sql`
+            SELECT pr.portfolio_id 
+            FROM portfolio_robots pr
+            WHERE pr.robot_id = ${robotId}
+            and pr.active = true;
+            `
+        );
+        for (const { portfolioId } of portfolios) {
+            await this.queueJob({ type: "portfolio", recalc, portfolioId });
         }
 
-        for (const userId of uniqueElementsBy(
-            userSignals.map(({ userId }) => userId),
-            (a, b) => a === b
-        )) {
-            await this.queueAggrJob({ type: "userSignalsAggr", recalc, userId }, exchange, asset);
-        }*/
+        if (portfolios.length) {
+            const userPortfolios = await this.db.pg.any<{ userPortfolioId: string }>(
+                sql`
+            SELECT up.id as user_portfolio_id
+            FROM user_portfolios up
+            WHERE up.portfolio_id in (${sql.join(
+                portfolios.map((p) => p.portfolioId),
+                sql`, `
+            )})
+            AND up.status = 'signals';
+            `
+            );
 
-        await this.queueAggrJob({ type: "allRobotsAggr", recalc }, exchange, asset);
-        //TODO: PORTFOLIO */
+            for (const { userPortfolioId } of userPortfolios) {
+                await this.queueJob({ type: "userPortfolio", recalc, userPortfolioId });
+            }
+        }
     }
 
     async handleStatsCalcPortfolioEvent(params: TradeStatsRunnerPortfolio) {
         const { recalc, portfolioId } = params;
 
         this.log.info(`New ${TradeStatsRunnerEvents.PORTFOLIO} event - ${portfolioId}`);
-
-        //TODO: PORTFOLIO
-    }
-
-    async handleCalcUserSignalEvent(params: TradeStatsRunnerUserSignal) {
-        const { recalc, userId, robotId } = params;
-
-        const userSignal: {
-            userSignalId: string;
-            exchange: string;
-            asset: string;
-        } = await this.db.pg.maybeOne(this.db.sql`
-            SELECT us.id as user_signal_id, r.exchange, r.asset
-            FROM user_signals us, robots r
-            WHERE us.user_id = ${userId}
-                AND us.robot_id = ${robotId}
-                AND us.robot_id = r.id;
-        `);
-
-        if (!userSignal) return;
-
-        const { userSignalId, exchange, asset } = userSignal;
-
-        await this.queueJob({
-            type: "userSignal",
-            recalc,
-            userSignalId
-        });
-        await this.queueAggrJob({ type: "userSignalsAggr", recalc, userId }, exchange, asset);
+        await this.queueJob({ type: "portfolio", recalc, portfolioId });
     }
 
     async handleStatsCalcUserRobotEvent(params: TradeStatsRunnerUserRobot) {
@@ -225,11 +190,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
 
         if (!userRobot) return;
 
-        const { userId, exchange, asset } = userRobot;
-
         await this.queueJob({ type: "userRobot", recalc, userRobotId });
-        await this.queueAggrJob({ type: "userRobotsAggr", recalc, userId }, exchange, asset);
-        await this.queueAggrJob({ type: "allUserRobotsAggr", recalc }, exchange, asset);
     }
 
     async handleStatsCalcUserPortfolioEvent(params: TradeStatsRunnerUserPortfolio) {
@@ -237,7 +198,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
 
         this.log.info(`New ${TradeStatsRunnerEvents.USER_PORTFOLIO} event - ${userPortfolioId}`);
 
-        //TODO: PORTFOLIO
+        await this.queueJob({ type: "userPortfolio", recalc, userPortfolioId });
     }
 
     async handleRecalcAllRobotsEvent(params: TradeStatsRunnerRecalcAllRobots) {
@@ -260,49 +221,23 @@ export default class StatisticCalcRunnerService extends HTTPService {
         for (const { id: robotId } of robots) {
             await this.queueJob({ type: "robot", recalc: true, robotId });
         }
-
-        for (const { exchange, asset } of uniqueElementsBy(
-            [...robots],
-            (a, b) => a.exchange === b.exchange && a.asset === b.asset
-        )) {
-            await this.queueAggrJob({ type: "allRobotsAggr", recalc: true }, exchange, asset);
-        }
-
-        const userSignals = await this.db.pg.any<{
-            userSignalId: string;
-            userId: string;
-            exchange: string;
-            asset: string;
-        }>(this.db.sql`
-            SELECT us.id as user_signal_id, us.user_id, r.exchange, r.asset
-            FROM user_signals us, robots r
-            WHERE r.status = ${RobotStatus.started}
-                AND us.robot_id = r.id
-                ${conditionExchange}
-                ${conditionAsset};
-        `);
-        for (const { userSignalId } of userSignals) {
-            await this.queueJob({
-                type: "userSignal",
-                recalc: true,
-                userSignalId
-            });
-        }
-
-        for (const { userId, exchange, asset } of uniqueElementsBy(
-            [...userSignals],
-            (a, b) => a.userId === b.userId && a.exchange === b.exchange && a.asset === b.asset
-        )) {
-            await this.queueAggrJob({ type: "userSignalsAggr", recalc: true, userId }, exchange, asset);
-        }
     }
 
     async handleRecalcAllPorfoliosEvent(params: TradeStatsRunnerRecalcAllPortfolios) {
         const { exchange } = params;
 
-        const conditionExchange = !exchange ? this.db.sql`` : this.db.sql`AND r.exchange=${exchange}`;
+        const conditionExchange = !exchange ? this.db.sql`` : this.db.sql`WHERE p.exchange=${exchange}`;
 
-        //TODO: PORTFOLIO
+        const portfolios = await this.db.pg.any<{ portfolioId: string }>(
+            sql`
+            SELECT p.id as portfolio_id 
+            FROM portfolios p
+             ${conditionExchange};
+            `
+        );
+        for (const { portfolioId } of portfolios) {
+            await this.queueJob({ type: "portfolio", recalc: true, portfolioId });
+        }
     }
 
     async handleRecalcAllUserRobotsEvent(params: TradeStatsRunnerRecalcAllUserRobots) {
@@ -329,67 +264,26 @@ export default class StatisticCalcRunnerService extends HTTPService {
         for (const { userRobotId } of userRobots) {
             await this.queueJob({ type: "userRobot", recalc: true, userRobotId });
         }
-
-        for (const { userId, exchange, asset } of uniqueElementsBy(
-            [...userRobots],
-            (a, b) => a.userId === b.userId && a.exchange === b.exchange && a.asset === b.asset
-        )) {
-            await this.queueAggrJob({ type: "userRobotsAggr", recalc: true, userId }, exchange, asset);
-        }
-
-        for (const { exchange, asset } of uniqueElementsBy(
-            [...userRobots],
-            (a, b) => a.exchange === b.exchange && a.asset === b.asset
-        )) {
-            await this.queueAggrJob({ type: "allUserRobotsAggr", recalc: true }, exchange, asset);
-        }
     }
 
     async handleRecalcAllUserPortfoliosEvent(params: TradeStatsRunnerRecalcAllUserPortfolios) {
         const { exchange, userId } = params;
 
-        const conditionUserId = !userId ? this.db.sql`` : this.db.sql`AND ur.user_id=${userId}`;
-        const conditionExchange = !exchange ? this.db.sql`` : this.db.sql`AND r.exchange=${exchange}`;
+        const conditionUserId = !userId ? this.db.sql`` : this.db.sql`AND up.user_id=${userId}`;
+        const conditionExchange = !exchange ? this.db.sql`` : this.db.sql`AND up.exchange=${exchange}`;
 
-        //TODO: PORTFOLIO
-    }
+        const userPortfolios = await this.db.pg.any<{ userPortfolioId: string }>(
+            sql`
+        SELECT up.id as user_portfolio_id
+        FROM user_portfolios up
+        WHERE up.status != 'error'
+        ${conditionExchange}
+        ${conditionUserId};
+        `
+        );
 
-    async handleUserSignalDeletedEvent(params: TradeStatsRunnerUserSignalDeleted) {
-        const { userId, robotId } = params;
-
-        const robot: {
-            exchange: string;
-            asset: string;
-        } = await this.db.pg.maybeOne(this.db.sql`
-            SELECT exchange, asset
-            FROM robots
-            WHERE id = ${robotId};
-        `);
-
-        if (!robot) return;
-
-        const { exchange, asset } = robot;
-
-        await this.queueAggrJob({ type: "userSignalsAggr", recalc: true, userId }, exchange, asset);
-    }
-
-    async handleUserRobotDeletedEvent(params: { userId: string; robotId: string }) {
-        const { userId, robotId } = params;
-
-        const robot: {
-            exchange: string;
-            asset: string;
-        } = await this.db.pg.maybeOne(this.db.sql`
-            SELECT exchange, asset
-            FROM robots
-            WHERE id = ${robotId};
-        `);
-
-        if (!robot) return;
-
-        const { exchange, asset } = robot;
-
-        await this.queueAggrJob({ type: "userRobotsAggr", recalc: true, userId }, exchange, asset);
-        await this.queueAggrJob({ type: "allUserRobotsAggr", recalc: true }, exchange, asset);
+        for (const { userPortfolioId } of userPortfolios) {
+            await this.queueJob({ type: "userPortfolio", recalc: true, userPortfolioId });
+        }
     }
 }

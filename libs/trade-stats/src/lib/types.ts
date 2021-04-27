@@ -14,7 +14,7 @@ export interface Stats {
     winRate: number;
     lossRate: number;
     sumBarsHeld: number | null;
-    avgBarsHeld: number | null;
+    avgBarsHeld: number | null; //TODO: delete portfolio
     sumBarsHeldWinning: number | null;
     avgBarsHeldWinning: number | null;
     sumBarsHeldLosing: number | null;
@@ -39,6 +39,8 @@ export interface Stats {
     maxConsecWins: number;
     maxConsecLosses: number;
     maxDrawdown: number;
+    percentMaxDrawdown: number | null;
+    amountProportion: number | null;
     maxDrawdownDate: string | null;
     profitFactor: number | null;
     recoveryFactor: number | null;
@@ -77,6 +79,10 @@ export interface PeriodStats {
     stats: Stats;
 }
 
+export interface TradeStatsDB {
+    fullStats: FullStats;
+    periodStats: PeriodStats[];
+}
 export interface TradeStats {
     fullStats: FullStats;
     periodStats: {
@@ -189,5 +195,5 @@ export type TradeStatsAggrJob =
 
 export interface StatsMeta {
     job: TradeStatsJob;
-    userInitialBalance?: number;
+    initialBalance?: number;
 }

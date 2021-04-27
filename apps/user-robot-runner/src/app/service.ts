@@ -502,7 +502,8 @@ export default class UserRobotRunnerService extends HTTPService {
             !event.error.toLowerCase().includes("gateway") ||
             !event.error.toLowerCase().includes("getaddrinfo") ||
             !event.error.toLowerCase().includes("network") ||
-            !event.error.toLowerCase().includes("request")
+            !event.error.toLowerCase().includes("request") ||
+            !event.error.toLowerCase().includes("econnreset")
         )
             await this.pause({
                 id: event.userRobotId,

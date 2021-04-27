@@ -5,16 +5,12 @@ export const TRADE_STATS_TOPIC = "in-trade-stats-runner";
 export const enum TradeStatsRunnerEvents {
     ROBOT = `stats-calc.robot`,
     PORTFOLIO = `stats-calc.portfolio`,
-    USER_SIGNAL = `stats-calc.user-signal`,
     USER_ROBOT = `stats-calc.user-robot`,
     USER_PORTFOLIO = `stats-calc.user-portfolio`,
     RECALC_ALL_ROBOTS = `stats-calc.recalc-all-robots`,
     RECALC_ALL_PORTFOLIOS = `stats-calc.recalc-all-portfolios`,
-    RECALC_ALL_USER_SIGNALS = `stats-calc.recalc-all-user-signals`,
     RECALC_ALL_USER_ROBOTS = `stats-calc.recalc-all-user-robots`,
-    RECALC_ALL_USER_PORTFOLIOS = `stats-calc.recalc-all-user-portfolios`,
-    USER_SIGNAL_DELETED = `stats-calc.user-signal-deleted`,
-    USER_ROBOT_DELETED = `stats-calc.user-robot-deleted`
+    RECALC_ALL_USER_PORTFOLIOS = `stats-calc.recalc-all-user-portfolios`
 }
 
 export const OUR_TRADE_STATS_TOPIC = "out-trade-stats-worker";
@@ -41,19 +37,6 @@ export const TradeStatsRunnerSchema = {
             default: false
         },
         portfolioId: {
-            type: "uuid"
-        }
-    },
-    [TradeStatsRunnerEvents.USER_SIGNAL]: {
-        recalc: {
-            type: "boolean",
-            optional: true,
-            default: false
-        },
-        userId: {
-            type: "uuid"
-        },
-        robotId: {
             type: "uuid"
         }
     },
@@ -124,22 +107,6 @@ export const TradeStatsRunnerSchema = {
             optional: true,
             default: null as string
         }
-    },
-    [TradeStatsRunnerEvents.USER_SIGNAL_DELETED]: {
-        userId: {
-            type: "uuid"
-        },
-        robotId: {
-            type: "uuid"
-        }
-    },
-    [TradeStatsRunnerEvents.USER_ROBOT_DELETED]: {
-        userId: {
-            type: "uuid"
-        },
-        robotId: {
-            type: "uuid"
-        }
     }
 };
 
@@ -151,12 +118,6 @@ export interface TradeStatsRunnerRobot {
 export interface TradeStatsRunnerPortfolio {
     recalc?: boolean;
     portfolioId: string;
-}
-
-export interface TradeStatsRunnerUserSignal {
-    recalc?: boolean;
-    userId: string;
-    robotId: string;
 }
 
 export interface TradeStatsRunnerUserRobot {
@@ -189,20 +150,9 @@ export interface TradeStatsRunnerRecalcAllUserPortfolios {
     userId?: string;
 }
 
-export interface TradeStatsRunnerUserSignalDeleted {
-    userId: string;
-    robotId: string;
-}
-
-export interface TradeStatsRunnerUserRobotDeleted {
-    userId: string;
-    robotId: string;
-}
-
 export type TradeStatsRunnerEvent =
     | TradeStatsRunnerRobot
     | TradeStatsRunnerPortfolio
-    | TradeStatsRunnerUserSignal
     | TradeStatsRunnerUserRobot
     | TradeStatsRunnerUserPortfolio
     | TradeStatsRunnerRecalcAllRobots

@@ -16,7 +16,7 @@ import { Queues, RobotJob, RobotJobType, RobotRunnerJobType, RobotStatus } from 
 import { StrategySettings } from "@cryptuoso/robot-settings";
 import { equals, robotExchangeName, sortDesc, uniqueElementsBy } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
-import { CandleType, DBCandle, RobotPositionStatus, Timeframe, ValidTimeframe } from "@cryptuoso/market";
+import { CandleType, DBCandle, Timeframe, ValidTimeframe } from "@cryptuoso/market";
 import { BaseServiceError, BaseServiceEvents, Event } from "@cryptuoso/events";
 import { UserRoles } from "@cryptuoso/user-state";
 export type RobotRunnerServiceConfig = HTTPServiceConfig;

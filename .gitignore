@@ -49,3 +49,5 @@ indicators/*.js
 !indicators/.gitkeep 
 
 migrations.json
+
+/testResults

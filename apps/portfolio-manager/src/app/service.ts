@@ -17,10 +17,21 @@ export default class PortfolioManagerService extends HTTPService {
             this.createRoutes({
                 initPortfolios: {
                     inputSchema: {
-                        exchange: "string"
+                        exchange: "string",
+                        initialBalance: {
+                            type: "number",
+                            optional: true
+                        }
                     },
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.initPortfolios.bind(this))
+                },
+                buildPortfolio: {
+                    inputSchema: {
+                        portfolioId: "uuid"
+                    },
+                    roles: [UserRoles.admin, UserRoles.manager],
+                    handler: this.HTTPHandler.bind(this, this.buildPortfolio.bind(this))
                 },
                 buildPortfolios: {
                     inputSchema: {
@@ -37,6 +48,7 @@ export default class PortfolioManagerService extends HTTPService {
     }
 
     async onServiceStart(): Promise<void> {
+        this.createQueue("portfolioBuilder");
         this.createWorker("portfolioBuilder", this.builder);
     }
 
@@ -61,8 +73,13 @@ export default class PortfolioManagerService extends HTTPService {
             .join("+");
     }
 
-    async initPortfolios({ exchange }: { exchange: string }) {
+    async initPortfolios({ exchange, initialBalance }: { exchange: string; initialBalance?: number }) {
         const allOptions = this.generateOptions();
+        const { minAmountCurrency, feeRate } = await this.db.pg.one<{ minAmountCurrency: number; feeRate: number }>(sql`
+        SELECT max(min_amount_currency) as min_amount_currency, max(fee_rate) as fee_rate from v_markets
+        WHERE exchange = ${exchange}
+        GROUP BY exchange;
+        `);
         const allPortfolios: PortfolioDB[] = allOptions.map((options) => ({
             id: uuid(),
             code: `${exchange}:${this.generateCode(options)}`,
@@ -71,8 +88,11 @@ export default class PortfolioManagerService extends HTTPService {
             available: 5,
             settings: {
                 options,
-                minBalance: 0,
-                initialBalance: 1000
+                minBalance: initialBalance,
+                minTradeAmount: minAmountCurrency,
+                feeRate: feeRate,
+                initialBalance: initialBalance,
+                leverage: 3
             }
         }));
         await this.db.pg.query(sql`
@@ -91,17 +111,35 @@ export default class PortfolioManagerService extends HTTPService {
         this.log.info(`Inited ${allPortfolios.length} ${exchange} portfolios`);
     }
 
-    async buildPortfolios({ exchange }: { exchange: string }) {
+    async buildPortfolio({ portfolioId }: { portfolioId: string }) {
         await this.addJob(
             "portfolioBuilder",
             "build",
-            { exchange },
+            { portfolioId },
             {
-                jobId: exchange,
+                jobId: portfolioId,
                 removeOnComplete: true,
                 removeOnFail: 10
             }
         );
+    }
+
+    async buildPortfolios({ exchange }: { exchange: string }) {
+        const portfolios = await this.db.pg.many<{ id: PortfolioDB["id"] }>(sql`
+        SELECT id FROM portfolios where exchange = ${exchange};
+        `);
+        for (const { id } of portfolios) {
+            await this.addJob(
+                "portfolioBuilder",
+                "build",
+                { portfolioId: id },
+                {
+                    jobId: id,
+                    removeOnComplete: true,
+                    removeOnFail: 10
+                }
+            );
+        }
     }
 
     async builder(job: Job<PortfolioBuilderJob, boolean>) {

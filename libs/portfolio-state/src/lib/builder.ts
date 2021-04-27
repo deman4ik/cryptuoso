@@ -2,11 +2,11 @@ import logger, { Logger } from "@cryptuoso/logger";
 import { PortfolioOptions, PortfolioRobot, PortfolioState } from "@cryptuoso/portfolio-state";
 import { BasePosition, calcPositionProfit } from "@cryptuoso/market";
 import { TradeStats, TradeStatsCalc } from "@cryptuoso/trade-stats";
-import { getPercentagePos, percentBetween, sum, uniqueElementsBy } from "@cryptuoso/helpers";
+import { getPercentagePos, percentBetween, round, sum, uniqueElementsBy } from "@cryptuoso/helpers";
 import Statistics from "statistics.js";
+import { PortfolioSettings } from "./types";
 
 interface PortoflioRobotState extends PortfolioRobot {
-    proportion?: number;
     stats?: TradeStats;
     positions: BasePosition[];
 }
@@ -14,6 +14,7 @@ interface PortoflioRobotState extends PortfolioRobot {
 interface PortfolioCalculated {
     robots: { [key: string]: PortoflioRobotState };
     tradeStats: TradeStats;
+    settings: PortfolioSettings;
     correlationPercent?: number;
 }
 
@@ -71,7 +72,7 @@ export class PortfolioBuilder {
                 positions,
                 {
                     job: { type: "robot", robotId, recalc: true },
-                    userInitialBalance: this.portfolio.settings.initialBalance
+                    initialBalance: this.portfolio.settings.initialBalance
                 },
                 null
             );
@@ -111,35 +112,65 @@ export class PortfolioBuilder {
             .map(({ robotId }) => robotId);
     }
 
-    calcPortfolio(robotIds: string[]): PortfolioCalculated {
+    calcAmounts(robotIds: string[], settings = this.portfolio.settings) {
+        const portfolioSettings = { ...settings };
         const robots = Object.values(this.robots).filter(({ robotId }) => robotIds.includes(robotId));
-        for (const robot of robots) {
-            robot.proportion = this.portfolio.settings.initialBalance / Math.abs(robot.stats.fullStats.maxDrawdown);
-        }
-        const propСoefficient = this.portfolio.settings.initialBalance / sum(...robots.map((r) => r.proportion));
+
+        const propСoefficient = 100 / sum(...robots.map((r) => r.stats.fullStats.amountProportion));
 
         for (const robot of robots) {
-            robot.amountInCurrency = propСoefficient * robot.proportion;
-            robot.share = (robot.amountInCurrency * 100) / this.portfolio.settings.initialBalance;
+            robot.share = robot.stats.fullStats.amountProportion * propСoefficient;
+        }
+
+        const minShare = Math.min(...robots.map((r) => r.share));
+        portfolioSettings.minBalance = round((portfolioSettings.minTradeAmount * 100) / minShare / 100) * 100;
+        portfolioSettings.initialBalance =
+            portfolioSettings.minBalance > portfolioSettings.initialBalance
+                ? portfolioSettings.minBalance
+                : portfolioSettings.initialBalance;
+
+        const leveragedBalance = portfolioSettings.initialBalance * (portfolioSettings.leverage || 1);
+        for (const robot of robots) {
+            robot.amountInCurrency = (leveragedBalance * robot.share) / 100;
             robot.positions = robot.positions.map((pos) => {
                 const volume = robot.amountInCurrency / pos.entryPrice;
                 return {
                     ...pos,
                     volume,
-                    profit: calcPositionProfit(pos.direction, pos.entryPrice, pos.exitPrice, volume),
-                    worstProfit: calcPositionProfit(pos.direction, pos.entryPrice, pos.maxPrice, volume)
+                    profit: calcPositionProfit(pos.direction, pos.entryPrice, pos.exitPrice, volume, settings.feeRate),
+                    worstProfit: calcPositionProfit(
+                        pos.direction,
+                        pos.entryPrice,
+                        pos.maxPrice,
+                        volume,
+                        settings.feeRate
+                    )
                 };
             });
         }
+        return {
+            robots,
+            settings: portfolioSettings
+        };
+    }
+
+    calcPortfolioStats(robots: PortoflioRobotState[]) {
         const positions = robots.reduce((prev, cur) => [...prev, ...cur.positions], []);
         const tradeStatsCalc = new TradeStatsCalc(
             positions,
             {
                 job: { type: "portfolio", portfolioId: this.portfolio.id, recalc: true },
-                userInitialBalance: this.portfolio.settings.initialBalance
+                initialBalance: this.portfolio.settings.initialBalance
             },
             null
         );
+
+        return tradeStatsCalc.calculate();
+    }
+
+    calcPortfolio(robotIds: string[], settings = this.portfolio.settings): PortfolioCalculated {
+        const { robots, settings: portfolioSettings } = this.calcAmounts(robotIds, settings);
+        const tradeStats = this.calcPortfolioStats(robots);
         const robotsList: {
             [key: string]: PortoflioRobotState;
         } = {};
@@ -148,7 +179,8 @@ export class PortfolioBuilder {
         }
         return {
             robots: robotsList,
-            tradeStats: tradeStatsCalc.calculate()
+            tradeStats,
+            settings: portfolioSettings
         };
     }
 
@@ -252,8 +284,7 @@ export class PortfolioBuilder {
             };
         }
 
-        const rating =
-            Object.values(comparison).reduce((prev, cur) => prev + cur.diff, 0) / Object.keys(comparison).length;
+        const rating = Object.values(comparison).reduce((prev, cur) => prev + cur.diff, 0);
 
         return {
             prevPortfolioRobots: Object.keys(prevPortfolio.robots),
@@ -264,20 +295,19 @@ export class PortfolioBuilder {
         };
     }
 
-    async build() {
+    async build(): Promise<{ portfolio: PortfolioState; steps: any }> {
         try {
             this.calculateRobotsStats();
             this.sortRobots();
             const steps = [];
             const robotsList = this.sortedRobotsList.reverse();
             this.currentRobotsList = [...robotsList];
-
             this.prevPortfolio = this.calcPortfolio(this.sortedRobotsList);
 
             for (const robotId of robotsList) {
                 const list = this.currentRobotsList.filter((r) => r !== robotId);
                 if (list.length < this.minRobotsCount) break;
-                this.currentPortfolio = this.calcPortfolio(list);
+                this.currentPortfolio = this.calcPortfolio(list, this.prevPortfolio.settings);
 
                 const result = this.comparePortfolios(this.prevPortfolio, this.currentPortfolio);
                 if (result.approve) {
@@ -287,9 +317,22 @@ export class PortfolioBuilder {
                 steps.push(result);
             }
 
-            //TODO: set min balance
             return {
-                portfolio: this.prevPortfolio,
+                portfolio: {
+                    ...this.portfolio,
+                    settings: this.prevPortfolio.settings,
+                    fullStats: this.prevPortfolio.tradeStats.fullStats,
+                    periodStats: [
+                        ...Object.values(this.prevPortfolio.tradeStats.periodStats.year),
+                        ...Object.values(this.prevPortfolio.tradeStats.periodStats.quarter),
+                        ...Object.values(this.prevPortfolio.tradeStats.periodStats.month)
+                    ],
+                    robots: Object.values(this.prevPortfolio.robots).map((r) => ({
+                        robotId: r.robotId,
+                        active: true,
+                        share: r.share
+                    }))
+                },
                 steps
             };
         } catch (error) {
