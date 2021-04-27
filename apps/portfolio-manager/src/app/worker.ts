@@ -1,40 +1,69 @@
 import { expose } from "threads/worker";
 import logger, { Logger } from "@cryptuoso/logger";
 import { DataStream } from "scramjet";
-import { sql, pg, makeChunksGenerator } from "@cryptuoso/postgres";
-import { PortfolioBuilder, PortfolioBuilderJob, PortfolioState } from "@cryptuoso/portfolio-state";
+import { sql, pg, makeChunksGenerator, pgUtil } from "@cryptuoso/postgres";
+import { PortfolioBuilder, PortfolioBuilderJob, PortfolioDB } from "@cryptuoso/portfolio-state";
 import { BasePosition } from "@cryptuoso/market";
 
 let portfolioBuilder: PortfolioBuilder;
 
 const worker = {
     async init(job: PortfolioBuilderJob) {
-        const portfolio: PortfolioState = await pg.one(sql`
-        SELECT p.id, p.code, p.name, p.exchange, p.available, p.settings, p.stats 
+        logger.info(`Initing #${job.portfolioId} builder`);
+        const portfolio = await pg.one<PortfolioDB>(sql`
+        SELECT p.id, p.code, p.name, p.exchange, p.available, p.settings
         FROM portfolios p 
         WHERE p.id = ${job.portfolioId}; 
         `);
         const positions: BasePosition[] = await DataStream.from(
             makeChunksGenerator(
-                this.db.pg,
+                pg,
                 sql`
-        SELECT p.id, p.robot_id, p.entry_date, p.entry_price, p.exit_date, p.exit_price, p.volume, p.worst_profit, p.profit, p.bars_held
+        SELECT p.id, p.robot_id, p.direction, p.entry_date, p.entry_price, p.exit_date, p.exit_price, p.volume, p.worst_profit, p.max_price, p.profit, p.bars_held
         FROM v_robot_positions p, robots r 
         WHERE p.robot_id = r.id 
           AND r.exchange = ${portfolio.exchange}
           AND r.available >= ${portfolio.available}
           AND p.status = 'closed'
-          ORDER BY p.exit_date;
+          ORDER BY p.exit_date
         `,
                 10000
             )
         ).reduce(async (accum: BasePosition[], chunk: BasePosition[]) => [...accum, ...chunk], []);
 
         portfolioBuilder = new PortfolioBuilder(portfolio, positions);
+        logger.info(`#${job.portfolioId} builder inited`);
     },
     async process() {
+        logger.info(`Processing #${portfolioBuilder.portfolio.id} build`);
         const result = await portfolioBuilder.build();
-        return result;
+
+        await pg.transaction(async (t) => {
+            await t.query(sql`
+            UPDATE portfolios SET full_stats = ${JSON.stringify(
+                result.portfolio.fullStats
+            )}, period_stats = ${JSON.stringify(result.portfolio.periodStats)},
+            settings = ${JSON.stringify(result.portfolio.settings)}
+            WHERE id = ${result.portfolio.id}
+            `);
+
+            await t.query(sql`
+            INSERT INTO portfolio_robots 
+            (portfolio_id, robot_id, active, share)
+            SELECT *
+                FROM ${sql.unnest(
+                    pgUtil.prepareUnnest(
+                        result.portfolio.robots.map((r) => ({ ...r, portfolioId: result.portfolio.id })),
+                        ["portfolioId", "robotId", "active", "share"]
+                    ),
+                    ["uuid", "uuid", "bool", "numeric"]
+                )}
+                ON CONFLICT ON CONSTRAINT portfolio_robots_pkey
+                DO UPDATE SET active = excluded.active,
+                share = excluded.share;
+            `);
+        });
+        logger.info(`#${portfolioBuilder.portfolio.id} build finished`);
     }
 };
 

@@ -90,7 +90,9 @@ export class TradeStatsCalc implements TradeStats {
             currentWinSequence: prevStats?.currentWinSequence || 0,
             currentLossSequence: prevStats?.currentLossSequence || 0,
             maxDrawdown: prevStats?.maxDrawdown || 0,
+            percentMaxDrawdown: prevStats?.percentMaxDrawdown || null,
             maxDrawdownDate: prevStats?.maxDrawdownDate || null,
+            amountProportion: prevStats?.amountProportion || null,
             profitFactor: prevStats?.profitFactor || null,
             recoveryFactor: prevStats?.recoveryFactor || null,
             payoffRatio: prevStats?.payoffRatio || null,
@@ -123,7 +125,7 @@ export class TradeStatsCalc implements TradeStats {
         if (!stats.firstPosition) stats.firstPosition = positions[0];
         if (this.hasBalance && stats.initialBalance === null)
             stats.initialBalance =
-                this.meta.userInitialBalance || stats.firstPosition.volume * stats.firstPosition.entryPrice;
+                this.meta.initialBalance || stats.firstPosition.volume * stats.firstPosition.entryPrice;
 
         return stats;
     }
@@ -251,7 +253,8 @@ export class TradeStatsCalc implements TradeStats {
             stats.currentBalance = stats.initialBalance + stats.netProfit;
             stats.percentGrossProfit = (stats.grossProfit / stats.initialBalance) * 100;
             stats.percentGrossLoss = (stats.grossLoss / stats.initialBalance) * 100;
-
+            stats.percentMaxDrawdown = (Math.abs(stats.maxDrawdown) / stats.initialBalance) * 100;
+            stats.amountProportion = 100 / stats.percentMaxDrawdown;
             stats.sumPercentNetProfitSqDiff = null;
             for (const percent of stats.positionsProfitPercents) {
                 const percentProfitSqDiff = Math.pow(percent - stats.avgPercentNetProfit, 2);
@@ -339,7 +342,7 @@ export class TradeStatsCalc implements TradeStats {
                         if (this.hasBalance && periodStats.year[year.key].stats.initialBalance === null)
                             periodStats.year[year.key].stats.initialBalance =
                                 prevPeriodStats?.stats?.currentBalance ||
-                                this.meta.userInitialBalance ||
+                                this.meta.initialBalance ||
                                 periodStats.year[year.key].stats.firstPosition.volume *
                                     periodStats.year[year.key].stats.firstPosition.entryPrice;
                     } else if (this.hasBalance) {
@@ -385,7 +388,7 @@ export class TradeStatsCalc implements TradeStats {
                         if (this.hasBalance && periodStats.quarter[quarter.key].stats.initialBalance === null)
                             periodStats.quarter[quarter.key].stats.initialBalance =
                                 prevPeriodStats?.stats?.currentBalance ||
-                                this.meta.userInitialBalance ||
+                                this.meta.initialBalance ||
                                 periodStats.quarter[quarter.key].stats.firstPosition.volume *
                                     periodStats.quarter[quarter.key].stats.firstPosition.entryPrice;
                     } else if (this.hasBalance) {
@@ -432,7 +435,7 @@ export class TradeStatsCalc implements TradeStats {
                         if (this.hasBalance && periodStats.month[month.key].stats.initialBalance === null)
                             periodStats.month[month.key].stats.initialBalance =
                                 prevPeriodStats?.stats?.currentBalance ||
-                                this.meta.userInitialBalance ||
+                                this.meta.initialBalance ||
                                 periodStats.month[month.key].stats.firstPosition.volume *
                                     periodStats.month[month.key].stats.firstPosition.entryPrice;
                     } else if (this.hasBalance) {

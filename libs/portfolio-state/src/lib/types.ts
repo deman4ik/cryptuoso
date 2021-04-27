@@ -1,4 +1,4 @@
-import { FullStats, TradeStats } from "@cryptuoso/trade-stats";
+import { FullStats, PeriodStats } from "@cryptuoso/trade-stats";
 
 export interface PortfolioOptions {
     diversification: boolean;
@@ -12,7 +12,10 @@ export interface PortfolioOptions {
 export interface PortfolioSettings {
     options: PortfolioOptions;
     minBalance: number;
+    minTradeAmount: number;
+    feeRate: number;
     initialBalance: number;
+    leverage: number;
 }
 
 export interface PortfolioDB {
@@ -22,18 +25,20 @@ export interface PortfolioDB {
     exchange: string;
     available: number;
     settings: PortfolioSettings;
-    stats?: FullStats;
+    fullStats?: FullStats;
+    periodStats?: PeriodStats[];
 }
 
-export interface PortfolioRobot {
+export interface PortfolioRobotDB {
     robotId: string;
     active: boolean;
     share: number;
-    amountInCurrency: number;
+}
+export interface PortfolioRobot extends PortfolioRobotDB {
+    amountInCurrency?: number;
 }
 
 export interface PortfolioState extends PortfolioDB {
-    tradeStats?: TradeStats;
     robots?: PortfolioRobot[];
 }
 

@@ -20,7 +20,9 @@ const portfolio: PortfolioState = {
             efficiency: true
         },
         minBalance: 0,
-        initialBalance: 1000
+        initialBalance: 0,
+        feeRate: 0.01,
+        minTradeAmount: 65
     }
 };
 
@@ -41,6 +43,23 @@ describe("Test portfolio state", () => {
             portfolioBuilder.calculateRobotsStats();
             portfolioBuilder.sortRobots();
             expect(portfolioBuilder.sortedRobotsList.length).toBe(55);
+        });
+        it("Should calc amounts", async () => {
+            const portfolioBuilder = new PortfolioBuilder(portfolio, positions);
+            portfolioBuilder.calculateRobotsStats();
+            portfolioBuilder.sortRobots();
+            const result = portfolioBuilder.calcAmounts(portfolioBuilder.sortedRobotsList);
+            fs.writeFileSync(
+                "./testResults/amounts.json",
+                JSON.stringify(
+                    result.robots.map((r) => ({
+                        robotId: r.robotId,
+                        amountInCurrency: r.amountInCurrency,
+                        share: r.share
+                    }))
+                )
+            );
+            expect(result).toBeDefined();
         });
         it("Should calc portfolio", async () => {
             const portfolioBuilder = new PortfolioBuilder(portfolio, positions);
@@ -65,33 +84,10 @@ describe("Test portfolio state", () => {
             expect(result.approve).toBe(false);
         });
         it("Should build new portfolio", async () => {
-            const values = {
-                diversification: [true, false],
-                profit: [true, false],
-                risk: [true, false],
-                moneyManagement: [true, false],
-                winRate: [true, false],
-                efficiency: [true, false]
-            };
+            const portfolioBuilder = new PortfolioBuilder(portfolio, positions);
+            const result = await portfolioBuilder.build();
 
-            const options = combinate(values).slice(0, -1);
-            const results = await Promise.all(
-                options.map(async (option) => {
-                    const portfolioBuilder = new PortfolioBuilder(
-                        {
-                            ...portfolio,
-                            settings: {
-                                ...portfolio.settings,
-                                options: option
-                            }
-                        },
-                        positions
-                    );
-                    const result = await portfolioBuilder.build();
-                    return { options: option, robots: Object.keys(result.portfolio.robots).length };
-                })
-            );
-            fs.writeFileSync("pf.json", JSON.stringify(results));
+            fs.writeFileSync("./testResults/pf.json", JSON.stringify(result));
             // console.log(util.inspect(result.steps, false, null, true));
         });
     });
