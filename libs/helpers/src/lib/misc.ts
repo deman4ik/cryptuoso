@@ -23,8 +23,8 @@ export const isUndefinedOrNull = (value: any): boolean => value === null || valu
  * Returns default value if provided value is null or undefined
  *
  * @template T
- * @param {T} value
- * @param {T} defaultValue
+ * @param {any} value
+ * @param {any} [defaultValue=null]
  */
-export const defaultValue = <T>(value: T, defaultValue: T) =>
+export const nvl = (value: any, defaultValue: any = null) =>
     value === null || value === undefined ? defaultValue : value;

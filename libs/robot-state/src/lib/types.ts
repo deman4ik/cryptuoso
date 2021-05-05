@@ -13,7 +13,7 @@ import {
 } from "@cryptuoso/market";
 import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 import { IndicatorState } from "@cryptuoso/robot-indicators";
-import { TradeStats } from "@cryptuoso/stats-calc";
+import { FullStats, PeriodStats } from "@cryptuoso/trade-stats";
 
 export const enum RobotStatus {
     starting = "starting",
@@ -61,6 +61,7 @@ export interface RobotPositionState extends BasePosition {
     barsHeld?: number;
     backtest?: boolean;
     internalState?: RobotPostionInternalState;
+    emulated: boolean;
 }
 
 export interface RobotState {
@@ -74,6 +75,7 @@ export interface RobotState {
         strategySettings: StrategySettings;
         robotSettings: RobotSettings;
         activeFrom: string;
+        feeRate?: number;
     };
     lastCandle?: Candle;
     state?: StrategyProps;
@@ -82,10 +84,10 @@ export interface RobotState {
     startedAt?: string;
     stoppedAt?: string;
     backtest?: boolean;
-}
-
-export interface RobotStats extends TradeStats {
-    robotId: string;
+    fullStats?: FullStats;
+    periodStats?: PeriodStats[];
+    emulatedFullStats?: FullStats;
+    emulatedPeriodStats?: PeriodStats[];
 }
 
 export const enum RobotJobType {

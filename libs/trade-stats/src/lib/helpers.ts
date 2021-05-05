@@ -1,6 +1,6 @@
 import dayjs, { UnitType } from "@cryptuoso/dayjs";
 import { durationUnit } from "@cryptuoso/helpers";
-import { StatsPeriod } from "./types";
+import { PeriodStats, StatsPeriod, TradeStats } from "./types";
 
 export function createDatesPeriod(
     dateFrom: string,
@@ -38,4 +38,30 @@ export function createDatesPeriod(
         });
     }
     return list;
+}
+
+export function periodStatsFromArray(arr: PeriodStats[]) {
+    const periodStats: TradeStats["periodStats"] = {
+        year: {},
+        quarter: {},
+        month: {}
+    };
+    for (const period of arr.filter(({ period }) => period === "year")) {
+        periodStats.year[`${period.year}`] = period;
+    }
+    for (const period of arr.filter(({ period }) => period === "quarter")) {
+        periodStats.year[`${period.year}.${period.quarter}`] = period;
+    }
+    for (const period of arr.filter(({ period }) => period === "month")) {
+        periodStats.year[`${period.year}.${period.month}`] = period;
+    }
+    return periodStats;
+}
+
+export function periodStatsToArray(periodStats: TradeStats["periodStats"]) {
+    return [
+        ...Object.values(periodStats.year),
+        ...Object.values(periodStats.quarter),
+        ...Object.values(periodStats.month)
+    ];
 }

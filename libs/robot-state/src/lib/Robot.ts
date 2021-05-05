@@ -1,13 +1,14 @@
 import dayjs from "@cryptuoso/dayjs";
 import { BaseIndicator, TulipIndicator, IndicatorCode, IndicatorType } from "@cryptuoso/robot-indicators";
-import { ValidTimeframe, CandleProps, RobotPositionStatus, Candle } from "@cryptuoso/market";
+import { ValidTimeframe, CandleProps, RobotPositionStatus, Candle, calcPositionProfit } from "@cryptuoso/market";
 import { RobotWorkerEvents, SignalEvents } from "@cryptuoso/robot-events";
 import { NewEvent } from "@cryptuoso/events";
-import { CANDLES_RECENT_AMOUNT, defaultValue, sortAsc } from "@cryptuoso/helpers";
+import { CANDLES_RECENT_AMOUNT, nvl, sortAsc } from "@cryptuoso/helpers";
 import { BaseStrategy } from "./BaseStrategy";
 import { RobotPositionState, RobotState, RobotStatus, StrategyProps } from "./types";
 import logger from "@cryptuoso/logger";
-import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
+import { calcCurrencyDynamic, RobotSettings, StrategySettings, VolumeSettingsType } from "@cryptuoso/robot-settings";
+import { periodStatsFromArray, periodStatsToArray, TradeStats, TradeStatsCalc } from "@cryptuoso/trade-stats";
 
 export interface StrategyCode {
     [key: string]: any;
@@ -27,6 +28,7 @@ export class Robot {
         strategySettings: StrategySettings;
         robotSettings: RobotSettings;
         activeFrom: string;
+        feeRate?: number;
     };
     _lastCandle: Candle;
     _state: StrategyProps;
@@ -44,6 +46,8 @@ export class Robot {
     _postionsToSave: RobotPositionState[];
     _backtest: boolean;
     _error: any;
+    _stats?: TradeStats;
+    _emulatedStats?: TradeStats;
 
     constructor(state: RobotState) {
         /* Идентификатор робота */
@@ -64,13 +68,13 @@ export class Robot {
         this._settings = {
             strategySettings: {
                 ...state.settings.strategySettings,
-                requiredHistoryMaxBars: defaultValue(
+                requiredHistoryMaxBars: nvl(
                     state.settings.strategySettings.requiredHistoryMaxBars,
                     CANDLES_RECENT_AMOUNT
                 )
             },
             robotSettings: state.settings.robotSettings,
-            activeFrom: defaultValue(state.settings.activeFrom, state.startedAt)
+            activeFrom: nvl(state.settings.activeFrom, state.startedAt)
         };
 
         /* Последняя свеча */
@@ -84,7 +88,7 @@ export class Robot {
             initialized: false
         };
         /* Действия для проверки */
-        this._hasAlerts = state.hasAlerts || false;
+        this._hasAlerts = nvl(state.hasAlerts, false);
 
         this._baseIndicatorsCode = {};
         /* Текущая свеча */
@@ -101,6 +105,13 @@ export class Robot {
         this._eventsToSend = [];
         this._postionsToSave = [];
         this._indicatorInstances = {};
+
+        /* Статистика */
+        this._stats = { fullStats: state.fullStats, periodStats: periodStatsFromArray(nvl(state.periodStats, [])) };
+        this._emulatedStats = {
+            fullStats: state.emulatedFullStats,
+            periodStats: periodStatsFromArray(nvl(state.emulatedPeriodStats, []))
+        };
     }
 
     get eventsToSend() {
@@ -159,6 +170,10 @@ export class Robot {
 
     get hasAlerts() {
         return this._hasAlerts;
+    }
+
+    get emulateNextPosition() {
+        return this._emulatedStats?.fullStats?.emulateNextPosition || false;
     }
 
     clear() {
@@ -315,6 +330,7 @@ export class Robot {
             timeframe: this._timeframe,
             robotId: this._id,
             backtest: this._backtest,
+            emulateNextPosition: this.emulateNextPosition,
             posLastNumb: strategyState.posLastNumb,
             positions: strategyState.positions,
             parametersSchema,
@@ -480,6 +496,7 @@ export class Robot {
         // Передать свечу и значения индикаторов в инстанс стратегии
         this._strategyInstance._handleCandles(this._candle, this._candles, this._candlesProps);
         this._strategyInstance._handleIndicators(this._state.indicators);
+        this._strategyInstance._handleEmulation(this.emulateNextPosition);
         // Очищаем предыдущие  задачи у позиций
         this._strategyInstance._clearAlerts();
         // Запустить проверку стратегии
@@ -564,6 +581,45 @@ export class Robot {
         };
     }
 
+    calcStats() {
+        if (this.hasClosedPositions) {
+            logger.debug(`Calculating #${this._id} robot stats`);
+
+            const tradeStatsCalc = new TradeStatsCalc(
+                this.closedPositions,
+                {
+                    job: {
+                        type: "robot",
+                        robotId: this._id,
+                        recalc: false,
+                        SMAWindow: this._settings.robotSettings.SMAWindow
+                    },
+                    initialBalance: this._settings.robotSettings.initialBalance
+                },
+                this._emulatedStats
+            );
+            this._emulatedStats = tradeStatsCalc.calculate();
+            this._strategyInstance._handleEmulation(this.emulateNextPosition);
+            const notEmulatedPositions = this.closedPositions.filter((p) => !p.emulated);
+            if (notEmulatedPositions.length) {
+                const tradeStatsCalc = new TradeStatsCalc(
+                    notEmulatedPositions,
+                    {
+                        job: {
+                            type: "robot",
+                            robotId: this._id,
+                            recalc: false,
+                            SMAWindow: this._settings.robotSettings.SMAWindow
+                        },
+                        initialBalance: this._settings.robotSettings.initialBalance
+                    },
+                    this._stats
+                );
+                this._stats = tradeStatsCalc.calculate();
+            }
+        }
+    }
+
     clearEvents() {
         this._eventsToSend = [];
         this._postionsToSave = [];
@@ -602,7 +658,36 @@ export class Robot {
      */
     getStrategyState() {
         this._eventsToSend = [...this._eventsToSend, ...this._strategyInstance._eventsToSend];
-        this._postionsToSave = this._strategyInstance._positionsToSave;
+        let volume: number;
+        let volumeInCurrency: number;
+        if (this._settings.robotSettings.volumeType === VolumeSettingsType.assetStatic) {
+            volume = this._settings.robotSettings.volume;
+        } else if (this._settings.robotSettings.volumeType === VolumeSettingsType.currencyDynamic) {
+            volumeInCurrency = this._settings.robotSettings.volumeInCurrency;
+        }
+        this._postionsToSave = this._strategyInstance._positionsToSave.map((pos) => {
+            if (pos.status === "closed") {
+                const posVolume = volume || calcCurrencyDynamic(volumeInCurrency, pos.entryPrice);
+                return {
+                    ...pos,
+                    volume: posVolume,
+                    profit: calcPositionProfit(
+                        pos.direction,
+                        pos.entryPrice,
+                        pos.exitPrice,
+                        posVolume,
+                        this._settings.feeRate
+                    ),
+                    worstProfit: calcPositionProfit(
+                        pos.direction,
+                        pos.entryPrice,
+                        pos.maxPrice,
+                        posVolume,
+                        this._settings.feeRate
+                    )
+                };
+            } else return pos;
+        });
         this._state.initialized = this._strategyInstance.initialized;
         this._state.positions = this._strategyInstance.validPositions;
         this._state.posLastNumb = this._strategyInstance.posLastNumb;
@@ -630,7 +715,11 @@ export class Robot {
             status: this._status,
             startedAt: this._startedAt,
             stoppedAt: this._stoppedAt,
-            state: this._state
+            state: this._state,
+            fullStats: this._stats?.fullStats,
+            periodStats: periodStatsToArray(this._stats?.periodStats),
+            emulatedFullStats: this._emulatedStats?.fullStats,
+            emulatedPeriodStats: periodStatsToArray(this._emulatedStats?.periodStats)
         };
     }
 

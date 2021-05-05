@@ -13,9 +13,11 @@ import {
     BacktesterWorkerFailed
 } from "@cryptuoso/backtester-events";
 import { RobotStatus } from "@cryptuoso/robot-state";
-import { Backtester, Status } from "@cryptuoso/backtester-state";
+import { Backtester, BacktesterState, Status } from "@cryptuoso/backtester-state";
 import { sql } from "@cryptuoso/postgres";
 import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
+import combinate from "combinate";
+import { GenericObject } from "@cryptuoso/helpers";
 
 export type BacktesterRunnerServiceConfig = HTTPServiceConfig;
 
@@ -53,7 +55,8 @@ export default class BacktesterRunnerService extends HTTPService {
 
     async onServiceStart() {
         this.createQueue("backtest", null, {
-            stalledInterval: 60000
+            maxStalledCount: 1,
+            stalledInterval: 120000
         });
     }
 
@@ -191,18 +194,69 @@ export default class BacktesterRunnerService extends HTTPService {
             }
             */
 
-            const allStrategySettings: { [key: string]: StrategySettings } = {};
+            /* const allStrategySettings: { [key: string]: StrategySettings } = {};
             if (!Array.isArray(params.strategySettings)) {
-                strategySettings = { ...strategySettings, ...params.strategySettings };
                 allStrategySettings[params.robotId || id] = strategySettings;
             } else if (params.strategySettings && Array.isArray(params.strategySettings)) {
                 params.strategySettings.forEach((settings: StrategySettings) => {
                     allStrategySettings[uuid()] = settings;
                 });
+            }*/
+
+            if (params.strategySettings) {
+                strategySettings = { ...strategySettings, ...params.strategySettings };
             }
 
             if (params.robotSettings) {
                 robotSettings = { ...robotSettings, ...params.robotSettings };
+            }
+
+            const robots: BacktesterState["robots"] = {};
+            let allOptions: { [key: string]: number }[];
+
+            if (params.settingsRange && Array.isArray(params.settingsRange) && params.settingsRange.length) {
+                const options: { [key: string]: number[] } = {};
+
+                for (const setting of params.settingsRange) {
+                    options[`${setting.context}#${setting.prop}`] = [];
+
+                    let current = setting.from;
+                    while (current <= setting.to) {
+                        options[`${setting.context}#${setting.prop}`].push(current);
+                        current += setting.step;
+                    }
+                }
+
+                allOptions = combinate(options);
+                for (const option of allOptions) {
+                    const newStrategySettings: GenericObject<number> = {};
+                    const newRobotSettings: GenericObject<number> = {};
+                    for (const [key, value] of Object.entries(option)) {
+                        const [context, prop] = key.split("#");
+                        if (context === "strategy") {
+                            newStrategySettings[prop] = value;
+                        } else if (context === "robot") {
+                            newRobotSettings[prop] = value;
+                        }
+                    }
+                    robots[uuid()] = {
+                        strategySettings: {
+                            ...strategySettings,
+                            ...newStrategySettings
+                        },
+                        robotSettings: {
+                            ...robotSettings,
+                            ...newRobotSettings
+                        }
+                    };
+                }
+            }
+
+            if (!Object.keys(robots).length) {
+                robots[params.robotId || uuid()] = {
+                    strategySettings,
+                    robotSettings
+                };
             }
 
             // Check history
@@ -230,15 +284,15 @@ export default class BacktesterRunnerService extends HTTPService {
                 dateFrom: params.dateFrom,
                 dateTo: params.dateTo,
                 settings: params.settings,
-                strategySettings: allStrategySettings,
-                robotSettings,
+                robots,
                 status: Status.queued
             });
 
             await this.addJob("backtest", "backtest", backtester.state, {
                 jobId: backtester.id,
                 removeOnComplete: true,
-                removeOnFail: 100
+                removeOnFail: 100,
+                attempts: 1
             });
             this.log.info(`Backtester ${backtester.id} scheduled`);
             return { result: backtester.id };

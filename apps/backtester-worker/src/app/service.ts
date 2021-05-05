@@ -115,7 +115,7 @@ export default class BacktesterWorkerService extends BaseService {
                 const finalState = await backtesterWorker.process();
                 backtester = new Backtester(finalState);
                 this.log.info(`Backtester #${backtester.id} is ${backtester.status}!`);
-                job.update(backtester.state);
+                // job.update(backtester.state);
                 if (backtester.isFailed) {
                     await this.events.emit<BacktesterWorkerFailed>({
                         type: BacktesterWorkerEvents.FAILED,

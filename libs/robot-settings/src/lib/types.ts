@@ -5,24 +5,29 @@ export const enum VolumeSettingsType {
     assetDynamicDelta = "assetDynamicDelta"
 }
 
-export interface AssetStaticSettings {
+export interface BaseSettings {
+    initialBalance?: number;
+    SMAWindow?: number;
+}
+
+export interface AssetStaticSettings extends BaseSettings {
     volumeType: VolumeSettingsType.assetStatic;
     volume: number;
 }
 
-export interface CurrencyDynamicSettings {
+export interface CurrencyDynamicSettings extends BaseSettings {
     volumeType: VolumeSettingsType.currencyDynamic;
     volumeInCurrency: number;
 }
 
-export interface AssetDynamicDeltaSettings {
+export interface AssetDynamicDeltaSettings extends BaseSettings {
     volumeType: VolumeSettingsType.assetDynamicDelta;
     initialVolume: number;
     volume?: number;
     delta?: number;
 }
 
-export interface BalancePercentSettings {
+export interface BalancePercentSettings extends BaseSettings {
     volumeType: VolumeSettingsType.balancePercent;
     balancePercent: number;
 }
@@ -39,7 +44,7 @@ export interface StrategySettings {
 }
 
 export const AssetStaticSettingsSchema = {
-    $$strict: true,
+    //$$strict: true,
     type: "object",
     props: {
         volumeType: { type: "equal", value: VolumeSettingsType.assetStatic },
@@ -48,7 +53,7 @@ export const AssetStaticSettingsSchema = {
 };
 
 export const CurrencyDynamicSettingsSchema = {
-    $$strict: true,
+    //$$strict: true,
     type: "object",
     props: {
         volumeType: { type: "equal", value: VolumeSettingsType.currencyDynamic },
@@ -57,7 +62,7 @@ export const CurrencyDynamicSettingsSchema = {
 };
 
 export const AssetDynamicDeltaSettingsSchema = {
-    $$strict: true,
+    // $$strict: true,
     type: "object",
     props: {
         volumeType: { type: "equal", value: VolumeSettingsType.assetDynamicDelta },
@@ -68,7 +73,7 @@ export const AssetDynamicDeltaSettingsSchema = {
 };
 
 export const BalancePercentSettingsSchema = {
-    $$strict: true,
+    // $$strict: true,
     type: "object",
     props: {
         volumeType: { type: "equal", value: VolumeSettingsType.balancePercent },

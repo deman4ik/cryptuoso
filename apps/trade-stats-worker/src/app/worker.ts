@@ -11,12 +11,15 @@ import {
     StatsMeta,
     TradeStats,
     TradeStatsCalc,
-    TradeStatsDB
+    TradeStatsDB,
+    periodStatsFromArray,
+    periodStatsToArray
 } from "@cryptuoso/trade-stats";
 import logger, { Logger } from "@cryptuoso/logger";
 import { sql, pg, pgUtil, makeChunksGenerator } from "@cryptuoso/postgres";
 import { PortfolioSettings } from "@cryptuoso/portfolio-state";
 import { UserPortfolioSettings } from "@cryptuoso/user-portfolio-state";
+
 class StatsCalcWorker {
     private dummy = "-";
     #log: Logger;
@@ -64,32 +67,6 @@ class StatsCalcWorker {
         return tradeStatsCalc.calculate();
     }
 
-    periodStatsFromArray(arr: PeriodStats[]) {
-        const periodStats: TradeStats["periodStats"] = {
-            year: {},
-            quarter: {},
-            month: {}
-        };
-        for (const period of arr.filter(({ period }) => period === "year")) {
-            periodStats.year[`${period.year}`] = period;
-        }
-        for (const period of arr.filter(({ period }) => period === "quarter")) {
-            periodStats.year[`${period.year}.${period.quarter}`] = period;
-        }
-        for (const period of arr.filter(({ period }) => period === "month")) {
-            periodStats.year[`${period.year}.${period.month}`] = period;
-        }
-        return periodStats;
-    }
-
-    periodStatsToArray(periodStats: TradeStats["periodStats"]) {
-        return [
-            ...Object.values(periodStats.year),
-            ...Object.values(periodStats.quarter),
-            ...Object.values(periodStats.month)
-        ];
-    }
-
     async calcRobot(job: TradeStatsRobot) {
         try {
             let { recalc = false } = job;
@@ -117,7 +94,7 @@ class StatsCalcWorker {
                 else
                     initialStats = {
                         fullStats: prevStats.fullStats,
-                        periodStats: this.periodStatsFromArray(prevStats.periodStats)
+                        periodStats: periodStatsFromArray(prevStats.periodStats)
                     };
             }
 
@@ -163,7 +140,7 @@ class StatsCalcWorker {
             await this.db.pg.query(sql`
         UPDATE robots 
         SET full_stats = ${JSON.stringify(newStats.fullStats)},
-        period_stats = ${JSON.stringify(this.periodStatsToArray(newStats.periodStats))}
+        period_stats = ${JSON.stringify(periodStatsToArray(newStats.periodStats))}
         WHERE id = ${robotId};
         `);
         } catch (err) {
@@ -200,7 +177,7 @@ class StatsCalcWorker {
                 else
                     initialStats = {
                         fullStats: portfolio.fullStats,
-                        periodStats: this.periodStatsFromArray(portfolio.periodStats)
+                        periodStats: periodStatsFromArray(portfolio.periodStats)
                     };
             }
 
@@ -246,7 +223,7 @@ class StatsCalcWorker {
             await this.db.pg.query(sql`
             UPDATE portfolios 
             SET full_stats = ${JSON.stringify(newStats.fullStats)},
-            period_stats = ${JSON.stringify(this.periodStatsToArray(newStats.periodStats))}
+            period_stats = ${JSON.stringify(periodStatsToArray(newStats.periodStats))}
             WHERE id = ${portfolioId};
             `);
         } catch (err) {
@@ -283,7 +260,7 @@ class StatsCalcWorker {
                 else
                     initialStats = {
                         fullStats: prevStats.fullStats,
-                        periodStats: this.periodStatsFromArray(prevStats.periodStats)
+                        periodStats: periodStatsFromArray(prevStats.periodStats)
                     };
             }
 
@@ -329,7 +306,7 @@ class StatsCalcWorker {
             await this.db.pg.query(sql`
             UPDATE user_robots 
             SET full_stats = ${JSON.stringify(newStats.fullStats)},
-            period_stats = ${JSON.stringify(this.periodStatsToArray(newStats.periodStats))}
+            period_stats = ${JSON.stringify(periodStatsToArray(newStats.periodStats))}
             WHERE id = ${userRobotId}; `);
         } catch (err) {
             this.log.error("Failed to calcUserRobot stats", err);
@@ -365,7 +342,7 @@ class StatsCalcWorker {
                 else
                     initialStats = {
                         fullStats: userPortfolio.fullStats,
-                        periodStats: this.periodStatsFromArray(userPortfolio.periodStats)
+                        periodStats: periodStatsFromArray(userPortfolio.periodStats)
                     };
             }
 
@@ -416,7 +393,7 @@ class StatsCalcWorker {
             await this.db.pg.query(sql`
             UPDATE user_portfolios 
             SET full_stats = ${JSON.stringify(newStats.fullStats)},
-            period_stats = ${JSON.stringify(this.periodStatsToArray(newStats.periodStats))}
+            period_stats = ${JSON.stringify(periodStatsToArray(newStats.periodStats))}
             WHERE id = ${userPortfolioId};
             `);
         } catch (err) {

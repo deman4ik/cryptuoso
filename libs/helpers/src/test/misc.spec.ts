@@ -1,4 +1,4 @@
-import { sleep, defaultValue } from "../lib/misc";
+import { sleep, nvl } from "../lib/misc";
 
 describe("'misc' utils test", () => {
     describe("'sleep' test", () => {
@@ -9,11 +9,11 @@ describe("'misc' utils test", () => {
             expect(timeAfter - timeBefore >= 1000).toBe(true);
         });
     });
-    describe("'defaultValue' test", () => {
+    describe("'nvl' test", () => {
         it("Should return default value if value is not valid", () => {
-            expect(defaultValue(null, 0)).toBe(0);
-            expect(defaultValue(1, 0)).toBe(1);
-            expect(defaultValue(undefined, "defined")).toStrictEqual("defined");
+            expect(nvl(null, 0)).toBe(0);
+            expect(nvl(1, 0)).toBe(1);
+            expect(nvl(undefined, "defined")).toStrictEqual("defined");
         });
     });
 });

@@ -1,7 +1,7 @@
 import { ValidationSchema } from "fastest-validator";
 import dayjs from "@cryptuoso/dayjs";
 import { v4 as uuid } from "uuid";
-import { validate, sortAsc } from "@cryptuoso/helpers";
+import { validate, sortAsc, nvl } from "@cryptuoso/helpers";
 import { RobotPosition } from "./RobotPosition";
 import {
     CandleProps,
@@ -29,6 +29,7 @@ export interface StrategyState extends StrategyProps {
     parametersSchema: ValidationSchema;
     strategyFunctions: { [key: string]: () => any };
     backtest?: boolean;
+    emulateNextPosition?: boolean;
 }
 
 export class BaseStrategy {
@@ -44,13 +45,22 @@ export class BaseStrategy {
     _positions: { [key: string]: RobotPosition };
     _parametersSchema: ValidationSchema;
     _backtest?: boolean;
+    _emulateNextPosition?: boolean;
     _candle: Candle;
     _candles: Candle[];
     _candlesProps: CandleProps;
     _indicators: {
         [key: string]: IndicatorState;
     };
-    _consts: { [key: string]: string };
+    _consts: { [key: string]: string } = {
+        LONG: TradeAction.long,
+        CLOSE_LONG: TradeAction.closeLong,
+        SHORT: TradeAction.short,
+        CLOSE_SHORT: TradeAction.closeShort,
+        LIMIT: OrderType.limit,
+        MARKET: OrderType.market,
+        STOP: OrderType.stop
+    };
     _eventsToSend: NewEvent<any>[];
     _positionsToSave: RobotPositionState[];
     _log = logger.debug.bind(logger);
@@ -69,6 +79,7 @@ export class BaseStrategy {
         this._setPositions(state.positions);
         this._parametersSchema = state.parametersSchema;
         this._backtest = state.backtest;
+        this._emulateNextPosition = nvl(state.emulateNextPosition, false);
         this._candle = null;
         this._candles = []; // [{}]
         this._candlesProps = {
@@ -79,15 +90,6 @@ export class BaseStrategy {
             volume: []
         };
         this._indicators = state.indicators || {};
-        this._consts = {
-            LONG: TradeAction.long,
-            CLOSE_LONG: TradeAction.closeLong,
-            SHORT: TradeAction.short,
-            CLOSE_SHORT: TradeAction.closeShort,
-            LIMIT: OrderType.limit,
-            MARKET: OrderType.market,
-            STOP: OrderType.stop
-        };
         this._eventsToSend = [];
         this._positionsToSave = [];
         if (state.variables) {
@@ -196,6 +198,14 @@ export class BaseStrategy {
         }
     }
 
+    _positionsHandleEmulation(emulate: boolean) {
+        if (Object.keys(this._positions).length > 0) {
+            Object.keys(this._positions).forEach((key) => {
+                this._positions[key]._handleEmulation(emulate);
+            });
+        }
+    }
+
     _getNextPositionCode(prefix = "p") {
         if (Object.prototype.hasOwnProperty.call(this._posLastNumb, prefix)) {
             this._posLastNumb[prefix] += 1;
@@ -219,9 +229,10 @@ export class BaseStrategy {
             prefix,
             code,
             parentId: parentId,
-            backtest: this._backtest
+            backtest: this._backtest,
+            emulated: this._emulateNextPosition
         });
-        this._positions[code]._log = logger.debug.bind(logger);
+        //this._positions[code]._log = logger.debug.bind(logger);
         this._positions[code]._handleCandle(this._candle);
         return this._positions[code];
     }
@@ -264,7 +275,7 @@ export class BaseStrategy {
         if (positions && Array.isArray(positions) && positions.length > 0) {
             positions.forEach((position) => {
                 this._positions[position.code] = new RobotPosition(position);
-                this._positions[position.code]._log = logger.debug.bind(logger);
+                // this._positions[position.code]._log = logger.debug.bind(logger);
             });
         }
     }
@@ -317,6 +328,11 @@ export class BaseStrategy {
         this._candles = candles;
         this._candlesProps = candlesProps;
         this._positionsHandleCandle(candle);
+    }
+
+    _handleEmulation(emulateNextPosition: boolean) {
+        this._emulateNextPosition = emulateNextPosition;
+        this._positionsHandleEmulation(emulateNextPosition);
     }
 
     _addIndicator(name: string, indicatorName: string, parameters: { [key: string]: any }) {
