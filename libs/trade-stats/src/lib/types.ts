@@ -21,11 +21,13 @@ export interface Stats {
     avgBarsHeldLosing: number | null;
     netProfit: number;
     avgNetProfit: number | null;
-    positionsProfitPercents: number[];
+    //positionsProfitPercents: number[];
     percentNetProfit: number | null;
-    sumPercentNetProfit: number | null;
-    avgPercentNetProfit: number | null;
-    sumPercentNetProfitSqDiff: number | null;
+    // sumPercentNetProfit: number | null;
+    //  avgPercentNetProfit: number | null;
+    //sumPercentNetProfitSqDiff: number | null;
+    netProfitsSMA: number[];
+    netProfitSMA: number | null;
     stdDevPercentNetProfit: number | null;
     localMax: number;
     grossProfit: number;
@@ -67,6 +69,7 @@ export interface FullStats extends Stats {
     avgPercentGrossLossYears: number | null;
     avgPercentGrossLossQuarters: number | null;
     avgPercentGrossLossMonths: number | null;
+    emulateNextPosition: boolean | null;
 }
 
 export interface PeriodStats {
@@ -114,6 +117,7 @@ interface BaseTradeStatsJob {
 export interface TradeStatsRobot extends BaseTradeStatsJob {
     type: "robot";
     robotId: string;
+    SMAWindow?: number;
 }
 
 export interface TradeStatsPortfolio extends BaseTradeStatsJob {

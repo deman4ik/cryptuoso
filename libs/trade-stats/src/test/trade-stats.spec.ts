@@ -9,12 +9,21 @@ describe("Test 'trade-stats'", () => {
     describe("Test calc with no previous statistics", () => {
         it("Should calculate statistics", async () => {
             const tradeStatsCalculator = new TradeStatsCalc(positions, {
-                job: { robotId: "test", type: "robot", recalc: true },
-                userInitialBalance: 1000
+                job: { robotId: "test", type: "robot", recalc: true, SMAWindow: 10 },
+                initialBalance: 100000
             });
             const stats = tradeStatsCalculator.calculate();
-
-            console.log(stats.fullStats);
+            const { sharpeRatio } = stats.fullStats;
+            /*  console.log(
+                Object.values(stats.periodStats.month).map(({ dateFrom, stats }) => ({
+                    dateFrom,
+                    percentNetProfit: stats.percentNetProfit,
+                    netProfit: stats.netProfit
+                }))
+            ); */
+            console.log({
+                sharpeRatio
+            });
             // expect(stats.fullStats).toEqual(result.fullStats);
             // console.log(util.inspect(stats.periodStats.month, false, null, true));
             //  const data = JSON.stringify(stats);
@@ -32,7 +41,7 @@ describe("Test 'trade-stats'", () => {
                 ),
                 {
                     job: { robotId: "test", type: "robot", recalc: false, round: false },
-                    userInitialBalance: 1000
+                    initialBalance: 1000
                 }
             );
             const prevStats = prevTradeStatsCalculator.calculate();
@@ -45,7 +54,7 @@ describe("Test 'trade-stats'", () => {
                 ),
                 {
                     job: { robotId: "test", type: "robot", recalc: false, round: false },
-                    userInitialBalance: 1000
+                    initialBalance: 1000
                 },
                 prevStats
             );
@@ -53,11 +62,18 @@ describe("Test 'trade-stats'", () => {
 
             const tradeStatsCalculatorAll = new TradeStatsCalc(positions, {
                 job: { robotId: "test", type: "robot", recalc: true, round: false },
-                userInitialBalance: 1000
+                initialBalance: 1000
             });
             const statsAll = tradeStatsCalculatorAll.calculate();
 
             expect(stats).toEqual(statsAll);
+            const { netProfitsSMA, netProfitSMA, netProfit, emulateNextPosition } = statsAll.fullStats;
+            console.log({
+                netProfitsSMA,
+                netProfitSMA,
+                netProfit,
+                emulateNextPosition
+            });
             //  console.log(stats.fullStats);
             // expect(stats.fullStats).toEqual(result.fullStats);
             // console.log(util.inspect(stats.periodStats.month, false, null, true));

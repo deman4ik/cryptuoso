@@ -335,21 +335,31 @@ export default class NotificationsService extends BaseService {
     async handleOrderError(event: OrdersErrorEvent) {
         try {
             this.log.info(`Handling order error event`, event);
-            const { userRobotId, timestamp } = event;
+            if (
+                !event.error.toLowerCase().includes("margin") &&
+                !event.error.toLowerCase().includes("insufficient") &&
+                !event.error.toLowerCase().includes("gateway") &&
+                !event.error.toLowerCase().includes("getaddrinfo") &&
+                !event.error.toLowerCase().includes("network") &&
+                !event.error.toLowerCase().includes("request") &&
+                !event.error.toLowerCase().includes("econnreset")
+            ) {
+                const { userRobotId, timestamp } = event;
 
-            const { robotCode, telegramId, email, userId } = await this.#getUserRobotInfo(userRobotId);
+                const { robotCode, telegramId, email, userId } = await this.#getUserRobotInfo(userRobotId);
 
-            const notification: Notification<any> = {
-                userId,
-                timestamp,
-                type: "order.error",
-                data: { ...event, robotCode },
-                userRobotId,
-                sendEmail: !!email,
-                sendTelegram: !!telegramId
-            };
+                const notification: Notification<any> = {
+                    userId,
+                    timestamp,
+                    type: "order.error",
+                    data: { ...event, robotCode },
+                    userRobotId,
+                    sendEmail: !!email,
+                    sendTelegram: !!telegramId
+                };
 
-            await this.#saveNotifications([notification]);
+                await this.#saveNotifications([notification]);
+            }
         } catch (err) {
             this.log.error("Failed to handleOrderError", err, event);
             throw err;

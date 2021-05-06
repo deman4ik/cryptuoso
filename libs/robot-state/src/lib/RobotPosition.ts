@@ -1,4 +1,4 @@
-import { sortAsc, round } from "@cryptuoso/helpers";
+import { sortAsc, round, nvl } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
 import {
     TradeAction,
@@ -14,6 +14,7 @@ import {
     DBCandle
 } from "@cryptuoso/market";
 import { RobotPositionState, RobotPostionInternalState } from "./types";
+import logger from "@cryptuoso/logger";
 
 /**
  * Robot position
@@ -45,11 +46,11 @@ export class RobotPosition {
     private _profit: number;
     private _barsHeld: number;
     private _backtest?: boolean;
+    private _emulated?: boolean;
     private _internalState: RobotPostionInternalState;
     private _candle?: Candle;
     private _alertsToPublish: SignalInfo[];
     private _tradeToPublish: SignalInfo;
-    _log = console.log;
 
     constructor(state: RobotPositionState) {
         this._id = state.id;
@@ -76,6 +77,7 @@ export class RobotPosition {
         this._profit = state.profit || 0;
         this._barsHeld = state.barsHeld || 0;
         this._backtest = state.backtest;
+        this._emulated = state.emulated;
         this._internalState = state.internalState || {
             highestHigh: null,
             lowestLow: null,
@@ -187,7 +189,9 @@ export class RobotPosition {
             alerts: this._alerts,
             profit: this._profit,
             barsHeld: this._barsHeld,
-            internalState: this._internalState
+            internalState: this._internalState,
+            emulated: nvl(this._emulated, false),
+            maxPrice: this._direction === "long" ? this._internalState.lowestLow : this._internalState.highestHigh
         };
     }
 
@@ -222,6 +226,10 @@ export class RobotPosition {
         }
     }
 
+    _handleEmulation(emulate: boolean) {
+        this._emulated = emulate;
+    }
+
     _checkOpen() {
         if (this._entryStatus === RobotTradeStatus.closed) {
             throw new Error(`Position ${this._code} is already open`);
@@ -238,7 +246,7 @@ export class RobotPosition {
     }
 
     _addAlert(action: TradeAction, price: number, orderType: OrderType) {
-        this._log(`${this._candle.timestamp} Position alert ${this._code} - ${action} - ${orderType} - ${price}`);
+        logger.debug(`${this._candle.timestamp} Position alert ${this._code} - ${action} - ${orderType} - ${price}`);
         const alert = {
             action,
             price: round(+price, 6),
@@ -260,7 +268,7 @@ export class RobotPosition {
 
     _createTradeSignal(alert: AlertInfo) {
         const { action, orderType, price } = alert;
-        this._log(`${this._candle.timestamp} Position trade ${this._code} - ${action}.${orderType}.${price}`);
+        logger.debug(`${this._candle.timestamp} Position trade ${this._code} - ${action}.${orderType}.${price}`);
         this._alertsToPublish = [];
         this._tradeToPublish = {
             ...alert,
@@ -278,7 +286,7 @@ export class RobotPosition {
         this._status = RobotPositionStatus.open;
         this._entryStatus = RobotTradeStatus.closed;
         this._entryPrice = price;
-        this._entryDate = dayjs.utc().toISOString();
+        this._entryDate = this._backtest ? this._candle.timestamp : dayjs.utc().toISOString();
         this._entryOrderType = orderType;
         this._entryAction = action;
         this._entryCandleTimestamp = this._candle.timestamp;
@@ -295,7 +303,7 @@ export class RobotPosition {
         this._status = RobotPositionStatus.closed;
         this._exitStatus = RobotTradeStatus.closed;
         this._exitPrice = +price;
-        this._exitDate = dayjs.utc().toISOString();
+        this._exitDate = this._backtest ? this._candle.timestamp : dayjs.utc().toISOString();
         this._exitOrderType = orderType;
         this._exitAction = action;
         this._exitCandleTimestamp = this._candle.timestamp;

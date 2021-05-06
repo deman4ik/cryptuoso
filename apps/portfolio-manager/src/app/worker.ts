@@ -1,5 +1,5 @@
 import { expose } from "threads/worker";
-import logger, { Logger } from "@cryptuoso/logger";
+import logger from "@cryptuoso/logger";
 import { DataStream } from "scramjet";
 import { sql, pg, makeChunksGenerator, pgUtil } from "@cryptuoso/postgres";
 import { PortfolioBuilder, PortfolioBuilderJob, PortfolioDB } from "@cryptuoso/portfolio-state";

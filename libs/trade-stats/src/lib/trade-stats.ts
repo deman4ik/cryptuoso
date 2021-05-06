@@ -1,5 +1,5 @@
 import dayjs from "@cryptuoso/dayjs";
-import { average, chunkArray, divide, round, sortAsc, sum } from "@cryptuoso/helpers";
+import { average, chunkArray, divide, nvl, round, sortAsc, sum } from "@cryptuoso/helpers";
 import { BasePosition } from "@cryptuoso/market";
 import { createDatesPeriod } from "./helpers";
 import { FullStats, PerformanceVals, Stats, StatsMeta, TradeStats } from "./types";
@@ -42,7 +42,7 @@ export class TradeStatsCalc implements TradeStats {
     }
 
     private get hasBalance() {
-        return ["robot", "userSignal", "userRobot", "portfolio"].includes(this.meta.job.type);
+        return ["robot", "userRobot", "portfolio"].includes(this.meta.job.type);
     }
 
     private roundStats(stats: Stats | FullStats) {
@@ -57,75 +57,81 @@ export class TradeStatsCalc implements TradeStats {
 
     private initStats(prevStats?: Stats): Stats {
         return {
-            initialBalance: prevStats?.initialBalance || null,
-            currentBalance: prevStats?.currentBalance || null,
-            tradesCount: prevStats?.tradesCount || 0,
-            tradesWinning: prevStats?.tradesWinning || 0,
-            tradesLosing: prevStats?.tradesLosing || 0,
-            winRate: prevStats?.winRate || 0,
-            lossRate: prevStats?.lossRate || 0,
-            sumBarsHeld: prevStats?.sumBarsHeld || null,
-            avgBarsHeld: prevStats?.avgBarsHeld || null,
-            sumBarsHeldWinning: prevStats?.sumBarsHeldWinning || null,
-            avgBarsHeldWinning: prevStats?.avgBarsHeldWinning || null,
-            sumBarsHeldLosing: prevStats?.sumBarsHeldLosing || null,
-            avgBarsHeldLosing: prevStats?.avgBarsHeldLosing || null,
-            netProfit: prevStats?.netProfit || 0,
-            avgNetProfit: prevStats?.avgNetProfit || null,
-            positionsProfitPercents: prevStats?.positionsProfitPercents || [],
-            percentNetProfit: prevStats?.percentNetProfit || null,
-            sumPercentNetProfit: prevStats?.sumPercentNetProfit || null,
-            avgPercentNetProfit: prevStats?.avgPercentNetProfit || null,
-            sumPercentNetProfitSqDiff: prevStats?.sumPercentNetProfitSqDiff || null,
-            stdDevPercentNetProfit: prevStats?.stdDevPercentNetProfit || null,
-            localMax: prevStats?.localMax || 0,
-            grossProfit: prevStats?.grossProfit || 0,
-            grossLoss: prevStats?.grossLoss || 0,
-            avgGrossProfit: prevStats?.avgGrossProfit || null,
-            avgGrossLoss: prevStats?.avgGrossLoss || null,
-            percentGrossProfit: prevStats?.percentGrossProfit || null,
-            percentGrossLoss: prevStats?.percentGrossLoss || null,
-            maxConsecWins: prevStats?.maxConsecWins || 0,
-            maxConsecLosses: prevStats?.maxConsecLosses || 0,
-            currentWinSequence: prevStats?.currentWinSequence || 0,
-            currentLossSequence: prevStats?.currentLossSequence || 0,
-            maxDrawdown: prevStats?.maxDrawdown || 0,
-            percentMaxDrawdown: prevStats?.percentMaxDrawdown || null,
-            maxDrawdownDate: prevStats?.maxDrawdownDate || null,
-            amountProportion: prevStats?.amountProportion || null,
-            profitFactor: prevStats?.profitFactor || null,
-            recoveryFactor: prevStats?.recoveryFactor || null,
-            payoffRatio: prevStats?.payoffRatio || null,
-            sharpeRatio: prevStats?.sharpeRatio || null,
-            rating: prevStats?.rating || null,
-            lastUpdatedAt: prevStats?.lastUpdatedAt || null,
-            firstPosition: prevStats?.firstPosition || null,
-            lastPosition: prevStats?.lastPosition || null,
-            equity: prevStats?.equity || [],
-            equityAvg: prevStats?.equityAvg || []
+            initialBalance: nvl(prevStats?.initialBalance),
+            currentBalance: nvl(prevStats?.currentBalance, nvl(prevStats?.initialBalance)),
+            tradesCount: nvl(prevStats?.tradesCount, 0),
+            tradesWinning: nvl(prevStats?.tradesWinning, 0),
+            tradesLosing: nvl(prevStats?.tradesLosing, 0),
+            winRate: nvl(prevStats?.winRate, 0),
+            lossRate: nvl(prevStats?.lossRate, 0),
+            sumBarsHeld: nvl(prevStats?.sumBarsHeld),
+            avgBarsHeld: nvl(prevStats?.avgBarsHeld),
+            sumBarsHeldWinning: nvl(prevStats?.sumBarsHeldWinning),
+            avgBarsHeldWinning: nvl(prevStats?.avgBarsHeldWinning),
+            sumBarsHeldLosing: nvl(prevStats?.sumBarsHeldLosing),
+            avgBarsHeldLosing: nvl(prevStats?.avgBarsHeldLosing),
+            netProfit: nvl(prevStats?.netProfit, 0),
+            netProfitSMA: nvl(prevStats?.netProfitSMA),
+            netProfitsSMA: nvl(prevStats?.netProfitsSMA, []),
+            avgNetProfit: nvl(prevStats?.avgNetProfit),
+            // positionsProfitPercents: nvl(prevStats?.positionsProfitPercents, []),
+            percentNetProfit: nvl(prevStats?.percentNetProfit, 0),
+            // sumPercentNetProfit: nvl(prevStats?.sumPercentNetProfit),
+            //  avgPercentNetProfit: nvl(prevStats?.avgPercentNetProfit),
+            // sumPercentNetProfitSqDiff: nvl(prevStats?.sumPercentNetProfitSqDiff),
+
+            stdDevPercentNetProfit: nvl(prevStats?.stdDevPercentNetProfit),
+            localMax: nvl(prevStats?.localMax, 0),
+            grossProfit: nvl(prevStats?.grossProfit, 0),
+            grossLoss: nvl(prevStats?.grossLoss, 0),
+            avgGrossProfit: nvl(prevStats?.avgGrossProfit),
+            avgGrossLoss: nvl(prevStats?.avgGrossLoss),
+            percentGrossProfit: nvl(prevStats?.percentGrossProfit),
+            percentGrossLoss: nvl(prevStats?.percentGrossLoss),
+            maxConsecWins: nvl(prevStats?.maxConsecWins, 0),
+            maxConsecLosses: nvl(prevStats?.maxConsecLosses, 0),
+            currentWinSequence: nvl(prevStats?.currentWinSequence, 0),
+            currentLossSequence: nvl(prevStats?.currentLossSequence, 0),
+            maxDrawdown: nvl(prevStats?.maxDrawdown, 0),
+            percentMaxDrawdown: nvl(prevStats?.percentMaxDrawdown),
+            maxDrawdownDate: nvl(prevStats?.maxDrawdownDate),
+            amountProportion: nvl(prevStats?.amountProportion),
+            profitFactor: nvl(prevStats?.profitFactor),
+            recoveryFactor: nvl(prevStats?.recoveryFactor),
+            payoffRatio: nvl(prevStats?.payoffRatio),
+            sharpeRatio: nvl(prevStats?.sharpeRatio),
+            rating: nvl(prevStats?.rating),
+            lastUpdatedAt: nvl(prevStats?.lastUpdatedAt),
+            firstPosition: nvl(prevStats?.firstPosition),
+            lastPosition: nvl(prevStats?.lastPosition),
+            equity: nvl(prevStats?.equity, []),
+            equityAvg: nvl(prevStats?.equityAvg, [])
         };
     }
 
     private initFullStats(positions: BasePosition[], fullStats: FullStats): FullStats {
         const stats = {
             ...this.initStats(fullStats),
-            avgTradesCountYears: fullStats?.avgTradesCountYears || null,
-            avgTradesCountQuarters: fullStats?.avgTradesCountQuarters || null,
-            avgTradesCountMonths: fullStats?.avgTradesCountMonths || null,
-            avgPercentNetProfitYears: fullStats?.avgPercentNetProfitYears || null,
-            avgPercentNetProfitQuarters: fullStats?.avgPercentNetProfitQuarters || null,
-            avgPercentNetProfitMonths: fullStats?.avgPercentNetProfitMonths || null,
-            avgPercentGrossProfitYears: fullStats?.avgPercentGrossProfitYears || null,
-            avgPercentGrossProfitQuarters: fullStats?.avgPercentGrossProfitQuarters || null,
-            avgPercentGrossProfitMonths: fullStats?.avgPercentGrossProfitMonths || null,
-            avgPercentGrossLossYears: fullStats?.avgPercentGrossLossYears || null,
-            avgPercentGrossLossQuarters: fullStats?.avgPercentGrossLossQuarters || null,
-            avgPercentGrossLossMonths: fullStats?.avgPercentGrossLossMonths || null
+            avgTradesCountYears: nvl(fullStats?.avgTradesCountYears),
+            avgTradesCountQuarters: nvl(fullStats?.avgTradesCountQuarters),
+            avgTradesCountMonths: nvl(fullStats?.avgTradesCountMonths),
+            avgPercentNetProfitYears: nvl(fullStats?.avgPercentNetProfitYears),
+            avgPercentNetProfitQuarters: nvl(fullStats?.avgPercentNetProfitQuarters),
+            avgPercentNetProfitMonths: nvl(fullStats?.avgPercentNetProfitMonths),
+            avgPercentGrossProfitYears: nvl(fullStats?.avgPercentGrossProfitYears),
+            avgPercentGrossProfitQuarters: nvl(fullStats?.avgPercentGrossProfitQuarters),
+            avgPercentGrossProfitMonths: nvl(fullStats?.avgPercentGrossProfitMonths),
+            avgPercentGrossLossYears: nvl(fullStats?.avgPercentGrossLossYears),
+            avgPercentGrossLossQuarters: nvl(fullStats?.avgPercentGrossLossQuarters),
+            avgPercentGrossLossMonths: nvl(fullStats?.avgPercentGrossLossMonths),
+            emulateNextPosition: nvl(fullStats?.emulateNextPosition, false)
         };
         if (!stats.firstPosition) stats.firstPosition = positions[0];
-        if (this.hasBalance && stats.initialBalance === null)
+        if (this.hasBalance && stats.initialBalance === null) {
             stats.initialBalance =
                 this.meta.initialBalance || stats.firstPosition.volume * stats.firstPosition.entryPrice;
+            stats.currentBalance = stats.initialBalance;
+        }
 
         return stats;
     }
@@ -197,13 +203,17 @@ export class TradeStatsCalc implements TradeStats {
             }
             const prevNetProfit = stats.netProfit;
             const prevLocalMax = stats.localMax;
-            if (this.hasBalance) {
-                const percentProfit = (profit * 100) / stats.initialBalance;
+
+            /*  if (this.hasBalance) {
+                const percentProfit = (profit * 100) / stats.currentBalance;
                 stats.positionsProfitPercents.push(percentProfit);
                 stats.sumPercentNetProfit = sum(stats.sumPercentNetProfit, percentProfit);
-            }
+               
+            } */
             stats.netProfit = sum(stats.netProfit, profit);
-
+            if (this.meta.job.type === "robot") {
+                stats.netProfitsSMA.push(stats.netProfit);
+            }
             if (stats.netProfit > stats.localMax) stats.localMax = stats.netProfit;
             const drawdown = stats.netProfit - stats.localMax;
             if (stats.maxDrawdown > drawdown) {
@@ -216,12 +226,13 @@ export class TradeStatsCalc implements TradeStats {
                 const worstDrawdown = worstNetProfit - prevLocalMax;
                 if (stats.maxDrawdown > worstDrawdown) {
                     stats.maxDrawdown = worstDrawdown;
+                    stats.maxDrawdownDate = exitDate;
                 }
             }
 
             stats.equity.push({
                 x: dayjs.utc(exitDate).valueOf(),
-                y: round(profit, 2)
+                y: round(stats.netProfit, 2)
             });
         }
         stats.equityAvg = this.calculateEquityAvg(stats.equity);
@@ -240,21 +251,22 @@ export class TradeStatsCalc implements TradeStats {
         stats.avgNetProfit = stats.netProfit / stats.tradesCount;
         stats.grossProfit = sum(stats.grossProfit, ...winningPositions.map(({ profit }) => profit));
         stats.grossLoss = sum(stats.grossLoss, ...lossingPositions.map(({ profit }) => profit));
-        stats.avgGrossProfit = stats.grossProfit / stats.tradesCount;
-        stats.avgGrossLoss = stats.grossLoss / stats.tradesCount;
+        stats.avgGrossProfit = stats.grossProfit / stats.tradesWinning;
+        stats.avgGrossLoss = stats.grossLoss / stats.tradesLosing;
 
         stats.profitFactor = Math.abs(divide(stats.grossProfit, stats.grossLoss));
         stats.recoveryFactor = divide(stats.netProfit, stats.maxDrawdown) * -1;
         stats.payoffRatio = Math.abs(divide(stats.avgGrossProfit, stats.avgGrossLoss));
 
         if (this.hasBalance) {
+            stats.currentBalance = sum(stats.initialBalance, stats.netProfit);
             stats.percentNetProfit = (stats.netProfit / stats.initialBalance) * 100;
-            stats.avgPercentNetProfit = stats.sumPercentNetProfit / stats.tradesCount;
-            stats.currentBalance = stats.initialBalance + stats.netProfit;
             stats.percentGrossProfit = (stats.grossProfit / stats.initialBalance) * 100;
             stats.percentGrossLoss = (stats.grossLoss / stats.initialBalance) * 100;
             stats.percentMaxDrawdown = (Math.abs(stats.maxDrawdown) / stats.initialBalance) * 100;
             stats.amountProportion = 100 / stats.percentMaxDrawdown;
+
+            /*  stats.avgPercentNetProfit = stats.sumPercentNetProfit / stats.tradesCount;
             stats.sumPercentNetProfitSqDiff = null;
             for (const percent of stats.positionsProfitPercents) {
                 const percentProfitSqDiff = Math.pow(percent - stats.avgPercentNetProfit, 2);
@@ -263,11 +275,17 @@ export class TradeStatsCalc implements TradeStats {
             if (stats.tradesCount > 1) {
                 stats.stdDevPercentNetProfit = Math.sqrt(stats.sumPercentNetProfitSqDiff) / (stats.tradesCount - 1);
                 stats.sharpeRatio = stats.avgPercentNetProfit / stats.stdDevPercentNetProfit;
-            }
+            } */
         }
 
         stats.lastPosition = positions[positions.length - 1];
         stats.lastUpdatedAt = dayjs.utc(stats.lastPosition.exitDate).toISOString();
+
+        if (this.meta.job.type === "robot" && this.meta.job.SMAWindow) {
+            const window = this.meta.job.SMAWindow;
+            stats.netProfitsSMA = stats.netProfitsSMA.slice(-window);
+            if (stats.netProfitsSMA.length === window) stats.netProfitSMA = sum(...stats.netProfitsSMA) / window;
+        }
 
         return stats;
     }
@@ -305,17 +323,45 @@ export class TradeStatsCalc implements TradeStats {
         );
         stats.avgPercentGrossLossMonths = average(...months.map(({ stats: { percentGrossLoss } }) => percentGrossLoss));
 
+        if (this.hasBalance) {
+            const prevMonths = months
+                .sort((a, b) => sortAsc(dayjs.utc(a.dateFrom).valueOf(), dayjs.utc(b.dateFrom).valueOf()))
+                .slice(0, -1);
+
+            if (prevMonths && prevMonths.length > 2) {
+                const positionsProfitPercents = prevMonths.map(({ stats }) => stats.percentNetProfit);
+                const sumPercentNetProfit = sum(...positionsProfitPercents);
+
+                const avgPercentNetProfit = sumPercentNetProfit / prevMonths.length;
+                let sumPercentNetProfitSqDiff = null;
+                for (const percent of positionsProfitPercents) {
+                    const percentProfitSqDiff = Math.pow(percent - avgPercentNetProfit, 2);
+                    sumPercentNetProfitSqDiff = sum(sumPercentNetProfitSqDiff, percentProfitSqDiff);
+                }
+
+                stats.stdDevPercentNetProfit = Math.sqrt(sumPercentNetProfitSqDiff) / (prevMonths.length - 1);
+                stats.sharpeRatio = avgPercentNetProfit / stats.stdDevPercentNetProfit;
+            }
+
+            if (this.meta.job.type === "robot" && this.meta.job.SMAWindow) {
+                if (stats.netProfitSMA) {
+                    stats.emulateNextPosition = stats.netProfit < stats.netProfitSMA;
+                } else {
+                    stats.emulateNextPosition = false;
+                }
+            }
+        }
         return this.roundStats(stats) as FullStats;
     }
 
     private calcPeriodStats(
         positions: BasePosition[],
-
         prevPeriodStats: TradeStats["periodStats"]
     ): TradeStats["periodStats"] {
         const periodStats = { ...prevPeriodStats };
         const firstPositionExitDate = positions[0].exitDate;
         const lastPositionExitDate = positions[positions.length - 1].exitDate;
+
         const years = createDatesPeriod(firstPositionExitDate, lastPositionExitDate, "year");
         const quearters = createDatesPeriod(firstPositionExitDate, lastPositionExitDate, "quarter");
         const months = createDatesPeriod(firstPositionExitDate, lastPositionExitDate, "month");
@@ -323,7 +369,7 @@ export class TradeStatsCalc implements TradeStats {
         for (const year of years) {
             try {
                 const currentPositions = positions.filter(({ exitDate }) =>
-                    dayjs.utc(exitDate).isBetween(year.dateFrom, year.dateTo)
+                    dayjs.utc(exitDate).isBetween(year.dateFrom, year.dateTo, null, "[]")
                 );
                 if (!periodStats.year[year.key]) {
                     periodStats.year[year.key] = {
@@ -339,12 +385,15 @@ export class TradeStatsCalc implements TradeStats {
                     if (currentPositions.length) {
                         if (!periodStats.year[year.key].stats.firstPosition)
                             periodStats.year[year.key].stats.firstPosition = currentPositions[0];
-                        if (this.hasBalance && periodStats.year[year.key].stats.initialBalance === null)
+                        if (this.hasBalance && periodStats.year[year.key].stats.initialBalance === null) {
                             periodStats.year[year.key].stats.initialBalance =
                                 prevPeriodStats?.stats?.currentBalance ||
                                 this.meta.initialBalance ||
                                 periodStats.year[year.key].stats.firstPosition.volume *
                                     periodStats.year[year.key].stats.firstPosition.entryPrice;
+                            periodStats.year[year.key].stats.currentBalance =
+                                periodStats.year[year.key].stats.initialBalance;
+                        }
                     } else if (this.hasBalance) {
                         periodStats.year[year.key].stats.initialBalance =
                             prevPeriodStats?.stats?.currentBalance || null;
@@ -368,7 +417,7 @@ export class TradeStatsCalc implements TradeStats {
         for (const quarter of quearters) {
             try {
                 const currentPositions = positions.filter(({ exitDate }) =>
-                    dayjs.utc(exitDate).isBetween(quarter.dateFrom, quarter.dateTo)
+                    dayjs.utc(exitDate).isBetween(quarter.dateFrom, quarter.dateTo, null, "[]")
                 );
                 if (!periodStats.quarter[quarter.key]) {
                     periodStats.quarter[quarter.key] = {
@@ -385,12 +434,15 @@ export class TradeStatsCalc implements TradeStats {
                     if (currentPositions.length) {
                         if (!periodStats.quarter[quarter.key].stats.firstPosition)
                             periodStats.quarter[quarter.key].stats.firstPosition = currentPositions[0];
-                        if (this.hasBalance && periodStats.quarter[quarter.key].stats.initialBalance === null)
+                        if (this.hasBalance && periodStats.quarter[quarter.key].stats.initialBalance === null) {
                             periodStats.quarter[quarter.key].stats.initialBalance =
                                 prevPeriodStats?.stats?.currentBalance ||
                                 this.meta.initialBalance ||
                                 periodStats.quarter[quarter.key].stats.firstPosition.volume *
                                     periodStats.quarter[quarter.key].stats.firstPosition.entryPrice;
+                            periodStats.quarter[quarter.key].stats.currentBalance =
+                                periodStats.quarter[quarter.key].stats.initialBalance;
+                        }
                     } else if (this.hasBalance) {
                         periodStats.quarter[quarter.key].stats.initialBalance =
                             prevPeriodStats?.stats?.currentBalance || null;
@@ -414,7 +466,7 @@ export class TradeStatsCalc implements TradeStats {
         for (const month of months) {
             try {
                 const currentPositions = positions.filter(({ exitDate }) =>
-                    dayjs.utc(exitDate).isBetween(month.dateFrom, month.dateTo)
+                    dayjs.utc(exitDate).isBetween(month.dateFrom, month.dateTo, null, "[]")
                 );
                 if (!periodStats.month[month.key]) {
                     periodStats.month[month.key] = {
@@ -432,12 +484,15 @@ export class TradeStatsCalc implements TradeStats {
                     if (currentPositions.length) {
                         if (!periodStats.month[month.key].stats.firstPosition)
                             periodStats.month[month.key].stats.firstPosition = currentPositions[0];
-                        if (this.hasBalance && periodStats.month[month.key].stats.initialBalance === null)
+                        if (this.hasBalance && periodStats.month[month.key].stats.initialBalance === null) {
                             periodStats.month[month.key].stats.initialBalance =
                                 prevPeriodStats?.stats?.currentBalance ||
                                 this.meta.initialBalance ||
                                 periodStats.month[month.key].stats.firstPosition.volume *
                                     periodStats.month[month.key].stats.firstPosition.entryPrice;
+                            periodStats.month[month.key].stats.currentBalance =
+                                periodStats.month[month.key].stats.initialBalance;
+                        }
                     } else if (this.hasBalance) {
                         periodStats.month[month.key].stats.initialBalance =
                             prevPeriodStats?.stats?.currentBalance || null;
@@ -451,6 +506,7 @@ export class TradeStatsCalc implements TradeStats {
 
                     periodStats.month[month.key].stats
                 );
+
                 periodStats.month[month.key].stats = this.roundStats(periodStats.month[month.key].stats);
             } catch (err) {
                 logger.error(err);

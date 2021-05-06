@@ -92,9 +92,19 @@ export const BacktesterRunnerSchema = {
                 }
             }
         },
-        strategySettingsRange: {
-            type: "object",
-            optional: true
+        settingsRange: {
+            type: "array",
+            optional: true,
+            items: {
+                type: "object",
+                props: {
+                    context: { type: "enum", values: ["strategy", "robot"] },
+                    prop: "string",
+                    from: "number",
+                    to: "number",
+                    step: "number"
+                }
+            }
         },
         strategySettings: [
             {
@@ -103,11 +113,6 @@ export const BacktesterRunnerSchema = {
                 props: {
                     requiredHistoryMaxBars: { type: "number", integer: true, default: CANDLES_RECENT_AMOUNT }
                 }
-            },
-            {
-                type: "array",
-                props: "object",
-                optional: true
             }
         ],
         robotSettings: RobotSettingsSchema.map((s) => ({ ...s, optional: true }))
@@ -149,8 +154,8 @@ export interface BacktesterRunnerStart {
     dateFrom?: string;
     dateTo?: string;
     settings: BacktesterSettings;
-    strategySettingsRange?: { [key: string]: any }; //TODO settings generator
-    strategySettings?: StrategySettings | StrategySettings[];
+    settingsRange?: [{ context: "strategy" | "robot"; prop: string; from: number; to: number; step: number }];
+    strategySettings?: StrategySettings;
     robotSettings?: RobotSettings;
 }
 

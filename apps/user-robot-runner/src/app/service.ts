@@ -222,14 +222,14 @@ export default class UserRobotRunnerService extends HTTPService {
                 403
             );
 
-        if (userRobot.status === UserRobotStatus.paused) {
+        /*if (userRobot.status === UserRobotStatus.paused) {
             throw new ActionsHandlerError(
                 `Something went wrong with your robot. It will be started automatically when everything is fixed.`,
                 null,
                 "FORBIDDEN",
                 403
             );
-        }
+        }*/
 
         const userSub = await this.db.pg.maybeOne<{ id: UserSub["id"] }>(sql`
         SELECT id 
@@ -285,14 +285,14 @@ export default class UserRobotRunnerService extends HTTPService {
                 403
             );
 
-        if (userRobot.status === UserRobotStatus.paused) {
+        /*  if (userRobot.status === UserRobotStatus.paused) {
             throw new ActionsHandlerError(
                 `Something went wrong with your robot. It will be started automatically when everything is fixed.`,
                 null,
                 "FORBIDDEN",
                 403
             );
-        }
+        } */
 
         if (userRobot.status === UserRobotStatus.stopped || userRobot.status === UserRobotStatus.stopping) {
             return userRobot.status;
@@ -496,19 +496,19 @@ export default class UserRobotRunnerService extends HTTPService {
         this.log.info(
             `New ${ConnectorWorkerEvents.ORDER_ERROR} event for User Robot #${event.userRobotId}. Order #${event.orderId} is invalid - ${event.error}`
         );
-        /*  if (
-            !event.error.toLowerCase().includes("margin") ||
-            !event.error.toLowerCase().includes("insufficient") ||
-            !event.error.toLowerCase().includes("gateway") ||
-            !event.error.toLowerCase().includes("getaddrinfo") ||
-            !event.error.toLowerCase().includes("network") ||
-            !event.error.toLowerCase().includes("request") ||
+        if (
+            !event.error.toLowerCase().includes("margin") &&
+            !event.error.toLowerCase().includes("insufficient") &&
+            !event.error.toLowerCase().includes("gateway") &&
+            !event.error.toLowerCase().includes("getaddrinfo") &&
+            !event.error.toLowerCase().includes("network") &&
+            !event.error.toLowerCase().includes("request") &&
             !event.error.toLowerCase().includes("econnreset")
         )
             await this.pause({
                 id: event.userRobotId,
                 message: `Order #${event.orderId} error - ${event.error}. Please contact support.`
-            }); */
+            });
     }
 
     async handleUserExAccError(event: UserExchangeAccountErrorEvent) {

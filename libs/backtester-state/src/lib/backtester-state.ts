@@ -1,18 +1,10 @@
-import { Robot, StrategyCode, RobotPositionState, StrategyProps, RobotStats } from "@cryptuoso/robot-state";
-import {
-    ValidTimeframe,
-    Candle,
-    SignalEvent,
-    DBCandle,
-    calcPositionProfit,
-    RobotPositionStatus
-} from "@cryptuoso/market";
+import { Robot, StrategyCode, RobotPositionState, StrategyProps } from "@cryptuoso/robot-state";
+import { ValidTimeframe, Candle, SignalEvent, DBCandle } from "@cryptuoso/market";
 import dayjs from "@cryptuoso/dayjs";
-import { round, defaultValue } from "@cryptuoso/helpers";
+import { round, nvl } from "@cryptuoso/helpers";
 import logger from "@cryptuoso/logger";
 import { IndicatorCode } from "@cryptuoso/robot-indicators";
-import { calcStatistics } from "@cryptuoso/stats-calc";
-import { getRobotPositionVolume, RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
+import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 
 export const enum Status {
     queued = "queued",
@@ -51,11 +43,19 @@ export interface BacktesterState {
     startedAt?: string;
     finishedAt?: string;
     robotState?: StrategyProps;
-    strategySettings?: {
-        [key: string]: StrategySettings;
+    robots?: {
+        [key: string]: {
+            instance?: Robot;
+            strategySettings: StrategySettings;
+            robotSettings: RobotSettings;
+            data?: {
+                logs: BacktesterLogs[];
+                alerts: BacktesterSignals[];
+                trades: BacktesterSignals[];
+                positions: { [key: string]: BacktesterPositionState };
+            };
+        };
     };
-    robotSettings?: RobotSettings;
-    robotInstances?: { [key: string]: Robot };
     error?: string;
 }
 
@@ -71,10 +71,6 @@ export interface BacktesterLogs {
     [key: string]: any;
     candle: DBCandle;
     robotId: string;
-    backtestId: string;
-}
-
-export interface BacktesterStats extends RobotStats {
     backtestId: string;
 }
 
@@ -99,29 +95,7 @@ export class Backtester {
     #startedAt?: string;
     #finishedAt?: string;
     #robotState?: StrategyProps;
-    #strategySettings?: {
-        [key: string]: StrategySettings;
-    };
-    #robotSettings?: RobotSettings;
-    #robots?: {
-        [key: string]: {
-            instance: Robot;
-            data: {
-                logs: BacktesterLogs[];
-                alerts: BacktesterSignals[];
-                trades: BacktesterSignals[];
-                positions: { [key: string]: BacktesterPositionState };
-                settings: {
-                    [key: string]: {
-                        strategySettings: StrategySettings;
-                        robotSettings: RobotSettings;
-                        activeFrom: string;
-                    };
-                };
-                stats: BacktesterStats;
-            };
-        };
-    } = {};
+    #robots: BacktesterState["robots"] = {};
     #error?: string;
 
     constructor(state: BacktesterState) {
@@ -135,18 +109,17 @@ export class Backtester {
         this.#dateFrom = state.dateFrom;
         this.#dateTo = state.dateTo;
         this.#settings = {
-            local: defaultValue(state.settings?.local, false),
-            populateHistory: defaultValue(state.settings?.populateHistory, false),
-            saveSignals: defaultValue(state.settings?.saveSignals, true),
-            savePositions: defaultValue(state.settings?.savePositions, true),
-            saveLogs: defaultValue(state.settings?.saveLogs, false)
+            local: nvl(state.settings?.local, false),
+            populateHistory: nvl(state.settings?.populateHistory, false),
+            saveSignals: nvl(state.settings?.saveSignals, true),
+            savePositions: nvl(state.settings?.savePositions, true),
+            saveLogs: nvl(state.settings?.saveLogs, false)
         };
-        this.#strategySettings = state.strategySettings;
-        this.#robotSettings = state.robotSettings;
-        this.#totalBars = defaultValue(state.totalBars, 0);
-        this.#processedBars = defaultValue(state.processedBars, 0);
-        this.#leftBars = defaultValue(state.leftBars, this.#totalBars);
-        this.#completedPercent = defaultValue(state.completedPercent, 0);
+        this.#robots = state.robots;
+        this.#totalBars = nvl(state.totalBars, 0);
+        this.#processedBars = nvl(state.processedBars, 0);
+        this.#leftBars = nvl(state.leftBars, this.#totalBars);
+        this.#completedPercent = nvl(state.completedPercent, 0);
         this.#status = state.status;
         this.#startedAt = state.startedAt || null;
         this.#finishedAt = state.finishedAt || null;
@@ -166,19 +139,27 @@ export class Backtester {
             dateFrom: this.#dateFrom,
             dateTo: this.#dateTo,
             settings: this.#settings,
-            strategySettings: this.#strategySettings,
-            robotSettings: this.#robotSettings,
             totalBars: this.#totalBars || 0,
             processedBars: this.#processedBars || 0,
             leftBars: this.#leftBars || 0,
             prevPercent: this.#prevPercent || 0,
             completedPercent: this.#completedPercent || 0,
+            robots: this.allRobotsSettings,
             status: this.#status,
             startedAt: this.#startedAt,
             finishedAt: this.#finishedAt,
             robotState: this.#robotState,
             error: this.#error
         };
+    }
+
+    get allRobotsSettings() {
+        const robots: BacktesterState["robots"] = {};
+        for (const [id, { robotSettings, strategySettings }] of Object.entries(this.#robots)) {
+            robots[id] = { robotSettings, strategySettings };
+        }
+
+        return robots;
     }
 
     get id() {
@@ -309,14 +290,6 @@ export class Backtester {
         return this.#robotState;
     }
 
-    get robotSettings() {
-        return this.#robotSettings;
-    }
-
-    set robotSettings(robotSettings) {
-        this.#robotSettings = robotSettings;
-    }
-
     get robotIds() {
         return Object.keys(this.#robots);
     }
@@ -330,32 +303,29 @@ export class Backtester {
     }
 
     initRobots(strategyCode: StrategyCode) {
-        for (const [id, settings] of Object.entries(this.#strategySettings)) {
+        for (const [id, robot] of Object.entries(this.#robots)) {
             try {
                 logger.debug(`Backtester #${this.#id} - Initializing robot #${id}`);
-                this.#robots[id] = {
-                    instance: new Robot({
-                        id,
-                        exchange: this.#exchange,
-                        asset: this.#asset,
-                        currency: this.#currency,
-                        timeframe: this.#timeframe,
-                        strategy: this.#strategy,
-                        settings: {
-                            strategySettings: settings,
-                            robotSettings: this.#robotSettings,
-                            activeFrom: this.#dateFrom
-                        },
-                        backtest: true
-                    }),
-                    data: {
-                        logs: [],
-                        alerts: [],
-                        trades: [],
-                        positions: {},
-                        settings: {},
-                        stats: null
-                    }
+                this.#robots[id].instance = new Robot({
+                    id,
+                    exchange: this.#exchange,
+                    asset: this.#asset,
+                    currency: this.#currency,
+                    timeframe: this.#timeframe,
+                    strategy: this.#strategy,
+                    settings: {
+                        strategySettings: robot.strategySettings,
+                        robotSettings: robot.robotSettings,
+                        activeFrom: this.#dateFrom,
+                        feeRate: this.#feeRate
+                    },
+                    backtest: true
+                });
+                this.#robots[id].data = {
+                    logs: [],
+                    alerts: [],
+                    trades: [],
+                    positions: {}
                 };
                 this.#robots[id].instance.setStrategy(strategyCode);
                 this.#robots[id].instance.initStrategy();
@@ -425,114 +395,34 @@ export class Backtester {
         if (this.#settings.savePositions || this.#settings.populateHistory) {
             const robot = this.#robots[id];
             robot.instance.positionsToSave.forEach((pos) => {
-                const newPos = {
-                    ...pos,
-                    entryDate: pos.entryCandleTimestamp,
-                    exitDate: pos.exitCandleTimestamp
-                };
-                robot.data.positions[pos.id] = { ...newPos, backtestId: this.#id };
+                robot.data.positions[pos.id] = { ...pos, backtestId: this.#id };
             });
         }
     };
-
-    /* #saveSettings = (id: string) => {
-        const robot = this.#robots[id];
-        if (!robot.data.settings[robot.instance.settingsActiveFrom])
-            robot.data.settings[robot.instance.settingsActiveFrom] = robot.instance.settings;
-    };
-
-    #calcStats = async (id: string) => {
-        const robot = this.#robots[id];
-        if (robot.instance.hasClosedPositions) {
-            const positions = robot.instance.closedPositions.map((pos) => {
-                const volume = getRobotPositionVolume(
-                    robot.instance.settings.robotSettings,
-                    pos.entryPrice,
-                    robot.data.stats?.statistics?.netProfit?.all
-                );
-                const profit = calcPositionProfit(
-                    pos.direction,
-                    pos.entryPrice,
-                    pos.exitPrice,
-                    volume,
-                    this.#feeRate
-                );
-                return { ...pos, volume, profit };
-            });
-            robot.data.stats = {
-                ...(await this.#calcStatistics(robot.data.stats, positions)),
-                robotId: id,
-                backtestId: this.#id
-            };
-        }
-    };
-
-    #updateSettings = (id: string) => {
-        const robot = this.#robots[id];
-        if (robot.instance.hasClosedPositions) {
-            if (robot.instance.robotSettings.volumeType === VolumeSettingsType.assetDynamicDelta) {
-                const volume = getRobotPositionVolume(
-                    robot.instance.settings.robotSettings,
-                    null,
-                    robot.data.stats.statistics.netProfit.all
-                );
-
-                if (volume !== robot.instance.robotSettings.volume)
-                    robot.instance.settings = {
-                        strategySettings: robot.instance.strategySettings,
-                        robotSettings: { ...robot.instance.robotSettings, volume },
-                        activeFrom: robot.instance.lastCandle.timestamp
-                    };
-            }
-        }
-    };*/
 
     async handleCandle(candle: Candle) {
         logger.info(`Backtester #${this.id} - Handling ${this.#processedBars + 1} bar of ${this.#totalBars}`);
-        Object.keys(this.#robots).forEach(async (id) => {
+
+        for (const id of Object.keys(this.#robots)) {
             const robot = this.#robots[id];
             robot.instance.handleCandle(candle);
+
             robot.instance.clearEvents();
             robot.instance.checkAlerts();
-
+            robot.instance.calcStats();
             this.#saveLogs(id);
             this.#saveSignals(id);
             this.#savePositions(id);
-
             robot.instance.clearEvents();
             await robot.instance.calcIndicators();
             robot.instance.runStrategy();
             robot.instance.finalize();
-
+            robot.instance.calcStats();
             this.#saveLogs(id);
             this.#saveSignals(id);
             this.#savePositions(id);
-        });
+        }
     }
-
-    calcStats = async () => {
-        Object.keys(this.#robots).forEach(async (id) => {
-            const robot = this.#robots[id];
-            const positions = Object.values(robot.data.positions)
-                .filter(({ status }) => status === RobotPositionStatus.closed)
-                .map((pos) => {
-                    const volume = getRobotPositionVolume(robot.instance.settings.robotSettings, pos.entryPrice);
-                    const profit = calcPositionProfit(
-                        pos.direction,
-                        pos.entryPrice,
-                        pos.exitPrice,
-                        volume,
-                        this.#feeRate
-                    );
-                    return { ...pos, volume, profit };
-                });
-            robot.data.stats = {
-                ...(await calcStatistics(robot.data.stats, positions)),
-                robotId: id,
-                backtestId: this.#id
-            };
-        });
-    };
 
     finish(cancel = false) {
         this.#finishedAt = dayjs.utc().toISOString();
@@ -542,7 +432,7 @@ export class Backtester {
             return;
         }
         if (this.isProcessed) {
-            this.#robotState = this.#robots[this.#robotId].instance.state;
+            if (this.settings.populateHistory) this.#robotState = this.#robots[this.#robotId]?.instance?.state;
             this.#status = Status.finished;
         }
     }

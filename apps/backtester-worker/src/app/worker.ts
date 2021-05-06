@@ -8,11 +8,10 @@ import {
     Backtester,
     BacktesterSignals,
     BacktesterPositionState,
-    BacktesterLogs,
-    BacktesterStats
+    BacktesterLogs
 } from "@cryptuoso/backtester-state";
 import requireFromString from "require-from-string";
-import { RobotPositionState, RobotState, RobotStats, RobotStatus, StrategyCode } from "@cryptuoso/robot-state";
+import { RobotPositionState, RobotState, RobotStatus, StrategyCode } from "@cryptuoso/robot-state";
 import { IndicatorCode } from "@cryptuoso/robot-indicators";
 import { ValidTimeframe, Candle, DBCandle, SignalEvent, CandleType } from "@cryptuoso/market";
 import { sortAsc, chunkArray } from "@cryptuoso/helpers";
@@ -27,7 +26,7 @@ class BacktesterWorker {
     #log: Logger;
     #backtester: Backtester;
     #db: { sql: typeof sql; pg: typeof pg; util: typeof pgUtil };
-    defaultChunkSize = 20000;
+    defaultChunkSize = 10000;
     defaultInsertChunkSize = 10000;
     constructor(state: BacktesterState) {
         this.#log = logger;
@@ -138,23 +137,23 @@ class BacktesterWorker {
             )}
         )
         ON CONFLICT ON CONSTRAINT backtests_pkey
-        DO UPDATE SET robot_id = ${state.robotId},
-            asset = ${state.asset},
-            currency = ${state.currency},
-            timeframe = ${state.timeframe},
-            strategy = ${state.strategy},
-            date_from = ${state.dateFrom},
-            date_to = ${state.dateTo},
-            settings = ${JSON.stringify(state.settings)},
-            total_bars = ${state.totalBars},
-            processed_bars = ${state.processedBars},
-            left_bars = ${state.leftBars},
-            completed_percent = ${state.completedPercent},
-            status = ${state.status},
-            started_at = ${state.startedAt},
-            finished_at = ${state.finishedAt},
-            error = ${state.error},
-            robot_state = ${JSON.stringify(state.robotState || {})};
+        DO UPDATE SET robot_id = excluded.robot_id,
+            asset = excluded.asset,
+            currency = excluded.currency,
+            timeframe = excluded.timeframe,
+            strategy = excluded.strategy,
+            date_from = excluded.date_from,
+            date_to = excluded.date_to,
+            settings = excluded.settings,
+            total_bars = excluded.total_bars,
+            processed_bars = excluded.processed_bars,
+            left_bars = excluded.left_bars,
+            completed_percent = excluded.completed_percent,
+            status = excluded.status,
+            started_at = excluded.started_at,
+            finished_at = excluded.finished_at,
+            error = excluded.error,
+            robot_state = excluded.robot_state;
         `);
         } catch (err) {
             this.log.error("Failed to save backtester state", err);
@@ -240,7 +239,10 @@ class BacktesterWorker {
          exit_candle_timestamp,
          alerts,
          bars_held,
-         internal_state
+         internal_state,
+         emulated,
+         volume,
+         profit
         )
         SELECT * FROM 
         ${sql.unnest(
@@ -273,7 +275,10 @@ class BacktesterWorker {
                     "exitCandleTimestamp",
                     "alerts",
                     "barsHeld",
-                    "internalState"
+                    "internalState",
+                    "emulated",
+                    "volume",
+                    "profit"
                 ]
             ),
             [
@@ -299,7 +304,10 @@ class BacktesterWorker {
                 "timestamp",
                 "jsonb",
                 "numeric",
-                "jsonb"
+                "jsonb",
+                "bool",
+                "numeric",
+                "numeric"
             ]
         )}
         `);
@@ -341,74 +349,58 @@ class BacktesterWorker {
         }
     };
 
-    #saveStats = async (stats: BacktesterStats) => {
+    #saveStats = async (stats: RobotState & { backtestId: string }) => {
         try {
-            if (stats && stats?.statistics) {
+            if (stats) {
                 const {
                     backtestId,
-                    robotId,
-                    statistics,
-                    equity,
-                    equityAvg,
-                    firstPositionEntryDate,
-                    lastPositionExitDate,
-                    lastUpdatedAt
+                    id: robotId,
+                    fullStats,
+                    periodStats,
+                    emulatedFullStats,
+                    emulatedPeriodStats
                 } = stats;
 
                 this.log.info(`Backtester #${backtestId} - Saving robot's #${robotId} stats`);
                 await this.db.pg.query(sql`
         INSERT INTO backtest_stats 
-        (backtest_id, robot_id, 
-        statistics, equity, equity_avg, first_position_entry_date,
-        last_position_exit_date, last_updated_at) VALUES (
-            ${backtestId}, ${robotId}, ${JSON.stringify(statistics)}, ${JSON.stringify(equity)}, ${JSON.stringify(
-                    equityAvg
-                )}, ${firstPositionEntryDate},
-            ${lastPositionExitDate},${lastUpdatedAt}
+        (backtest_id, robot_id, full_stats, period_stats, emulated_full_stats, emulated_period_stats ) VALUES (
+            ${backtestId}, ${robotId}, 
+            ${JSON.stringify(fullStats) || null}, 
+            ${JSON.stringify(periodStats) || null}, 
+            ${JSON.stringify(emulatedFullStats) || null}, 
+            ${JSON.stringify(emulatedPeriodStats) || null}
         )
         `);
             }
         } catch (err) {
-            this.log.error(`Failed to save backtster stats`, err);
+            this.log.error(`Failed to save backtester stats`, err);
             throw err;
         }
     };
 
-    #saveSettings = async (
-        settings: {
-            backtestId: string;
-            robotId: string;
-            strategySettings: StrategySettings;
-            robotSettings: RobotSettings;
-            activeFrom: string;
-        }[]
-    ) => {
+    #saveSettings = async ({
+        backtestId,
+        robotId,
+        strategySettings,
+        robotSettings,
+        activeFrom
+    }: {
+        backtestId: string;
+        robotId: string;
+        strategySettings: StrategySettings;
+        robotSettings: RobotSettings;
+        activeFrom: string;
+    }) => {
         try {
-            const chunks = chunkArray(
-                settings.map((s) => ({
-                    ...s,
-                    strategySettings: JSON.stringify(s.strategySettings),
-                    robotSettings: JSON.stringify(s.robotSettings)
-                })),
-                this.defaultInsertChunkSize
-            );
-            for (const chunk of chunks) {
-                await this.db.pg.query(sql`
+            await this.db.pg.query(sql`
             INSERT INTO backtest_settings
             (backtest_id, robot_id, strategy_settings, robot_settings, active_from)
-            SELECT * FROM
-            ${sql.unnest(
-                this.db.util.prepareUnnest(chunk, [
-                    "backtestId",
-                    "robotId",
-                    "strategySettings",
-                    "robotSettings",
-                    "activeFrom"
-                ]),
-                ["uuid", "uuid", "jsonb", "jsonb", "timestamp"]
-            )}
+            VALUES (${backtestId},${robotId},
+            ${JSON.stringify(strategySettings)},
+            ${JSON.stringify(robotSettings)},
+            ${activeFrom})
             `);
-            }
         } catch (err) {
             this.log.error(`Failed to save backtster settings`, err);
             throw err;
@@ -433,7 +425,11 @@ class BacktesterWorker {
         UPDATE robots 
         SET state = ${JSON.stringify(state.state)}, 
         last_candle = ${JSON.stringify(state.lastCandle)}, 
-        has_alerts = ${state.hasAlerts}
+        has_alerts = ${state.hasAlerts},
+        full_stats = ${JSON.stringify(state.fullStats)},
+        period_stats = ${JSON.stringify(state.periodStats)},
+        emulated_full_stats = ${JSON.stringify(state.emulatedFullStats)},
+        emulated_period_stats = ${JSON.stringify(state.emulatedPeriodStats)}
         WHERE id = ${state.id};
         `);
         } catch (err) {
@@ -555,7 +551,8 @@ class BacktesterWorker {
          exit_candle_timestamp,
          alerts,
          bars_held,
-         internal_state
+         internal_state,
+         emulated
         )
         SELECT * FROM 
         ${sql.unnest(
@@ -587,7 +584,8 @@ class BacktesterWorker {
                     "exitCandleTimestamp",
                     "alerts",
                     "barsHeld",
-                    "internalState"
+                    "internalState",
+                    "emulated"
                 ]
             ),
             [
@@ -612,7 +610,8 @@ class BacktesterWorker {
                 "timestamp",
                 "jsonb",
                 "numeric",
-                "jsonb"
+                "jsonb",
+                "bool"
             ]
         )}
         `);
@@ -623,37 +622,6 @@ class BacktesterWorker {
             }
         } catch (err) {
             this.log.error(`Failed to save robot positions`, err);
-            throw err;
-        }
-    };
-
-    #saveRobotStats = async (robotId: string, stats: RobotStats) => {
-        try {
-            this.log.info(`Robot #${robotId} - Saving stats`);
-            await this.db.pg.query(sql`DELETE FROM robot_stats where robot_id = ${robotId}`);
-            if (stats && stats?.statistics) {
-                const {
-                    robotId,
-                    statistics,
-                    equity,
-                    equityAvg,
-                    firstPositionEntryDate,
-                    lastPositionExitDate,
-                    lastUpdatedAt
-                } = stats;
-
-                await this.db.pg.query(sql`
-        INSERT INTO robot_stats 
-        (robot_id, 
-        statistics, equity, equity_avg, first_position_entry_date,
-        last_position_exit_date, last_updated_at) VALUES (
-            ${robotId}, ${JSON.stringify(statistics)}, ${JSON.stringify(equity)}, ${JSON.stringify(equityAvg)},
-            ${firstPositionEntryDate}, ${lastPositionExitDate},${lastUpdatedAt}
-        )
-        `);
-            }
-        } catch (err) {
-            this.log.error(`Failed to save robot stats`, err);
             throw err;
         }
     };
@@ -682,6 +650,13 @@ class BacktesterWorker {
                     this.log.info(`Backtester #${this.backtester.id} - Found previous backtest. Deleting...`);
                     await this.db.pg.query(sql`DELETE FROM backtests WHERE id = ${this.backtester.id}`);
                 }
+                // Load average fee
+                const { feeRate } = await this.db.pg.one<{ feeRate: number }>(sql`
+                    SELECT fee_rate FROM markets
+                    WHERE exchange = ${this.backtester.exchange} 
+                    and asset = ${this.backtester.asset} 
+                    and currency = ${this.backtester.currency};`);
+                this.backtester.feeRate = feeRate;
                 // Load strategy and indicators code, init strategy and indicators
                 const strategyCode = await this.#loadStrategyCode(
                     this.backtester.strategy,
@@ -716,20 +691,12 @@ class BacktesterWorker {
                 this.log.info(`Backtester #${this.backtester.id} - History from ${historyCandles[0].timestamp}`);
                 this.backtester.handleHistoryCandles(historyCandles);
 
-                // Load average fee
-                const { feeRate } = await this.db.pg.one<{ feeRate: number }>(sql`
-                    SELECT fee_rate FROM markets
-                    WHERE exchange = ${this.backtester.exchange} 
-                    and asset = ${this.backtester.asset} 
-                    and currency = ${this.backtester.currency};`);
-                this.backtester.feeRate = feeRate;
-
                 await this.#saveState(this.backtester.state);
 
                 await this.run();
             } catch (err) {
                 this.backtester.fail(err.message);
-                this.log.warn(`Backtester #${this.backtester.id}`, err);
+                this.log.warn(`Backtester #${this.backtester.id}`, err.message);
             }
 
             this.backtester.finish();
@@ -756,6 +723,7 @@ class BacktesterWorker {
             const candlesCount: number = +(await this.db.pg.oneFirst(sql`
                SELECT COUNT(1) ${query}`));
             this.backtester.init(candlesCount);
+
             await DataStream.from(
                 makeChunksGenerator(
                     this.db.pg,
@@ -776,7 +744,6 @@ class BacktesterWorker {
                 })
                 .whenEnd();
 
-            await this.backtester.calcStats();
             if (this.backtester.settings.populateHistory) {
                 const robot = this.backtester.robots[this.backtester.robotId];
 
@@ -788,7 +755,7 @@ class BacktesterWorker {
                     robot.data.trades.sort((a, b) => sortAsc(a.candleTimestamp, b.candleTimestamp))
                 );
                 await this.#saveRobotPositions(this.backtester.robotId, Object.values(robot.data.positions));
-                await this.#saveRobotStats(this.backtester.robotId, robot.data.stats);
+
                 await this.#startRobot(this.backtester.robotId, this.backtester.dateFrom);
             } else {
                 for (const robot of Object.values(this.backtester.robots)) {
@@ -808,19 +775,17 @@ class BacktesterWorker {
                         await this.#saveLogs(robot.data.logs);
                     }
 
-                    await this.#saveStats(robot.data.stats);
+                    await this.#saveStats({ ...robot.instance.robotState, backtestId: this.backtester.id });
 
-                    await this.#saveSettings(
-                        Object.values(robot.data.settings).map((s) => ({
-                            ...s,
-                            backtestId: this.backtester.id,
-                            robotId: robot.instance.id
-                        }))
-                    );
+                    await this.#saveSettings({
+                        ...robot.instance.settings,
+                        backtestId: this.backtester.id,
+                        robotId: robot.instance.id
+                    });
                 }
             }
         } catch (err) {
-            this.log.error(`Backtester #${this.backtester.id} - Failed`, err);
+            this.log.error(`Backtester #${this.backtester.id} - Failed`, err.message);
             throw err;
         }
     }
