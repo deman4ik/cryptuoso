@@ -740,11 +740,12 @@ export default class UserProfileService extends HTTPService {
         const userRobotsCount = await this.db.pg.oneFirst<number>(sql`
             SELECT COUNT(1)
             FROM user_robots
-            WHERE user_ex_acc_id = ${id};
+            WHERE user_ex_acc_id = ${id}
+              AND status = ${UserRobotStatus.started};
         `);
 
         if (userExchangeAcc.status === UserExchangeAccStatus.enabled && userRobotsCount > 0)
-            throw new ActionsHandlerError("You can't delete API Keys with added Robots", null, "FORBIDDEN", 403);
+            throw new ActionsHandlerError("You can't delete API Keys with started Robots", null, "FORBIDDEN", 403);
 
         await this.db.pg.query(sql`
             DELETE
@@ -1021,8 +1022,8 @@ export default class UserProfileService extends HTTPService {
                 403
             );
 
-        if (userRobotExists.status !== UserRobotStatus.stopped)
-            throw new ActionsHandlerError("User Robot is not stopped", null, "FORBIDDEN", 403);
+        if (userRobotExists.status !== UserRobotStatus.stopped && userRobotExists.status !== UserRobotStatus.paused)
+            throw new ActionsHandlerError(`User Robot is ${userRobotExists.status}`, null, "FORBIDDEN", 403);
 
         await this.db.pg.query(sql`
                 DELETE

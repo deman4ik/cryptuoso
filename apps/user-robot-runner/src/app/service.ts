@@ -222,14 +222,14 @@ export default class UserRobotRunnerService extends HTTPService {
                 403
             );
 
-        if (userRobot.status === UserRobotStatus.paused) {
+        /*if (userRobot.status === UserRobotStatus.paused) {
             throw new ActionsHandlerError(
                 `Something went wrong with your robot. It will be started automatically when everything is fixed.`,
                 null,
                 "FORBIDDEN",
                 403
             );
-        }
+        }*/
 
         const userSub = await this.db.pg.maybeOne<{ id: UserSub["id"] }>(sql`
         SELECT id 
@@ -285,14 +285,14 @@ export default class UserRobotRunnerService extends HTTPService {
                 403
             );
 
-        if (userRobot.status === UserRobotStatus.paused) {
+        /*  if (userRobot.status === UserRobotStatus.paused) {
             throw new ActionsHandlerError(
                 `Something went wrong with your robot. It will be started automatically when everything is fixed.`,
                 null,
                 "FORBIDDEN",
                 403
             );
-        }
+        } */
 
         if (userRobot.status === UserRobotStatus.stopped || userRobot.status === UserRobotStatus.stopping) {
             return userRobot.status;

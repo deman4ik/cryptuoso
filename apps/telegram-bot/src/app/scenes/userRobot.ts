@@ -30,7 +30,7 @@ function getUserRobotMenu(ctx: any) {
                 m.callbackButton(
                     ctx.i18n.t("scenes.userRobot.start"),
                     JSON.stringify({ a: "start" }),
-                    !added || ![UserRobotStatus.stopped].includes(status)
+                    !added || ![UserRobotStatus.stopped, UserRobotStatus.paused].includes(status)
                 )
             ],
             [
@@ -45,7 +45,7 @@ function getUserRobotMenu(ctx: any) {
                 m.callbackButton(
                     ctx.i18n.t("scenes.userRobot.delete"),
                     JSON.stringify({ a: "delete" }),
-                    !added || status !== UserRobotStatus.stopped
+                    !added || (status !== UserRobotStatus.stopped && status !== UserRobotStatus.paused)
                 )
             ],
             [m.callbackButton(ctx.i18n.t("keyboards.backKeyboard.back"), JSON.stringify({ a: "back" }), false)]
