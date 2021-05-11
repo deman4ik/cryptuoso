@@ -30,6 +30,7 @@ export interface StrategyState extends StrategyProps {
     strategyFunctions: { [key: string]: () => any };
     backtest?: boolean;
     emulateNextPosition?: boolean;
+    marginNextPosition?: number;
 }
 
 export class BaseStrategy {
@@ -46,6 +47,7 @@ export class BaseStrategy {
     _parametersSchema: ValidationSchema;
     _backtest?: boolean;
     _emulateNextPosition?: boolean;
+    _marginNextPosition?: number;
     _candle: Candle;
     _candles: Candle[];
     _candlesProps: CandleProps;
@@ -80,6 +82,7 @@ export class BaseStrategy {
         this._parametersSchema = state.parametersSchema;
         this._backtest = state.backtest;
         this._emulateNextPosition = nvl(state.emulateNextPosition, false);
+        this._marginNextPosition = nvl(state.marginNextPosition, 1);
         this._candle = null;
         this._candles = []; // [{}]
         this._candlesProps = {
@@ -206,6 +209,14 @@ export class BaseStrategy {
         }
     }
 
+    _positionsHandleMargin(margin: number) {
+        if (Object.keys(this._positions).length > 0) {
+            Object.keys(this._positions).forEach((key) => {
+                this._positions[key]._handleMargin(margin);
+            });
+        }
+    }
+
     _getNextPositionCode(prefix = "p") {
         if (Object.prototype.hasOwnProperty.call(this._posLastNumb, prefix)) {
             this._posLastNumb[prefix] += 1;
@@ -230,7 +241,8 @@ export class BaseStrategy {
             code,
             parentId: parentId,
             backtest: this._backtest,
-            emulated: this._emulateNextPosition
+            emulated: this._emulateNextPosition,
+            margin: this._marginNextPosition
         });
         //this._positions[code]._log = logger.debug.bind(logger);
         this._positions[code]._handleCandle(this._candle);
@@ -333,6 +345,11 @@ export class BaseStrategy {
     _handleEmulation(emulateNextPosition: boolean) {
         this._emulateNextPosition = emulateNextPosition;
         this._positionsHandleEmulation(emulateNextPosition);
+    }
+
+    _handleMargin(marginNextPosition: number) {
+        this._marginNextPosition = marginNextPosition;
+        this._positionsHandleMargin(marginNextPosition);
     }
 
     _addIndicator(name: string, indicatorName: string, parameters: { [key: string]: any }) {

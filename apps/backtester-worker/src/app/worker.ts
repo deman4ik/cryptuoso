@@ -241,6 +241,7 @@ class BacktesterWorker {
          bars_held,
          internal_state,
          emulated,
+         margin,
          volume,
          profit
         )
@@ -277,6 +278,7 @@ class BacktesterWorker {
                     "barsHeld",
                     "internalState",
                     "emulated",
+                    "margin",
                     "volume",
                     "profit"
                 ]
@@ -307,6 +309,7 @@ class BacktesterWorker {
                 "jsonb",
                 "bool",
                 "numeric",
+                "numeric",
                 "numeric"
             ]
         )}
@@ -314,7 +317,8 @@ class BacktesterWorker {
                 }
             }
         } catch (err) {
-            this.log.error(`Failed to save backtster positions`, err);
+            this.log.error(`Failed to save backtester positions`, err);
+            this.log.debug(positions[positions.length - 1]);
             throw err;
         }
     };
@@ -426,10 +430,10 @@ class BacktesterWorker {
         SET state = ${JSON.stringify(state.state)}, 
         last_candle = ${JSON.stringify(state.lastCandle)}, 
         has_alerts = ${state.hasAlerts},
-        full_stats = ${JSON.stringify(state.fullStats)},
-        period_stats = ${JSON.stringify(state.periodStats)},
-        emulated_full_stats = ${JSON.stringify(state.emulatedFullStats)},
-        emulated_period_stats = ${JSON.stringify(state.emulatedPeriodStats)}
+        full_stats = ${JSON.stringify(state.fullStats) || null},
+        period_stats = ${JSON.stringify(state.periodStats) || null},
+        emulated_full_stats = ${JSON.stringify(state.emulatedFullStats) || null},
+        emulated_period_stats = ${JSON.stringify(state.emulatedPeriodStats) || null}
         WHERE id = ${state.id};
         `);
         } catch (err) {
@@ -552,7 +556,8 @@ class BacktesterWorker {
          alerts,
          bars_held,
          internal_state,
-         emulated
+         emulated,
+         margin
         )
         SELECT * FROM 
         ${sql.unnest(
@@ -585,7 +590,8 @@ class BacktesterWorker {
                     "alerts",
                     "barsHeld",
                     "internalState",
-                    "emulated"
+                    "emulated",
+                    "margin"
                 ]
             ),
             [
@@ -611,7 +617,8 @@ class BacktesterWorker {
                 "jsonb",
                 "numeric",
                 "jsonb",
-                "bool"
+                "bool",
+                "numeric"
             ]
         )}
         `);

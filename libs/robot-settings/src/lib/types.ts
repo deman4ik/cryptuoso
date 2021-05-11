@@ -8,6 +8,7 @@ export const enum VolumeSettingsType {
 export interface BaseSettings {
     initialBalance?: number;
     SMAWindow?: number;
+    margin?: number;
 }
 
 export interface AssetStaticSettings extends BaseSettings {

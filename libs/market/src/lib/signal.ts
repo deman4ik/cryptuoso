@@ -22,6 +22,8 @@ export interface SignalInfo extends AlertInfo {
     positionPrefix: string;
     positionCode: string;
     positionParentId?: string;
+    emulated?: boolean;
+    margin?: number;
 }
 
 export interface SignalEvent extends SignalInfo {

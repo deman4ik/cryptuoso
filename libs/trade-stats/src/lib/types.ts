@@ -54,6 +54,8 @@ export interface Stats {
     lastPosition: BasePosition | null;
     equity: PerformanceVals;
     equityAvg: PerformanceVals;
+    seriesCount: number;
+    currentSeries: number | null;
 }
 
 export interface FullStats extends Stats {
@@ -70,6 +72,8 @@ export interface FullStats extends Stats {
     avgPercentGrossLossQuarters: number | null;
     avgPercentGrossLossMonths: number | null;
     emulateNextPosition: boolean | null;
+    marginNextPosition: number | null;
+    zScore: number | null;
 }
 
 export interface PeriodStats {
@@ -118,6 +122,7 @@ export interface TradeStatsRobot extends BaseTradeStatsJob {
     type: "robot";
     robotId: string;
     SMAWindow?: number;
+    margin?: number;
 }
 
 export interface TradeStatsPortfolio extends BaseTradeStatsJob {
