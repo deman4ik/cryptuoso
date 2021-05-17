@@ -263,7 +263,7 @@ export default class RobotWorkerService extends BaseService {
          exit_candle_timestamp,
          alerts,
          bars_held,
-         internal_state
+         internal_state, max_price
         ) VALUES (
             ${position.id},
             ${position.robotId}, ${position.prefix}, ${position.code}, ${position.parentId || null},
@@ -276,7 +276,7 @@ export default class RobotWorkerService extends BaseService {
             ${position.exitCandleTimestamp || null},
             ${JSON.stringify(position.alerts)},
             ${position.barsHeld || null},
-            ${JSON.stringify(position.internalState)}
+            ${JSON.stringify(position.internalState)}, ${position.maxPrice || null}
         ) ON CONFLICT ON CONSTRAINT robot_positions_robot_id_code_key 
          DO UPDATE SET updated_at = now(),
          direction = excluded.direction,
@@ -295,7 +295,8 @@ export default class RobotWorkerService extends BaseService {
          exit_candle_timestamp = excluded.exit_candle_timestamp,
          alerts = excluded.alerts,
          bars_held = excluded.bars_held,
-         internal_state = excluded.internal_state;`);
+         internal_state = excluded.internal_state,
+         max_price = excluded.max_price;`);
         }
     };
 

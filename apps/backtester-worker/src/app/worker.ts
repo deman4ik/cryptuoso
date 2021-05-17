@@ -243,7 +243,8 @@ class BacktesterWorker {
          emulated,
          margin,
          volume,
-         profit
+         profit,
+         max_price
         )
         SELECT * FROM 
         ${sql.unnest(
@@ -280,7 +281,8 @@ class BacktesterWorker {
                     "emulated",
                     "margin",
                     "volume",
-                    "profit"
+                    "profit",
+                    "maxPrice"
                 ]
             ),
             [
@@ -308,6 +310,7 @@ class BacktesterWorker {
                 "numeric",
                 "jsonb",
                 "bool",
+                "numeric",
                 "numeric",
                 "numeric",
                 "numeric"
@@ -493,7 +496,7 @@ class BacktesterWorker {
         (id, robot_id, timestamp, type, 
         action, order_type, price,
         position_id, position_prefix, position_code, position_parent_id,
-        candle_timestamp)
+        candle_timestamp, emulated)
         SELECT * FROM
         ${sql.unnest(
             this.db.util.prepareUnnest(chunk, [
@@ -508,7 +511,8 @@ class BacktesterWorker {
                 "positionPrefix",
                 "positionCode",
                 "positionParentId",
-                "candleTimestamp"
+                "candleTimestamp",
+                "emulated"
             ]),
             [
                 "uuid",
@@ -522,7 +526,8 @@ class BacktesterWorker {
                 "varchar",
                 "varchar",
                 "uuid",
-                "timestamp"
+                "timestamp",
+                "bool"
             ]
         )}`);
                 }
@@ -557,7 +562,8 @@ class BacktesterWorker {
          bars_held,
          internal_state,
          emulated,
-         margin
+         margin,
+         max_price
         )
         SELECT * FROM 
         ${sql.unnest(
@@ -591,7 +597,8 @@ class BacktesterWorker {
                     "barsHeld",
                     "internalState",
                     "emulated",
-                    "margin"
+                    "margin",
+                    "maxPrice"
                 ]
             ),
             [
@@ -618,6 +625,7 @@ class BacktesterWorker {
                 "numeric",
                 "jsonb",
                 "bool",
+                "numeric",
                 "numeric"
             ]
         )}

@@ -59,6 +59,7 @@ export function periodStatsFromArray(arr: PeriodStats[]) {
 }
 
 export function periodStatsToArray(periodStats: TradeStats["periodStats"]) {
+    if (!periodStats) return null;
     return [
         ...Object.values(periodStats.year),
         ...Object.values(periodStats.quarter),
