@@ -45,6 +45,7 @@ export interface BasePosition {
     barsHeld?: number;
     fee?: number;
     margin?: number;
+    emulated?: boolean;
 }
 
 export const calcPositionProfit = (

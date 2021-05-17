@@ -3,7 +3,7 @@ import { BaseIndicator, TulipIndicator, IndicatorCode, IndicatorType } from "@cr
 import { ValidTimeframe, CandleProps, RobotPositionStatus, Candle, calcPositionProfit } from "@cryptuoso/market";
 import { RobotWorkerEvents, SignalEvents } from "@cryptuoso/robot-events";
 import { NewEvent } from "@cryptuoso/events";
-import { CANDLES_RECENT_AMOUNT, nvl, sortAsc } from "@cryptuoso/helpers";
+import { CANDLES_RECENT_AMOUNT, equals, nvl, sortAsc } from "@cryptuoso/helpers";
 import { BaseStrategy } from "./BaseStrategy";
 import { RobotPositionState, RobotState, RobotStatus, StrategyProps } from "./types";
 import logger from "@cryptuoso/logger";
@@ -611,28 +611,39 @@ export class Robot {
                 },
                 this._emulatedStats
             );
-            this._emulatedStats = tradeStatsCalc.calculate();
-            logger.debug(this._emulatedStats.fullStats.zScore);
+            const newEmulatedStats = tradeStatsCalc.calculate();
+
             this._strategyInstance._handleEmulation(this.emulateNextPosition);
             this._strategyInstance._handleMargin(this.marginNextPosition);
             const notEmulatedPositions = this.closedPositions.filter((p) => !p.emulated);
+            let newStats = this._stats;
             if (notEmulatedPositions.length) {
-                const tradeStatsCalc = new TradeStatsCalc(
-                    notEmulatedPositions,
-                    {
-                        job: {
-                            type: "robot",
-                            robotId: this._id,
-                            recalc: false,
-                            SMAWindow: this._settings.robotSettings.SMAWindow,
-                            margin: this._settings.robotSettings.margin
+                if (
+                    notEmulatedPositions.length === this.closedPositions.length &&
+                    equals(this._emulatedStats, this._stats)
+                ) {
+                    newStats = newEmulatedStats;
+                } else {
+                    const tradeStatsCalc = new TradeStatsCalc(
+                        notEmulatedPositions,
+                        {
+                            job: {
+                                type: "robot",
+                                robotId: this._id,
+                                recalc: false,
+                                SMAWindow: this._settings.robotSettings.SMAWindow,
+                                margin: this._settings.robotSettings.margin
+                            },
+                            initialBalance: this._settings.robotSettings.initialBalance
                         },
-                        initialBalance: this._settings.robotSettings.initialBalance
-                    },
-                    this._stats
-                );
-                this._stats = tradeStatsCalc.calculate();
+                        this._stats
+                    );
+                    newStats = tradeStatsCalc.calculate();
+                }
             }
+
+            this._emulatedStats = newEmulatedStats;
+            this._stats = newStats;
         }
     }
 
