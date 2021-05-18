@@ -71,7 +71,8 @@ export class BaseService {
                 util: pgUtil
             };
             this.#redisConnection = new Redis(
-                process.env.REDISCS //,{enableReadyCheck: false}
+                process.env.REDISCS, //,{enableReadyCheck: false}
+                { maxRetriesPerRequest: null }
             );
 
             this.#redLock = new RedLock([this.#redisConnection], {
