@@ -1,11 +1,11 @@
-import Validator, { ValidationSchema, ValidationError } from "fastest-validator";
+import Validator, { ValidationSchema, SyncCheckFunction, AsyncCheckFunction } from "fastest-validator";
 import { CloudEvent as Event } from "cloudevents";
 import { flattenArray } from "@cryptuoso/helpers";
 export { Event };
 export type EventHandler = {
     passFullEvent: boolean;
     handler: (event: { [key: string]: any }) => Promise<void>;
-    validate: (value: any) => true | ValidationError[];
+    validate: SyncCheckFunction | AsyncCheckFunction;
 };
 export const BASE_REDIS_PREFIX = "cpz:events:";
 const CLOUD_EVENTS_SCHEMA = {

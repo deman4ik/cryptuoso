@@ -2,7 +2,7 @@ import restana, { Service, Protocol, Request, Response, RequestHandler } from "r
 import ifunless from "middleware-if-unless";
 import bodyParser from "body-parser";
 import helmet from "helmet";
-import Validator, { ValidationSchema, ValidationError, SyncCheckFunction, AsyncCheckFunction } from "fastest-validator";
+import Validator, { ValidationSchema, SyncCheckFunction, AsyncCheckFunction } from "fastest-validator";
 import { BaseService, BaseServiceConfig } from "./BaseService";
 import { ActionsHandlerError } from "@cryptuoso/errors";
 import { BaseUser, User, UserRoles, UserStatus } from "@cryptuoso/user-state";

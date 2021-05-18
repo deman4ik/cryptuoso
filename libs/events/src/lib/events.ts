@@ -102,9 +102,9 @@ export class Events {
         });
     }
 
-    _parseStreamResponse(
-        reply: [string, StreamMessage[]][]
-    ): { [key: string]: { msgId: string; data: { [key: string]: any } }[] } {
+    _parseStreamResponse(reply: [string, StreamMessage[]][]): {
+        [key: string]: { msgId: string; data: { [key: string]: any } }[];
+    } {
         const object: { [key: string]: { msgId: string; data: { [key: string]: any } }[] } = {};
         for (const stream of reply) {
             object[stream[0]] = this._parseMessageResponse(stream[1]);
