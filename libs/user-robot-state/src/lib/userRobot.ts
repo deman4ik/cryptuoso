@@ -18,13 +18,17 @@ import { OrdersStatusEvent } from "@cryptuoso/connector-events";
 import { BaseError } from "@cryptuoso/errors";
 import { ConnectorJob } from "@cryptuoso/connector-state";
 import logger from "@cryptuoso/logger";
+import { UserPorfolioDB } from "@cryptuoso/user-portfolio-state";
+import { UserRobotSettings } from "@cryptuoso/robot-settings";
 
 export class UserRobot {
     _id: string;
     _userExAccId: string;
     _userId: string;
     _robotId: string;
+
     _settings: UserRobotCurrentSettings;
+    _userRobotSettings: UserRobotSettings;
     _internalState: UserRobotInternalState;
     _status: UserRobotStatus;
     _startedAt?: string;
@@ -36,6 +40,10 @@ export class UserRobot {
     _tradeSettings: TradeSettings;
     _positions: GenericObject<UserPosition>;
     _message?: string;
+    _userPortfolioId?: string;
+    _userPortfolioStatus?: UserPorfolioDB["status"];
+    _userPortfolioSettings?: UserPorfolioDB["settings"];
+    _currentPrice?: number;
 
     constructor(state: UserRobotState) {
         this._id = state.id;
@@ -43,6 +51,7 @@ export class UserRobot {
         this._userId = state.userId;
         this._robotId = state.robotId;
         this._settings = state.settings;
+        this._userRobotSettings = state.userRobotSettings;
         this._status = state.status;
         this._startedAt = state.startedAt;
         this._stoppedAt = state.stoppedAt;
@@ -55,6 +64,10 @@ export class UserRobot {
         this._internalState = state.internalState || {};
         this._positions = {}; // key -> positionId not id
         this._setPositions(state.positions);
+        this._userPortfolioId = state.userPortfolioId;
+        this._userPortfolioSettings = state.userPortfolioSettings;
+        this._userPortfolioStatus = state.userPortfolioStatus;
+        this._currentPrice = state.currentPrice;
     }
 
     get id() {
@@ -79,6 +92,7 @@ export class UserRobot {
             userExAccId: this._userExAccId,
             userId: this._userId,
             robotId: this._robotId,
+            userPortfolioId: this._userPortfolioId,
             internalState: this._internalState,
             status: this._status,
             startedAt: this._startedAt,
@@ -158,7 +172,7 @@ export class UserRobot {
         this._message = data?.message || null;
         if (this.hasActivePositions)
             Object.keys(this._positions).forEach((key) => {
-                this._positions[key].cancel();
+                this._positions[key].cancel(this._currentPrice);
                 this._positions[key].executeJob();
             });
     }
@@ -212,6 +226,7 @@ export class UserRobot {
             );
 
         if (signal.action === TradeAction.long || signal.action === TradeAction.short) {
+            if (this._userRobotSettings?.active === false) return;
             let hasPreviousActivePositions = false;
 
             if (signal.positionParentId) {
@@ -241,7 +256,7 @@ export class UserRobot {
                 if (previousActivePositions?.length) {
                     hasPreviousActivePositions = true;
                     for (const position of previousActivePositions) {
-                        position.cancel();
+                        position.cancel(this._currentPrice);
                         position.executeJob();
                     }
                 }
@@ -267,6 +282,7 @@ export class UserRobot {
                     positionCode: signal.positionCode,
                     positionId: signal.positionId,
                     userRobotId: this._id,
+                    userPortfolioId: this._userPortfolioId,
                     userId: this._userId,
                     exchange: this._exchange,
                     asset: this._asset,
@@ -282,10 +298,11 @@ export class UserRobot {
                         entrySlippageCount: 0,
                         exitSlippageCount: 0,
                         delayedSignal: delay && signal
-                    }
+                    },
+                    emulated: this._userPortfolioStatus === "signals"
                 });
 
-                if (!delay) {
+                if (!delay || this._positions[newPositionId].emulated) {
                     this._positions[newPositionId].handleSignal(signal);
                     this._positions[newPositionId].executeJob();
                 }
@@ -341,5 +358,23 @@ export class UserRobot {
 
         position.executeJob();
         if (!this.hasActivePositions) this.handleDelayedPositions();
+    }
+
+    confirmTrade(userPositionId: string, cancel = false) {
+        const position = this._positions[userPositionId];
+        if (!position)
+            throw new BaseError(
+                "Position not found",
+                {
+                    userPositionId,
+                    userRobotId: this._id
+                },
+                "ERR_NOT_FOUND"
+            );
+        if (cancel) {
+            position.cancelTrade();
+        } else {
+            position.confirmEntryTrade();
+        }
     }
 }

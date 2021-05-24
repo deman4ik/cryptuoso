@@ -1,4 +1,5 @@
-import { TradeAction, OrderType } from "@cryptuoso/market";
+import { TradeAction } from "./market";
+import { OrderType } from "./orders";
 import { ValidTimeframe } from "./timeframe";
 
 export const enum SignalType {

@@ -37,6 +37,7 @@ export class UserPosition {
     _positionCode: string;
     _positionId: string;
     _userRobotId: string;
+    _userPortfolioId: string;
     _userId: string;
     _userExAccId: string;
     _settings: UserRobotCurrentSettings;
@@ -68,6 +69,7 @@ export class UserPosition {
     _reason?: string; //TODO ENUM
     _profit?: number;
     _barsHeld?: number;
+    _emulated: boolean;
     _internalState: UserPositionInternalState;
     _entryOrders?: Order[];
     _exitOrders?: Order[];
@@ -85,6 +87,7 @@ export class UserPosition {
         this._positionCode = state.positionCode;
         this._positionId = state.positionId;
         this._userRobotId = state.userRobotId;
+        this._userPortfolioId = state.userPortfolioId;
         this._userId = state.userId;
         this._userExAccId = state.userExAccId;
         this._settings = state.settings;
@@ -121,6 +124,7 @@ export class UserPosition {
         this._reason = state.reason;
         this._profit = state.profit;
         this._barsHeld = state.barsHeld;
+        this._emulated = state.emulated || false;
         this._nextJobAt = state.nextJobAt;
         this._nextJob = state.nextJob;
         this._entryOrders = state.entryOrders || [];
@@ -189,12 +193,27 @@ export class UserPosition {
         return this._nextJob;
     }
 
-    cancel() {
+    get emulated() {
+        return this._emulated;
+    }
+
+    cancel(currentPrice?: number) {
+        if (this._emulated) {
+            this._exitSignalPrice = currentPrice;
+            //this._exitPrice = currentPrice;
+            this._exitDate = dayjs.utc().toISOString();
+        }
         this._nextJob = UserPositionJob.cancel;
         this._nextJobAt = dayjs.utc().toISOString();
     }
 
     _setStatus() {
+        if (
+            this._status === UserPositionStatus.closed ||
+            this._status === UserPositionStatus.closedAuto ||
+            this._status === UserPositionStatus.canceled
+        )
+            return;
         if (this._entryStatus === UserPositionOrderStatus.new || this._entryStatus === UserPositionOrderStatus.open)
             this._status = UserPositionStatus.new;
         else if (this._entryStatus === UserPositionOrderStatus.canceled) {
@@ -231,7 +250,7 @@ export class UserPosition {
             this._entryStatus !== UserPositionOrderStatus.closed &&
             this._entryStatus !== UserPositionOrderStatus.canceled &&
             this._entryOrders &&
-            this._entryOrders.length > 0
+            this._entryOrders.length
         ) {
             const order = this._entryOrders.sort((a, b) => sortAsc(a.createdAt, b.createdAt))[
                 this._entryOrders.length - 1
@@ -293,7 +312,7 @@ export class UserPosition {
             this._exitStatus !== UserPositionOrderStatus.closed &&
             this._exitStatus !== UserPositionOrderStatus.canceled &&
             this._exitOrders &&
-            this._exitOrders.length > 0
+            this._exitOrders.length
         ) {
             const order = this._exitOrders.sort((a, b) => sortAsc(a.createdAt, b.createdAt))[
                 this._exitOrders.length - 1
@@ -412,6 +431,7 @@ export class UserPosition {
             positionCode: this._positionCode,
             positionId: this._positionId,
             userRobotId: this._userRobotId,
+            userPortfolioId: this._userPortfolioId,
             userId: this._userId,
             exchange: this._exchange,
             asset: this._asset,
@@ -442,7 +462,8 @@ export class UserPosition {
             profit: this._profit,
             barsHeld: this._barsHeld,
             nextJobAt: this._nextJobAt,
-            nextJob: this._nextJob
+            nextJob: this._nextJob,
+            emulated: this._emulated
         };
     }
 
@@ -611,38 +632,55 @@ export class UserPosition {
         return order;
     }
 
-    _open(trade: TradeInfo) {
-        const order = this._createOrder(trade);
-        this._ordersToCreate.push(order);
-        this._connectorJobs.push({
-            id: uuid(),
-            type: OrderJobType.create,
-            priority: Priority.high,
-            userExAccId: this._userExAccId,
-            orderId: order.id,
-            nextJobAt: dayjs.utc().toISOString()
-        });
-        this._entryOrders.push(order);
+    _open(trade: TradeInfo & { timestamp?: string }) {
+        if (!this._emulated) {
+            const order = this._createOrder(trade);
+            this._ordersToCreate.push(order);
+            this._connectorJobs.push({
+                id: uuid(),
+                type: OrderJobType.create,
+                priority: Priority.high,
+                userExAccId: this._userExAccId,
+                orderId: order.id,
+                nextJobAt: dayjs.utc().toISOString()
+            });
+            this._entryOrders.push(order);
+        }
         this._entryVolume = this._settings.volume;
         this._entryAction = trade.action;
+        if (this._emulated) {
+            this._entryPrice = this._setPrice(trade);
+            this._entryStatus = UserPositionOrderStatus.new;
+            this._entryDate = trade.timestamp;
+            this._entryCandleTimestamp = Timeframe.validTimeframeDatePrev(this._entryDate, this._timeframe);
+        }
         this._updateEntry();
         this._setStatus();
     }
 
-    _close(trade: TradeInfo) {
-        const order = this._createOrder(trade);
-        this._ordersToCreate.push(order);
-        this._connectorJobs.push({
-            id: uuid(),
-            type: OrderJobType.create,
-            priority: Priority.high,
-            userExAccId: this._userExAccId,
-            orderId: order.id,
-            nextJobAt: dayjs.utc().toISOString()
-        });
-        this._exitOrders.push(order);
-        if (!this._exitVolume || this._exitVolume === 0) this._exitVolume = this._entryExecuted;
+    _close(trade: TradeInfo & { timestamp?: string }) {
+        if (!this._emulated) {
+            const order = this._createOrder(trade);
+            this._ordersToCreate.push(order);
+            this._connectorJobs.push({
+                id: uuid(),
+                type: OrderJobType.create,
+                priority: Priority.high,
+                userExAccId: this._userExAccId,
+                orderId: order.id,
+                nextJobAt: dayjs.utc().toISOString()
+            });
+            this._exitOrders.push(order);
+        }
+        if (!this._exitVolume) this._exitVolume = this._entryExecuted;
         this._exitAction = trade.action;
+        if (this._emulated) {
+            this._exitPrice = this._setPrice(trade);
+            this._exitDate = this._exitDate || trade.timestamp;
+            this._exitCandleTimestamp = Timeframe.validTimeframeDatePrev(this._exitDate, this._timeframe);
+            this.confirmExitTrade();
+        }
+
         this._updateExit();
         this._setStatus();
     }
@@ -761,6 +799,7 @@ export class UserPosition {
             this.hasOpenExitOrders
         )
             return;
+
         const lastOrder = this.lastExitOrder;
         if (!lastOrder) return;
 
@@ -794,6 +833,26 @@ export class UserPosition {
     }
 
     _tryToCancel() {
+        if (this._emulated) {
+            // Position entry not closed
+            if (this._entryStatus && this._entryStatus !== UserPositionOrderStatus.closed) {
+                this._entryStatus = UserPositionOrderStatus.canceled;
+                this._setStatus();
+            } else if (this._entryStatus === UserPositionOrderStatus.closed && !this._exitStatus) {
+                this._close({
+                    action: this._direction === "long" ? TradeAction.closeLong : TradeAction.closeShort,
+                    orderType: OrderType.forceMarket,
+                    price: this._exitSignalPrice
+                });
+            } else if (!this._entryStatus && !this._exitStatus) {
+                this._entryStatus = UserPositionOrderStatus.canceled;
+                this._setStatus();
+            }
+
+            this._setStatus();
+            return;
+        }
+
         // Position entry not closed
         if (this._entryStatus && this._entryStatus !== UserPositionOrderStatus.closed) {
             // Entry not execute
@@ -916,6 +975,31 @@ export class UserPosition {
             this._tryToClose();
         } else if (this._nextJob === UserPositionJob.cancel) {
             this._tryToCancel();
+        }
+    }
+
+    confirmEntryTrade() {
+        if (this._emulated) {
+            this._entryStatus = UserPositionOrderStatus.closed;
+            this._entryExecuted = this._entryVolume;
+            this._hasRecentTrade = true;
+            this._setStatus();
+        }
+    }
+
+    cancelTrade() {
+        if (this._emulated) {
+            this._entryStatus = UserPositionOrderStatus.canceled;
+            this._setStatus();
+        }
+    }
+
+    confirmExitTrade() {
+        if (this._emulated) {
+            this._exitStatus = UserPositionOrderStatus.closed;
+            this._exitExecuted = this._entryVolume;
+            this._hasRecentTrade = true;
+            this._setStatus();
         }
     }
 }

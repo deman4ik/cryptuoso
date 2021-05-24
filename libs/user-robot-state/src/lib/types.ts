@@ -3,6 +3,7 @@ import { Order, PositionDirection, SignalEvent, TradeAction, TradeSettings, Vali
 import { UserRobotSettings } from "@cryptuoso/robot-settings";
 import { UserMarketState } from "@cryptuoso/market";
 import { OrdersStatusEvent } from "@cryptuoso/connector-events";
+import { UserPorfolioDB } from "@cryptuoso/user-portfolio-state";
 
 export const enum UserPositionStatus {
     delayed = "delayed",
@@ -44,6 +45,7 @@ export interface UserPositionDB {
     positionCode: string;
     positionId: string;
     userRobotId: string;
+    userPortfolioId: string;
     userId: string;
     exchange: string;
     asset: string;
@@ -75,6 +77,7 @@ export interface UserPositionDB {
     barsHeld?: number;
     nextJobAt?: string;
     nextJob?: UserPositionJob;
+    emulated: boolean;
 }
 
 export interface UserPositionState extends UserPositionDB {
@@ -104,6 +107,7 @@ export interface UserRobotDB {
     userExAccId: string;
     userId: string;
     robotId: string;
+    userPortfolioId?: string;
     internalState: UserRobotInternalState;
     status: UserRobotStatus;
     startedAt?: string;
@@ -119,16 +123,16 @@ export interface UserRobotState extends UserRobotDB {
     timeframe: ValidTimeframe;
     tradeSettings: TradeSettings;
     positions: UserPositionState[];
+    userPortfolioStatus?: UserPorfolioDB["status"];
+    userPortfolioSettings?: UserPorfolioDB["settings"];
+    currentPrice?: number;
+    userRobotSettings?: UserRobotSettings;
 }
 
 export interface UserRobotStateExt extends UserRobotState {
-    currentPrice: number;
     limits: UserMarketState["limits"]["userRobot"];
     precision: { amount: number; price: number };
     totalBalanceUsd: number;
-    profit?: number;
-    assetDynamicDelta: number;
-    userRobotSettings: UserRobotSettings;
 }
 
 export const enum UserRobotJobType {

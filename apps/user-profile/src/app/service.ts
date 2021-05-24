@@ -21,7 +21,6 @@ import { spawn, Pool, Worker as ThreadsWorker } from "threads";
 import { Encrypt } from "./encryptWorker";
 import { formatExchange, GenericObject, round } from "@cryptuoso/helpers";
 import {
-    checkAssetDynamicDelta,
     checkAssetStatic,
     checkBalancePercent,
     checkCurrencyDynamic,
@@ -791,17 +790,7 @@ export default class UserProfileService extends HTTPService {
             checkBalancePercent(balancePercent, availableBalancePercent, volumeInCurrency, amountMin, amountMax);
 
             newUserRobotSettings = { volumeType: VolumeSettingsType.balancePercent, balancePercent };
-        } else if (settings.volumeType === VolumeSettingsType.assetDynamicDelta) {
-            const initialVolume = round(settings.initialVolume, precision?.amount || 6);
-            const amountMin = limits?.min?.amount;
-            const amountMax = limits?.max?.amount;
-            checkAssetDynamicDelta(initialVolume, amountMin, amountMax);
-            newUserRobotSettings = {
-                volumeType: VolumeSettingsType.assetDynamicDelta,
-                initialVolume
-            };
         }
-
         return newUserRobotSettings;
     }
 
@@ -949,10 +938,7 @@ export default class UserProfileService extends HTTPService {
                 settings.volume === currentUserRobotSettings.volume) ||
             (currentUserRobotSettings?.volumeType === VolumeSettingsType.currencyDynamic &&
                 settings.volumeType === VolumeSettingsType.currencyDynamic &&
-                settings.volumeInCurrency === currentUserRobotSettings.volumeInCurrency) ||
-            (currentUserRobotSettings?.volumeType === VolumeSettingsType.assetDynamicDelta &&
-                settings.volumeType === VolumeSettingsType.assetDynamicDelta &&
-                settings.initialVolume === currentUserRobotSettings.initialVolume)
+                settings.volumeInCurrency === currentUserRobotSettings.volumeInCurrency)
         )
             return;
 
