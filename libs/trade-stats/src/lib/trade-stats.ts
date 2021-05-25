@@ -1,7 +1,7 @@
 import dayjs from "@cryptuoso/dayjs";
 import { average, chunkArray, divide, nvl, round, sortAsc, sum } from "@cryptuoso/helpers";
 import { BasePosition } from "@cryptuoso/market";
-import { createDatesPeriod } from "./helpers";
+import { calcZScore, createDatesPeriod } from "./helpers";
 import { FullStats, PerformanceVals, Stats, StatsMeta, TradeStats } from "./types";
 import logger from "@cryptuoso/logger";
 
@@ -105,7 +105,9 @@ export class TradeStatsCalc implements TradeStats {
             firstPosition: nvl(prevStats?.firstPosition),
             lastPosition: nvl(prevStats?.lastPosition),
             equity: nvl(prevStats?.equity, []),
-            equityAvg: nvl(prevStats?.equityAvg, [])
+            equityAvg: nvl(prevStats?.equityAvg, []),
+            seriesCount: nvl(prevStats?.seriesCount, 0),
+            currentSeries: nvl(prevStats?.currentSeries)
         };
     }
 
@@ -124,7 +126,9 @@ export class TradeStatsCalc implements TradeStats {
             avgPercentGrossLossYears: nvl(fullStats?.avgPercentGrossLossYears),
             avgPercentGrossLossQuarters: nvl(fullStats?.avgPercentGrossLossQuarters),
             avgPercentGrossLossMonths: nvl(fullStats?.avgPercentGrossLossMonths),
-            emulateNextPosition: nvl(fullStats?.emulateNextPosition, false)
+            emulateNextPosition: nvl(fullStats?.emulateNextPosition, false),
+            marginNextPosition: nvl(fullStats?.marginNextPosition, 1),
+            zScore: nvl(fullStats?.zScore)
         };
         if (!stats.firstPosition) stats.firstPosition = positions[0];
         if (this.hasBalance && stats.initialBalance === null) {
@@ -195,12 +199,28 @@ export class TradeStatsCalc implements TradeStats {
                 stats.currentWinSequence += 1;
                 stats.currentLossSequence = 0;
                 if (stats.currentWinSequence > stats.maxConsecWins) stats.maxConsecWins = stats.currentWinSequence;
+
+                if (stats.currentSeries === -1) {
+                    stats.currentSeries = 1;
+                    stats.seriesCount += 1;
+                }
             } else {
                 stats.currentLossSequence += 1;
                 stats.currentWinSequence = 0;
                 if (stats.currentLossSequence > stats.maxConsecLosses)
                     stats.maxConsecLosses = stats.currentLossSequence;
+
+                if (stats.currentSeries === 1) {
+                    stats.currentSeries = -1;
+                    stats.seriesCount += 1;
+                }
             }
+
+            if (!stats.currentSeries) {
+                stats.currentSeries = profit > 0 ? 1 : -1;
+                stats.seriesCount += 1;
+            }
+
             const prevNetProfit = stats.netProfit;
             const prevLocalMax = stats.localMax;
 
@@ -343,11 +363,46 @@ export class TradeStatsCalc implements TradeStats {
                 stats.sharpeRatio = avgPercentNetProfit / stats.stdDevPercentNetProfit;
             }
 
-            if (this.meta.job.type === "robot" && this.meta.job.SMAWindow) {
-                if (stats.netProfitSMA) {
-                    stats.emulateNextPosition = stats.netProfit < stats.netProfitSMA;
-                } else {
-                    stats.emulateNextPosition = false;
+            if (this.meta.job.type === "robot") {
+                /* if (this.meta.job.margin) {
+                    if (stats.lastPosition.profit < 0) stats.marginNextPosition = this.meta.job.margin;
+                    else stats.marginNextPosition = 1;
+                }
+                if (this.meta.job.SMAWindow) {
+                    if (stats.netProfitSMA) {
+                        stats.emulateNextPosition = stats.netProfit < stats.netProfitSMA;
+                    } else {
+                        stats.emulateNextPosition = false;
+                    }
+                }*/
+
+                if (stats.tradesCount >= 30) {
+                    stats.zScore = calcZScore(
+                        stats.tradesCount,
+                        stats.seriesCount,
+                        stats.tradesWinning,
+                        stats.tradesLosing
+                    );
+                    if (stats.zScore > 2.5) {
+                        if (stats.lastPosition.profit > 0) {
+                            stats.emulateNextPosition = true;
+                            stats.marginNextPosition = 1;
+                        } else {
+                            stats.emulateNextPosition = false;
+                            stats.marginNextPosition = this.meta.job.margin;
+                        }
+                    } else if (stats.zScore < -2) {
+                        if (stats.lastPosition.profit > 0) {
+                            stats.emulateNextPosition = false;
+                            stats.marginNextPosition = this.meta.job.margin;
+                        } else {
+                            stats.emulateNextPosition = true;
+                            stats.marginNextPosition = 1;
+                        }
+                    } else {
+                        stats.emulateNextPosition = false;
+                        stats.marginNextPosition = 1;
+                    }
                 }
             }
         }

@@ -13,7 +13,7 @@ describe("Test 'trade-stats'", () => {
                 initialBalance: 100000
             });
             const stats = tradeStatsCalculator.calculate();
-            const { sharpeRatio } = stats.fullStats;
+            const { zScore, emulateNextPosition, marginNextPosition } = stats.fullStats;
             /*  console.log(
                 Object.values(stats.periodStats.month).map(({ dateFrom, stats }) => ({
                     dateFrom,
@@ -22,7 +22,9 @@ describe("Test 'trade-stats'", () => {
                 }))
             ); */
             console.log({
-                sharpeRatio
+                zScore,
+                emulateNextPosition,
+                marginNextPosition
             });
             // expect(stats.fullStats).toEqual(result.fullStats);
             // console.log(util.inspect(stats.periodStats.month, false, null, true));
@@ -68,12 +70,7 @@ describe("Test 'trade-stats'", () => {
 
             expect(stats).toEqual(statsAll);
             const { netProfitsSMA, netProfitSMA, netProfit, emulateNextPosition } = statsAll.fullStats;
-            console.log({
-                netProfitsSMA,
-                netProfitSMA,
-                netProfit,
-                emulateNextPosition
-            });
+
             //  console.log(stats.fullStats);
             // expect(stats.fullStats).toEqual(result.fullStats);
             // console.log(util.inspect(stats.periodStats.month, false, null, true));

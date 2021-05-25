@@ -59,9 +59,30 @@ export function periodStatsFromArray(arr: PeriodStats[]) {
 }
 
 export function periodStatsToArray(periodStats: TradeStats["periodStats"]) {
+    if (!periodStats) return null;
     return [
         ...Object.values(periodStats.year),
         ...Object.values(periodStats.quarter),
         ...Object.values(periodStats.month)
     ];
+}
+
+/**
+ * zScore
+ *
+ * @export
+ * @param {number} tradesCount
+ * @param {number} seriesCount
+ * @param {number} winningTrades
+ * @param {number} lossingTrades
+ * @returns {number}
+ */
+export function calcZScore(
+    tradesCount: number,
+    seriesCount: number,
+    winningTrades: number,
+    lossingTrades: number
+): number {
+    const P = 2 * winningTrades * lossingTrades;
+    return (tradesCount * (seriesCount - 0.5) - P) / Math.sqrt((P * (P - tradesCount)) / (tradesCount - 1));
 }

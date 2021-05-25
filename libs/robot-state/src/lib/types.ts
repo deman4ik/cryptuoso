@@ -61,7 +61,6 @@ export interface RobotPositionState extends BasePosition {
     barsHeld?: number;
     backtest?: boolean;
     internalState?: RobotPostionInternalState;
-    emulated: boolean;
 }
 
 export interface RobotState {

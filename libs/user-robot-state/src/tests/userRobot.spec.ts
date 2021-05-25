@@ -46,6 +46,7 @@ describe("Test User Robot", () => {
             status: UserRobotStatus.started,
             startedAt: dayjs.utc("2019-10-25T00:00:00.000Z").toISOString(),
             positions: [],
+            currentPrice: 6500,
             ...robotParams
         });
     });
@@ -1885,6 +1886,364 @@ describe("Test User Robot", () => {
         expect(userRobot.positions[0].status).toBe(UserPositionStatus.closedAuto);
         expect(userRobot.hasClosedPositions).toBe(true);
         expect(userRobot.hasActivePositions).toBe(false);
+        if (userRobot.status === UserRobotStatus.stopping && !userRobot.hasActivePositions) userRobot.setStop();
+        expect(userRobot.state.status).toBe(UserRobotStatus.stopped);
+    });
+});
+
+describe("Test Emulated User Robot", () => {
+    beforeEach(() => {
+        userRobot = new UserRobot({
+            id: uuid(),
+            userExAccId: uuid(),
+            userId: uuid(),
+            robotId,
+            internalState: {},
+            status: UserRobotStatus.started,
+            startedAt: dayjs.utc("2019-10-25T00:00:00.000Z").toISOString(),
+            positions: [],
+            userPortfolioStatus: "signals",
+            currentPrice: 6500,
+            ...robotParams
+        });
+    });
+
+    it("Should create new Long Position", () => {
+        const signal: SignalEvent = {
+            id: uuid(),
+            robotId,
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            timestamp: dayjs.utc("2019-10-26T00:05:01.000Z").toISOString(),
+            type: SignalType.trade,
+            positionId: uuid(),
+            positionPrefix: "p",
+            positionCode: "p_1",
+            candleTimestamp: dayjs.utc("2019-10-26T00:05:00.000Z").toISOString(),
+            action: TradeAction.long,
+            orderType: OrderType.stop,
+            price: 6500
+        };
+
+        userRobot.handleSignal(signal);
+        expect(userRobot.positions.length).toBe(1);
+        expect(userRobot.positions[0].direction).toBe("long");
+        expect(userRobot.positions[0].entryPrice).toBe(7152);
+    });
+
+    it("Should create new Short Position", () => {
+        const signal: SignalEvent = {
+            id: uuid(),
+            robotId,
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            timestamp: dayjs.utc("2019-10-26T00:05:01.000Z").toISOString(),
+            type: SignalType.trade,
+            positionId: uuid(),
+            positionPrefix: "p",
+            positionCode: "p_1",
+            candleTimestamp: dayjs.utc("2019-10-26T00:05:00.000Z").toISOString(),
+            action: TradeAction.short,
+            orderType: OrderType.market,
+            price: 6500
+        };
+
+        userRobot.handleSignal(signal);
+        expect(userRobot.positions.length).toBe(1);
+        expect(userRobot.positions[0].direction).toBe("short");
+        expect(userRobot.positions[0].entryPrice).toBe(5848);
+    });
+
+    it("Should set order price without modifications", () => {
+        const signal: SignalEvent = {
+            id: uuid(),
+            robotId,
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            timestamp: dayjs.utc("2019-10-26T00:05:01.000Z").toISOString(),
+            type: SignalType.trade,
+            positionId: uuid(),
+            positionPrefix: "p",
+            positionCode: "p_1",
+            candleTimestamp: dayjs.utc("2019-10-26T00:05:00.000Z").toISOString(),
+            action: TradeAction.short,
+            orderType: OrderType.market,
+            price: 6500
+        };
+        userRobot = new UserRobot({
+            ...userRobot.state,
+            userPortfolioStatus: "signals",
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            tradeSettings: {
+                orderTimeout: 120
+            }
+        });
+        userRobot.handleSignal(signal);
+        expect(userRobot.positions.length).toBe(1);
+        expect(userRobot.positions[0].direction).toBe("short");
+        expect(userRobot.positions[0].entryPrice).toBe(signal.price);
+    });
+
+    it("Should cancel position", () => {
+        const signalOpen: SignalEvent = {
+            id: uuid(),
+            robotId,
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            timestamp: dayjs.utc("2019-10-26T00:05:01.000Z").toISOString(),
+            type: SignalType.trade,
+            positionId: uuid(),
+            positionPrefix: "p",
+            positionCode: "p_1",
+            candleTimestamp: dayjs.utc("2019-10-26T00:05:00.000Z").toISOString(),
+            action: TradeAction.short,
+            orderType: OrderType.market,
+            price: 6500
+        };
+
+        userRobot.handleSignal(signalOpen);
+        userRobot.confirmTrade(userRobot.positions[0].id, true);
+        expect(userRobot.positions[0].status).toBe(UserPositionStatus.canceled);
+    });
+
+    it("Should confirm entry trade", () => {
+        const signalOpen: SignalEvent = {
+            id: uuid(),
+            robotId,
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            timestamp: dayjs.utc("2019-10-26T00:05:01.000Z").toISOString(),
+            type: SignalType.trade,
+            positionId: uuid(),
+            positionPrefix: "p",
+            positionCode: "p_1",
+            candleTimestamp: dayjs.utc("2019-10-26T00:05:00.000Z").toISOString(),
+            action: TradeAction.short,
+            orderType: OrderType.market,
+            price: 6500
+        };
+
+        userRobot.handleSignal(signalOpen);
+        userRobot.confirmTrade(userRobot.positions[0].id);
+        expect(userRobot.positions[0].status).toBe(UserPositionStatus.open);
+    });
+
+    it("Should close position", () => {
+        const signalOpen: SignalEvent = {
+            id: uuid(),
+            robotId,
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            timestamp: dayjs.utc("2019-10-26T00:05:01.000Z").toISOString(),
+            type: SignalType.trade,
+            positionId: uuid(),
+            positionPrefix: "p",
+            positionCode: "p_1",
+            candleTimestamp: dayjs.utc("2019-10-26T00:05:00.000Z").toISOString(),
+            action: TradeAction.short,
+            orderType: OrderType.market,
+            price: 6500
+        };
+
+        userRobot.handleSignal(signalOpen);
+        userRobot.confirmTrade(userRobot.positions[0].id);
+        const signalClose: SignalEvent = {
+            id: uuid(),
+            robotId,
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            timestamp: dayjs.utc("2019-10-26T00:05:01.000Z").toISOString(),
+            type: SignalType.trade,
+            positionId: signalOpen.positionId,
+            positionPrefix: "p",
+            positionCode: "p_1",
+            candleTimestamp: dayjs.utc("2019-10-26T00:05:00.000Z").toISOString(),
+            action: TradeAction.closeShort,
+            orderType: OrderType.market,
+            price: 5998
+        };
+        userRobot.handleSignal(signalClose);
+        expect(userRobot.positions[0].status).toBe(UserPositionStatus.closed);
+    });
+
+    it("Should close previous position", () => {
+        const signalOpen: SignalEvent = {
+            id: uuid(),
+            robotId,
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            timestamp: dayjs.utc("2019-10-26T00:05:01.000Z").toISOString(),
+            type: SignalType.trade,
+            positionId: uuid(),
+            positionPrefix: "p",
+            positionCode: "p_1",
+            candleTimestamp: dayjs.utc("2019-10-26T00:05:00.000Z").toISOString(),
+            action: TradeAction.short,
+            orderType: OrderType.market,
+            price: 6500
+        };
+
+        userRobot.handleSignal(signalOpen);
+        userRobot.confirmTrade(userRobot.positions[0].id);
+        const signalClose: SignalEvent = {
+            id: uuid(),
+            robotId,
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            timestamp: dayjs.utc("2019-10-26T00:05:01.000Z").toISOString(),
+            type: SignalType.trade,
+            positionId: uuid(),
+            positionPrefix: "p",
+            positionCode: "p_2",
+            candleTimestamp: dayjs.utc("2019-10-26T00:05:00.000Z").toISOString(),
+            action: TradeAction.closeShort,
+            orderType: OrderType.market,
+            price: 5998
+        };
+        userRobot.handleSignal(signalClose);
+        expect(userRobot.positions[0].status).toBe(UserPositionStatus.closed);
+        expect(userRobot.positions[0].exitPrice).toBe(6599.8);
+    });
+
+    it("Should not create new position after new open signal with same direction", () => {
+        const signalOpen: SignalEvent = {
+            id: uuid(),
+            robotId,
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            timestamp: dayjs.utc("2019-10-26T00:05:01.000Z").toISOString(),
+            type: SignalType.trade,
+            positionId: uuid(),
+            positionPrefix: "p",
+            positionCode: "p_1",
+            candleTimestamp: dayjs.utc("2019-10-26T00:05:00.000Z").toISOString(),
+            action: TradeAction.short,
+            orderType: OrderType.market,
+            price: 6500
+        };
+
+        userRobot.handleSignal(signalOpen);
+        userRobot.confirmTrade(userRobot.positions[0].id);
+        const firstUserPositionId = userRobot.positions[0].id;
+
+        const signalOpenNew: SignalEvent = {
+            id: uuid(),
+            robotId,
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            timestamp: dayjs.utc("2019-10-26T00:05:01.000Z").toISOString(),
+            type: SignalType.trade,
+            positionId: uuid(),
+            positionPrefix: "p",
+            positionCode: "p_2",
+            candleTimestamp: dayjs.utc("2019-10-26T00:05:00.000Z").toISOString(),
+            action: TradeAction.short,
+            orderType: OrderType.market,
+            price: 6500
+        };
+        userRobot.handleSignal(signalOpenNew);
+        expect(userRobot.positions[0].id).toBe(firstUserPositionId);
+        expect(userRobot.positions[0].status).toBe(UserPositionStatus.open);
+        expect(userRobot.positions.length).toBe(1);
+    });
+
+    it("Should force close position after new open signal with different direction", () => {
+        const signalOpen: SignalEvent = {
+            id: uuid(),
+            robotId,
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            timestamp: dayjs.utc("2019-10-26T00:05:01.000Z").toISOString(),
+            type: SignalType.trade,
+            positionId: uuid(),
+            positionPrefix: "p",
+            positionCode: "p_1",
+            candleTimestamp: dayjs.utc("2019-10-26T00:05:00.000Z").toISOString(),
+            action: TradeAction.short,
+            orderType: OrderType.market,
+            price: 6500
+        };
+
+        userRobot.handleSignal(signalOpen);
+        userRobot.confirmTrade(userRobot.positions[0].id);
+
+        const signalOpenNew: SignalEvent = {
+            id: uuid(),
+            robotId,
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            timestamp: dayjs.utc("2019-10-26T00:05:01.000Z").toISOString(),
+            type: SignalType.trade,
+            positionId: uuid(),
+            positionPrefix: "p",
+            positionCode: "p_2",
+            candleTimestamp: dayjs.utc("2019-10-26T00:05:00.000Z").toISOString(),
+            action: TradeAction.long,
+            orderType: OrderType.market,
+            price: 6500
+        };
+        userRobot.handleSignal(signalOpenNew);
+        expect(userRobot.positions[0].status).toBe(UserPositionStatus.closedAuto);
+        expect(userRobot.positions[1].status).toBe(UserPositionStatus.new);
+    });
+
+    it("Should force close position after Robot stop", () => {
+        const signalOpen: SignalEvent = {
+            id: uuid(),
+            robotId,
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            timestamp: dayjs.utc("2019-10-26T00:05:01.000Z").toISOString(),
+            type: SignalType.trade,
+            positionId: uuid(),
+            positionPrefix: "p",
+            positionCode: "p_1",
+            candleTimestamp: dayjs.utc("2019-10-26T00:05:00.000Z").toISOString(),
+            action: TradeAction.short,
+            orderType: OrderType.market,
+            price: 6500
+        };
+
+        userRobot.handleSignal(signalOpen);
+        userRobot.confirmTrade(userRobot.positions[0].id);
+
+        userRobot.stop();
+
+        expect(userRobot.hasActivePositions).toBe(false);
+        expect(userRobot.state.status).toBe(UserRobotStatus.stopping);
+        expect(userRobot.positions[0].status).toBe(UserPositionStatus.closedAuto);
+        expect(userRobot.hasClosedPositions).toBe(true);
         if (userRobot.status === UserRobotStatus.stopping && !userRobot.hasActivePositions) userRobot.setStop();
         expect(userRobot.state.status).toBe(UserRobotStatus.stopped);
     });

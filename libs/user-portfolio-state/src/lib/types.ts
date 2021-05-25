@@ -1,10 +1,12 @@
 import { FullStats } from "@cryptuoso/trade-stats";
-import { PortfolioDB } from "@cryptuoso/portfolio-state";
 
 export interface UserPortfolioSettings {
     initialBalance: number;
     tradingAmountType: "currencyFixed" | "balancePercent";
-    tradingAmount: number;
+    balancePercent?: number;
+    tradingAmountCurrency?: number;
+    leverage: number;
+    minBalance: number;
 }
 
 export interface UserPorfolioDB {
@@ -15,9 +17,5 @@ export interface UserPorfolioDB {
     exchange: string;
     status: "signals" | "active" | "error";
     settings: UserPortfolioSettings;
-}
-
-export interface UserPorfolioState extends UserPorfolioDB {
-    portfolio: PortfolioDB;
     stats?: FullStats;
 }

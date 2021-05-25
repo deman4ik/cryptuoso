@@ -57,7 +57,7 @@ export const min = (...nums: number[]) => Math.min(...nums.filter((n) => typeof 
 
 export function divide(a: number, b: number) {
     if (a === 0) return 0;
-    if (!a || !b || b === 0) return null;
+    if (!a || !b) return null;
     return a / b;
 }
 
@@ -70,7 +70,7 @@ export function divide(a: number, b: number) {
  * divideRound(10,3); // 3.33
  */
 export function divideRound(a: number, b: number): number | 0 {
-    if (!a || !b || a === 0 || b === 0) return 0;
+    if (!a || !b) return 0;
     const result = a / b;
     return +round(result, 2);
 }

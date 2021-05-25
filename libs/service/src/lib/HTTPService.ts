@@ -2,7 +2,7 @@ import restana, { Service, Protocol, Request, Response, RequestHandler } from "r
 import ifunless from "middleware-if-unless";
 import bodyParser from "body-parser";
 import helmet from "helmet";
-import Validator, { ValidationSchema, ValidationError } from "fastest-validator";
+import Validator, { ValidationSchema, SyncCheckFunction, AsyncCheckFunction } from "fastest-validator";
 import { BaseService, BaseServiceConfig } from "./BaseService";
 import { ActionsHandlerError } from "@cryptuoso/errors";
 import { BaseUser, User, UserRoles, UserStatus } from "@cryptuoso/user-state";
@@ -44,7 +44,7 @@ export class HTTPService extends BaseService {
     private _server: Service<Protocol.HTTP>;
     private _routes: {
         [key: string]: {
-            validate?: (value: any) => true | ValidationError[];
+            validate?: SyncCheckFunction | AsyncCheckFunction;
             auth?: boolean;
             roles?: string[];
         };
@@ -137,7 +137,7 @@ export class HTTPService extends BaseService {
                 throw new ActionsHandlerError("Invalid role", null, "FORBIDDEN", 403);
             req.body = body;
             return next();
-        } else
+        } else if (Array.isArray(validationErrors))
             throw new ActionsHandlerError(
                 validationErrors.map((e) => e.message).join(" "),
                 { validationErrors },
@@ -231,7 +231,7 @@ export class HTTPService extends BaseService {
             handler: (req: any, res: any) => Promise<any>;
             auth?: boolean;
             roles?: string[];
-            inputSchema?: ValidationSchema;
+            inputSchema?: ValidationSchema<any>;
         };
     }) {
         for (const [name, route] of Object.entries(routes)) {
@@ -244,7 +244,7 @@ export class HTTPService extends BaseService {
             if (roles && (!Array.isArray(roles) || roles.length === 0))
                 throw new Error("Roles must be an array or undefined");
             roles = roles || [];
-            let schema: ValidationSchema;
+            let schema: ValidationSchema<any>;
 
             if (inputSchema !== null || inputSchema === undefined) {
                 schema = {
@@ -282,7 +282,7 @@ export class HTTPService extends BaseService {
     private _createWebhooks(routes: {
         [key: string]: {
             handler: (req: any, res: any) => Promise<any>;
-            inputSchema?: ValidationSchema;
+            inputSchema?: ValidationSchema<any>;
         };
     }) {
         for (const [name, route] of Object.entries(routes)) {

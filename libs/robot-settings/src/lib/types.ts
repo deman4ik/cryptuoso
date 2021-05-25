@@ -8,6 +8,7 @@ export const enum VolumeSettingsType {
 export interface BaseSettings {
     initialBalance?: number;
     SMAWindow?: number;
+    margin?: number;
 }
 
 export interface AssetStaticSettings extends BaseSettings {
@@ -20,12 +21,12 @@ export interface CurrencyDynamicSettings extends BaseSettings {
     volumeInCurrency: number;
 }
 
-export interface AssetDynamicDeltaSettings extends BaseSettings {
+/*export interface AssetDynamicDeltaSettings extends BaseSettings {
     volumeType: VolumeSettingsType.assetDynamicDelta;
     initialVolume: number;
     volume?: number;
     delta?: number;
-}
+}*/
 
 export interface BalancePercentSettings extends BaseSettings {
     volumeType: VolumeSettingsType.balancePercent;
@@ -36,7 +37,11 @@ export type RobotSettings = AssetStaticSettings | CurrencyDynamicSettings;
 
 export type UserSignalSettings = AssetStaticSettings | CurrencyDynamicSettings;
 
-export type UserRobotSettings = RobotSettings | BalancePercentSettings | AssetDynamicDeltaSettings;
+export type UserRobotSettings = {
+    active?: boolean;
+    emulated?: boolean;
+    share?: number;
+} & (RobotSettings | BalancePercentSettings); //| AssetDynamicDeltaSettings;
 
 export interface StrategySettings {
     [key: string]: number | string;
@@ -61,7 +66,7 @@ export const CurrencyDynamicSettingsSchema = {
     }
 };
 
-export const AssetDynamicDeltaSettingsSchema = {
+/*export const AssetDynamicDeltaSettingsSchema = {
     // $$strict: true,
     type: "object",
     props: {
@@ -70,7 +75,7 @@ export const AssetDynamicDeltaSettingsSchema = {
         volume: { type: "number", optional: true },
         delta: { type: "number", optional: true }
     }
-};
+};*/
 
 export const BalancePercentSettingsSchema = {
     // $$strict: true,
@@ -83,8 +88,8 @@ export const BalancePercentSettingsSchema = {
 
 export const RobotSettingsSchema = [
     AssetStaticSettingsSchema,
-    CurrencyDynamicSettingsSchema,
-    AssetDynamicDeltaSettingsSchema
+    CurrencyDynamicSettingsSchema
+    //  AssetDynamicDeltaSettingsSchema
 ];
 
 export const UserSignalSettingsSchema = [AssetStaticSettingsSchema, CurrencyDynamicSettingsSchema];
@@ -92,6 +97,6 @@ export const UserSignalSettingsSchema = [AssetStaticSettingsSchema, CurrencyDyna
 export const UserRobotSettingsSchema = [
     AssetStaticSettingsSchema,
     CurrencyDynamicSettingsSchema,
-    AssetDynamicDeltaSettingsSchema,
+    //  AssetDynamicDeltaSettingsSchema,
     BalancePercentSettingsSchema
 ];

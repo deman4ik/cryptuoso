@@ -13,12 +13,14 @@ import {
     TradeStatsCalc,
     TradeStatsDB,
     periodStatsFromArray,
-    periodStatsToArray
+    periodStatsToArray,
+    FullStats
 } from "@cryptuoso/trade-stats";
 import logger, { Logger } from "@cryptuoso/logger";
 import { sql, pg, pgUtil, makeChunksGenerator } from "@cryptuoso/postgres";
 import { PortfolioSettings } from "@cryptuoso/portfolio-state";
 import { UserPortfolioSettings } from "@cryptuoso/user-portfolio-state";
+import { equals } from "@cryptuoso/helpers";
 
 class StatsCalcWorker {
     private dummy = "-";
@@ -81,21 +83,40 @@ class StatsCalcWorker {
                 }
             };
 
+            let initialEmulatedStats: TradeStats = {
+                fullStats: null,
+                periodStats: {
+                    year: null,
+                    quarter: null,
+                    month: null
+                }
+            };
+
             if (!recalc) {
-                const prevStats = await this.db.pg.one<TradeStatsDB>(sql`
-            SELECT r.full_stats, r.period_stats
+                const prevStats = await this.db.pg.one<{
+                    fullStats: FullStats;
+                    periodStats: PeriodStats[];
+                    emulatedFullStats: FullStats;
+                    emulatedPeriodStats: PeriodStats[];
+                }>(sql`
+            SELECT r.full_stats, r.period_stats, r.emulated_full_stats, r.emulated_period_stats
             FROM robots r
             WHERE r.id = ${robotId};
         `);
 
                 if (!prevStats) throw new Error(`The robot doesn't exists (robotId: ${robotId})`);
 
-                if (!prevStats.fullStats) recalc = true;
-                else
+                if (!prevStats.emulatedFullStats) recalc = true;
+                else {
+                    initialEmulatedStats = {
+                        fullStats: prevStats.emulatedFullStats,
+                        periodStats: periodStatsFromArray(prevStats.emulatedPeriodStats)
+                    };
                     initialStats = {
                         fullStats: prevStats.fullStats,
                         periodStats: periodStatsFromArray(prevStats.periodStats)
                     };
+                }
             }
 
             let calcFrom;
@@ -105,7 +126,8 @@ class StatsCalcWorker {
             }
             const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
             const querySelectPart = sql`
-            SELECT p.id, p.direction, p.entry_date, p.entry_price, p.exit_date, p.exit_price, p.volume, p.worst_profit, p.profit, p.bars_held
+            SELECT p.id, p.direction, p.entry_date, p.entry_price, p.exit_date, p.exit_price, 
+            p.volume, p.worst_profit, p.profit, p.bars_held, p.max_price, p.margin, p.emulated
         `;
             const queryFromAndConditionPart = sql`
             FROM v_robot_positions p
@@ -113,34 +135,33 @@ class StatsCalcWorker {
                 AND p.status = 'closed'
                 ${conditionExitDate}
         `;
-            const queryCommonPart = sql`
+
+            const fullPositions = await this.db.pg.any<BasePosition>(sql`
             ${querySelectPart}
             ${queryFromAndConditionPart}
-            ORDER BY p.exit_date
-        `;
-
-            const positionsCount = await this.db.pg.oneFirst<number>(sql`
-            SELECT COUNT(1)
-            ${queryFromAndConditionPart};
+            ORDER BY p.exit_date;
         `);
 
-            if (positionsCount == 0) return false;
+            if (!fullPositions || !fullPositions.length) return;
+            const newEmulatedStats = this.calcStats([...fullPositions], { job }, initialEmulatedStats);
 
-            const newStats: TradeStats = await DataStream.from(
-                makeChunksGenerator(
-                    this.db.pg,
-                    queryCommonPart,
-                    positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
-                )
-            ).reduce(
-                async (prevStats: TradeStats, chunk: BasePosition[]) => await this.calcStats(chunk, { job }, prevStats),
-                initialStats
-            );
+            const notEmulatedPositions = fullPositions.filter((p) => !p.emulated);
 
+            let newStats = initialStats;
+            if (notEmulatedPositions.length) {
+                if (
+                    notEmulatedPositions.length === fullPositions.length &&
+                    equals(initialEmulatedStats, initialStats)
+                ) {
+                    newStats = newEmulatedStats;
+                } else newStats = this.calcStats([...notEmulatedPositions], { job }, initialStats);
+            }
             await this.db.pg.query(sql`
         UPDATE robots 
         SET full_stats = ${JSON.stringify(newStats.fullStats)},
-        period_stats = ${JSON.stringify(periodStatsToArray(newStats.periodStats))}
+        period_stats = ${JSON.stringify(periodStatsToArray(newStats.periodStats))},
+        emulated_full_stats = ${JSON.stringify(newEmulatedStats.fullStats)},
+        emulated_period_stats = ${JSON.stringify(periodStatsToArray(newEmulatedStats.periodStats))},
         WHERE id = ${robotId};
         `);
         } catch (err) {

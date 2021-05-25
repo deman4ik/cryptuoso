@@ -241,8 +241,10 @@ class BacktesterWorker {
          bars_held,
          internal_state,
          emulated,
+         margin,
          volume,
-         profit
+         profit,
+         max_price
         )
         SELECT * FROM 
         ${sql.unnest(
@@ -277,8 +279,10 @@ class BacktesterWorker {
                     "barsHeld",
                     "internalState",
                     "emulated",
+                    "margin",
                     "volume",
-                    "profit"
+                    "profit",
+                    "maxPrice"
                 ]
             ),
             [
@@ -307,6 +311,8 @@ class BacktesterWorker {
                 "jsonb",
                 "bool",
                 "numeric",
+                "numeric",
+                "numeric",
                 "numeric"
             ]
         )}
@@ -314,7 +320,8 @@ class BacktesterWorker {
                 }
             }
         } catch (err) {
-            this.log.error(`Failed to save backtster positions`, err);
+            this.log.error(`Failed to save backtester positions`, err);
+            this.log.debug(positions[positions.length - 1]);
             throw err;
         }
     };
@@ -426,10 +433,10 @@ class BacktesterWorker {
         SET state = ${JSON.stringify(state.state)}, 
         last_candle = ${JSON.stringify(state.lastCandle)}, 
         has_alerts = ${state.hasAlerts},
-        full_stats = ${JSON.stringify(state.fullStats)},
-        period_stats = ${JSON.stringify(state.periodStats)},
-        emulated_full_stats = ${JSON.stringify(state.emulatedFullStats)},
-        emulated_period_stats = ${JSON.stringify(state.emulatedPeriodStats)}
+        full_stats = ${JSON.stringify(state.fullStats) || null},
+        period_stats = ${JSON.stringify(state.periodStats) || null},
+        emulated_full_stats = ${JSON.stringify(state.emulatedFullStats) || null},
+        emulated_period_stats = ${JSON.stringify(state.emulatedPeriodStats) || null}
         WHERE id = ${state.id};
         `);
         } catch (err) {
@@ -489,7 +496,7 @@ class BacktesterWorker {
         (id, robot_id, timestamp, type, 
         action, order_type, price,
         position_id, position_prefix, position_code, position_parent_id,
-        candle_timestamp)
+        candle_timestamp, emulated)
         SELECT * FROM
         ${sql.unnest(
             this.db.util.prepareUnnest(chunk, [
@@ -504,7 +511,8 @@ class BacktesterWorker {
                 "positionPrefix",
                 "positionCode",
                 "positionParentId",
-                "candleTimestamp"
+                "candleTimestamp",
+                "emulated"
             ]),
             [
                 "uuid",
@@ -518,7 +526,8 @@ class BacktesterWorker {
                 "varchar",
                 "varchar",
                 "uuid",
-                "timestamp"
+                "timestamp",
+                "bool"
             ]
         )}`);
                 }
@@ -552,7 +561,9 @@ class BacktesterWorker {
          alerts,
          bars_held,
          internal_state,
-         emulated
+         emulated,
+         margin,
+         max_price
         )
         SELECT * FROM 
         ${sql.unnest(
@@ -585,7 +596,9 @@ class BacktesterWorker {
                     "alerts",
                     "barsHeld",
                     "internalState",
-                    "emulated"
+                    "emulated",
+                    "margin",
+                    "maxPrice"
                 ]
             ),
             [
@@ -611,7 +624,9 @@ class BacktesterWorker {
                 "jsonb",
                 "numeric",
                 "jsonb",
-                "bool"
+                "bool",
+                "numeric",
+                "numeric"
             ]
         )}
         `);

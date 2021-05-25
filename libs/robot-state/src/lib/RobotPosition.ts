@@ -47,6 +47,7 @@ export class RobotPosition {
     private _barsHeld: number;
     private _backtest?: boolean;
     private _emulated?: boolean;
+    private _margin?: number;
     private _internalState: RobotPostionInternalState;
     private _candle?: Candle;
     private _alertsToPublish: SignalInfo[];
@@ -77,7 +78,8 @@ export class RobotPosition {
         this._profit = state.profit || 0;
         this._barsHeld = state.barsHeld || 0;
         this._backtest = state.backtest;
-        this._emulated = state.emulated;
+        this._emulated = state.emulated || false;
+        this._margin = nvl(state.margin, 1);
         this._internalState = state.internalState || {
             highestHigh: null,
             lowestLow: null,
@@ -164,6 +166,14 @@ export class RobotPosition {
         return this._internalState.lowestLow;
     }
 
+    public get emulated() {
+        return this._emulated;
+    }
+
+    public get margin() {
+        return this._margin;
+    }
+
     public get state(): RobotPositionState {
         return {
             id: this._id,
@@ -191,6 +201,7 @@ export class RobotPosition {
             barsHeld: this._barsHeld,
             internalState: this._internalState,
             emulated: nvl(this._emulated, false),
+            margin: nvl(this._margin, 1),
             maxPrice: this._direction === "long" ? this._internalState.lowestLow : this._internalState.highestHigh
         };
     }
@@ -230,6 +241,10 @@ export class RobotPosition {
         this._emulated = emulate;
     }
 
+    _handleMargin(margin: number) {
+        this._margin = margin;
+    }
+
     _checkOpen() {
         if (this._entryStatus === RobotTradeStatus.closed) {
             throw new Error(`Position ${this._code} is already open`);
@@ -262,7 +277,9 @@ export class RobotPosition {
                 positionId: this._id,
                 positionPrefix: this._prefix,
                 positionCode: this._code,
-                positionParentId: this._parentId
+                positionParentId: this._parentId,
+                emulated: this._emulated,
+                margin: this._margin
             });
     }
 
@@ -276,7 +293,9 @@ export class RobotPosition {
             positionId: this._id,
             positionPrefix: this._prefix,
             positionCode: this._code,
-            positionParentId: this._parentId
+            positionParentId: this._parentId,
+            emulated: this._emulated,
+            margin: this._margin
         };
     }
 

@@ -9,7 +9,6 @@ import {
     UserRobot,
     UserPositionDB,
     UserRobotStateExt,
-    UserPositionState,
     UserPositionStatus,
     UserTradeEvent
 } from "@cryptuoso/user-robot-state";
@@ -26,14 +25,9 @@ import { BaseError } from "@cryptuoso/errors";
 import { NewEvent } from "@cryptuoso/events";
 import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
 import { DatabaseTransactionConnectionType } from "slonik";
-import {
-    calcAssetDynamicDelta,
-    calcBalancePercent,
-    calcCurrencyDynamic,
-    VolumeSettingsType
-} from "@cryptuoso/robot-settings";
+import { calcBalancePercent, calcCurrencyDynamic, VolumeSettingsType } from "@cryptuoso/robot-settings";
 import dayjs from "@cryptuoso/dayjs";
-import { keysToCamelCase, round } from "@cryptuoso/helpers";
+import { keysToCamelCase, round, roundFirstSignificant } from "@cryptuoso/helpers";
 
 export type UserRobotRunnerServiceConfig = BaseServiceConfig;
 
@@ -97,6 +91,7 @@ export default class UserRobotRunnerService extends BaseService {
     SELECT ur.id,
            ur.user_ex_acc_id,
            ur.user_id,
+           ur.user_portfolio_id,
            ur.robot_id,
            ur.internal_state,
            ur.status,
@@ -112,14 +107,16 @@ export default class UserRobotRunnerService extends BaseService {
            m.precision,
            ea.total_balance_usd,
            st.net_profit as profit,
-           m.asset_dynamic_delta,
            m.trade_settings,
            urs.user_robot_settings,
+           up.status as user_portfolio_status,
+           up.settings as user_portfolio_settings,
            (SELECT array_to_json(array_agg(pos))
 FROM
 (SELECT p.id,
     p.position_id,
     p.user_robot_id,
+    p.user_portfolio_id,
     p.parent_id,
     p.direction,
     p.entry_status,
@@ -156,6 +153,7 @@ FROM
     p.exit_action,
     to_char(p.entry_candle_timestamp::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as entry_candle_timestamp,
     to_char(p.exit_candle_timestamp::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as exit_candle_timestamp,
+    p.emulated,
   (SELECT array_to_json(array_agg(eo))
    FROM
      (SELECT o.id,
@@ -228,16 +226,19 @@ WHERE p.user_robot_id =${userRobotId}
                    'new',
                    'open')) pos) AS positions
     FROM user_robots ur, robots r, 
-    v_user_markets m, v_user_robot_settings urs, 
+    v_user_markets m, 
     v_user_amounts a, v_user_exchange_accs ea
     LEFT JOIN v_user_robot_stats st
     ON st.user_robot_id = ${userRobotId}
+    LEFT JOIN v_user_robot_settings urs
+    ON urs.user_robot_id = ${userRobotId}
+    LEFT JOIN user_portfolios up
+    ON up.id = ur.user_portfolio_id
     WHERE ur.robot_id = r.id  
       AND m.exchange = r.exchange
       AND m.asset = r.asset
       AND m.currency = r.currency
       AND m.user_id = ur.user_id    
-	  AND urs.user_robot_id = ${userRobotId}
       AND a.user_ex_acc_id = ur.user_ex_acc_id
       AND ea.id = ur.user_ex_acc_id
       AND ur.id = ${userRobotId};                   
@@ -247,24 +248,39 @@ WHERE p.user_robot_id =${userRobotId}
     };
 
     #getCurrentVolume = (state: UserRobotStateExt) => {
-        const { userRobotSettings } = state;
         let volume: number;
+        if (state.userPortfolioId) {
+            const { userPortfolioSettings } = state;
+            if (userPortfolioSettings.tradingAmountType === "balancePercent") {
+                const currentPortfolioBalance = (userPortfolioSettings.balancePercent / 100) * state.totalBalanceUsd;
 
-        if (userRobotSettings.volumeType === VolumeSettingsType.assetStatic) {
-            volume = userRobotSettings.volume;
-        } else if (userRobotSettings.volumeType === VolumeSettingsType.currencyDynamic) {
-            const { volumeInCurrency } = userRobotSettings;
-            volume = calcCurrencyDynamic(volumeInCurrency, state.currentPrice);
-        } else if (userRobotSettings.volumeType === VolumeSettingsType.assetDynamicDelta) {
-            const { initialVolume } = userRobotSettings;
+                volume = calcBalancePercent(state.userRobotSettings.share, currentPortfolioBalance, state.currentPrice);
+            } else if (userPortfolioSettings.tradingAmountType === "currencyFixed") {
+                volume = calcBalancePercent(
+                    state.userRobotSettings.share,
+                    userPortfolioSettings.tradingAmountCurrency,
+                    state.currentPrice
+                );
+            }
 
-            volume = calcAssetDynamicDelta(initialVolume, state.assetDynamicDelta, state.profit);
-        } else if (userRobotSettings.volumeType === VolumeSettingsType.balancePercent) {
-            const { balancePercent } = userRobotSettings;
+            if (userPortfolioSettings.leverage) {
+                volume = roundFirstSignificant(volume * userPortfolioSettings.leverage);
+            }
+        } else {
+            //TODO: deprecated
+            const { userRobotSettings } = state;
 
-            volume = calcBalancePercent(balancePercent, state.totalBalanceUsd, state.currentPrice);
-        } else throw new BaseError("Unknown volume type", userRobotSettings);
+            if (userRobotSettings.volumeType === VolumeSettingsType.assetStatic) {
+                volume = userRobotSettings.volume;
+            } else if (userRobotSettings.volumeType === VolumeSettingsType.currencyDynamic) {
+                const { volumeInCurrency } = userRobotSettings;
+                volume = calcCurrencyDynamic(volumeInCurrency, state.currentPrice);
+            } else if (userRobotSettings.volumeType === VolumeSettingsType.balancePercent) {
+                const { balancePercent } = userRobotSettings;
 
+                volume = calcBalancePercent(balancePercent, state.totalBalanceUsd, state.currentPrice);
+            } else throw new BaseError("Unknown volume type", userRobotSettings);
+        }
         if (volume < state.limits.min.amount) volume = state.limits.min.amount;
         else if (state.limits.max?.amount && volume > state.limits.max?.amount) volume = state.limits.max?.amount;
         return { volume: round(volume, state.precision?.amount || 6) };
@@ -277,7 +293,7 @@ WHERE p.user_robot_id =${userRobotId}
             INSERT INTO user_positions
       ( id, prefix, code,
         position_code, position_id,
-        user_robot_id, user_id,
+        user_robot_id, user_portfolio_id, user_id,
         exchange, asset, currency,
         status, parent_id, direction,
         entry_status, entry_action, entry_signal_price,
@@ -287,12 +303,12 @@ WHERE p.user_robot_id =${userRobotId}
         exit_price, exit_date, exit_candle_timestamp,
         exit_volume, exit_executed, exit_remaining,
         internal_state, reason, profit, bars_held,
-        next_job_at, next_job
+        next_job_at, next_job, emulated
          ) 
          VALUES (
              ${p.id}, ${p.prefix}, ${p.code}, 
              ${p.positionCode}, ${p.positionId || null},
-             ${p.userRobotId}, ${p.userId},
+             ${p.userRobotId}, ${p.userPortfolioId}, ${p.userId},
              ${p.exchange}, ${p.asset}, ${p.currency},
              ${p.status}, ${p.parentId || null}, ${p.direction},
              ${p.entryStatus || null}, ${p.entryAction || null}, ${p.entrySignalPrice || null},
@@ -301,10 +317,10 @@ WHERE p.user_robot_id =${userRobotId}
              ${p.exitStatus || null}, ${p.exitAction || null}, ${p.exitSignalPrice || null},
              ${p.exitPrice || null}, ${p.exitDate || null}, ${p.exitCandleTimestamp || null},
              ${p.exitVolume || null}, ${p.exitExecuted || null}, ${p.exitRemaining || null},
-             ${JSON.stringify(p.internalState) || null}, ${p.reason || null}, ${p.profit || null}, ${
-                p.barsHeld || null
-            },
-             ${p.nextJobAt || null}, ${p.nextJob || null}
+             ${JSON.stringify(p.internalState) || null}, ${p.reason || null},
+             ${p.profit || null}, ${p.barsHeld || null},
+             ${p.nextJobAt || null}, ${p.nextJob || null},
+             ${p.emulated || false}
          )
           ON CONFLICT ON CONSTRAINT user_positions_pkey 
           DO UPDATE SET updated_at = now(),

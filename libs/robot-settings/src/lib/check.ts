@@ -9,7 +9,7 @@ export const checkAssetStatic = (volume: number, min: number, max?: number) => {
 
 export const checkCurrencyDynamic = checkAssetStatic;
 
-export const checkAssetDynamicDelta = checkAssetStatic;
+//export const checkAssetDynamicDelta = checkAssetStatic;
 
 export const checkBalancePercent = (
     percent: number,

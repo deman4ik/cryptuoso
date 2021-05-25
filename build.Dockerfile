@@ -11,9 +11,9 @@ RUN \
     echo -e "StrictHostKeyChecking no" >> /etc/ssh/ssh_config && \
     ssh-add ~/.ssh/id_rsa && \
     touch ~/.ssh/known_hosts && \
-    ssh-keyscan github.com >> ~/.ssh/known_hosts
+    ssh-keyscan github.com >> ~/.ssh/known_hosts && \
+    mkdir -p /usr/src/app
 
-RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 
 COPY . /usr/src/app/

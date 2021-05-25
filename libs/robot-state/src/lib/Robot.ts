@@ -3,7 +3,7 @@ import { BaseIndicator, TulipIndicator, IndicatorCode, IndicatorType } from "@cr
 import { ValidTimeframe, CandleProps, RobotPositionStatus, Candle, calcPositionProfit } from "@cryptuoso/market";
 import { RobotWorkerEvents, SignalEvents } from "@cryptuoso/robot-events";
 import { NewEvent } from "@cryptuoso/events";
-import { CANDLES_RECENT_AMOUNT, nvl, sortAsc } from "@cryptuoso/helpers";
+import { CANDLES_RECENT_AMOUNT, equals, nvl, sortAsc } from "@cryptuoso/helpers";
 import { BaseStrategy } from "./BaseStrategy";
 import { RobotPositionState, RobotState, RobotStatus, StrategyProps } from "./types";
 import logger from "@cryptuoso/logger";
@@ -173,7 +173,11 @@ export class Robot {
     }
 
     get emulateNextPosition() {
-        return this._emulatedStats?.fullStats?.emulateNextPosition || false;
+        return nvl(this._emulatedStats?.fullStats?.emulateNextPosition, false);
+    }
+
+    get marginNextPosition() {
+        return nvl(this._emulatedStats?.fullStats?.marginNextPosition, 1);
     }
 
     clear() {
@@ -331,6 +335,7 @@ export class Robot {
             robotId: this._id,
             backtest: this._backtest,
             emulateNextPosition: this.emulateNextPosition,
+            marginNextPosition: this.marginNextPosition,
             posLastNumb: strategyState.posLastNumb,
             positions: strategyState.positions,
             parametersSchema,
@@ -497,6 +502,7 @@ export class Robot {
         this._strategyInstance._handleCandles(this._candle, this._candles, this._candlesProps);
         this._strategyInstance._handleIndicators(this._state.indicators);
         this._strategyInstance._handleEmulation(this.emulateNextPosition);
+        this._strategyInstance._handleMargin(this.marginNextPosition);
         // Очищаем предыдущие  задачи у позиций
         this._strategyInstance._clearAlerts();
         // Запустить проверку стратегии
@@ -540,7 +546,7 @@ export class Robot {
     }
 
     handleCandle(candle: Candle) {
-        logger.debug(`Robot #${this._id} - New candle ${candle.timestamp}`);
+        //logger.debug(`Robot #${this._id} - New candle ${candle.timestamp}`);
         if (this._lastCandle && candle.time <= this._lastCandle.time) {
             return {
                 success: false,
@@ -585,38 +591,59 @@ export class Robot {
         if (this.hasClosedPositions) {
             logger.debug(`Calculating #${this._id} robot stats`);
 
+            const fullPositions = this.closedPositions.map((pos) => ({
+                ...pos,
+                volume: pos.volume / pos.margin,
+                profit: pos.profit / pos.margin,
+                worstProfit: pos.worstProfit / pos.margin
+            }));
             const tradeStatsCalc = new TradeStatsCalc(
-                this.closedPositions,
+                fullPositions,
                 {
                     job: {
                         type: "robot",
                         robotId: this._id,
                         recalc: false,
-                        SMAWindow: this._settings.robotSettings.SMAWindow
+                        SMAWindow: this._settings.robotSettings.SMAWindow,
+                        margin: this._settings.robotSettings.margin
                     },
                     initialBalance: this._settings.robotSettings.initialBalance
                 },
                 this._emulatedStats
             );
-            this._emulatedStats = tradeStatsCalc.calculate();
+            const newEmulatedStats = tradeStatsCalc.calculate();
+
             this._strategyInstance._handleEmulation(this.emulateNextPosition);
+            this._strategyInstance._handleMargin(this.marginNextPosition);
             const notEmulatedPositions = this.closedPositions.filter((p) => !p.emulated);
+            let newStats = this._stats;
             if (notEmulatedPositions.length) {
-                const tradeStatsCalc = new TradeStatsCalc(
-                    notEmulatedPositions,
-                    {
-                        job: {
-                            type: "robot",
-                            robotId: this._id,
-                            recalc: false,
-                            SMAWindow: this._settings.robotSettings.SMAWindow
+                if (
+                    notEmulatedPositions.length === this.closedPositions.length &&
+                    equals(this._emulatedStats, this._stats)
+                ) {
+                    newStats = newEmulatedStats;
+                } else {
+                    const tradeStatsCalc = new TradeStatsCalc(
+                        notEmulatedPositions,
+                        {
+                            job: {
+                                type: "robot",
+                                robotId: this._id,
+                                recalc: false,
+                                SMAWindow: this._settings.robotSettings.SMAWindow,
+                                margin: this._settings.robotSettings.margin
+                            },
+                            initialBalance: this._settings.robotSettings.initialBalance
                         },
-                        initialBalance: this._settings.robotSettings.initialBalance
-                    },
-                    this._stats
-                );
-                this._stats = tradeStatsCalc.calculate();
+                        this._stats
+                    );
+                    newStats = tradeStatsCalc.calculate();
+                }
             }
+
+            this._emulatedStats = newEmulatedStats;
+            this._stats = newStats;
         }
     }
 
@@ -666,27 +693,32 @@ export class Robot {
             volumeInCurrency = this._settings.robotSettings.volumeInCurrency;
         }
         this._postionsToSave = this._strategyInstance._positionsToSave.map((pos) => {
+            const margin = nvl(pos.margin, 1);
+            const posVolume = volume * margin || calcCurrencyDynamic(volumeInCurrency, pos.entryPrice) * margin;
+            let profit;
+            let worstProfit;
             if (pos.status === "closed") {
-                const posVolume = volume || calcCurrencyDynamic(volumeInCurrency, pos.entryPrice);
-                return {
-                    ...pos,
-                    volume: posVolume,
-                    profit: calcPositionProfit(
-                        pos.direction,
-                        pos.entryPrice,
-                        pos.exitPrice,
-                        posVolume,
-                        this._settings.feeRate
-                    ),
-                    worstProfit: calcPositionProfit(
-                        pos.direction,
-                        pos.entryPrice,
-                        pos.maxPrice,
-                        posVolume,
-                        this._settings.feeRate
-                    )
-                };
-            } else return pos;
+                profit = calcPositionProfit(
+                    pos.direction,
+                    pos.entryPrice,
+                    pos.exitPrice,
+                    posVolume,
+                    this._settings.feeRate
+                );
+                worstProfit = calcPositionProfit(
+                    pos.direction,
+                    pos.entryPrice,
+                    pos.maxPrice,
+                    posVolume,
+                    this._settings.feeRate
+                );
+            }
+            return {
+                ...pos,
+                volume: posVolume,
+                profit,
+                worstProfit
+            };
         });
         this._state.initialized = this._strategyInstance.initialized;
         this._state.positions = this._strategyInstance.validPositions;

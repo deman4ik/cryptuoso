@@ -10,9 +10,6 @@
                 "node": true,
                 "jest": true
             },
-            "parserOptions": {
-                "project": "./tsconfig.*?.json"
-            },
             "rules": {
                 "@nrwl/nx/enforce-module-boundaries": [
                     "error",
@@ -38,9 +35,6 @@
         {
             "files": ["*.ts", "*.tsx"],
             "extends": ["plugin:@nrwl/nx/typescript"],
-            "parserOptions": {
-                "project": "./tsconfig.*?.json"
-            },
             "rules": {
                 "@typescript-eslint/no-explicit-any": "off",
                 "@typescript-eslint/explicit-module-boundary-types": "off",

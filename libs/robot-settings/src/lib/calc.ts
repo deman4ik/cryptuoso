@@ -4,7 +4,7 @@ import { RobotSettings, VolumeSettingsType, UserSignalSettings } from "./types";
 export const calcCurrencyDynamic = (volumeInCurrency: number, price: number) =>
     roundFirstSignificant(volumeInCurrency / price);
 
-export const calcAssetDynamicDelta = (initialVolume: number, delta: number, profit: number) => {
+/*export const calcAssetDynamicDelta = (initialVolume: number, delta: number, profit: number) => {
     if (!profit) return initialVolume;
 
     const baseVolume = initialVolume / 2;
@@ -15,7 +15,7 @@ export const calcAssetDynamicDelta = (initialVolume: number, delta: number, prof
     const lvl = Math.trunc((-1 + Math.sqrt(1 + 8 * (profit / (baseVolume * delta) + 1))) / 2);
 
     return roundFirstSignificant(baseVolume * (lvl + 1));
-};
+}; */
 
 export const calcBalancePercent = (percent: number, balance: number, price: number) => {
     return calcCurrencyDynamic((percent / 100) * balance, price);

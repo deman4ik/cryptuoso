@@ -13,7 +13,7 @@ import {
     StatsCalcWorkerEvents
 } from "@cryptuoso/stats-calc-events";
 import { BasePosition } from "@cryptuoso/market";
-import Validator, { ValidationSchema, ValidationError } from "fastest-validator";
+import Validator, { ValidationSchema, SyncCheckFunction, AsyncCheckFunction } from "fastest-validator";
 import dayjs from "dayjs";
 
 type UserSignalStats = {
@@ -56,7 +56,7 @@ export default class StatisticCalcWorkerService extends BaseService {
     private dummy = "-";
     private routes: {
         [K in StatsCalcJobType]?: {
-            validate: (params: StatsCalcJob) => true | ValidationError[];
+            validate: SyncCheckFunction | AsyncCheckFunction;
             handler: (params: StatsCalcJob) => Promise<boolean>;
         };
     } = {};
@@ -194,7 +194,7 @@ export default class StatisticCalcWorkerService extends BaseService {
 
             const errors = route.validate(params);
 
-            if (errors !== true) {
+            if (errors !== true && Array.isArray(errors)) {
                 throw new Error(`Bad params: ${errors.map((e) => e.message).join("\n")}`);
             }
 

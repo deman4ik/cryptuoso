@@ -263,7 +263,7 @@ export default class RobotWorkerService extends BaseService {
          exit_candle_timestamp,
          alerts,
          bars_held,
-         internal_state
+         internal_state, max_price
         ) VALUES (
             ${position.id},
             ${position.robotId}, ${position.prefix}, ${position.code}, ${position.parentId || null},
@@ -276,7 +276,7 @@ export default class RobotWorkerService extends BaseService {
             ${position.exitCandleTimestamp || null},
             ${JSON.stringify(position.alerts)},
             ${position.barsHeld || null},
-            ${JSON.stringify(position.internalState)}
+            ${JSON.stringify(position.internalState)}, ${position.maxPrice || null}
         ) ON CONFLICT ON CONSTRAINT robot_positions_robot_id_code_key 
          DO UPDATE SET updated_at = now(),
          direction = excluded.direction,
@@ -295,7 +295,8 @@ export default class RobotWorkerService extends BaseService {
          exit_candle_timestamp = excluded.exit_candle_timestamp,
          alerts = excluded.alerts,
          bars_held = excluded.bars_held,
-         internal_state = excluded.internal_state;`);
+         internal_state = excluded.internal_state,
+         max_price = excluded.max_price;`);
         }
     };
 
@@ -313,16 +314,17 @@ export default class RobotWorkerService extends BaseService {
                 positionCode,
                 positionParentId,
                 candleTimestamp,
-                timestamp
+                timestamp,
+                emulated
             } = signal;
             await this.db.pg.query(sql`
                 INSERT INTO robot_signals
                 (id, robot_id, action, order_type, price, type, position_id,
                 position_prefix, position_code, position_parent_id,
-                candle_timestamp,timestamp)
+                candle_timestamp,timestamp, emulated)
                 VALUES (${id}, ${robotId}, ${action}, ${orderType}, ${price || null}, ${type},
                 ${positionId}, ${positionPrefix}, ${positionCode}, ${positionParentId || null}, ${candleTimestamp},
-                ${timestamp})
+                ${timestamp}, ${emulated || false})
             `);
         }
     };
@@ -331,7 +333,11 @@ export default class RobotWorkerService extends BaseService {
             UPDATE robots 
             SET state = ${JSON.stringify(state.state)}, 
             last_candle = ${JSON.stringify(state.lastCandle)}, 
-            has_alerts = ${state.hasAlerts}
+            has_alerts = ${state.hasAlerts},
+            full_stats = ${JSON.stringify(state.fullStats) || null},
+            period_stats = ${JSON.stringify(state.periodStats) || null},
+            emulated_full_stats = ${JSON.stringify(state.emulatedFullStats) || null},
+            emulated_period_stats = ${JSON.stringify(state.emulatedPeriodStats) || null}
             WHERE id = ${state.id};
             `);
 
@@ -354,7 +360,11 @@ export default class RobotWorkerService extends BaseService {
                     r.has_alerts, 
                     r.status,
                     r.started_at, 
-                    r.stopped_at
+                    r.stopped_at,
+                    r.full_stats,
+                    r.period_stats,
+                    r.emulated_full_stats,
+                    r.emulated_period_stats
             FROM robots r, v_robot_settings rs 
             WHERE rs.robot_id = r.id AND id = ${robotId};`);
 
@@ -386,6 +396,7 @@ export default class RobotWorkerService extends BaseService {
 
                     if (success) {
                         robot.checkAlerts();
+                        robot.calcStats();
                     } else {
                         this.log.error(error);
                     }
@@ -414,6 +425,7 @@ export default class RobotWorkerService extends BaseService {
                 if (success) {
                     await robot.calcIndicators();
                     robot.runStrategy();
+                    // TODO:  robot.calcStats();
                     robot.finalize();
                 } else {
                     this.log.error(error);
