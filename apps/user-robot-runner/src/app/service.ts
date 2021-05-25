@@ -497,8 +497,6 @@ export default class UserRobotRunnerService extends HTTPService {
             `New ${ConnectorWorkerEvents.ORDER_ERROR} event for User Robot #${event.userRobotId}. Order #${event.orderId} is invalid - ${event.error}`
         );
         if (
-            !event.error.toLowerCase().includes("margin") &&
-            !event.error.toLowerCase().includes("insufficient") &&
             !event.error.toLowerCase().includes("gateway") &&
             !event.error.toLowerCase().includes("getaddrinfo") &&
             !event.error.toLowerCase().includes("network") &&
