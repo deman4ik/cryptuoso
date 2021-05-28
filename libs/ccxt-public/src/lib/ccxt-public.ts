@@ -174,9 +174,7 @@ export class PublicConnector {
         }
     }
 
-    async getTimeframes(
-        exchange: string
-    ): Promise<{
+    async getTimeframes(exchange: string): Promise<{
         [key: string]: Timeframe;
     }> {
         await this.initConnector(exchange);

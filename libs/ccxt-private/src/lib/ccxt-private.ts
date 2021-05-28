@@ -492,9 +492,7 @@ export class PrivateConnector {
         }
     }
 
-    async createOrder(
-        order: Order
-    ): Promise<{
+    async createOrder(order: Order): Promise<{
         order: Order;
         nextJob?: {
             type: OrderJobType;
@@ -764,9 +762,7 @@ export class PrivateConnector {
         }
     }
 
-    async checkOrder(
-        order: Order
-    ): Promise<{
+    async checkOrder(order: Order): Promise<{
         order: Order;
         nextJob?: {
             type: OrderJobType;
@@ -883,9 +879,7 @@ export class PrivateConnector {
         }
     }
 
-    async cancelOrder(
-        order: Order
-    ): Promise<{
+    async cancelOrder(order: Order): Promise<{
         order: Order;
         nextJob?: {
             type: OrderJobType;

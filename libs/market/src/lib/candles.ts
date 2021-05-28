@@ -209,9 +209,9 @@ export function createCandlesFromTrades(
     return result;
 }
 
-export function convertExchangeTimeframes(exchangeTimeframes: {
-    [key: string]: string | number;
-}): { [key: string]: Timeframe } {
+export function convertExchangeTimeframes(exchangeTimeframes: { [key: string]: string | number }): {
+    [key: string]: Timeframe;
+} {
     const timeframes: { [key: string]: ValidTimeframe } = {};
     Object.keys(exchangeTimeframes).forEach((key) => {
         const tf = Timeframe.stringToTimeframe(key);

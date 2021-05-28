@@ -1,5 +1,10 @@
-import { handleCandleGaps, batchCandles, createCandlesFromTrades, convertExchangeTimeframes } from "../lib/candles";
-import { CandleType } from "@cryptuoso/market";
+import {
+    handleCandleGaps,
+    batchCandles,
+    createCandlesFromTrades,
+    convertExchangeTimeframes,
+    CandleType
+} from "../lib/candles";
 import dayjs from "@cryptuoso/dayjs";
 import { candles60 as gappedCandles60 } from "./testData/gappedCandles";
 import { candles60 } from "./testData/candles";

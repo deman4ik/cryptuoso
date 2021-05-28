@@ -19,7 +19,6 @@ import {
 import logger, { Logger } from "@cryptuoso/logger";
 import { sql, pg, pgUtil, makeChunksGenerator } from "@cryptuoso/postgres";
 import { PortfolioSettings } from "@cryptuoso/portfolio-state";
-import { UserPortfolioSettings } from "@cryptuoso/user-portfolio-state";
 import { equals } from "@cryptuoso/helpers";
 
 class StatsCalcWorker {
@@ -350,7 +349,7 @@ class StatsCalcWorker {
                 }
             };
 
-            const userPortfolio = await this.db.pg.maybeOne<TradeStatsDB & { settings: UserPortfolioSettings }>(sql`
+            const userPortfolio = await this.db.pg.maybeOne<TradeStatsDB & { settings: PortfolioSettings }>(sql`
             SELECT r.full_stats, r.period_stats, r.settings
             FROM user_portfolios r
             WHERE r.id = ${userPortfolioId};

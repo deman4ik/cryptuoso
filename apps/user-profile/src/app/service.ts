@@ -27,8 +27,7 @@ import {
     UserRobotSettings,
     UserRobotSettingsSchema,
     UserSignalSettings,
-    UserSignalSettingsSchema,
-    VolumeSettingsType
+    UserSignalSettingsSchema
 } from "@cryptuoso/robot-settings";
 import { PrivateConnector } from "@cryptuoso/ccxt-private";
 import { GA } from "@cryptuoso/analytics";
@@ -312,19 +311,19 @@ export default class UserProfileService extends HTTPService {
 
         let newUserSignalSettings: UserSignalSettings;
 
-        if (settings.volumeType === VolumeSettingsType.assetStatic) {
+        if (settings.volumeType === "assetStatic") {
             const volume = round(settings.volume, precision?.amount || 6);
             const amountMin = limits?.min?.amount;
             const amountMax = limits?.max?.amount;
             checkAssetStatic(volume, amountMin, amountMax);
-            newUserSignalSettings = { volumeType: VolumeSettingsType.assetStatic, volume };
-        } else if (settings.volumeType === VolumeSettingsType.currencyDynamic) {
+            newUserSignalSettings = { volumeType: "assetStatic", volume };
+        } else if (settings.volumeType === "currencyDynamic") {
             const volumeInCurrency = round(settings.volumeInCurrency, precision?.price || 2);
             const amountMin = limits?.min?.amountUSD;
             const amountMax = limits?.max?.amountUSD;
             checkCurrencyDynamic(volumeInCurrency, amountMin, amountMax);
 
-            newUserSignalSettings = { volumeType: VolumeSettingsType.currencyDynamic, volumeInCurrency };
+            newUserSignalSettings = { volumeType: "currencyDynamic", volumeInCurrency };
         }
 
         return newUserSignalSettings;
@@ -394,10 +393,7 @@ export default class UserProfileService extends HTTPService {
             );
         `);
 
-        const volume =
-            newSettings.volumeType === VolumeSettingsType.assetStatic
-                ? newSettings.volume
-                : newSettings.volumeInCurrency;
+        const volume = newSettings.volumeType === "assetStatic" ? newSettings.volume : newSettings.volumeInCurrency;
         GA.event(user.id, "signals", "subscribe");
         return volume;
     }
@@ -421,11 +417,11 @@ export default class UserProfileService extends HTTPService {
         `);
 
         if (
-            (currentUserSignalSettings?.volumeType === VolumeSettingsType.assetStatic &&
-                settings.volumeType === VolumeSettingsType.assetStatic &&
+            (currentUserSignalSettings?.volumeType === "assetStatic" &&
+                settings.volumeType === "assetStatic" &&
                 settings.volume === currentUserSignalSettings.volume) ||
-            (currentUserSignalSettings?.volumeType === VolumeSettingsType.currencyDynamic &&
-                settings.volumeType === VolumeSettingsType.currencyDynamic &&
+            (currentUserSignalSettings?.volumeType === "currencyDynamic" &&
+                settings.volumeType === "currencyDynamic" &&
                 settings.volumeInCurrency === currentUserSignalSettings.volumeInCurrency)
         )
             return;
@@ -454,10 +450,7 @@ export default class UserProfileService extends HTTPService {
             );
         `);
 
-        const volume =
-            newSettings.volumeType === VolumeSettingsType.assetStatic
-                ? newSettings.volume
-                : newSettings.volumeInCurrency;
+        const volume = newSettings.volumeType === "assetStatic" ? newSettings.volume : newSettings.volumeInCurrency;
         GA.event(user.id, "signals", "edit");
         return volume;
     }
@@ -769,19 +762,19 @@ export default class UserProfileService extends HTTPService {
 
         let newUserRobotSettings: UserRobotSettings;
 
-        if (settings.volumeType === VolumeSettingsType.assetStatic) {
+        if (settings.volumeType === "assetStatic") {
             const volume = round(settings.volume, precision?.amount || 6);
             const amountMin = limits?.min?.amount;
             const amountMax = limits?.max?.amount;
             checkAssetStatic(volume, amountMin, amountMax);
-            newUserRobotSettings = { volumeType: VolumeSettingsType.assetStatic, volume };
-        } else if (settings.volumeType === VolumeSettingsType.currencyDynamic) {
+            newUserRobotSettings = { volumeType: "assetStatic", volume };
+        } else if (settings.volumeType === "currencyDynamic") {
             const volumeInCurrency = round(settings.volumeInCurrency, precision?.price || 2);
             const amountMin = limits?.min?.amountUSD;
             const amountMax = limits?.max?.amountUSD;
             checkCurrencyDynamic(volumeInCurrency, amountMin, amountMax);
-            newUserRobotSettings = { volumeType: VolumeSettingsType.currencyDynamic, volumeInCurrency };
-        } else if (settings.volumeType === VolumeSettingsType.balancePercent) {
+            newUserRobotSettings = { volumeType: "currencyDynamic", volumeInCurrency };
+        } else if (settings.volumeType === "balancePercent") {
             const balancePercent = round(settings.balancePercent);
             const volumeInCurrency = round((balancePercent / 100) * totalBalance, precision?.price || 2);
             const amountMin = limits?.min?.amountUSD;
@@ -789,7 +782,7 @@ export default class UserProfileService extends HTTPService {
 
             checkBalancePercent(balancePercent, availableBalancePercent, volumeInCurrency, amountMin, amountMax);
 
-            newUserRobotSettings = { volumeType: VolumeSettingsType.balancePercent, balancePercent };
+            newUserRobotSettings = { volumeType: "balancePercent", balancePercent };
         }
         return newUserRobotSettings;
     }
@@ -933,11 +926,11 @@ export default class UserProfileService extends HTTPService {
         const { userRobotSettings: currentUserRobotSettings } = userRobotExists;
 
         if (
-            (currentUserRobotSettings?.volumeType === VolumeSettingsType.assetStatic &&
-                settings.volumeType === VolumeSettingsType.assetStatic &&
+            (currentUserRobotSettings?.volumeType === "assetStatic" &&
+                settings.volumeType === "assetStatic" &&
                 settings.volume === currentUserRobotSettings.volume) ||
-            (currentUserRobotSettings?.volumeType === VolumeSettingsType.currencyDynamic &&
-                settings.volumeType === VolumeSettingsType.currencyDynamic &&
+            (currentUserRobotSettings?.volumeType === "currencyDynamic" &&
+                settings.volumeType === "currencyDynamic" &&
                 settings.volumeInCurrency === currentUserRobotSettings.volumeInCurrency)
         )
             return;
@@ -960,7 +953,7 @@ export default class UserProfileService extends HTTPService {
         `);
 
         const currentAvailableBalancePercent =
-            currentUserRobotSettings?.volumeType === VolumeSettingsType.balancePercent
+            currentUserRobotSettings?.volumeType === "balancePercent"
                 ? availableBalancePercent + currentUserRobotSettings.balancePercent
                 : availableBalancePercent;
 

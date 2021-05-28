@@ -25,7 +25,7 @@ import { BaseError } from "@cryptuoso/errors";
 import { NewEvent } from "@cryptuoso/events";
 import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
 import { DatabaseTransactionConnectionType } from "slonik";
-import { calcBalancePercent, calcCurrencyDynamic, VolumeSettingsType } from "@cryptuoso/robot-settings";
+import { calcBalancePercent, calcCurrencyDynamic } from "@cryptuoso/robot-settings";
 import dayjs from "@cryptuoso/dayjs";
 import { keysToCamelCase, round, roundFirstSignificant } from "@cryptuoso/helpers";
 
@@ -270,12 +270,12 @@ WHERE p.user_robot_id =${userRobotId}
             //TODO: deprecated
             const { userRobotSettings } = state;
 
-            if (userRobotSettings.volumeType === VolumeSettingsType.assetStatic) {
+            if (userRobotSettings.volumeType === "assetStatic") {
                 volume = userRobotSettings.volume;
-            } else if (userRobotSettings.volumeType === VolumeSettingsType.currencyDynamic) {
+            } else if (userRobotSettings.volumeType === "currencyDynamic") {
                 const { volumeInCurrency } = userRobotSettings;
                 volume = calcCurrencyDynamic(volumeInCurrency, state.currentPrice);
-            } else if (userRobotSettings.volumeType === VolumeSettingsType.balancePercent) {
+            } else if (userRobotSettings.volumeType === "balancePercent") {
                 const { balancePercent } = userRobotSettings;
 
                 volume = calcBalancePercent(balancePercent, state.totalBalanceUsd, state.currentPrice);

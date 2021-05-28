@@ -152,7 +152,11 @@ export function handleUserExAccError(notification: Notification<any> & { telegra
 }
 
 export function handleUserRobotError(notification: Notification<any> & { telegramId: number }) {
-    const { userRobotId, robotCode: code, error } = notification.data as {
+    const {
+        userRobotId,
+        robotCode: code,
+        error
+    } = notification.data as {
         userRobotId: string;
         robotCode: string;
         error: string;
@@ -170,7 +174,11 @@ export function handleUserRobotError(notification: Notification<any> & { telegra
 }
 
 export function handleUserRobotStatus(notification: Notification<any> & { telegramId: number }) {
-    const { status, message, robotCode: code } = notification.data as {
+    const {
+        status,
+        message,
+        robotCode: code
+    } = notification.data as {
         status: UserRobotStatus;
         message?: string;
         robotCode: string;
@@ -188,7 +196,12 @@ export function handleUserRobotStatus(notification: Notification<any> & { telegr
 }
 
 export function handleOrderError(notification: Notification<any> & { telegramId: number }) {
-    const { userRobotId, error, orderId, robotCode: code } = notification.data as OrdersErrorEvent & {
+    const {
+        userRobotId,
+        error,
+        orderId,
+        robotCode: code
+    } = notification.data as OrdersErrorEvent & {
         robotCode: string;
     };
     //TODO: Set lang from DB

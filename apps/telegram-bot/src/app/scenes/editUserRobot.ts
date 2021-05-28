@@ -92,7 +92,7 @@ async function editUserRobotEnterVolume(ctx: any) {
             const { p: volumeType }: { p: VolumeSettingsType } = JSON.parse(ctx.callbackQuery.data);
             ctx.scene.state.volumeType = volumeType;
         }
-        if (ctx.scene.state.volumeType === VolumeSettingsType.balancePercent && !ctx.scene.state.amounts) {
+        if (ctx.scene.state.volumeType === "balancePercent" && !ctx.scene.state.amounts) {
             const { balance, availableBalancePercent } = await this.getUserAmounts(ctx);
             ctx.scene.state.amounts = { balance, availableBalancePercent };
         }
@@ -122,13 +122,13 @@ async function editUserRobotEnterVolume(ctx: any) {
 
         let asset;
         let minVolumeText;
-        if (volumeType === VolumeSettingsType.assetStatic || volumeType === VolumeSettingsType.assetDynamicDelta) {
+        if (volumeType === "assetStatic") {
             asset = robot.asset;
             minVolumeText = ctx.i18n.t("scenes.editUserRobot.minVal", { minVolume: amount, asset });
-        } else if (volumeType === VolumeSettingsType.currencyDynamic) {
+        } else if (volumeType === "currencyDynamic") {
             asset = robot.currency;
             minVolumeText = ctx.i18n.t("scenes.editUserRobot.minVal", { minVolume: amountUSD, asset });
-        } else if (volumeType === VolumeSettingsType.balancePercent) {
+        } else if (volumeType === "balancePercent") {
             const {
                 amounts: { balance, availableBalancePercent }
             }: {
@@ -140,7 +140,7 @@ async function editUserRobotEnterVolume(ctx: any) {
             asset = "%";
             const minPercent = Math.ceil((amountUSD / balance) * 100);
             let availablePercent = availableBalancePercent;
-            if (robot.userRobot.settings.currentSettings.volumeType === VolumeSettingsType.balancePercent) {
+            if (robot.userRobot.settings.currentSettings.volumeType === "balancePercent") {
                 availablePercent = availableBalancePercent + robot.userRobot.settings.currentSettings.balancePercent;
             }
             minVolumeText = `${ctx.i18n.t("scenes.editUserRobot.avPerc", {
@@ -202,11 +202,11 @@ async function editUserRobotConfirm(ctx: any) {
         try {
             volume = parseFloat(ctx.message.text);
             if (isNaN(volume)) error = "Volume is not a number";
-            if (volumeType === VolumeSettingsType.assetStatic || volumeType === VolumeSettingsType.assetDynamicDelta) {
+            if (volumeType === "assetStatic") {
                 checkAssetStatic(volume, min.amount, max.amount);
-            } else if (volumeType === VolumeSettingsType.currencyDynamic) {
+            } else if (volumeType === "currencyDynamic") {
                 checkCurrencyDynamic(volume, min.amountUSD, max.amountUSD);
-            } else if (volumeType === VolumeSettingsType.balancePercent) {
+            } else if (volumeType === "balancePercent") {
                 const {
                     amounts: { balance, availableBalancePercent }
                 }: {
@@ -217,7 +217,7 @@ async function editUserRobotConfirm(ctx: any) {
                 } = ctx.scene.state;
                 const volumeUSD = (volume / 100) * balance;
                 let availablePercent = availableBalancePercent;
-                if (robot.userRobot.settings.currentSettings.volumeType === VolumeSettingsType.balancePercent) {
+                if (robot.userRobot.settings.currentSettings.volumeType === "balancePercent") {
                     availablePercent =
                         availableBalancePercent + robot.userRobot.settings.currentSettings.balancePercent;
                 }
@@ -236,22 +236,17 @@ async function editUserRobotConfirm(ctx: any) {
                 id
             };
 
-            if (volumeType === VolumeSettingsType.assetStatic) {
+            if (volumeType === "assetStatic") {
                 params.settings = {
                     volumeType,
                     volume
                 };
-            } else if (volumeType === VolumeSettingsType.currencyDynamic) {
+            } else if (volumeType === "currencyDynamic") {
                 params.settings = {
                     volumeType,
                     volumeInCurrency: volume
                 };
-            } else if (volumeType === VolumeSettingsType.assetDynamicDelta) {
-                params.settings = {
-                    volumeType,
-                    initialVolume: volume
-                };
-            } else if (volumeType === VolumeSettingsType.balancePercent) {
+            } else if (volumeType === "balancePercent") {
                 params.settings = {
                     volumeType,
                     balancePercent: volume
@@ -291,11 +286,11 @@ async function editUserRobotConfirm(ctx: any) {
         if (result) {
             let asset;
 
-            if (volumeType === VolumeSettingsType.assetStatic || volumeType === VolumeSettingsType.assetDynamicDelta) {
+            if (volumeType === "assetStatic") {
                 asset = robot.asset;
-            } else if (volumeType === VolumeSettingsType.currencyDynamic) {
+            } else if (volumeType === "currencyDynamic") {
                 asset = robot.currency;
-            } else if (volumeType === VolumeSettingsType.balancePercent) {
+            } else if (volumeType === "balancePercent") {
                 asset = "%";
             }
 

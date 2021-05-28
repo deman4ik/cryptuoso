@@ -7,7 +7,7 @@ import { CANDLES_RECENT_AMOUNT, equals, nvl, sortAsc } from "@cryptuoso/helpers"
 import { BaseStrategy } from "./BaseStrategy";
 import { RobotPositionState, RobotState, RobotStatus, StrategyProps } from "./types";
 import logger from "@cryptuoso/logger";
-import { calcCurrencyDynamic, RobotSettings, StrategySettings, VolumeSettingsType } from "@cryptuoso/robot-settings";
+import { calcCurrencyDynamic, RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 import { periodStatsFromArray, periodStatsToArray, TradeStats, TradeStatsCalc } from "@cryptuoso/trade-stats";
 
 export interface StrategyCode {
@@ -687,9 +687,9 @@ export class Robot {
         this._eventsToSend = [...this._eventsToSend, ...this._strategyInstance._eventsToSend];
         let volume: number;
         let volumeInCurrency: number;
-        if (this._settings.robotSettings.volumeType === VolumeSettingsType.assetStatic) {
+        if (this._settings.robotSettings.volumeType === "assetStatic") {
             volume = this._settings.robotSettings.volume;
-        } else if (this._settings.robotSettings.volumeType === VolumeSettingsType.currencyDynamic) {
+        } else if (this._settings.robotSettings.volumeType === "currencyDynamic") {
             volumeInCurrency = this._settings.robotSettings.volumeInCurrency;
         }
         this._postionsToSave = this._strategyInstance._positionsToSave.map((pos) => {

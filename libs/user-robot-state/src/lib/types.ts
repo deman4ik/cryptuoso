@@ -3,7 +3,7 @@ import { Order, PositionDirection, SignalEvent, TradeAction, TradeSettings, Vali
 import { UserRobotSettings } from "@cryptuoso/robot-settings";
 import { UserMarketState } from "@cryptuoso/market";
 import { OrdersStatusEvent } from "@cryptuoso/connector-events";
-import { UserPorfolioDB } from "@cryptuoso/user-portfolio-state";
+import { UserPorfolioDB } from "@cryptuoso/portfolio-state";
 
 export const enum UserPositionStatus {
     delayed = "delayed",

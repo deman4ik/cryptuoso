@@ -2,7 +2,7 @@ import { expose } from "threads/worker";
 import logger from "@cryptuoso/logger";
 import { DataStream } from "scramjet";
 import { sql, pg, makeChunksGenerator, pgUtil } from "@cryptuoso/postgres";
-import { PortfolioBuilder, PortfolioBuilderJob, PortfolioDB } from "@cryptuoso/portfolio-state";
+import { PortfolioBuilder, PortfolioBuilderJob, PortfolioState } from "@cryptuoso/portfolio-state";
 import { BasePosition } from "@cryptuoso/market";
 
 let portfolioBuilder: PortfolioBuilder;
@@ -10,10 +10,18 @@ let portfolioBuilder: PortfolioBuilder;
 const worker = {
     async init(job: PortfolioBuilderJob) {
         logger.info(`Initing #${job.portfolioId} builder`);
-        const portfolio = await pg.one<PortfolioDB>(sql`
-        SELECT p.id, p.code, p.name, p.exchange, p.available, p.settings
-        FROM portfolios p 
-        WHERE p.id = ${job.portfolioId}; 
+        const portfolio = await pg.one<PortfolioState>(sql`
+            SELECT p.id, p.code, p.name, p.exchange, p.available, p.settings,
+                   json_build_object('minTradeAmount', m.min_trade_amount,
+                                     'feeRate', m.fee_rate) as context
+            FROM portfolios p, 
+                 (SELECT mk.exchange, 
+	                     max(mk.min_amount_currency) as min_trade_amount, 
+	                     max(mk.fee_rate) as fee_rate 
+	              FROM v_markets mk
+                  GROUP BY mk.exchange) m
+            WHERE p.exchange = m.exchange
+              AND p.id = ${job.portfolioId}; 
         `);
         const positions: BasePosition[] = await DataStream.from(
             makeChunksGenerator(

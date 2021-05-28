@@ -18,7 +18,7 @@ import { OrdersStatusEvent } from "@cryptuoso/connector-events";
 import { BaseError } from "@cryptuoso/errors";
 import { ConnectorJob } from "@cryptuoso/connector-state";
 import logger from "@cryptuoso/logger";
-import { UserPorfolioDB } from "@cryptuoso/user-portfolio-state";
+import { UserPorfolioDB } from "@cryptuoso/portfolio-state";
 import { UserRobotSettings } from "@cryptuoso/robot-settings";
 
 export class UserRobot {

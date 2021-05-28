@@ -1,9 +1,4 @@
-export const enum VolumeSettingsType {
-    assetStatic = "assetStatic",
-    currencyDynamic = "currencyDynamic",
-    balancePercent = "balancePercent",
-    assetDynamicDelta = "assetDynamicDelta"
-}
+export type VolumeSettingsType = "assetStatic" | "currencyDynamic" | "balancePercent";
 
 export interface BaseSettings {
     initialBalance?: number;
@@ -12,12 +7,12 @@ export interface BaseSettings {
 }
 
 export interface AssetStaticSettings extends BaseSettings {
-    volumeType: VolumeSettingsType.assetStatic;
+    volumeType: "assetStatic";
     volume: number;
 }
 
 export interface CurrencyDynamicSettings extends BaseSettings {
-    volumeType: VolumeSettingsType.currencyDynamic;
+    volumeType: "currencyDynamic";
     volumeInCurrency: number;
 }
 
@@ -29,7 +24,7 @@ export interface CurrencyDynamicSettings extends BaseSettings {
 }*/
 
 export interface BalancePercentSettings extends BaseSettings {
-    volumeType: VolumeSettingsType.balancePercent;
+    volumeType: "balancePercent";
     balancePercent: number;
 }
 
@@ -52,7 +47,7 @@ export const AssetStaticSettingsSchema = {
     //$$strict: true,
     type: "object",
     props: {
-        volumeType: { type: "equal", value: VolumeSettingsType.assetStatic },
+        volumeType: { type: "equal", value: "assetStatic" },
         volume: { type: "number" }
     }
 };
@@ -61,7 +56,7 @@ export const CurrencyDynamicSettingsSchema = {
     //$$strict: true,
     type: "object",
     props: {
-        volumeType: { type: "equal", value: VolumeSettingsType.currencyDynamic },
+        volumeType: { type: "equal", value: "currencyDynamic" },
         volumeInCurrency: { type: "number" }
     }
 };
@@ -81,7 +76,7 @@ export const BalancePercentSettingsSchema = {
     // $$strict: true,
     type: "object",
     props: {
-        volumeType: { type: "equal", value: VolumeSettingsType.balancePercent },
+        volumeType: { type: "equal", value: "balancePercent" },
         balancePercent: { type: "number", integer: true, min: 1 }
     }
 };

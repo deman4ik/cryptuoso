@@ -2,13 +2,9 @@ import { IndicatorState, BaseIndicator } from "../BaseIndicator";
 import tulip from "./create";
 
 export class TulipIndicator extends BaseIndicator {
-    calculate: (props: {
-        open: number[];
-        high: number[];
-        low: number[];
-        close: number[];
-        volume: number[];
-    }) => { [key: string]: number };
+    calculate: (props: { open: number[]; high: number[]; low: number[]; close: number[]; volume: number[] }) => {
+        [key: string]: number;
+    };
 
     constructor(state: IndicatorState) {
         super(state);

@@ -32,9 +32,9 @@ import { MESSAGE, LEVEL, SPLAT } from "triple-beam";
 import { inspect } from "util";
 
 /* UGLY TS OBJECT KEY TYPE FIX */
-const MESSAGESYMBOL = (MESSAGE as unknown) as string;
-const LEVELSYMBOL = (LEVEL as unknown) as string;
-const SPLATSYMBOL = (SPLAT as unknown) as string;
+const MESSAGESYMBOL = MESSAGE as unknown as string;
+const LEVELSYMBOL = LEVEL as unknown as string;
+const SPLATSYMBOL = SPLAT as unknown as string;
 
 /* Helper functions for pretty console logging for development */
 const prettyStringify = (obj: { [key: string]: any }) => inspect({ ...obj }, false, 20, true);

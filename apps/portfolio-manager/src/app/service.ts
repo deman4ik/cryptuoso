@@ -2,7 +2,15 @@ import { spawn, Worker as ThreadsWorker, Thread } from "threads";
 import { Job } from "bullmq";
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import { PortfolioWorker } from "./worker";
-import { PortfolioBuilderJob, PortfolioDB, PortfolioOptions } from "@cryptuoso/portfolio-state";
+import {
+    getPortfolioBalance,
+    getPortfolioMinBalance,
+    PortfolioBuilderJob,
+    PortfolioContext,
+    PortfolioDB,
+    PortfolioOptions,
+    PortfolioSettings
+} from "@cryptuoso/portfolio-state";
 import { UserRoles } from "@cryptuoso/user-state";
 import { v4 as uuid } from "uuid";
 import combinate from "combinate";
@@ -18,10 +26,17 @@ export default class PortfolioManagerService extends HTTPService {
                 initPortfolios: {
                     inputSchema: {
                         exchange: "string",
+                        tradingAmountType: { type: "string", default: "balancePercent" },
+                        balancePercent: { type: "number", optional: true, default: 100 },
+                        tradingAmountCurrency: { type: "number", optional: true },
                         initialBalance: {
                             type: "number",
-                            optional: true
-                        }
+                            optional: true,
+                            default: 100000
+                        },
+                        leverage: { type: "number", optional: true, integer: true, default: 3 },
+                        minRobotsCount: { type: "number", optional: true, integer: true },
+                        maxRobotsCount: { type: "number", optional: true, integer: true }
                     },
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.initPortfolios.bind(this))
@@ -73,13 +88,38 @@ export default class PortfolioManagerService extends HTTPService {
             .join("+");
     }
 
-    async initPortfolios({ exchange, initialBalance }: { exchange: string; initialBalance?: number }) {
+    async initPortfolios({
+        exchange,
+        tradingAmountType,
+        balancePercent,
+        tradingAmountCurrency,
+        initialBalance,
+        leverage,
+        maxRobotsCount,
+        minRobotsCount
+    }: {
+        exchange: string;
+        tradingAmountType: PortfolioSettings["tradingAmountType"];
+        balancePercent: PortfolioSettings["balancePercent"];
+        tradingAmountCurrency: PortfolioSettings["tradingAmountCurrency"];
+        initialBalance: PortfolioSettings["initialBalance"];
+        leverage: PortfolioSettings["leverage"];
+        maxRobotsCount?: PortfolioSettings["leverage"];
+        minRobotsCount?: PortfolioSettings["leverage"];
+    }) {
         const allOptions = this.generateOptions();
-        const { minAmountCurrency, feeRate } = await this.db.pg.one<{ minAmountCurrency: number; feeRate: number }>(sql`
-        SELECT max(min_amount_currency) as min_amount_currency, max(fee_rate) as fee_rate from v_markets
-        WHERE exchange = ${exchange}
-        GROUP BY exchange;
+        const { minTradeAmount, feeRate } = await this.db.pg.one<PortfolioContext>(sql`
+        SELECT max(m.min_amount_currency) as min_trade_amount, max(m.fee_rate) as fee_rate from v_markets m
+        WHERE m.exchange = ${exchange}
+        GROUP BY m.exchange;
         `);
+        const portfolioBalance = getPortfolioBalance(
+            initialBalance,
+            tradingAmountType,
+            balancePercent,
+            tradingAmountCurrency
+        );
+        getPortfolioMinBalance(portfolioBalance, minTradeAmount, minRobotsCount);
         const allPortfolios: PortfolioDB[] = allOptions.map((options) => ({
             id: uuid(),
             code: `${exchange}:${this.generateCode(options)}`,
@@ -88,11 +128,16 @@ export default class PortfolioManagerService extends HTTPService {
             available: 5,
             settings: {
                 options,
-                minBalance: initialBalance,
-                minTradeAmount: minAmountCurrency,
-                feeRate: feeRate,
-                initialBalance: initialBalance,
-                leverage: 3
+                tradingAmountType,
+                balancePercent,
+                tradingAmountCurrency,
+                initialBalance,
+                portfolioBalance,
+                minTradeAmount,
+                feeRate,
+                leverage,
+                maxRobotsCount,
+                minRobotsCount
             }
         }));
         await this.db.pg.query(sql`

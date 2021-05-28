@@ -2564,57 +2564,6 @@
                 }
             }
         },
-        "user-portfolio-manager": {
-            "root": "apps/user-portfolio-manager",
-            "sourceRoot": "apps/user-portfolio-manager/src",
-            "projectType": "application",
-            "prefix": "user-portfolio-manager",
-            "architect": {
-                "build": {
-                    "builder": "@nrwl/node:build",
-                    "outputs": ["{options.outputPath}"],
-                    "options": {
-                        "outputPath": "dist/apps/user-portfolio-manager",
-                        "main": "apps/user-portfolio-manager/src/main.ts",
-                        "tsConfig": "apps/user-portfolio-manager/tsconfig.app.json",
-                        "assets": ["apps/user-portfolio-manager/src/assets"]
-                    },
-                    "configurations": {
-                        "production": {
-                            "optimization": true,
-                            "extractLicenses": true,
-                            "inspect": false,
-                            "fileReplacements": [
-                                {
-                                    "replace": "apps/user-portfolio-manager/src/environments/environment.ts",
-                                    "with": "apps/user-portfolio-manager/src/environments/environment.prod.ts"
-                                }
-                            ]
-                        }
-                    }
-                },
-                "serve": {
-                    "builder": "@nrwl/node:execute",
-                    "options": {
-                        "buildTarget": "user-portfolio-manager:build"
-                    }
-                },
-                "lint": {
-                    "builder": "@nrwl/linter:eslint",
-                    "options": {
-                        "lintFilePatterns": ["apps/user-portfolio-manager/**/*.ts"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "outputs": ["coverage/apps/user-portfolio-manager"],
-                    "options": {
-                        "jestConfig": "apps/user-portfolio-manager/jest.config.js",
-                        "passWithNoTests": true
-                    }
-                }
-            }
-        },
         "portfolio-state": {
             "root": "libs/portfolio-state",
             "sourceRoot": "libs/portfolio-state/src",
@@ -2631,27 +2580,6 @@
                     "outputs": ["coverage/libs/portfolio-state"],
                     "options": {
                         "jestConfig": "libs/portfolio-state/jest.config.js",
-                        "passWithNoTests": true
-                    }
-                }
-            }
-        },
-        "user-portfolio-state": {
-            "root": "libs/user-portfolio-state",
-            "sourceRoot": "libs/user-portfolio-state/src",
-            "projectType": "library",
-            "architect": {
-                "lint": {
-                    "builder": "@nrwl/linter:eslint",
-                    "options": {
-                        "lintFilePatterns": ["libs/user-portfolio-state/**/*.ts"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "outputs": ["coverage/libs/user-portfolio-state"],
-                    "options": {
-                        "jestConfig": "libs/user-portfolio-state/jest.config.js",
                         "passWithNoTests": true
                     }
                 }

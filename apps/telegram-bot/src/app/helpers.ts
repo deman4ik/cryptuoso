@@ -1,13 +1,11 @@
 import dayjs from "@cryptuoso/dayjs";
 import {
-    AssetDynamicDeltaSettings,
     AssetStaticSettings,
     BalancePercentSettings,
     CurrencyDynamicSettings,
     RobotSettings,
     UserRobotSettings,
-    UserSignalSettings,
-    VolumeSettingsType
+    UserSignalSettings
 } from "@cryptuoso/robot-settings";
 import { BaseStatistics } from "@cryptuoso/stats-calc";
 
@@ -54,16 +52,13 @@ export function getVolumeValueText(
 ) {
     const { volumeType } = settings;
     let volumeValue;
-    if (volumeType === VolumeSettingsType.assetStatic) {
+    if (volumeType === "assetStatic") {
         const { volume } = settings as AssetStaticSettings;
         volumeValue = `${volume} ${asset}`;
-    } else if (volumeType === VolumeSettingsType.currencyDynamic) {
+    } else if (volumeType === "currencyDynamic") {
         const { volumeInCurrency } = settings as CurrencyDynamicSettings;
         volumeValue = `${volumeInCurrency} $`;
-    } else if (volumeType === VolumeSettingsType.assetDynamicDelta) {
-        const { initialVolume } = settings as AssetDynamicDeltaSettings;
-        volumeValue = `${initialVolume} ${asset}`;
-    } else if (volumeType === VolumeSettingsType.balancePercent) {
+    } else if (volumeType === "balancePercent") {
         const { balancePercent } = settings as BalancePercentSettings;
         volumeValue = `${balancePercent} %`;
     }
@@ -73,16 +68,13 @@ export function getVolumeValueText(
 export function getVolumeValue(settings: RobotSettings | UserSignalSettings | UserRobotSettings) {
     const { volumeType } = settings;
     let volumeValue;
-    if (volumeType === VolumeSettingsType.assetStatic) {
+    if (volumeType === "assetStatic") {
         const { volume } = settings as AssetStaticSettings;
         volumeValue = volume;
-    } else if (volumeType === VolumeSettingsType.currencyDynamic) {
+    } else if (volumeType === "currencyDynamic") {
         const { volumeInCurrency } = settings as CurrencyDynamicSettings;
         volumeValue = volumeInCurrency;
-    } else if (volumeType === VolumeSettingsType.assetDynamicDelta) {
-        const { initialVolume } = settings as AssetDynamicDeltaSettings;
-        volumeValue = initialVolume;
-    } else if (volumeType === VolumeSettingsType.balancePercent) {
+    } else if (volumeType === "balancePercent") {
         const { balancePercent } = settings as BalancePercentSettings;
         volumeValue = balancePercent;
     }
