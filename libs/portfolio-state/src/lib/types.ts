@@ -43,7 +43,9 @@ export interface PortfolioRobot extends PortfolioRobotDB {
 export interface PortfolioContext {
     minTradeAmount: number;
     feeRate: number;
+    currentBalance: number;
 }
+
 export interface PortfolioState extends PortfolioDB {
     context: PortfolioContext;
     variables?: {
@@ -57,16 +59,35 @@ export interface PortfolioState extends PortfolioDB {
 
 export interface PortfolioBuilderJob {
     portfolioId: string;
+    type: "portfolio";
+}
+
+export interface UserPortfolioBuilderJob {
+    userPortfolioId: string;
+    type: "userPortfolio";
 }
 
 export interface UserPorfolioDB {
     id: string;
-    portfolioId: string;
     userId: string;
     userExAccId?: string;
     exchange: string;
-    status: "signals" | "active" | "error";
-    settings: PortfolioSettings;
+    type: "signals" | "trading";
+    status: "pending" | "builded" | "active" | "stopped" | "error";
     fullStats?: FullStats;
     periodStats?: PeriodStats[];
+}
+
+export interface UserPortfolioState extends UserPorfolioDB {
+    userPortfolioSettingsId?: string;
+    userPortfolioSettingsActiveFrom?: string;
+    settings: PortfolioSettings;
+    context: PortfolioContext;
+    variables?: {
+        portfolioBalance: number;
+        minBalance: number;
+        maxRobotsCount: number;
+        minRobotsCount: number;
+    };
+    robots?: PortfolioRobot[];
 }

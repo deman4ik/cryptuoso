@@ -3,7 +3,7 @@ import { Order, PositionDirection, SignalEvent, TradeAction, TradeSettings, Vali
 import { UserRobotSettings } from "@cryptuoso/robot-settings";
 import { UserMarketState } from "@cryptuoso/market";
 import { OrdersStatusEvent } from "@cryptuoso/connector-events";
-import { UserPorfolioDB } from "@cryptuoso/portfolio-state";
+import { UserPorfolioDB, UserPortfolioState } from "@cryptuoso/portfolio-state";
 
 export const enum UserPositionStatus {
     delayed = "delayed",
@@ -32,10 +32,6 @@ export interface UserPositionInternalState {
     entrySlippageCount: number;
     exitSlippageCount: number;
     delayedSignal?: SignalEvent;
-}
-
-export interface UserRobotCurrentSettings {
-    volume: number;
 }
 
 export interface UserPositionDB {
@@ -83,7 +79,6 @@ export interface UserPositionDB {
 export interface UserPositionState extends UserPositionDB {
     timeframe: ValidTimeframe;
     userExAccId: string;
-    settings: UserRobotCurrentSettings;
     tradeSettings: TradeSettings;
     entryOrders?: Order[];
     exitOrders?: Order[];
@@ -113,7 +108,12 @@ export interface UserRobotDB {
     startedAt?: string;
     stoppedAt?: string;
     message?: string;
-    settings?: UserRobotCurrentSettings;
+    settings: {
+        volume: number;
+        active?: boolean;
+        emulated?: boolean;
+        share?: number;
+    };
 }
 
 export interface UserRobotState extends UserRobotDB {
@@ -123,8 +123,11 @@ export interface UserRobotState extends UserRobotDB {
     timeframe: ValidTimeframe;
     tradeSettings: TradeSettings;
     positions: UserPositionState[];
-    userPortfolioStatus?: UserPorfolioDB["status"];
-    userPortfolioSettings?: UserPorfolioDB["settings"];
+    userPortfolio: {
+        type: UserPorfolioDB["type"];
+        status: UserPorfolioDB["status"];
+        settings: UserPortfolioState["settings"];
+    };
     currentPrice?: number;
     userRobotSettings?: UserRobotSettings;
 }

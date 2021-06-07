@@ -109,8 +109,10 @@ export default class UserRobotRunnerService extends BaseService {
            st.net_profit as profit,
            m.trade_settings,
            urs.user_robot_settings,
-           up.status as user_portfolio_status,
-           up.settings as user_portfolio_settings,
+           ur.settings,
+           json_build_object('type',  up.type,
+           'status'. up.status,
+           'settings', ups.user_portfolio_settings) as user_portfolio
            (SELECT array_to_json(array_agg(pos))
 FROM
 (SELECT p.id,
@@ -234,6 +236,8 @@ WHERE p.user_robot_id =${userRobotId}
     ON urs.user_robot_id = ${userRobotId}
     LEFT JOIN user_portfolios up
     ON up.id = ur.user_portfolio_id
+    LEFT JOIN v_user_portfolio_settings ups
+    ON ups.user_portfolio_id = ur.user_portfolio_id
     WHERE ur.robot_id = r.id  
       AND m.exchange = r.exchange
       AND m.asset = r.asset
@@ -247,43 +251,69 @@ WHERE p.user_robot_id =${userRobotId}
         return keysToCamelCase(rawData) as UserRobotStateExt;
     };
 
-    #getCurrentVolume = (state: UserRobotStateExt) => {
+    #getCurrentSettings = ({
+        settings,
+        currentPrice,
+        totalBalanceUsd,
+        userPortfolioId,
+        userPortfolio: { type: userPortfolioType, settings: userPortfolioSettings },
+        limits,
+        precision,
+        userRobotSettings //TODO: deprecate
+    }: UserRobotStateExt): UserRobotDB["settings"] => {
         let volume: number;
-        if (state.userPortfolioId) {
-            const { userPortfolioSettings } = state;
+        let volumeInCurrency: number;
+        let balance;
+
+        if (userPortfolioId) {
+            if (userPortfolioType === "signals") balance = userPortfolioSettings.initialBalance;
+            else balance = totalBalanceUsd; //? или тоже initialBalance
             if (userPortfolioSettings.tradingAmountType === "balancePercent") {
-                const currentPortfolioBalance = (userPortfolioSettings.balancePercent / 100) * state.totalBalanceUsd;
+                const currentPortfolioBalance = (userPortfolioSettings.balancePercent / 100) * balance;
 
-                volume = calcBalancePercent(state.userRobotSettings.share, currentPortfolioBalance, state.currentPrice);
+                ({ volume, volumeInCurrency } = calcBalancePercent(
+                    settings.share,
+                    currentPortfolioBalance,
+                    currentPrice
+                ));
             } else if (userPortfolioSettings.tradingAmountType === "currencyFixed") {
-                volume = calcBalancePercent(
-                    state.userRobotSettings.share,
+                ({ volume, volumeInCurrency } = calcBalancePercent(
+                    settings.share,
                     userPortfolioSettings.tradingAmountCurrency,
-                    state.currentPrice
-                );
+                    currentPrice
+                ));
             }
-
             if (userPortfolioSettings.leverage) {
                 volume = roundFirstSignificant(volume * userPortfolioSettings.leverage);
             }
         } else {
-            //TODO: deprecated
-            const { userRobotSettings } = state;
+            //TODO: deprecate
 
             if (userRobotSettings.volumeType === "assetStatic") {
                 volume = userRobotSettings.volume;
             } else if (userRobotSettings.volumeType === "currencyDynamic") {
                 const { volumeInCurrency } = userRobotSettings;
-                volume = calcCurrencyDynamic(volumeInCurrency, state.currentPrice);
+                volume = calcCurrencyDynamic(volumeInCurrency, currentPrice);
             } else if (userRobotSettings.volumeType === "balancePercent") {
                 const { balancePercent } = userRobotSettings;
 
-                volume = calcBalancePercent(balancePercent, state.totalBalanceUsd, state.currentPrice);
+                ({ volume } = calcBalancePercent(balancePercent, totalBalanceUsd, currentPrice));
             } else throw new BaseError("Unknown volume type", userRobotSettings);
         }
-        if (volume < state.limits.min.amount) volume = state.limits.min.amount;
-        else if (state.limits.max?.amount && volume > state.limits.max?.amount) volume = state.limits.max?.amount;
-        return { volume: round(volume, state.precision?.amount || 6) };
+
+        if (volume < limits.min.amount) {
+            volume = limits.min.amount;
+            volumeInCurrency = limits.min.amountUSD;
+        } else if (limits.max?.amount && volume > limits.max?.amount) {
+            volume = limits.max?.amount;
+            volumeInCurrency = limits.max.amountUSD;
+        }
+
+        if (userPortfolioId) {
+            if (balance < volumeInCurrency) throw new Error("Exchange account balance is insufficient");
+        }
+
+        return { ...settings, volume: round(volume, precision?.amount || 6) };
     };
 
     #savePositions = async (transaction: DatabaseTransactionConnectionType, positions: UserPositionDB[]) => {
@@ -404,7 +434,7 @@ WHERE p.user_robot_id =${userRobotId}
         try {
             const userRobotState = await this.#getUserRobotState(userRobotId);
             this.log.info(userRobotState);
-            const settings = await this.#getCurrentVolume(userRobotState);
+            const settings = await this.#getCurrentSettings(userRobotState);
 
             const userRobot = new UserRobot({ ...userRobotState, settings });
             const eventsToSend: NewEvent<any>[] = [];

@@ -1,5 +1,5 @@
 import logger, { Logger } from "@cryptuoso/logger";
-import { PortfolioOptions, PortfolioRobot, PortfolioState } from "./types";
+import { PortfolioOptions, PortfolioRobot, PortfolioState, UserPortfolioState } from "./types";
 import { BasePosition, calcPositionProfit } from "@cryptuoso/market";
 import { periodStatsToArray, TradeStats, TradeStatsCalc } from "@cryptuoso/trade-stats";
 import { getPercentagePos, percentBetween, round, sum, uniqueElementsBy } from "@cryptuoso/helpers";
@@ -17,9 +17,9 @@ interface PortfolioCalculated {
     correlationPercent?: number;
 }
 
-export class PortfolioBuilder {
+export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
     #log: Logger;
-    portfolio: PortfolioState;
+    portfolio: T;
     optionWeights: { [Weight in keyof PortfolioOptions]: number } = {
         diversification: 1.1,
         profit: 1.1,
@@ -37,7 +37,7 @@ export class PortfolioBuilder {
 
     currentPortfolio: PortfolioCalculated;
 
-    constructor(portfolio: PortfolioState, positions: BasePosition[]) {
+    constructor(portfolio: T, positions: BasePosition[]) {
         this.#log = logger;
         this.portfolio = portfolio;
         this.#calcPortfolioVariables();
@@ -324,7 +324,7 @@ export class PortfolioBuilder {
         };
     }
 
-    async build(): Promise<{ portfolio: PortfolioState; steps: any }> {
+    async build(): Promise<{ portfolio: T; steps: any }> {
         try {
             this.calculateRobotsStats();
             this.sortRobots();

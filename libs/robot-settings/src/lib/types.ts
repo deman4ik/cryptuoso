@@ -32,11 +32,7 @@ export type RobotSettings = AssetStaticSettings | CurrencyDynamicSettings;
 
 export type UserSignalSettings = AssetStaticSettings | CurrencyDynamicSettings;
 
-export type UserRobotSettings = {
-    active?: boolean;
-    emulated?: boolean;
-    share?: number;
-} & (RobotSettings | BalancePercentSettings); //| AssetDynamicDeltaSettings;
+export type UserRobotSettings = RobotSettings | BalancePercentSettings; //| AssetDynamicDeltaSettings;
 
 export interface StrategySettings {
     [key: string]: number | string;

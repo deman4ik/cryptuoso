@@ -18,7 +18,13 @@ export const calcCurrencyDynamic = (volumeInCurrency: number, price: number) =>
 }; */
 
 export const calcBalancePercent = (percent: number, balance: number, price: number) => {
-    return calcCurrencyDynamic((percent / 100) * balance, price);
+    const volumeInCurrency = (percent / 100) * balance;
+    const volume = calcCurrencyDynamic(volumeInCurrency, price);
+
+    return {
+        volume,
+        volumeInCurrency
+    };
 };
 
 export const getRobotPositionVolume = (settings: RobotSettings | UserSignalSettings, price?: number): number => {

@@ -9,12 +9,18 @@ import {
     PortfolioContext,
     PortfolioDB,
     PortfolioOptions,
-    PortfolioSettings
+    PortfolioSettings,
+    UserPorfolioDB,
+    UserPortfolioBuilderJob,
+    UserPortfolioState
 } from "@cryptuoso/portfolio-state";
-import { UserRoles } from "@cryptuoso/user-state";
+import { User, UserExchangeAccount, UserExchangeAccountInfo, UserRoles } from "@cryptuoso/user-state";
 import { v4 as uuid } from "uuid";
 import combinate from "combinate";
 import { sql } from "@cryptuoso/postgres";
+import { equals, nvl } from "@cryptuoso/helpers";
+import dayjs from "@cryptuoso/dayjs";
+import { ActionsHandlerError } from "@cryptuoso/errors";
 
 export type PortfolioManagerServiceConfig = HTTPServiceConfig;
 
@@ -54,6 +60,35 @@ export default class PortfolioManagerService extends HTTPService {
                     },
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.buildPortfolios.bind(this))
+                },
+                createUserPortfolio: {
+                    inputSchema: {
+                        exchange: "string",
+                        userExAccId: { type: "uuid", optional: true },
+                        tradingAmountType: { type: "string" },
+                        balancePercent: { type: "number", optional: true },
+                        tradingAmountCurrency: { type: "number", optional: true },
+                        initialBalance: {
+                            type: "number",
+                            optional: true
+                        },
+                        leverage: { type: "number", optional: true, integer: true, default: 3 },
+                        minRobotsCount: { type: "number", optional: true, integer: true },
+                        maxRobotsCount: { type: "number", optional: true, integer: true },
+                        options: {
+                            type: "object",
+                            props: {
+                                diversification: "boolean",
+                                profit: "boolean",
+                                risk: "boolean",
+                                moneyManagement: "boolean",
+                                winRate: "boolean",
+                                efficiency: "boolean"
+                            }
+                        }
+                    },
+                    roles: [UserRoles.manager, UserRoles.user, UserRoles.vip],
+                    handler: this.HTTPWithAuthHandler.bind(this, this.createUserPortfolio.bind(this))
                 }
             });
             this.addOnStartHandler(this.onServiceStart);
@@ -64,7 +99,7 @@ export default class PortfolioManagerService extends HTTPService {
 
     async onServiceStart(): Promise<void> {
         this.createQueue("portfolioBuilder");
-        this.createWorker("portfolioBuilder", this.builder);
+        this.createWorker("portfolioBuilder", this.portfolioBuilderProcess);
     }
 
     generateOptions() {
@@ -108,8 +143,8 @@ export default class PortfolioManagerService extends HTTPService {
         minRobotsCount?: PortfolioSettings["leverage"];
     }) {
         const allOptions = this.generateOptions();
-        const { minTradeAmount, feeRate } = await this.db.pg.one<PortfolioContext>(sql`
-        SELECT max(m.min_amount_currency) as min_trade_amount, max(m.fee_rate) as fee_rate from v_markets m
+        const { minTradeAmount } = await this.db.pg.one<{ minTradeAmount: PortfolioContext["minTradeAmount"] }>(sql`
+        SELECT max(m.min_amount_currency) as min_trade_amount from v_markets m
         WHERE m.exchange = ${exchange}
         GROUP BY m.exchange;
         `);
@@ -120,7 +155,7 @@ export default class PortfolioManagerService extends HTTPService {
             tradingAmountCurrency
         );
         getPortfolioMinBalance(portfolioBalance, minTradeAmount, minRobotsCount);
-        const allPortfolios: PortfolioDB[] = allOptions.map((options) => ({
+        const allPortfolios: PortfolioDB[] = allOptions.map<PortfolioDB>((options) => ({
             id: uuid(),
             code: `${exchange}:${this.generateCode(options)}`,
             name: null,
@@ -132,9 +167,6 @@ export default class PortfolioManagerService extends HTTPService {
                 balancePercent,
                 tradingAmountCurrency,
                 initialBalance,
-                portfolioBalance,
-                minTradeAmount,
-                feeRate,
                 leverage,
                 maxRobotsCount,
                 minRobotsCount
@@ -156,11 +188,213 @@ export default class PortfolioManagerService extends HTTPService {
         this.log.info(`Inited ${allPortfolios.length} ${exchange} portfolios`);
     }
 
+    async createUserPortfolio(
+        user: User,
+        {
+            type,
+            exchange,
+            userExAccId,
+            tradingAmountType,
+            balancePercent,
+            tradingAmountCurrency,
+            initialBalance: userInitialBalance,
+            leverage,
+            maxRobotsCount,
+            minRobotsCount,
+            options
+        }: PortfolioSettings & {
+            exchange: UserPorfolioDB["exchange"];
+            type: UserPorfolioDB["type"];
+            userExAccId?: UserPorfolioDB["userExAccId"];
+            initialBalance?: PortfolioSettings["initialBalance"];
+        }
+    ) {
+        const { id: userId } = user;
+        const userPortfolioExists = await this.db.pg.maybeOne<{ id: UserPorfolioDB["id"] }>(sql`
+         SELECT p.id
+            FROM user_portfolios p
+            WHERE p.user_id = ${userId}; 
+        `);
+
+        if (userPortfolioExists) throw new Error("User portfolio already exists");
+
+        const { minTradeAmount } = await this.db.pg.one<{ minTradeAmount: PortfolioContext["minTradeAmount"] }>(sql`
+        SELECT max(m.min_amount_currency) as min_trade_amount
+        WHERE m.exchange = ${exchange}
+        GROUP BY m.exchange;
+        `);
+
+        let initialBalance;
+        if (type === "signals") {
+            initialBalance = userInitialBalance;
+        } else if (type === "trading") {
+            const userExAcc = await this.db.pg.maybeOne<{
+                exchange: UserExchangeAccountInfo["exchange"];
+                balance: UserExchangeAccountInfo["balance"];
+            }>(sql`
+            SELECT exchange, ((ea.balances ->> 'totalUSD'::text))::numeric as balance
+            FROM user_exchange_accs ea
+            WHERE ea.id = ${userExAccId};
+            `);
+            if (userExAcc.exchange !== exchange) throw new Error("Wrong exchange");
+            initialBalance = userExAcc.balance;
+        } else throw new Error("Unknown user portfolio type");
+
+        const portfolioBalance = getPortfolioBalance(
+            initialBalance,
+            tradingAmountType,
+            balancePercent,
+            tradingAmountCurrency
+        );
+        getPortfolioMinBalance(portfolioBalance, minTradeAmount, minRobotsCount);
+
+        const userPortfolio: UserPorfolioDB = {
+            id: uuid(),
+            type,
+            userId,
+            userExAccId,
+            exchange,
+            status: "pending"
+        };
+
+        const userPortfolioSettings: PortfolioSettings = {
+            options,
+            tradingAmountType,
+            balancePercent,
+            tradingAmountCurrency,
+            initialBalance,
+            leverage,
+            maxRobotsCount,
+            minRobotsCount
+        };
+        await this.db.pg.transaction(async (t) => {
+            await t.query(sql`
+        insert into user_portfolios
+        (id, type, user_io, user_ex_acc_id, exchange, status, settings)
+        VALUES (${userPortfolio.id},${userPortfolio.type}, ${userPortfolio.userId},
+        ${userPortfolio.userExAccId}, ${userPortfolio.exchange},
+        ${userPortfolio.status}
+        );`);
+
+            await t.query(sql`
+        insert into user_portfolio_settings (user_portfolio_id, active_from, user_portfolio_settings)
+        values (${userPortfolio.id}, ${null}, ${JSON.stringify(userPortfolioSettings)})
+        `);
+        });
+
+        await this.buildUserPortfolio({ userPortfolioId: userPortfolio.id });
+
+        return userPortfolio.id;
+    }
+
+    async editUserPortfolio(
+        user: User,
+        {
+            userPortfolioId,
+            tradingAmountType,
+            balancePercent,
+            tradingAmountCurrency,
+            leverage,
+            maxRobotsCount,
+            minRobotsCount,
+            options
+        }: {
+            userPortfolioId: UserPorfolioDB["id"];
+            tradingAmountType?: PortfolioSettings["tradingAmountType"];
+            balancePercent?: PortfolioSettings["balancePercent"];
+            tradingAmountCurrency?: PortfolioSettings["tradingAmountCurrency"];
+            leverage?: PortfolioSettings["leverage"];
+            maxRobotsCount?: PortfolioSettings["maxRobotsCount"];
+            minRobotsCount?: PortfolioSettings["minRobotsCount"];
+            options?: PortfolioSettings["options"];
+        }
+    ) {
+        const userPortfolio = await this.db.pg.one<UserPortfolioState>(sql`
+        SELECT p.id, p.type, p.user_id, p.user_ex_acc_id, p.exchange, p.status, 
+              ups.id as user_portfolio_settings_id, 
+              ups.active_from as user_portfolio_settings_active_from,
+              ups.user_portfolio_settings as settings,
+                  json_build_object('minTradeAmount', m.min_trade_amount,
+                                    'feeRate', m.fee_rate,
+                                    'currentBalance', ((ea.balances ->> 'totalUSD'::text))::numeric) as context
+           FROM user_portfolios p, user_portfolio_settings ups
+                (SELECT mk.exchange, 
+                        max(mk.min_amount_currency) as min_trade_amount, 
+                        max(mk.fee_rate) as fee_rate 
+                 FROM v_markets mk
+                 GROUP BY mk.exchange) m
+                 LEFT JOIN user_exchange_accs ea 
+                 ON ea.id = p.user_ex_acc_id
+           WHERE p.exchange = m.exchange
+             AND ups.user_portfolio_id = p.id
+             AND p.id = ${userPortfolioId}; 
+       `);
+
+        if (userPortfolio.userId !== user.id)
+            throw new ActionsHandlerError(
+                "Current user isn't owner of this User Portfolio",
+                { userPortfolioId: userPortfolio.id },
+                "FORBIDDEN",
+                403
+            );
+
+        if (tradingAmountType) {
+            let initialBalance = userPortfolio.settings.initialBalance;
+            if (userPortfolio.type === "trading") {
+                const userExAcc = await this.db.pg.maybeOne<{
+                    exchange: UserExchangeAccountInfo["exchange"];
+                    balance: UserExchangeAccountInfo["balance"];
+                }>(sql`
+                SELECT exchange, ((ea.balances ->> 'totalUSD'::text))::numeric as balance
+                FROM user_exchange_accs ea
+                WHERE ea.id = ${userPortfolio.userExAccId};
+                `);
+                initialBalance = userExAcc.balance;
+            }
+            const portfolioBalance = getPortfolioBalance(
+                initialBalance,
+                tradingAmountType,
+                balancePercent,
+                tradingAmountCurrency
+            );
+            getPortfolioMinBalance(
+                portfolioBalance,
+                userPortfolio.context.minTradeAmount,
+                nvl(minRobotsCount, userPortfolio.settings.minRobotsCount)
+            );
+        }
+        const userPortfolioSettings: PortfolioSettings = {
+            ...userPortfolio.settings,
+            options: nvl(options, userPortfolio.settings.options),
+            tradingAmountType: nvl(tradingAmountType, userPortfolio.settings.tradingAmountType),
+            balancePercent: nvl(balancePercent, userPortfolio.settings.balancePercent),
+            tradingAmountCurrency: nvl(tradingAmountCurrency, userPortfolio.settings.tradingAmountCurrency),
+            leverage: nvl(leverage, userPortfolio.settings.leverage),
+            maxRobotsCount: nvl(maxRobotsCount, userPortfolio.settings.maxRobotsCount),
+            minRobotsCount: nvl(minRobotsCount, userPortfolio.settings.minRobotsCount)
+        };
+
+        if (!equals(userPortfolioSettings, userPortfolio.settings)) {
+            this.db.pg.query(sql`
+        INSERT INTO user_portfolio_settings (user_portfolio_id, active_from, user_portfolio_settings)
+        VALUES(${userPortfolio.id}, ${null} ${JSON.stringify(userPortfolioSettings)} );
+        }
+        `);
+        }
+
+        if (
+            userPortfolio.status !== "active" ||
+            dayjs.utc().diff(userPortfolio.userPortfolioSettingsActiveFrom, "week") > 1
+        ) {
+            await this.buildUserPortfolio({ userPortfolioId: userPortfolio.id });
+        }
+    }
+
     async buildPortfolio({ portfolioId }: { portfolioId: string }) {
-        await this.addJob(
+        await this.addJob<PortfolioBuilderJob>(
             "portfolioBuilder",
             "build",
-            { portfolioId },
+            { portfolioId, type: "portfolio" },
             {
                 jobId: portfolioId,
                 removeOnComplete: true,
@@ -174,10 +408,10 @@ export default class PortfolioManagerService extends HTTPService {
         SELECT id FROM portfolios where exchange = ${exchange};
         `);
         for (const { id } of portfolios) {
-            await this.addJob(
+            await this.addJob<PortfolioBuilderJob>(
                 "portfolioBuilder",
                 "build",
-                { portfolioId: id },
+                { portfolioId: id, type: "portfolio" },
                 {
                     jobId: id,
                     removeOnComplete: true,
@@ -187,15 +421,29 @@ export default class PortfolioManagerService extends HTTPService {
         }
     }
 
-    async builder(job: Job<PortfolioBuilderJob, boolean>) {
+    async buildUserPortfolio({ userPortfolioId }: { userPortfolioId: string }) {
+        await this.addJob<UserPortfolioBuilderJob>(
+            "portfolioBuilder",
+            "build",
+            { userPortfolioId, type: "userPortfolio" },
+            {
+                jobId: userPortfolioId,
+                removeOnComplete: true,
+                removeOnFail: 10
+            }
+        );
+    }
+
+    async portfolioBuilderProcess(job: Job<PortfolioBuilderJob | UserPortfolioBuilderJob, boolean>) {
         try {
             const beacon = this.lightship.createBeacon();
+
             const portfolioWorker = await spawn<PortfolioWorker>(new ThreadsWorker("./worker"));
-            this.log.info(`Processing job ${job.id}`);
 
             try {
-                await portfolioWorker.init(job.data);
-                await portfolioWorker.process();
+                if (job.data.type === "portfolio") await portfolioWorker.buildPortfolio(job.data);
+                else if (job.data.type === "userPortfolio") await portfolioWorker.buildUserPortfolio(job.data);
+                else throw new Error("Unsupported job type");
                 this.log.info(`Job ${job.id} processed`);
             } finally {
                 await Thread.terminate(portfolioWorker);
