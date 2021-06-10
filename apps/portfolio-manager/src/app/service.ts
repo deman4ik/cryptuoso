@@ -10,17 +10,17 @@ import {
     PortfolioDB,
     PortfolioOptions,
     PortfolioSettings,
-    UserPorfolioDB,
+    UserPortfolioDB,
     UserPortfolioBuilderJob,
     UserPortfolioState
 } from "@cryptuoso/portfolio-state";
-import { User, UserExchangeAccount, UserExchangeAccountInfo, UserRoles } from "@cryptuoso/user-state";
+import { User, UserExchangeAccountInfo, UserRoles } from "@cryptuoso/user-state";
 import { v4 as uuid } from "uuid";
 import combinate from "combinate";
 import { sql } from "@cryptuoso/postgres";
 import { equals, nvl } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
-import { ActionsHandlerError } from "@cryptuoso/errors";
+import { ActionsHandlerError, BaseError } from "@cryptuoso/errors";
 
 export type PortfolioManagerServiceConfig = HTTPServiceConfig;
 
@@ -89,6 +89,38 @@ export default class PortfolioManagerService extends HTTPService {
                     },
                     roles: [UserRoles.manager, UserRoles.user, UserRoles.vip],
                     handler: this.HTTPWithAuthHandler.bind(this, this.createUserPortfolio.bind(this))
+                },
+                editUserPortfolio: {
+                    inputSchema: {
+                        userPortfolioId: { type: "uuid", optional: true },
+                        tradingAmountType: { type: "string", optional: true },
+                        balancePercent: { type: "number", optional: true },
+                        tradingAmountCurrency: { type: "number", optional: true },
+                        leverage: { type: "number", optional: true, integer: true },
+                        minRobotsCount: { type: "number", optional: true, integer: true },
+                        maxRobotsCount: { type: "number", optional: true, integer: true },
+                        options: {
+                            type: "object",
+                            props: {
+                                diversification: "boolean",
+                                profit: "boolean",
+                                risk: "boolean",
+                                moneyManagement: "boolean",
+                                winRate: "boolean",
+                                efficiency: "boolean"
+                            },
+                            optional: true
+                        }
+                    },
+                    roles: [UserRoles.manager, UserRoles.user, UserRoles.vip],
+                    handler: this.HTTPWithAuthHandler.bind(this, this.editUserPortfolio.bind(this))
+                },
+                deleteUserPortfolio: {
+                    inputSchema: {
+                        userPortfolioId: { type: "uuid", optional: true }
+                    },
+                    roles: [UserRoles.manager, UserRoles.user, UserRoles.vip],
+                    handler: this.HTTPWithAuthHandler.bind(this, this.deleteUserPortfolio.bind(this))
                 }
             });
             this.addOnStartHandler(this.onServiceStart);
@@ -189,7 +221,6 @@ export default class PortfolioManagerService extends HTTPService {
     }
 
     async createUserPortfolio(
-        user: User,
         {
             type,
             exchange,
@@ -203,14 +234,15 @@ export default class PortfolioManagerService extends HTTPService {
             minRobotsCount,
             options
         }: PortfolioSettings & {
-            exchange: UserPorfolioDB["exchange"];
-            type: UserPorfolioDB["type"];
-            userExAccId?: UserPorfolioDB["userExAccId"];
+            exchange: UserPortfolioDB["exchange"];
+            type: UserPortfolioDB["type"];
+            userExAccId?: UserPortfolioDB["userExAccId"];
             initialBalance?: PortfolioSettings["initialBalance"];
-        }
+        },
+        user: User
     ) {
         const { id: userId } = user;
-        const userPortfolioExists = await this.db.pg.maybeOne<{ id: UserPorfolioDB["id"] }>(sql`
+        const userPortfolioExists = await this.db.pg.maybeOne<{ id: UserPortfolioDB["id"] }>(sql`
          SELECT p.id
             FROM user_portfolios p
             WHERE p.user_id = ${userId}; 
@@ -248,13 +280,13 @@ export default class PortfolioManagerService extends HTTPService {
         );
         getPortfolioMinBalance(portfolioBalance, minTradeAmount, minRobotsCount);
 
-        const userPortfolio: UserPorfolioDB = {
+        const userPortfolio: UserPortfolioDB = {
             id: uuid(),
             type,
             userId,
             userExAccId,
             exchange,
-            status: "pending"
+            status: "stopped"
         };
 
         const userPortfolioSettings: PortfolioSettings = {
@@ -278,7 +310,7 @@ export default class PortfolioManagerService extends HTTPService {
 
             await t.query(sql`
         insert into user_portfolio_settings (user_portfolio_id, active_from, user_portfolio_settings)
-        values (${userPortfolio.id}, ${null}, ${JSON.stringify(userPortfolioSettings)})
+        values (${userPortfolio.id}, ${null}, ${JSON.stringify(userPortfolioSettings)}); 
         `);
         });
 
@@ -288,7 +320,6 @@ export default class PortfolioManagerService extends HTTPService {
     }
 
     async editUserPortfolio(
-        user: User,
         {
             userPortfolioId,
             tradingAmountType,
@@ -299,7 +330,7 @@ export default class PortfolioManagerService extends HTTPService {
             minRobotsCount,
             options
         }: {
-            userPortfolioId: UserPorfolioDB["id"];
+            userPortfolioId: UserPortfolioDB["id"];
             tradingAmountType?: PortfolioSettings["tradingAmountType"];
             balancePercent?: PortfolioSettings["balancePercent"];
             tradingAmountCurrency?: PortfolioSettings["tradingAmountCurrency"];
@@ -307,7 +338,8 @@ export default class PortfolioManagerService extends HTTPService {
             maxRobotsCount?: PortfolioSettings["maxRobotsCount"];
             minRobotsCount?: PortfolioSettings["minRobotsCount"];
             options?: PortfolioSettings["options"];
-        }
+        },
+        user: User
     ) {
         const userPortfolio = await this.db.pg.one<UserPortfolioState>(sql`
         SELECT p.id, p.type, p.user_id, p.user_ex_acc_id, p.exchange, p.status, 
@@ -327,6 +359,7 @@ export default class PortfolioManagerService extends HTTPService {
                  ON ea.id = p.user_ex_acc_id
            WHERE p.exchange = m.exchange
              AND ups.user_portfolio_id = p.id
+             AND (ups.active = true OR ups.active_from is null)
              AND p.id = ${userPortfolioId}; 
        `);
 
@@ -377,17 +410,58 @@ export default class PortfolioManagerService extends HTTPService {
         if (!equals(userPortfolioSettings, userPortfolio.settings)) {
             this.db.pg.query(sql`
         INSERT INTO user_portfolio_settings (user_portfolio_id, active_from, user_portfolio_settings)
-        VALUES(${userPortfolio.id}, ${null} ${JSON.stringify(userPortfolioSettings)} );
-        }
+        VALUES(${userPortfolio.id}, ${null} ${JSON.stringify(userPortfolioSettings)} )
+        ON CONFLICT ON CONSTRAINT i_user_portfolio_settings_uk
+        DO UPDATE SET user_portfolio_settings = excluded.user_portfolio_settings;
         `);
         }
 
         if (
-            userPortfolio.status !== "active" ||
-            dayjs.utc().diff(userPortfolio.userPortfolioSettingsActiveFrom, "week") > 1
+            userPortfolio.status !== "started" ||
+            dayjs.utc().diff(userPortfolio.userPortfolioSettingsActiveFrom, "month") > 1
         ) {
             await this.buildUserPortfolio({ userPortfolioId: userPortfolio.id });
         }
+    }
+
+    async deleteUserPortfolio(
+        user: User,
+        {
+            userPortfolioId
+        }: {
+            userPortfolioId: UserPortfolioDB["id"];
+        }
+    ) {
+        const userPortfolio = await this.db.pg.one<{
+            id: UserPortfolioDB["id"];
+            type: UserPortfolioDB["type"];
+            userId: UserPortfolioDB["userId"];
+            status: UserPortfolioDB["status"];
+        }>(sql`
+        SELECT p.id, p.type, p.user_id, p.status
+           FROM user_portfolios p
+           WHERE p.id = ${userPortfolioId}; 
+       `);
+
+        if (userPortfolio.userId !== user.id)
+            throw new ActionsHandlerError(
+                "Current user isn't owner of this User Portfolio",
+                { userPortfolioId: userPortfolio.id },
+                "FORBIDDEN",
+                403
+            );
+
+        if (userPortfolio.type === "trading" && userPortfolio.status === "started") {
+            throw new BaseError("User portfolio must be stopped before deleting", {
+                userPortfolioId,
+                status: userPortfolio.status,
+                type: userPortfolio.type
+            });
+        }
+
+        await this.db.pg.query(sql`
+       DELETE FROM user_portfolios WHERE id = ${userPortfolioId};
+       `);
     }
 
     async buildPortfolio({ portfolioId }: { portfolioId: string }) {

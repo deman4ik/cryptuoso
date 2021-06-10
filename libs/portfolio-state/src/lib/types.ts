@@ -67,18 +67,18 @@ export interface UserPortfolioBuilderJob {
     type: "userPortfolio";
 }
 
-export interface UserPorfolioDB {
+export interface UserPortfolioDB {
     id: string;
     userId: string;
     userExAccId?: string;
     exchange: string;
     type: "signals" | "trading";
-    status: "pending" | "builded" | "active" | "stopped" | "error";
+    status: "starting" | "started" | "stopping" | "stopped" | "paused";
     fullStats?: FullStats;
     periodStats?: PeriodStats[];
 }
 
-export interface UserPortfolioState extends UserPorfolioDB {
+export interface UserPortfolioState extends UserPortfolioDB {
     userPortfolioSettingsId?: string;
     userPortfolioSettingsActiveFrom?: string;
     settings: PortfolioSettings;
@@ -89,5 +89,5 @@ export interface UserPortfolioState extends UserPorfolioDB {
         maxRobotsCount: number;
         minRobotsCount: number;
     };
-    robots?: PortfolioRobot[];
+    robots?: PortfolioRobotDB[];
 }

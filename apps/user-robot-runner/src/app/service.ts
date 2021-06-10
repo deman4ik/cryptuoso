@@ -13,13 +13,18 @@ import {
     UserRobotStatus
 } from "@cryptuoso/user-robot-state";
 import {
+    StatusSchema,
+    UserPortfolioStatus,
     UserRobotRunnerEvents,
     UserRobotRunnerPause,
     UserRobotRunnerResume,
     UserRobotRunnerSchema,
     UserRobotRunnerStart,
+    UserRobotRunnerStartPortfolio,
     UserRobotRunnerStop,
+    UserRobotRunnerStopPortfolio,
     UserRobotWorkerEvents,
+    UserRobotWorkerSchema,
     UserRobotWorkerStatus,
     USER_ROBOT_WORKER_TOPIC
 } from "@cryptuoso/user-robot-events";
@@ -38,6 +43,7 @@ import { Event } from "@cryptuoso/events";
 import { OrderStatus, SignalEvent, TradeAction } from "@cryptuoso/market";
 import { UserSub } from "@cryptuoso/billing";
 import { GA } from "@cryptuoso/analytics";
+import { UserPortfolioDB, UserPortfolioState } from "@cryptuoso/portfolio-state";
 
 export type UserRobotRunnerServiceConfig = HTTPServiceConfig;
 
@@ -68,6 +74,18 @@ export default class UserRobotRunnerService extends HTTPService {
                     roles: [UserRoles.admin, UserRoles.manager],
                     inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.RESUME],
                     handler: this._httpHandler.bind(this, this.resume.bind(this))
+                },
+                userPortfolioStart: {
+                    auth: true,
+                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
+                    inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.START_PORTFOLIO],
+                    handler: this._httpHandler.bind(this, this.startPortfolio.bind(this))
+                },
+                userPortfolioStop: {
+                    auth: true,
+                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
+                    inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.STOP_PORTFOLIO],
+                    handler: this._httpHandler.bind(this, this.stopPortfolio.bind(this))
                 }
             });
             this.events.subscribe({
@@ -432,6 +450,235 @@ export default class UserRobotRunnerService extends HTTPService {
         return userRobotsToResume.length;
     }
 
+    async syncPortfolioRobots({ userPortfolioId }: { userPortfolioId: string }) {
+        const userPortfolio = await this.db.pg.one<UserPortfolioState>(sql`
+        SELECT p.id, p.type, p.user_id, p.user_ex_acc_id, p.exchange, p.status, 
+              ups.active_from as user_portfolio_settings_active_from,
+              ups.user_portfolio_settings as settings,
+              ups.robots 
+           FROM v_user_portfolios p
+           WHERE p.id = ${userPortfolioId}; 
+       `);
+        if (userPortfolio.status !== "started") return;
+        if (userPortfolio.settings && userPortfolio.robots && Array.isArray(userPortfolio.robots)) {
+            this.db.pg.transaction(async (t) => {
+                await t.query(sql`UPDATE user_robots 
+            SET settings = jsonb_set(settings::jsonb,'{active}','false')
+            WHERE user_portfolio_id = ${userPortfolio.id};
+            `);
+
+                await t.query(sql`
+            INSERT INTO user_robots 
+            (user_portfolio_id, robot_id, user_ex_acc_id, user_id, status, settings)
+            SELECT *
+                FROM ${sql.unnest(
+                    this.db.util.prepareUnnest(
+                        userPortfolio.robots.map((r) => ({
+                            ...r,
+                            userPortfolioId: userPortfolio.id,
+                            userId: userPortfolio.userId,
+                            status: "started",
+                            settings: JSON.stringify({
+                                active: r.active,
+                                share: r.share,
+                                emulated: userPortfolio.type === "signals"
+                            })
+                        })),
+                        ["userPortfolioId", "robotId", "userExAccId", "userId", "status", "settings"]
+                    ),
+                    ["uuid", "uuid", "uuid", "uuid", "varchar", "jsonb"]
+                )}
+                ON CONFLICT ON CONSTRAINT user_robots_user_portfolio_id_robot_id_key
+                DO UPDATE SET settings = excluded.settings;
+            `);
+            });
+        } else {
+            this.log.warn(`User Portfolio #${userPortfolio.id} has no active robots`);
+        }
+    }
+
+    async startPortfolio({ id, message }: UserRobotRunnerStartPortfolio, user: User) {
+        GA.event(user.id, "portfolio", "start");
+        const userPortfolio = await this.db.pg.one<UserPortfolioState>(sql`
+        SELECT p.id, p.type, p.user_id, p.user_ex_acc_id, p.exchange, p.status, 
+              ups.active_from as user_portfolio_settings_active_from,
+              ups.user_portfolio_settings as settings
+           FROM user_portfolios p
+           LEFT JOIN v_user_portfolio_settings ups
+                 ON  ups.user_portfolio_id = p.id
+           WHERE p.exchange = m.exchange
+             AND p.id = ${id}; 
+       `);
+
+        if (!userPortfolio)
+            throw new ActionsHandlerError("User Portfolio not found", { userPortfolioId: id }, "NOT_FOUND", 404);
+
+        if (user && userPortfolio.userId !== user.id)
+            throw new ActionsHandlerError(
+                "Current user isn't owner of this User Portfolio",
+                { userPortfolioId: id },
+                "FORBIDDEN",
+                403
+            );
+
+        if (userPortfolio.status === UserRobotStatus.started) {
+            return userPortfolio.status;
+        }
+
+        if (userPortfolio.type === "trading") {
+            const userExchangeAccount = await this.db.pg.maybeOne<{
+                id: UserExchangeAccount["id"];
+                name: UserExchangeAccount["name"];
+                status: UserExchangeAccount["status"];
+            }>(sql`
+                SELECT id, name, status
+                FROM user_exchange_accs
+                WHERE id = ${userPortfolio.userExAccId};
+            `);
+
+            if (!userExchangeAccount)
+                throw new ActionsHandlerError(
+                    "User Exchange Account not found",
+                    { userExAccId: userPortfolio.userExAccId },
+                    "NOT_FOUND",
+                    404
+                );
+            if (userExchangeAccount.status !== UserExchangeAccStatus.enabled)
+                throw new ActionsHandlerError(
+                    `Something went wrong with your User Exchange Account ${userExchangeAccount.name}. Please check and update your exchange API keys.`,
+                    null,
+                    "FORBIDDEN",
+                    403
+                );
+        }
+        /*if (userRobot.status === UserRobotStatus.paused) {
+            throw new ActionsHandlerError(
+                `Something went wrong with your robot. It will be started automatically when everything is fixed.`,
+                null,
+                "FORBIDDEN",
+                403
+            );
+        }*/
+
+        const userSub = await this.db.pg.maybeOne<{ id: UserSub["id"] }>(sql`
+        SELECT id 
+        FROM user_subs
+        WHERE user_id = ${userPortfolio.userId}
+        AND status in (${"active"},${"trial"});
+        `);
+
+        if (!userSub)
+            throw new ActionsHandlerError(`Your Cryptuoso Subscription is not Active.`, null, "FORBIDDEN", 403);
+
+        const startedAt = dayjs.utc().toISOString();
+        const status = userPortfolio.settings ? "started" : "starting";
+        await this.db.pg.query(sql`
+        UPDATE user_portfolios
+        SET status = ${status},
+        message = ${message || null},
+        started_at = ${startedAt},
+        stopped_at = null
+        WHERE id = ${id};
+        `);
+
+        if (userPortfolio.settings) {
+            await this.syncPortfolioRobots({ userPortfolioId: userPortfolio.id });
+            await this.events.emit<UserPortfolioStatus>({
+                type: UserRobotWorkerEvents.STARTED_PORTFOLIO,
+                data: {
+                    userPortfolioId: id,
+                    timestamp: startedAt,
+                    status,
+                    message: message || null
+                }
+            });
+        }
+
+        return "started";
+    }
+
+    async stopPortfolio({ id, message }: UserRobotRunnerStopPortfolio, user: User) {
+        GA.event(user.id, "portfolio", "stop");
+        const userPortfolio = await this.db.pg.one<UserPortfolioState>(sql`
+        SELECT p.id, p.type, p.user_id, p.user_ex_acc_id, p.exchange, p.status, 
+              ups.active_from as user_portfolio_settings_active_from,
+              ups.user_portfolio_settings as settings
+           FROM user_portfolios p
+           LEFT JOIN v_user_portfolio_settings ups
+                 ON  ups.user_portfolio_id = p.id
+           WHERE p.exchange = m.exchange
+             AND p.id = ${id}; 
+       `);
+
+        if (!userPortfolio)
+            throw new ActionsHandlerError("User Robot not found", { userRobotId: id }, "NOT_FOUND", 404);
+
+        if (user && userPortfolio.userId !== user.id)
+            throw new ActionsHandlerError(
+                "Current user isn't owner of this User Portfolio",
+                { userPortfolioId: id },
+                "FORBIDDEN",
+                403
+            );
+
+        /*  if (userPortfolio.status === "paused") {
+            throw new ActionsHandlerError(
+                `Something went wrong with your portfolio. It will be started automatically when everything is fixed.`,
+                null,
+                "FORBIDDEN",
+                403
+            );
+        } */
+
+        if (userPortfolio.status === "stopped" || userPortfolio.status === "stopping") {
+            return userPortfolio.status;
+        }
+
+        const userRobots = await this.db.pg.any<{
+            id: UserRobotDB["id"];
+            status: UserRobotDB["status"];
+        }>(sql`SELECT id, status FROM user_robots WHERE 
+        user_portfolio_id = ${id} 
+        AND status != ${"stopped"};`);
+
+        const status = userRobots.length ? "stopping" : "stopped";
+        const stoppedAt = status === "stopped" ? dayjs.utc().toISOString() : null;
+        for (const userRobot of userRobots) {
+            await this.addUserRobotJob(
+                {
+                    userRobotId: userRobot.id,
+                    type: UserRobotJobType.stop,
+                    data: {
+                        message: message || null
+                    }
+                },
+                userRobot.status
+            );
+        }
+
+        await this.db.pg.query(sql`
+        UPDATE user_portfolios
+        SET status = ${status},
+        message = ${message || null},
+        stopped_at = ${stoppedAt}
+        WHERE id = ${id};
+        `);
+
+        if (status === "stopped") {
+            await this.events.emit<UserPortfolioStatus>({
+                type: UserRobotWorkerEvents.STOPPED_PORTFOLIO,
+                data: {
+                    userPortfolioId: id,
+                    timestamp: stoppedAt,
+                    status,
+                    message: message || null
+                }
+            });
+        }
+
+        return UserRobotStatus.stopping;
+    }
+
     #saveUserRobotHistory = async (userRobotId: string, type: string, data: { [key: string]: any }) =>
         this.db.pg.query(sql`
             INSERT INTO user_robot_history
@@ -446,6 +693,9 @@ export default class UserRobotRunnerService extends HTTPService {
         const historyType = type.replace(`${USER_ROBOT_WORKER_TOPIC}.`, "");
         this.log.info(`User Robot's #${userRobotId} ${historyType} event`, JSON.stringify(event.data));
         await this.#saveUserRobotHistory(userRobotId, historyType, event.data);
+
+        if (historyType === "started" || historyType === "stopped")
+            await this.handleUserRobotStatusEvents(<UserRobotWorkerStatus>event.data);
     }
 
     async handleSignalTradeEvents(signal: Signal) {
@@ -594,6 +844,49 @@ export default class UserRobotRunnerService extends HTTPService {
             }
         } catch (err) {
             this.log.error("Failed to check idle user orders", err);
+        }
+    }
+
+    async handleUserRobotStatusEvents(event: UserRobotWorkerStatus) {
+        if (!event.userPortfolioId) return;
+        if (event.status === UserRobotStatus.started || event.status === UserRobotStatus.stopped) {
+            const userPortfolio = await this.db.pg.one<{
+                status: UserPortfolioDB["status"];
+                robots: UserPortfolioState["robots"];
+                robotsCount: number;
+            }>(sql`
+        SELECT p.id, p.status, ups.robots, (select count(1) from user_robots ur where ur.user_portfolio_id = p.id and ur.status = ${event.status} ) as robots_count
+           FROM user_portfolios p
+           LEFT JOIN v_user_portfolio_settings ups
+                 ON  ups.user_portfolio_id = p.id
+           WHERE  p.id = ${event.userPortfolioId}; 
+       `);
+
+            if (
+                userPortfolio &&
+                (userPortfolio.status === "starting" || userPortfolio.status === "stopping") &&
+                userPortfolio.robots &&
+                userPortfolio.robots.length === userPortfolio.robotsCount
+            ) {
+                await this.db.pg.query(sql`
+                UPDATE user_portfolios
+                SET status = ${event.status},
+                stopped_at = ${event.timestamp}
+                WHERE id = ${event.userPortfolioId};
+                `);
+
+                await this.events.emit<UserPortfolioStatus>({
+                    type:
+                        event.status === "started"
+                            ? UserRobotWorkerEvents.STARTED_PORTFOLIO
+                            : UserRobotWorkerEvents.STOPPED_PORTFOLIO,
+                    data: {
+                        userPortfolioId: event.userRobotId,
+                        timestamp: event.timestamp,
+                        status: event.status
+                    }
+                });
+            }
         }
     }
 }

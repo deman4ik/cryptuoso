@@ -21,8 +21,8 @@ import {
     UserPositionJob,
     UserPositionOrderStatus,
     UserPositionStatus,
-    UserRobotCurrentSettings,
-    UserPositionDB
+    UserPositionDB,
+    UserRobotDB
 } from "./types";
 import { ConnectorJob, Priority } from "@cryptuoso/connector-state";
 import { addPercent, average, round, sortAsc, sum } from "@cryptuoso/helpers";
@@ -40,7 +40,7 @@ export class UserPosition {
     _userPortfolioId: string;
     _userId: string;
     _userExAccId: string;
-    _settings: UserRobotCurrentSettings;
+    _settings: UserRobotDB["settings"];
     _exchange: string;
     _asset: string;
     _currency: string;

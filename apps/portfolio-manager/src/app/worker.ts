@@ -83,13 +83,13 @@ const worker = {
     async buildUserPortfolio(job: UserPortfolioBuilderJob) {
         logger.info(`Initing #${job.userPortfolioId} user portfolio builder`);
         const portfolio = await pg.one<UserPortfolioState>(sql`
-            SELECT p.id, p.user_id, p.user_ex_acc_id, p.exchange, 
+            SELECT p.id, p.user_id, p.user_ex_acc_id, p.exchange, p.status,
                    ups.id as user_portfolio_settings_id, 
                    ups.active_from as user_portfolio_settings_active_from
                    ups.user_portfolio_settings as settings,
                    json_build_object('minTradeAmount', m.min_trade_amount,
                                      'feeRate', m.fee_rate) as context
-            FROM user_portfolios p, v_user_portfolio_settings ups
+            FROM user_portfolios p, user_portfolio_settings ups
                  (SELECT mk.exchange, 
 	                     max(mk.min_amount_currency) as min_trade_amount, 
 	                     max(mk.fee_rate) as fee_rate 
@@ -97,6 +97,12 @@ const worker = {
                   GROUP BY mk.exchange) m
             WHERE p.exchange = m.exchange
               AND p.id = ups.user_portfolio_id
+              AND (ups.active_from is null OR ups.active_from = ((SELECT max(s.active_from) AS max
+                    FROM user_portfolio_settings s
+                    WHERE s.user_portfolio_id = p.user_portfolio_id 
+                      AND s.active_from IS NOT NULL 
+                      AND s.active_from < now()))
+                  )
               AND p.id = ${job.userPortfolioId}; 
         `);
         const positions: BasePosition[] = await DataStream.from(
@@ -125,45 +131,32 @@ const worker = {
         const result = await userPortfolioBuilder.build();
 
         await pg.transaction(async (t) => {
-            await t.query(sql`
-            UPDATE user_portfolios SET status = ${"builded"}
-            WHERE id = ${result.portfolio.id}
-            `);
-
             await t.query(sql`UPDATE user_portfolio_settings 
-            SET user_portfolio_settings = ${JSON.stringify(result.portfolio.settings)},
-            active_from = ${dayjs.utc().toISOString()}
-            WHERE id = ${result.portfolio.userPortfolioSettingsId};`);
-
-            await t.query(sql`UPDATE user_robots 
-            SET settings = jsonb_set(settings::jsonb,'{active}','false')
+            SET active = ${false}
             WHERE user_portfolio_id = ${result.portfolio.id};
             `);
 
-            await t.query(sql`
-            INSERT INTO user_robots 
-            (user_portfolio_id, robot_id, user_ex_acc_id, user_id, status, settings)
-            SELECT *
-                FROM ${sql.unnest(
-                    pgUtil.prepareUnnest(
-                        result.portfolio.robots.map((r) => ({
-                            ...r,
-                            userPortfolioId: result.portfolio.id,
-                            userId: result.portfolio.userId,
-                            status: "stopped",
-                            settings: JSON.stringify({
-                                active: r.active,
-                                share: r.share,
-                                emulated: result.portfolio.type === "signals"
-                            })
-                        })),
-                        ["userPortfolioId", "robotId", "userExAccId", "userId", "status", "settings"]
-                    ),
-                    ["uuid", "uuid", "uuid", "uuid", "varchar", "jsonb"]
-                )}
-                ON CONFLICT ON CONSTRAINT user_robots_user_portfolio_id_robot_id_key
-                DO UPDATE SET settings = excluded.settings;
-            `);
+            if (portfolio.userPortfolioSettingsActiveFrom) {
+                await t.query(sql`
+                INSERT INTO user_portfolio_settings 
+                (user_portfolio_settings, 
+                robots, 
+                active, 
+                active_from)
+                 VALUES (
+                  ${JSON.stringify(result.portfolio.settings)}, 
+                 ${JSON.stringify(result.portfolio.robots)},
+                ${true}, 
+                ${dayjs.utc().toISOString()}
+            );`);
+            } else {
+                await t.query(sql`UPDATE user_portfolio_settings 
+            SET user_portfolio_settings = ${JSON.stringify(result.portfolio.settings)},
+            robots = ${JSON.stringify(result.portfolio.robots)},
+            active = ${true},
+            active_from = ${dayjs.utc().toISOString()}
+            WHERE id = ${result.portfolio.userPortfolioSettingsId};`);
+            }
         });
         logger.info(`#${userPortfolioBuilder.portfolio.id} user portfolio build finished`);
     }

@@ -1902,9 +1902,8 @@ describe("Test User Robot", () => {
             positions: [],
             currentPrice: 6500,
             ...robotParams,
-            userRobotSettings: {
-                volumeType: "balancePercent",
-                balancePercent: 100,
+            settings: {
+                ...robotParams.settings,
                 active: false
             }
         });
@@ -1941,9 +1940,8 @@ describe("Test User Robot", () => {
             positions: [],
             currentPrice: 6500,
             ...robotParams,
-            userRobotSettings: {
-                volumeType: "balancePercent",
-                balancePercent: 100,
+            settings: {
+                ...robotParams.settings,
                 active: true
             }
         });
@@ -2047,7 +2045,9 @@ describe("Test Emulated User Robot", () => {
             status: UserRobotStatus.started,
             startedAt: dayjs.utc("2019-10-25T00:00:00.000Z").toISOString(),
             positions: [],
-            userPortfolioStatus: "signals",
+            userPortfolio: {
+                type: "signals"
+            },
             currentPrice: 6500,
             ...robotParams
         });
@@ -2123,7 +2123,7 @@ describe("Test Emulated User Robot", () => {
         };
         userRobot = new UserRobot({
             ...userRobot.state,
-            userPortfolioStatus: "signals",
+            userPortfolio: { type: "signals" },
             exchange: "kraken",
             asset: "BTC",
             currency: "USD",

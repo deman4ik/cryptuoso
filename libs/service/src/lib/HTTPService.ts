@@ -322,12 +322,12 @@ export class HTTPService extends BaseService {
 
     async HTTPWithAuthHandler<T>(
         handler: {
-            (user: User, params: T): Promise<any>;
+            (params: T, user: User): Promise<any>;
         },
         req: RequestExtended,
         res: any
     ) {
-        const result = await handler(req.meta.user, req.body.input);
+        const result = await handler(req.body.input, req.meta.user);
 
         res.send(result || { result: "OK" });
 
