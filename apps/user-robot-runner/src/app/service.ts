@@ -13,7 +13,6 @@ import {
     UserRobotStatus
 } from "@cryptuoso/user-robot-state";
 import {
-    StatusSchema,
     UserPortfolioStatus,
     UserRobotRunnerEvents,
     UserRobotRunnerPause,
@@ -24,7 +23,6 @@ import {
     UserRobotRunnerStop,
     UserRobotRunnerStopPortfolio,
     UserRobotWorkerEvents,
-    UserRobotWorkerSchema,
     UserRobotWorkerStatus,
     USER_ROBOT_WORKER_TOPIC
 } from "@cryptuoso/user-robot-events";
@@ -44,6 +42,11 @@ import { OrderStatus, SignalEvent, TradeAction } from "@cryptuoso/market";
 import { UserSub } from "@cryptuoso/billing";
 import { GA } from "@cryptuoso/analytics";
 import { UserPortfolioDB, UserPortfolioState } from "@cryptuoso/portfolio-state";
+import {
+    PortfolioManagerOutEvents,
+    PortfolioManagerOutSchema,
+    PortfolioManagerUserPortfolioBuilded
+} from "@cryptuoso/portfolio-events";
 
 export type UserRobotRunnerServiceConfig = HTTPServiceConfig;
 
@@ -112,6 +115,10 @@ export default class UserRobotRunnerService extends HTTPService {
                 [UserRobotRunnerEvents.STOP]: {
                     handler: this.stop.bind(this),
                     schema: UserRobotRunnerSchema[UserRobotRunnerEvents.STOP]
+                },
+                [PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED]: {
+                    handler: this.handleUserPortfolioBuilded.bind(this),
+                    schema: PortfolioManagerOutSchema[PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED]
                 }
             });
             this.addOnStartHandler(this.onServiceStart);
@@ -677,6 +684,47 @@ export default class UserRobotRunnerService extends HTTPService {
         }
 
         return UserRobotStatus.stopping;
+    }
+
+    async handleUserPortfolioBuilded({ userPortfolioId }: PortfolioManagerUserPortfolioBuilded) {
+        try {
+            const userPortfolio = await this.db.pg.one<{
+                id: UserPortfolioDB["id"];
+                status: UserPortfolioDB["status"];
+            }>(sql`
+        SELECT p.id,  p.status
+           FROM user_portfolios p
+           WHERE p.id = ${userPortfolioId}; 
+       `);
+
+            const startedAt = dayjs.utc().toISOString();
+            const status = userPortfolio.status === "starting" ? "started" : null;
+
+            if (status) {
+                await this.db.pg.query(sql`
+        UPDATE user_portfolios
+        SET status = ${status},
+        started_at = ${startedAt}
+        WHERE id = ${userPortfolioId};
+        `);
+            }
+
+            await this.syncPortfolioRobots({ userPortfolioId });
+
+            if (status) {
+                await this.events.emit<UserPortfolioStatus>({
+                    type: UserRobotWorkerEvents.STARTED_PORTFOLIO,
+                    data: {
+                        userPortfolioId,
+                        timestamp: startedAt,
+                        status,
+                        message: null
+                    }
+                });
+            }
+        } catch (error) {
+            this.log.error(`Failed to handle user portfolio's #${userPortfolioId} builded event`);
+        }
     }
 
     #saveUserRobotHistory = async (userRobotId: string, type: string, data: { [key: string]: any }) =>

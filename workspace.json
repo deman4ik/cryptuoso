@@ -2584,6 +2584,27 @@
                     }
                 }
             }
+        },
+        "portfolio-events": {
+            "root": "libs/portfolio-events",
+            "sourceRoot": "libs/portfolio-events/src",
+            "projectType": "library",
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["libs/portfolio-events/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/libs/portfolio-events"],
+                    "options": {
+                        "jestConfig": "libs/portfolio-events/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
         }
     },
     "cli": {

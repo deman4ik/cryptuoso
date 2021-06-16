@@ -143,7 +143,8 @@ export const enum UserRobotJobType {
     stop = "stop",
     pause = "pause",
     signal = "signal",
-    order = "order"
+    order = "order",
+    disable = "disable"
 }
 
 export interface UserRobotJob {

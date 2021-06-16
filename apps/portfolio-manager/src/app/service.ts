@@ -21,6 +21,18 @@ import { sql } from "@cryptuoso/postgres";
 import { equals, nvl } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
 import { ActionsHandlerError, BaseError } from "@cryptuoso/errors";
+import {
+    PortfolioManagerInSchema,
+    PortfolioManagerInEvents,
+    PortfolioManagerBuildPortfolio,
+    PotrfolioManagerBuildPortfolios,
+    PortfolioManagerBuildUserPortfolio,
+    PortfolioManagerPortfolioBuildError,
+    PortfolioManagerOutEvents,
+    PortfolioManagerUserPortfolioBuildError,
+    PortfolioManagerPortfolioBuilded,
+    PortfolioManagerUserPortfolioBuilded
+} from "@cryptuoso/portfolio-events";
 
 export type PortfolioManagerServiceConfig = HTTPServiceConfig;
 
@@ -48,16 +60,12 @@ export default class PortfolioManagerService extends HTTPService {
                     handler: this.HTTPHandler.bind(this, this.initPortfolios.bind(this))
                 },
                 buildPortfolio: {
-                    inputSchema: {
-                        portfolioId: "uuid"
-                    },
+                    inputSchema: PortfolioManagerInSchema[PortfolioManagerInEvents.BUILD_PORTFOLIO],
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.buildPortfolio.bind(this))
                 },
                 buildPortfolios: {
-                    inputSchema: {
-                        exchange: "string"
-                    },
+                    inputSchema: PortfolioManagerInSchema[PortfolioManagerInEvents.BUILD_PORTFOLIOS],
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.buildPortfolios.bind(this))
                 },
@@ -121,6 +129,15 @@ export default class PortfolioManagerService extends HTTPService {
                     },
                     roles: [UserRoles.manager, UserRoles.user, UserRoles.vip],
                     handler: this.HTTPWithAuthHandler.bind(this, this.deleteUserPortfolio.bind(this))
+                },
+                buildUserPortfolio: {
+                    inputSchema: PortfolioManagerInSchema[PortfolioManagerInEvents.BUILD_USER_PORTFOLIO],
+                    roles: [UserRoles.admin, UserRoles.manager],
+                    handler: this.HTTPHandler.bind(this, this.buildUserPortfolio.bind(this))
+                },
+                buildUserPortfolios: {
+                    roles: [UserRoles.admin, UserRoles.manager],
+                    handler: this.HTTPHandler.bind(this, this.buildUserPortfolios.bind(this))
                 }
             });
             this.addOnStartHandler(this.onServiceStart);
@@ -464,7 +481,7 @@ export default class PortfolioManagerService extends HTTPService {
        `);
     }
 
-    async buildPortfolio({ portfolioId }: { portfolioId: string }) {
+    async buildPortfolio({ portfolioId }: PortfolioManagerBuildPortfolio) {
         await this.addJob<PortfolioBuilderJob>(
             "portfolioBuilder",
             "build",
@@ -477,7 +494,7 @@ export default class PortfolioManagerService extends HTTPService {
         );
     }
 
-    async buildPortfolios({ exchange }: { exchange: string }) {
+    async buildPortfolios({ exchange }: PotrfolioManagerBuildPortfolios) {
         const portfolios = await this.db.pg.many<{ id: PortfolioDB["id"] }>(sql`
         SELECT id FROM portfolios where exchange = ${exchange};
         `);
@@ -495,7 +512,7 @@ export default class PortfolioManagerService extends HTTPService {
         }
     }
 
-    async buildUserPortfolio({ userPortfolioId }: { userPortfolioId: string }) {
+    async buildUserPortfolio({ userPortfolioId }: PortfolioManagerBuildUserPortfolio) {
         await this.addJob<UserPortfolioBuilderJob>(
             "portfolioBuilder",
             "build",
@@ -508,6 +525,24 @@ export default class PortfolioManagerService extends HTTPService {
         );
     }
 
+    async buildUserPortfolios() {
+        const userPortfolios = await this.db.pg.many<{ id: UserPortfolioDB["id"] }>(sql`
+        SELECT id FROM user_portfolios where status = ${"active"};
+        `);
+        for (const { id } of userPortfolios) {
+            await this.addJob<UserPortfolioBuilderJob>(
+                "portfolioBuilder",
+                "build",
+                { userPortfolioId: id, type: "userPortfolio" },
+                {
+                    jobId: id,
+                    removeOnComplete: true,
+                    removeOnFail: 10
+                }
+            );
+        }
+    }
+
     async portfolioBuilderProcess(job: Job<PortfolioBuilderJob | UserPortfolioBuilderJob, boolean>) {
         try {
             const beacon = this.lightship.createBeacon();
@@ -515,9 +550,23 @@ export default class PortfolioManagerService extends HTTPService {
             const portfolioWorker = await spawn<PortfolioWorker>(new ThreadsWorker("./worker"));
 
             try {
-                if (job.data.type === "portfolio") await portfolioWorker.buildPortfolio(job.data);
-                else if (job.data.type === "userPortfolio") await portfolioWorker.buildUserPortfolio(job.data);
-                else throw new Error("Unsupported job type");
+                if (job.data.type === "portfolio") {
+                    await portfolioWorker.buildPortfolio(job.data);
+                    await this.events.emit<PortfolioManagerPortfolioBuilded>({
+                        type: PortfolioManagerOutEvents.PORTFOLIO_BUILDED,
+                        data: {
+                            portfolioId: job.data.portfolioId
+                        }
+                    });
+                } else if (job.data.type === "userPortfolio") {
+                    await portfolioWorker.buildUserPortfolio(job.data);
+                    await this.events.emit<PortfolioManagerUserPortfolioBuilded>({
+                        type: PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED,
+                        data: {
+                            userPortfolioId: job.data.userPortfolioId
+                        }
+                    });
+                } else throw new Error("Unsupported job type");
                 this.log.info(`Job ${job.id} processed`);
             } finally {
                 await Thread.terminate(portfolioWorker);
@@ -525,6 +574,23 @@ export default class PortfolioManagerService extends HTTPService {
             }
         } catch (error) {
             this.log.error(error);
+            if (job?.data?.type === "portfolio") {
+                await this.events.emit<PortfolioManagerPortfolioBuildError>({
+                    type: PortfolioManagerOutEvents.PORTFOLIO_BUILD_ERROR,
+                    data: {
+                        portfolioId: job.data.portfolioId,
+                        error: error.message
+                    }
+                });
+            } else if (job?.data?.type === "userPortfolio") {
+                await this.events.emit<PortfolioManagerUserPortfolioBuildError>({
+                    type: PortfolioManagerOutEvents.USER_PORTFOLIO_BUILD_ERROR,
+                    data: {
+                        userPortfolioId: job.data.userPortfolioId,
+                        error: error.message
+                    }
+                });
+            }
         }
     }
 }

@@ -482,7 +482,10 @@ WHERE p.user_robot_id =${userRobotId}
                 eventsToSend.push(pausedEvent);
             } else throw new BaseError(`Unknown user robot job type "${type}"`, job);
 
-            if (userRobot.status === UserRobotStatus.stopping && !userRobot.hasActivePositions) {
+            if (
+                (userRobot.status === UserRobotStatus.stopping || userRobot.state.settings?.active === false) &&
+                !userRobot.hasActivePositions
+            ) {
                 userRobot.setStop();
                 const stoppedEvent: NewEvent<UserRobotWorkerStatus> = {
                     type: UserRobotWorkerEvents.STOPPED,
