@@ -10,5 +10,6 @@ module.exports = {
         "^.+\\.[tj]s$": "ts-jest"
     },
     moduleFileExtensions: ["ts", "js", "html"],
-    coverageDirectory: "../../coverage/apps/exwatcher-kucoin"
+    coverageDirectory: "../../coverage/apps/exwatcher-kucoin",
+    testEnvironment: "node"
 };

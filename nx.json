@@ -19,133 +19,34 @@
         }
     },
     "projects": {
-        "dayjs": {
-            "tags": []
-        },
-        "logger": {
-            "tags": []
-        },
-        "errors": {
-            "tags": []
-        },
-        "helpers": {
-            "tags": []
-        },
-        "ccxt-public": {
-            "tags": []
-        },
-        "service": {
-            "tags": []
-        },
-        "importer-runner": {
-            "tags": []
-        },
-        "importer-state": {
-            "tags": []
-        },
-        "postgres": {
-            "tags": []
-        },
-        "events": {
-            "tags": []
-        },
-        "importer-events": {
-            "tags": []
-        },
-        "importer-worker": {
-            "tags": []
-        },
-        "exwatcher-runner": {
-            "tags": []
-        },
-        "exwatcher-bitfinex": {
-            "tags": []
-        },
-        "exwatcher-kraken": {
-            "tags": []
-        },
-        "exwatcher-binance": {
-            "tags": []
-        },
-        "exwatcher-base": {
-            "tags": []
-        },
-        "market": {
-            "tags": []
-        },
-        "exwatcher-events": {
-            "tags": []
-        },
-        "backtester-runner": {
-            "tags": []
-        },
-        "backtester-worker": {
-            "tags": []
-        },
-        "backtester-state": {
-            "tags": []
-        },
-        "robot-state": {
-            "tags": []
-        },
-        "robot-indicators": {
-            "tags": []
-        },
-        "robot-events": {
-            "tags": []
-        },
-        "backtester-events": {
-            "tags": []
-        },
-        "stats-calc": {
+        "analytics": {
             "tags": []
         },
         "auth": {
             "tags": []
         },
-        "user-state": {
+        "auth-utils": {
             "tags": []
         },
-        "mail": {
+        "backtester-events": {
             "tags": []
         },
-        "stats-calc-worker": {
+        "backtester-runner": {
             "tags": []
         },
-        "stats-calc-runner": {
+        "backtester-state": {
             "tags": []
         },
-        "stats-calc-events": {
+        "backtester-worker": {
             "tags": []
         },
-        "test-helpers": {
+        "billing": {
             "tags": []
         },
-        "utils": {
+        "ccxt-private": {
             "tags": []
         },
-        "events-manager": {
-            "tags": []
-        },
-        "user-signal-state": {
-            "tags": []
-        },
-        "user-robot-state": {
-            "tags": []
-        },
-        "user-profile": {
-            "tags": []
-        },
-        "robot-settings": {
-            "tags": []
-        },
-        "robot-runner": {
-            "tags": []
-        },
-        "robot-worker": {
-            "tags": []
-        },
-        "user-robot-events": {
+        "ccxt-public": {
             "tags": []
         },
         "connector-events": {
@@ -154,67 +55,79 @@
         "connector-runner": {
             "tags": []
         },
-        "connector-worker": {
-            "tags": []
-        },
-        "user-robot-runner": {
-            "tags": []
-        },
-        "user-robot-worker": {
-            "tags": []
-        },
         "connector-state": {
             "tags": []
         },
-        "ccxt-private": {
+        "connector-worker": {
             "tags": []
         },
-        "notifications": {
+        "dayjs": {
             "tags": []
         },
-        "support": {
+        "errors": {
             "tags": []
         },
-        "telegram-bot": {
+        "events": {
             "tags": []
         },
-        "graphql-client": {
+        "events-manager": {
             "tags": []
         },
-        "auth-utils": {
+        "exwatcher-base": {
             "tags": []
         },
-        "exwatcher-kucoin": {
+        "exwatcher-binance": {
+            "tags": []
+        },
+        "exwatcher-bitfinex": {
+            "tags": []
+        },
+        "exwatcher-events": {
             "tags": []
         },
         "exwatcher-huobipro": {
             "tags": []
         },
-        "user-sub": {
+        "exwatcher-kraken": {
             "tags": []
         },
-        "billing": {
+        "exwatcher-kucoin": {
             "tags": []
         },
-        "analytics": {
+        "exwatcher-runner": {
             "tags": []
         },
-        "webhooks": {
+        "graphql-client": {
             "tags": []
         },
-        "user-sub-events": {
+        "helpers": {
             "tags": []
         },
-        "trade-stats": {
+        "importer-events": {
             "tags": []
         },
-        "trade-stats-runner": {
+        "importer-runner": {
             "tags": []
         },
-        "trade-stats-worker": {
+        "importer-state": {
             "tags": []
         },
-        "trade-stats-events": {
+        "importer-worker": {
+            "tags": []
+        },
+        "logger": {
+            "tags": []
+        },
+        "mail": {
+            "tags": []
+        },
+        "market": {
+            "tags": []
+        },
+        "notifications": {
+            "tags": []
+        },
+        "portfolio-events": {
             "tags": []
         },
         "portfolio-manager": {
@@ -223,7 +136,94 @@
         "portfolio-state": {
             "tags": []
         },
-        "portfolio-events": {
+        "postgres": {
+            "tags": []
+        },
+        "robot-events": {
+            "tags": []
+        },
+        "robot-indicators": {
+            "tags": []
+        },
+        "robot-runner": {
+            "tags": []
+        },
+        "robot-settings": {
+            "tags": []
+        },
+        "robot-state": {
+            "tags": []
+        },
+        "robot-worker": {
+            "tags": []
+        },
+        "service": {
+            "tags": []
+        },
+        "stats-calc": {
+            "tags": []
+        },
+        "stats-calc-events": {
+            "tags": []
+        },
+        "stats-calc-runner": {
+            "tags": []
+        },
+        "stats-calc-worker": {
+            "tags": []
+        },
+        "support": {
+            "tags": []
+        },
+        "telegram-bot": {
+            "tags": []
+        },
+        "test-helpers": {
+            "tags": []
+        },
+        "trade-stats": {
+            "tags": []
+        },
+        "trade-stats-events": {
+            "tags": []
+        },
+        "trade-stats-runner": {
+            "tags": []
+        },
+        "trade-stats-worker": {
+            "tags": []
+        },
+        "user-profile": {
+            "tags": []
+        },
+        "user-robot-events": {
+            "tags": []
+        },
+        "user-robot-runner": {
+            "tags": []
+        },
+        "user-robot-state": {
+            "tags": []
+        },
+        "user-robot-worker": {
+            "tags": []
+        },
+        "user-signal-state": {
+            "tags": []
+        },
+        "user-state": {
+            "tags": []
+        },
+        "user-sub": {
+            "tags": []
+        },
+        "user-sub-events": {
+            "tags": []
+        },
+        "utils": {
+            "tags": []
+        },
+        "webhooks": {
             "tags": []
         }
     },
