@@ -33,6 +33,7 @@ import {
     PortfolioManagerPortfolioBuilded,
     PortfolioManagerUserPortfolioBuilded
 } from "@cryptuoso/portfolio-events";
+import { UserRobotStatus } from "@cryptuoso/user-robot-state";
 
 export type PortfolioManagerServiceConfig = HTTPServiceConfig;
 
@@ -266,6 +267,15 @@ export default class PortfolioManagerService extends HTTPService {
         `);
 
         if (userPortfolioExists) throw new Error("User portfolio already exists");
+
+        const oldUserRobots = await this.db.pg.oneFirst<number>(sql`
+        SELECT COUNT(1)
+        FROM user_robots
+        WHERE user_id = ${userId}
+        AND status != ${UserRobotStatus.stopped}
+        `);
+
+        if (oldUserRobots > 0) throw new Error("You already have started robots");
 
         const { minTradeAmount } = await this.db.pg.one<{ minTradeAmount: PortfolioContext["minTradeAmount"] }>(sql`
         SELECT max(m.min_amount_currency) as min_trade_amount

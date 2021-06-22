@@ -546,6 +546,22 @@ export default class UserProfileService extends HTTPService {
             }
         }
 
+        if (!existed) {
+            const anotherAccountExists = await this.db.pg.oneFirst<number>(sql`
+                SELECT count(1)
+                FROM user_exchange_accs
+                WHERE user_id = ${userId}
+                 AND exchange = ${exchange};
+            `);
+            if (anotherAccountExists > 0)
+                throw new ActionsHandlerError(
+                    "User Exchange Account already exists. Delete Exchange Account before creating a new one.",
+                    null,
+                    "FORBIDDEN",
+                    500
+                );
+        }
+
         const connector = new PrivateConnector({
             exchange,
             keys: {
@@ -573,6 +589,7 @@ export default class UserProfileService extends HTTPService {
             pass: pass && (await this.encrypt(userId, pass))
         };
 
+        /*
         if (!existed) {
             if (!name || name === "") {
                 const accExists = await this.db.pg.maybeOne<{ name: string }>(sql`
@@ -604,6 +621,10 @@ export default class UserProfileService extends HTTPService {
                         403
                     );
             }
+        }
+        */
+        if (!name) {
+            name = `${formatExchange(exchange)}`;
         }
 
         const exchangeAcc: UserExchangeAccount = {
@@ -902,12 +923,13 @@ export default class UserProfileService extends HTTPService {
 
         const userRobotExists = await this.db.pg.maybeOne<{
             id: UserRobotDB["id"];
+            userPortfolioId?: UserRobotDB["userPortfolioId"];
             userId: UserRobotDB["userId"];
             robotId: UserRobotDB["robotId"];
             userExAccId: UserRobotDB["userExAccId"];
             userRobotSettings: UserRobotSettings;
         }>(sql`
-            SELECT ur.id, ur.user_id, ur.robot_id, ur.user_ex_acc_id, s.user_robot_settings
+            SELECT ur.id, ur.user_portfolio_id, ur.user_id, ur.robot_id, ur.user_ex_acc_id, s.user_robot_settings
             FROM user_robots ur, v_user_robot_settings s
             WHERE user_robot_id = ur.id
               AND ur.id = ${id};
@@ -922,6 +944,14 @@ export default class UserProfileService extends HTTPService {
                 { userRobotId: id },
                 "FORBIDDEN",
                 403
+            );
+
+        if (userRobotExists.userPortfolioId)
+            throw new ActionsHandlerError(
+                "Editing user robot from portfolio is not allowed",
+                { userRobotId: id, userPortfolioId: userRobotExists.userPortfolioId },
+                "FORBIDDEN",
+                500
             );
         const { userRobotSettings: currentUserRobotSettings } = userRobotExists;
 
@@ -981,11 +1011,12 @@ export default class UserProfileService extends HTTPService {
 
         const userRobotExists = await this.db.pg.maybeOne<{
             id: UserRobotDB["id"];
+            userPortfolioId?: UserRobotDB["userPortfolioId"];
             robotId: UserRobotDB["robotId"];
             userId: UserRobotDB["userId"];
             status: UserRobotDB["status"];
         }>(sql`
-            SELECT id, robot_id, user_id, status
+            SELECT id, user_portfolio_id, robot_id, user_id, status
             FROM user_robots
             WHERE id = ${id};
         `);
@@ -999,6 +1030,14 @@ export default class UserProfileService extends HTTPService {
                 { userRobotId: id },
                 "FORBIDDEN",
                 403
+            );
+
+        if (userRobotExists.userPortfolioId)
+            throw new ActionsHandlerError(
+                "Editing user robot from portfolio is not allowed",
+                { userRobotId: id, userPortfolioId: userRobotExists.userPortfolioId },
+                "FORBIDDEN",
+                500
             );
 
         if (userRobotExists.status !== UserRobotStatus.stopped && userRobotExists.status !== UserRobotStatus.paused)
