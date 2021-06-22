@@ -100,7 +100,7 @@ export const enum UserRobotStatus {
 
 export interface UserRobotDB {
     id: string;
-    userExAccId: string;
+    userExAccId?: string;
     userId: string;
     robotId: string;
     userPortfolioId?: string;
@@ -144,14 +144,20 @@ export const enum UserRobotJobType {
     pause = "pause",
     signal = "signal",
     order = "order",
-    disable = "disable"
+    disable = "disable",
+    confirmTrade = "confirmTrade"
+}
+
+export interface UserRobotConfirmTradeJob {
+    userPositionId: string;
+    cancel?: boolean;
 }
 
 export interface UserRobotJob {
     id?: string;
     userRobotId: string;
     type: UserRobotJobType;
-    data?: SignalEvent | OrdersStatusEvent | { message?: string };
+    data?: SignalEvent | OrdersStatusEvent | { message?: string } | UserRobotConfirmTradeJob;
     retries?: number;
     error?: string;
 }

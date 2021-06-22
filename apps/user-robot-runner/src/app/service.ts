@@ -14,6 +14,7 @@ import {
 } from "@cryptuoso/user-robot-state";
 import {
     UserPortfolioStatus,
+    UserRobotRunnerConfirmTrade,
     UserRobotRunnerEvents,
     UserRobotRunnerPause,
     UserRobotRunnerResume,
@@ -77,6 +78,12 @@ export default class UserRobotRunnerService extends HTTPService {
                     roles: [UserRoles.admin, UserRoles.manager],
                     inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.RESUME],
                     handler: this._httpHandler.bind(this, this.resume.bind(this))
+                },
+                userRobotConfirmTrade: {
+                    auth: true,
+                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
+                    inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.CONFIRM_TRADE],
+                    handler: this.HTTPWithAuthHandler.bind(this, this.confirmTrade.bind(this))
                 },
                 userPortfolioStart: {
                     auth: true,
@@ -455,6 +462,40 @@ export default class UserRobotRunnerService extends HTTPService {
         }
 
         return userRobotsToResume.length;
+    }
+
+    async confirmTrade({ userRobotId, userPositionId, cancel }: UserRobotRunnerConfirmTrade, user: User) {
+        const userRobot = await this.db.pg.maybeOne<{
+            id: UserRobotDB["id"];
+            userId: UserRobotDB["userId"];
+            status: UserRobotStatus;
+        }>(sql`
+        SELECT id, user_id, status 
+          FROM user_robots 
+          WHERE id = ${userRobotId}
+            and status = ${UserRobotStatus.started};
+        `);
+
+        if (!userRobot) throw new ActionsHandlerError("User Robot not found", { userRobotId }, "NOT_FOUND", 404);
+
+        if (user && userRobot.userId !== user.id)
+            throw new ActionsHandlerError(
+                "Current user isn't owner of this User Robot",
+                { userRobotId },
+                "FORBIDDEN",
+                403
+            );
+        await this.addUserRobotJob(
+            {
+                userRobotId,
+                type: UserRobotJobType.confirmTrade,
+                data: {
+                    userPositionId,
+                    cancel
+                }
+            },
+            UserRobotStatus.started
+        );
     }
 
     async syncPortfolioRobots({ userPortfolioId }: { userPortfolioId: string }) {

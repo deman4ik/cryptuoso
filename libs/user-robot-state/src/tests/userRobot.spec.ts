@@ -2158,7 +2158,7 @@ describe("Test Emulated User Robot", () => {
         };
 
         userRobot.handleSignal(signalOpen);
-        userRobot.confirmTrade(userRobot.positions[0].id, true);
+        userRobot.confirmTrade({ userPositionId: userRobot.positions[0].id, cancel: true });
         expect(userRobot.positions[0].status).toBe(UserPositionStatus.canceled);
     });
 
@@ -2182,7 +2182,7 @@ describe("Test Emulated User Robot", () => {
         };
 
         userRobot.handleSignal(signalOpen);
-        userRobot.confirmTrade(userRobot.positions[0].id);
+        userRobot.confirmTrade({ userPositionId: userRobot.positions[0].id });
         expect(userRobot.positions[0].status).toBe(UserPositionStatus.open);
     });
 
@@ -2206,7 +2206,7 @@ describe("Test Emulated User Robot", () => {
         };
 
         userRobot.handleSignal(signalOpen);
-        userRobot.confirmTrade(userRobot.positions[0].id);
+        userRobot.confirmTrade({ userPositionId: userRobot.positions[0].id });
         const signalClose: SignalEvent = {
             id: uuid(),
             robotId,
@@ -2248,7 +2248,7 @@ describe("Test Emulated User Robot", () => {
         };
 
         userRobot.handleSignal(signalOpen);
-        userRobot.confirmTrade(userRobot.positions[0].id);
+        userRobot.confirmTrade({ userPositionId: userRobot.positions[0].id });
         const signalClose: SignalEvent = {
             id: uuid(),
             robotId,
@@ -2291,7 +2291,7 @@ describe("Test Emulated User Robot", () => {
         };
 
         userRobot.handleSignal(signalOpen);
-        userRobot.confirmTrade(userRobot.positions[0].id);
+        userRobot.confirmTrade({ userPositionId: userRobot.positions[0].id });
         const firstUserPositionId = userRobot.positions[0].id;
 
         const signalOpenNew: SignalEvent = {
@@ -2337,7 +2337,7 @@ describe("Test Emulated User Robot", () => {
         };
 
         userRobot.handleSignal(signalOpen);
-        userRobot.confirmTrade(userRobot.positions[0].id);
+        userRobot.confirmTrade({ userPositionId: userRobot.positions[0].id });
 
         const signalOpenNew: SignalEvent = {
             id: uuid(),
@@ -2381,7 +2381,7 @@ describe("Test Emulated User Robot", () => {
         };
 
         userRobot.handleSignal(signalOpen);
-        userRobot.confirmTrade(userRobot.positions[0].id);
+        userRobot.confirmTrade({ userPositionId: userRobot.positions[0].id });
 
         userRobot.stop();
 

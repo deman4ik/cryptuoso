@@ -10,7 +10,8 @@ import {
     UserPositionDB,
     UserRobotStateExt,
     UserPositionStatus,
-    UserTradeEvent
+    UserTradeEvent,
+    UserRobotConfirmTradeJob
 } from "@cryptuoso/user-robot-state";
 import {
     UserRobotWorkerError,
@@ -28,6 +29,7 @@ import { DatabaseTransactionConnectionType } from "slonik";
 import { calcBalancePercent, calcCurrencyDynamic } from "@cryptuoso/robot-settings";
 import dayjs from "@cryptuoso/dayjs";
 import { keysToCamelCase, round, roundFirstSignificant } from "@cryptuoso/helpers";
+import { TradeStatsRunnerEvents, TradeStatsRunnerUserRobot } from "@cryptuoso/trade-stats-events";
 
 export type UserRobotRunnerServiceConfig = BaseServiceConfig;
 
@@ -480,6 +482,8 @@ WHERE p.user_robot_id =${userRobotId}
                     }
                 };
                 eventsToSend.push(pausedEvent);
+            } else if (type === UserRobotJobType.confirmTrade) {
+                if (userRobot.state.settings.emulated) userRobot.confirmTrade(data as UserRobotConfirmTradeJob);
             } else throw new BaseError(`Unknown user robot job type "${type}"`, job);
 
             if (
@@ -526,6 +530,17 @@ WHERE p.user_robot_id =${userRobotId}
                         }
                     };
                     eventsToSend.push(statsCalcEvent);
+                    //TODO: deprecate
+
+                    if (userRobot.state.userPortfolioId) {
+                        const tradeStatsEvent: NewEvent<TradeStatsRunnerUserRobot> = {
+                            type: TradeStatsRunnerEvents.USER_ROBOT,
+                            data: {
+                                userRobotId: userRobot.id
+                            }
+                        };
+                        eventsToSend.push(tradeStatsEvent);
+                    }
                 }
 
                 if (userRobot.recentTrades.length) {

@@ -15,6 +15,7 @@ export const enum UserRobotRunnerEvents {
     STOP = "in-user-robot-runner.stop",
     PAUSE = "in-user-robot-runner.pause",
     RESUME = "in-user-robot-runner.resume",
+    CONFIRM_TRADE = "in-user-robot-runner.confirm-trade",
     START_PORTFOLIO = "in-user-robot-runner.start-portfolio",
     STOP_PORTFOLIO = "in-user-robot-runner.stop-portfolio"
 }
@@ -53,6 +54,11 @@ export const UserRobotRunnerSchema = {
     [UserRobotRunnerEvents.STOP]: RunnerSchema,
     [UserRobotRunnerEvents.PAUSE]: RunnerPauseSchema,
     [UserRobotRunnerEvents.RESUME]: RunnerPauseSchema,
+    [UserRobotRunnerEvents.CONFIRM_TRADE]: {
+        userRobotId: "uuid",
+        userPositionId: "uuid",
+        cancel: { type: "boolean", optional: true, default: false }
+    },
     [UserRobotRunnerEvents.START_PORTFOLIO]: RunnerSchema,
     [UserRobotRunnerEvents.STOP_PORTFOLIO]: RunnerSchema
 };
@@ -75,10 +81,16 @@ export interface UserRobotRunnerPause {
 }
 
 export interface UserRobotRunnerResume {
-    id: string;
+    id?: string;
     userExAccId?: string;
     exchange?: string;
     message?: string;
+}
+
+export interface UserRobotRunnerConfirmTrade {
+    userRobotId: string;
+    userPositionId: string;
+    cancel?: boolean;
 }
 
 export interface UserRobotRunnerStartPortfolio {

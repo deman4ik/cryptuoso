@@ -5,6 +5,7 @@ import {
     UserPositionDB,
     UserPositionState,
     UserPositionStatus,
+    UserRobotConfirmTradeJob,
     UserRobotDB,
     UserRobotInternalState,
     UserRobotState,
@@ -17,8 +18,6 @@ import { OrdersStatusEvent } from "@cryptuoso/connector-events";
 import { BaseError } from "@cryptuoso/errors";
 import { ConnectorJob } from "@cryptuoso/connector-state";
 import logger from "@cryptuoso/logger";
-import { PortfolioSettings, UserPortfolioDB, UserPortfolioState } from "@cryptuoso/portfolio-state";
-import { UserRobotSettings } from "@cryptuoso/robot-settings";
 
 export class UserRobot {
     _id: string;
@@ -57,7 +56,7 @@ export class UserRobot {
         this._tradeSettings = state.tradeSettings;
         this._message = state.message;
         this._internalState = state.internalState || {};
-        this._positions = {}; // key -> positionId not id
+        this._positions = {};
         this._setPositions(state.positions);
         this._userPortfolioId = state.userPortfolioId;
         this._userPortfolio = state.userPortfolio;
@@ -354,7 +353,7 @@ export class UserRobot {
         if (!this.hasActivePositions) this.handleDelayedPositions();
     }
 
-    confirmTrade(userPositionId: string, cancel = false) {
+    confirmTrade({ userPositionId, cancel = false }: UserRobotConfirmTradeJob) {
         const position = this._positions[userPositionId];
         if (!position)
             throw new BaseError(
