@@ -147,7 +147,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
         const propСoefficient = 100 / sum(...robots.map((r) => r.stats.fullStats.amountProportion));
 
         for (const robot of robots) {
-            robot.share = robot.stats.fullStats.amountProportion * propСoefficient;
+            robot.share = round(robot.stats.fullStats.amountProportion * propСoefficient);
         }
 
         const minShare = Math.min(...robots.map((r) => r.share));

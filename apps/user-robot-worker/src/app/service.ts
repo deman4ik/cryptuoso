@@ -110,7 +110,7 @@ export default class UserRobotRunnerService extends BaseService {
            ea.total_balance_usd,
            st.net_profit as profit,
            m.trade_settings,
-           urs.user_robot_settings, //TODO: deprecate
+           urs.user_robot_settings,
            ur.settings,
            json_build_object('type',  up.type,
            'status'. up.status,

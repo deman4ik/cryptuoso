@@ -457,12 +457,6 @@ export default class RobotWorkerService extends BaseService {
                         robotId
                     }
                 }); //TODO: deprecate
-                await this.events.emit<TradeStatsRunnerRobot>({
-                    type: TradeStatsRunnerEvents.ROBOT,
-                    data: {
-                        robotId
-                    }
-                });
             }
 
             for (const event of robot.eventsToSend) {
