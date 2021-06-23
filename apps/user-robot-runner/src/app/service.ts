@@ -499,11 +499,12 @@ export default class UserRobotRunnerService extends HTTPService {
     }
 
     async syncPortfolioRobots({ userPortfolioId }: { userPortfolioId: string }) {
+        this.log.info(`Syncing User Portfolio #${userPortfolioId} robots`);
         const userPortfolio = await this.db.pg.one<UserPortfolioState>(sql`
         SELECT p.id, p.type, p.user_id, p.user_ex_acc_id, p.exchange, p.status, 
-              ups.active_from as user_portfolio_settings_active_from,
-              ups.user_portfolio_settings as settings,
-              ups.robots 
+              p.active_from as user_portfolio_settings_active_from,
+              p.user_portfolio_settings as settings,
+              p.robots 
            FROM v_user_portfolios p
            WHERE p.id = ${userPortfolioId}; 
        `);
@@ -540,6 +541,7 @@ export default class UserRobotRunnerService extends HTTPService {
                 DO UPDATE SET settings = excluded.settings;
             `);
             });
+            this.log.info(`Added ${userPortfolio.robots.length} robots to User Portfolio #${userPortfolioId}`);
         } else {
             this.log.warn(`User Portfolio #${userPortfolio.id} has no active robots`);
         }
@@ -729,6 +731,7 @@ export default class UserRobotRunnerService extends HTTPService {
 
     async handleUserPortfolioBuilded({ userPortfolioId }: PortfolioManagerUserPortfolioBuilded) {
         try {
+            this.log.info(`Handling User Portfolio #${userPortfolioId} builded event`);
             const userPortfolio = await this.db.pg.one<{
                 id: UserPortfolioDB["id"];
                 status: UserPortfolioDB["status"];
@@ -762,9 +765,10 @@ export default class UserRobotRunnerService extends HTTPService {
                         message: null
                     }
                 });
+                this.log.info(`User Portfolio #${userPortfolioId} is started`);
             }
         } catch (error) {
-            this.log.error(`Failed to handle user portfolio's #${userPortfolioId} builded event`);
+            this.log.error(`Failed to handle user portfolio's #${userPortfolioId} builded event`, error);
         }
     }
 

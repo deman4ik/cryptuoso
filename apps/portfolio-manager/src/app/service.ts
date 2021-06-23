@@ -73,6 +73,7 @@ export default class PortfolioManagerService extends HTTPService {
                 createUserPortfolio: {
                     inputSchema: {
                         exchange: "string",
+                        type: { type: "enum", values: ["signals", "trading"] },
                         userExAccId: { type: "uuid", optional: true },
                         tradingAmountType: { type: "string" },
                         balancePercent: { type: "number", optional: true },
@@ -96,7 +97,8 @@ export default class PortfolioManagerService extends HTTPService {
                             }
                         }
                     },
-                    roles: [UserRoles.manager, UserRoles.user, UserRoles.vip],
+                    auth: true,
+                    roles: [UserRoles.admin, UserRoles.manager, UserRoles.user, UserRoles.vip],
                     handler: this.HTTPWithAuthHandler.bind(this, this.createUserPortfolio.bind(this))
                 },
                 editUserPortfolio: {
@@ -121,14 +123,16 @@ export default class PortfolioManagerService extends HTTPService {
                             optional: true
                         }
                     },
-                    roles: [UserRoles.manager, UserRoles.user, UserRoles.vip],
+                    auth: true,
+                    roles: [UserRoles.admin, UserRoles.manager, UserRoles.user, UserRoles.vip],
                     handler: this.HTTPWithAuthHandler.bind(this, this.editUserPortfolio.bind(this))
                 },
                 deleteUserPortfolio: {
                     inputSchema: {
                         userPortfolioId: { type: "uuid", optional: true }
                     },
-                    roles: [UserRoles.manager, UserRoles.user, UserRoles.vip],
+                    auth: true,
+                    roles: [UserRoles.admin, UserRoles.manager, UserRoles.user, UserRoles.vip],
                     handler: this.HTTPWithAuthHandler.bind(this, this.deleteUserPortfolio.bind(this))
                 },
                 buildUserPortfolio: {
@@ -275,10 +279,14 @@ export default class PortfolioManagerService extends HTTPService {
         AND status != ${UserRobotStatus.stopped}
         `);
 
-        if (oldUserRobots > 0) throw new Error("You already have started robots");
+        if (oldUserRobots > 0) {
+            this.log.warn("You already have started robots");
+            //throw new Error("You already have started robots");
+        }
 
         const { minTradeAmount } = await this.db.pg.one<{ minTradeAmount: PortfolioContext["minTradeAmount"] }>(sql`
         SELECT max(m.min_amount_currency) as min_trade_amount
+        FROM v_markets m
         WHERE m.exchange = ${exchange}
         GROUP BY m.exchange;
         `);
@@ -329,9 +337,12 @@ export default class PortfolioManagerService extends HTTPService {
         await this.db.pg.transaction(async (t) => {
             await t.query(sql`
         insert into user_portfolios
-        (id, type, user_io, user_ex_acc_id, exchange, status, settings)
-        VALUES (${userPortfolio.id},${userPortfolio.type}, ${userPortfolio.userId},
-        ${userPortfolio.userExAccId}, ${userPortfolio.exchange},
+        (id, type, user_id, user_ex_acc_id, exchange, status)
+        VALUES (${userPortfolio.id},
+        ${userPortfolio.type}, 
+        ${userPortfolio.userId},
+        ${userPortfolio.userExAccId || null}, 
+        ${userPortfolio.exchange},
         ${userPortfolio.status}
         );`);
 
@@ -343,7 +354,7 @@ export default class PortfolioManagerService extends HTTPService {
 
         await this.buildUserPortfolio({ userPortfolioId: userPortfolio.id });
 
-        return userPortfolio.id;
+        return { result: userPortfolio.id };
     }
 
     async editUserPortfolio(

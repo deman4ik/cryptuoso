@@ -85,11 +85,11 @@ const worker = {
         const portfolio = await pg.one<UserPortfolioState>(sql`
             SELECT p.id, p.user_id, p.user_ex_acc_id, p.exchange, p.status,
                    ups.id as user_portfolio_settings_id, 
-                   ups.active_from as user_portfolio_settings_active_from
+                   ups.active_from as user_portfolio_settings_active_from,
                    ups.user_portfolio_settings as settings,
                    json_build_object('minTradeAmount', m.min_trade_amount,
                                      'feeRate', m.fee_rate) as context
-            FROM user_portfolios p, user_portfolio_settings ups
+            FROM user_portfolios p, user_portfolio_settings ups,
                  (SELECT mk.exchange, 
 	                     max(mk.min_amount_currency) as min_trade_amount, 
 	                     max(mk.fee_rate) as fee_rate 
@@ -99,7 +99,7 @@ const worker = {
               AND p.id = ups.user_portfolio_id
               AND (ups.active_from is null OR ups.active_from = ((SELECT max(s.active_from) AS max
                     FROM user_portfolio_settings s
-                    WHERE s.user_portfolio_id = p.user_portfolio_id 
+                    WHERE s.user_portfolio_id = p.id 
                       AND s.active_from IS NOT NULL 
                       AND s.active_from < now()))
                   )
@@ -115,7 +115,7 @@ const worker = {
         FROM v_robot_positions p, robots r, users u 
         WHERE p.robot_id = r.id 
           AND r.exchange = ${portfolio.exchange}
-          AND u.id = p.user_id
+          AND u.id = ${portfolio.userId}
           AND r.available >= u.access
           AND p.emulated = 'false'
           AND p.status = 'closed'
