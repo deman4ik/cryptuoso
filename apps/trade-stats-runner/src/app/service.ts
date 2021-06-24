@@ -1,8 +1,8 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import {
-    TradeStatsRunnerEvent,
     TradeStatsRunnerEvents,
     TradeStatsRunnerPortfolio,
+    TradeStatsRunnerPortfolioRobot,
     TradeStatsRunnerRecalcAllPortfolios,
     TradeStatsRunnerRecalcAllRobots,
     TradeStatsRunnerRecalcAllUserPortfolios,
@@ -16,7 +16,7 @@ import { RobotStatus } from "@cryptuoso/robot-state";
 import { UserRoles } from "@cryptuoso/user-state";
 import { TradeStatsJob } from "@cryptuoso/trade-stats";
 import { sql } from "@cryptuoso/postgres";
-import { UserRobotDB, UserRobotStatus } from "@cryptuoso/user-robot-state";
+import { UserRobotDB } from "@cryptuoso/user-robot-state";
 
 export type StatisticCalcWorkerServiceConfig = HTTPServiceConfig;
 
@@ -34,6 +34,11 @@ export default class StatisticCalcRunnerService extends HTTPService {
                     inputSchema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.PORTFOLIO],
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.handleStatsCalcPortfolioEvent.bind(this))
+                },
+                calcStatsPortfolioRobot: {
+                    inputSchema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.PORTFOLIO_ROBOT],
+                    roles: [UserRoles.admin, UserRoles.manager],
+                    handler: this.HTTPHandler.bind(this, this.handleStatsCalcPortfolioRobotEvent.bind(this))
                 },
                 calcStatsUserRobot: {
                     inputSchema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.USER_ROBOT],
@@ -71,6 +76,10 @@ export default class StatisticCalcRunnerService extends HTTPService {
                     schema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.ROBOT],
                     handler: this.handleStatsCalcRobotEvent.bind(this)
                 },
+                [TradeStatsRunnerEvents.PORTFOLIO_ROBOT]: {
+                    schema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.PORTFOLIO_ROBOT],
+                    handler: this.handleStatsCalcPortfolioRobotEvent.bind(this)
+                },
                 [TradeStatsRunnerEvents.USER_ROBOT]: {
                     schema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.USER_ROBOT],
                     handler: this.handleStatsCalcUserRobotEvent.bind(this)
@@ -107,15 +116,29 @@ export default class StatisticCalcRunnerService extends HTTPService {
 
         this.log.info(`New ${TradeStatsRunnerEvents.ROBOT} event - ${robotId}`);
 
-        const robot = await this.db.pg.maybeOne<{ exchange: string; asset: string }>(this.db.sql`
-            SELECT exchange, asset
+        const robot = await this.db.pg.maybeOne<{ id: string }>(this.db.sql`
+        SELECT id
+        FROM robots
+        WHERE id = ${robotId};
+         `);
+
+        if (!robot) return;
+
+        await this.queueJob({ type: "robot", recalc, robotId });
+    }
+
+    async handleStatsCalcPortfolioRobotEvent(params: TradeStatsRunnerPortfolioRobot) {
+        const { recalc, robotId } = params;
+
+        this.log.info(`New ${TradeStatsRunnerEvents.ROBOT} event - ${robotId}`);
+
+        const robot = await this.db.pg.maybeOne<{ id: string }>(this.db.sql`
+            SELECT id
             FROM robots
             WHERE id = ${robotId};
         `);
 
         if (!robot) return;
-
-        await this.queueJob({ type: "robot", recalc, robotId });
 
         const portfolios = await this.db.pg.any<{ portfolioId: string }>(
             sql`

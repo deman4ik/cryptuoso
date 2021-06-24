@@ -70,9 +70,8 @@ export class PrivateConnector {
 
     getOrderParams(id: string, params: GenericObject<any>, type: OrderType) {
         if (this.exchange === "kraken") {
-            const { kraken } = params;
             return {
-                leverage: (kraken && kraken.leverage) || 3,
+                // leverage: (kraken && kraken.leverage) || 3, // TODO: check leverage from portfolio and somehow from tier?
                 trading_agreement: "agree"
                 // clientOrderId: id
             };
@@ -209,7 +208,7 @@ export class PrivateConnector {
 
             let price = market.limits.price.min;
             let amount = market.limits.amount.min;
-            if (this.exchange === "binance_futures" || this.exchange === "huobipro") {
+            if (this.exchange === "binance_futures" || this.exchange === "huobipro" || this.exchange === "kraken") {
                 const { price: currentPrice } = await this.getCurrentPrice(this.connector, asset, currency);
 
                 price = currentPrice / 1.3;
@@ -505,7 +504,7 @@ export class PrivateConnector {
 
             const type =
                 (order.type === OrderType.market || order.type === OrderType.forceMarket) &&
-                this.connector.has.createMarketOrder
+                this.connector.has.createMarketOrder === true
                     ? OrderType.market
                     : OrderType.limit;
 

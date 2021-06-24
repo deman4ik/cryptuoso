@@ -20,7 +20,7 @@ import dayjs from "dayjs";
 import { BaseError } from "@cryptuoso/errors";
 import { Utils } from "./utils";
 import { BaseServiceError, BaseServiceEvents } from "@cryptuoso/events";
-import { TradeStatsRunnerEvents, TradeStatsRunnerRobot } from "@cryptuoso/trade-stats-events";
+import { TradeStatsRunnerEvents, TradeStatsRunnerPortfolioRobot } from "@cryptuoso/trade-stats-events";
 
 export type RobotWorkerServiceConfig = BaseServiceConfig;
 
@@ -457,6 +457,13 @@ export default class RobotWorkerService extends BaseService {
                         robotId
                     }
                 }); //TODO: deprecate
+
+                await this.events.emit<TradeStatsRunnerPortfolioRobot>({
+                    type: TradeStatsRunnerEvents.PORTFOLIO_ROBOT,
+                    data: {
+                        robotId
+                    }
+                });
             }
 
             for (const event of robot.eventsToSend) {

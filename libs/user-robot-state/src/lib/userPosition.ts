@@ -885,6 +885,8 @@ export class UserPosition {
                 } else if (!this.hasOpenEntryOrders) {
                     this._entryStatus = UserPositionOrderStatus.canceled;
                     this._status = UserPositionStatus.canceled;
+                    this._nextJob = null;
+                    this._nextJobAt = null;
                 }
             } else if (this._entryStatus === UserPositionOrderStatus.partial) {
                 // Entry already executed
@@ -965,6 +967,8 @@ export class UserPosition {
             }
         } else if (!this._entryStatus && !this._exitStatus && !this.hasOpenEntryOrders && !this.hasOpenExitOrders) {
             this._status = UserPositionStatus.canceled;
+            this._nextJob = null;
+            this._nextJobAt = null;
         }
     }
 
