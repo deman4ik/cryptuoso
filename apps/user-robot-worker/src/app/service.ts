@@ -330,7 +330,8 @@ export default class UserRobotRunnerService extends BaseService {
             } else throw new BaseError(`Unknown user robot job type "${type}"`, job);
 
             if (
-                (userRobot.status === UserRobotStatus.stopping || userRobot.state.settings?.active === false) &&
+                (userRobot.status === UserRobotStatus.stopping ||
+                    (userRobot.state.userPortfolioId && userRobot.state.settings?.active === false)) &&
                 !userRobot.hasActivePositions
             ) {
                 userRobot.setStop();
