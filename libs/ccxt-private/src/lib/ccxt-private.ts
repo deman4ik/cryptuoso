@@ -73,7 +73,6 @@ export class PrivateConnector {
             return {
                 // leverage: (kraken && kraken.leverage) || 3, // TODO: check leverage from portfolio and somehow from tier?
                 trading_agreement: "agree"
-                // clientOrderId: id
             };
         }
         if (this.exchange === "bitfinex") {
