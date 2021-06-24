@@ -138,8 +138,6 @@ export class PrivateConnector {
             } catch (e) {
                 message = error.message;
             }
-        } else {
-            message = error?.message || "Unknown";
         }
         return JSON.stringify(message?.split("<html>")[0]);
     }
@@ -451,6 +449,7 @@ export class PrivateConnector {
                     await this.initConnector();
                     throw e;
                 }
+                this.log.error(e);
                 bail(e);
             }
         };
