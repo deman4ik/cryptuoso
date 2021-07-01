@@ -376,7 +376,7 @@ class StatsCalcWorker {
             SELECT p.id, p.direction, p.entry_date, p.entry_price, p.exit_date, p.exit_price, p.volume, p.worst_profit, p.profit, p.bars_held
         `;
             const queryFromAndConditionPart = sql`
-            FROM v_user_portfolio_positions p
+            FROM v_user_positions p
             WHERE p.user_portfolio_id = ${userPortfolioId}
                 AND p.status = 'closed'
                 ${conditionExitDate}

@@ -949,7 +949,7 @@ export class Auth {
         };
     }
 
-    generateAccessToken(user: User) {
+    generateAccessToken(user: User, jwtTokenExpires = `${process.env.JWT_TOKEN_EXPIRES}m`) {
         const {
             id,
             roles: { defaultRole, allowedRoles },
@@ -971,7 +971,7 @@ export class Auth {
             process.env.JWT_SECRET,
             {
                 algorithm: "HS256",
-                expiresIn: `${process.env.JWT_TOKEN_EXPIRES}m`
+                expiresIn: jwtTokenExpires
             }
         );
     }

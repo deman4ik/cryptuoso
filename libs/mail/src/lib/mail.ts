@@ -1,7 +1,7 @@
-import Mailgun from "mailgun-js";
+import Mailgun from "mailgun.js";
+import formData from "form-data";
 import logger from "@cryptuoso/logger";
 
-// message send types
 export interface SendProps {
     from?: string;
     to: string | Array<string>;
@@ -13,43 +13,22 @@ export interface SendProps {
     tags: Array<string>;
 }
 
-// subscribe type
 export interface SubscribeProps {
     list: string;
     email: string;
     name?: string;
 }
 
-/**
- * Класс работы с отправкой email
- */
-export interface MailUtilConfig {
-    apiKey: string;
-    domain: string;
-    host?: string;
-}
-
-/*template types*/
-export const TEMPLATE_TYPES: any = {
-    main: "main"
-};
-
 export class MailUtil {
-    private mailgun: Mailgun.Mailgun;
+    private client;
     constructor() {
         try {
-            let config;
-            if (process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN) {
-                config = {
-                    apiKey: process.env.MAILGUN_API_KEY,
-                    domain: process.env.MAILGUN_DOMAIN,
-                    host: "api.eu.mailgun.net"
-                };
-            } else {
-                config = { apiKey: "none", domain: "none" };
-                logger.warn("Mail Service runs in TEST mode.");
-            }
-            this.mailgun = new Mailgun(config);
+            const mailgun = new Mailgun(formData);
+            this.client = mailgun.client({
+                username: "api",
+                key: process.env.MAILGUN_API_KEY,
+                url: "https://api.eu.mailgun.net"
+            });
         } catch (e) {
             logger.error(e, "Failed to init mailgun instance!");
         }
@@ -68,7 +47,8 @@ export class MailUtil {
     }: SendProps) => {
         try {
             const mailGunVariables = variables && Object.keys(variables) && JSON.stringify(variables);
-            await this.mailgun.messages().send({
+
+            const response = await this.client.messages.create(process.env.MAILGUN_DOMAIN, {
                 from,
                 to,
                 subject,
@@ -78,6 +58,7 @@ export class MailUtil {
                 "h:X-Mailgun-Variables": mailGunVariables,
                 "o:tag": tags
             });
+            logger.info(response);
         } catch (e) {
             logger.error(e);
             throw e;
@@ -87,7 +68,7 @@ export class MailUtil {
     /*Подписка на рассылку*/
     subscribeToList = async ({ list, email: address, name }: SubscribeProps) => {
         try {
-            await this.mailgun.lists(list).members().create({
+            await this.client.createMember(list, {
                 subscribed: true,
                 address,
                 name

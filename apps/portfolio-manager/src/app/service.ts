@@ -46,8 +46,8 @@ export default class PortfolioManagerService extends HTTPService {
                     inputSchema: {
                         exchange: "string",
                         tradingAmountType: { type: "string", default: "balancePercent" },
-                        balancePercent: { type: "number", optional: true, default: 100 },
-                        tradingAmountCurrency: { type: "number", optional: true },
+                        balancePercent: { type: "number", integer: true, optional: true, default: 100 },
+                        tradingAmountCurrency: { type: "number", integer: true, optional: true },
                         initialBalance: {
                             type: "number",
                             optional: true,

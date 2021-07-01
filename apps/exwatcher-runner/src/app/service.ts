@@ -60,7 +60,7 @@ export default class ExwatcherRunnerService extends HTTPService {
 
         this.createWorker(queueKey, this.updateMarkets);
 
-        await this.connector.initAllConnectors();
+        await this.connector.initAllConnectors(true);
         await this.addJob(queueKey, JobTypes.updateMarkets, null, {
             repeat: {
                 cron: "0 0 */12 * * *"

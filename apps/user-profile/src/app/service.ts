@@ -896,13 +896,14 @@ export default class UserProfileService extends HTTPService {
 
         await this.db.pg.query(sql`
             INSERT INTO user_robots(
-                id, robot_id, user_ex_acc_id, user_id, status
+                id, robot_id, user_ex_acc_id, user_id, status, settings
             ) VALUES (
                 ${userRobotId},
                 ${robotId},
                 ${userExAccId},
                 ${userId},
-                ${RobotStatus.stopped}
+                ${RobotStatus.stopped},
+                ${JSON.stringify({ active: true })}
             );
         `);
 

@@ -267,8 +267,8 @@ export default class UserSubService extends HTTPService {
                       FROM v_user_aggr_stats
                     WHERE user_id = ${sub.userId}
                       AND type = 'userRobot'
-                      AND exchange is null
-                      AND asset is null
+                      AND exchange = '-'
+                      AND asset = '-'
                       AND net_profit > ${sub.subscriptionLimits?.trialNetProfit || 15};
                     `);
 
