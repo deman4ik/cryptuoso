@@ -137,7 +137,9 @@
     "telegraf": "^3.38.0",
     "telegraf-throttler": "^0.2.0",
     "threads": "^1.6.5",
+    "tslib": "^2.3.0",
     "tulind": "github:deman4ik/tulipnode",
+    "typescript": "^4.3.5",
     "universal-analytics": "^0.4.23",
     "uuid": "^8.3.2",
     "winston": "^3.3.3"
@@ -179,8 +181,6 @@
     "mockdate": "^3.0.3",
     "prettier": "2.3.2",
     "ts-jest": "27.0.3",
-    "ts-node": "^10.0.0",
-    "tslib": "^2.3.0",
-    "typescript": "^4.3.4"
+    "ts-node": "^10.0.0"
   }
 }
