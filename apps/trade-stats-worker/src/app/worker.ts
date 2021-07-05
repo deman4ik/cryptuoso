@@ -160,7 +160,7 @@ class StatsCalcWorker {
         SET full_stats = ${JSON.stringify(newStats.fullStats)},
         period_stats = ${JSON.stringify(periodStatsToArray(newStats.periodStats))},
         emulated_full_stats = ${JSON.stringify(newEmulatedStats.fullStats)},
-        emulated_period_stats = ${JSON.stringify(periodStatsToArray(newEmulatedStats.periodStats))},
+        emulated_period_stats = ${JSON.stringify(periodStatsToArray(newEmulatedStats.periodStats))}
         WHERE id = ${robotId};
         `);
         } catch (err) {
