@@ -644,7 +644,7 @@ export default class UserRobotRunnerService extends HTTPService {
             });
         }
 
-        return "started";
+        return status;
     }
 
     async stopPortfolio({ id, message }: UserRobotRunnerStopPortfolio, user: User) {

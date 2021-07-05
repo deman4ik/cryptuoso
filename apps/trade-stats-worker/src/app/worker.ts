@@ -211,7 +211,7 @@ class StatsCalcWorker {
             SELECT p.id, p.direction, p.entry_date, p.entry_price, p.exit_date, p.exit_price, p.volume, p.worst_profit, p.profit, p.bars_held
         `;
             const queryFromAndConditionPart = sql`
-            FROM v_portfolio_positions p
+            FROM v_portfolio_robot_positions p
             WHERE p.portfolio_id = ${portfolioId}
                 AND p.status = 'closed'
                 ${conditionExitDate}
