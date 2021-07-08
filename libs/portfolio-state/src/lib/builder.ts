@@ -1,6 +1,6 @@
 import logger, { Logger } from "@cryptuoso/logger";
 import { PortfolioOptions, PortfolioRobot, PortfolioState, UserPortfolioState } from "./types";
-import { BasePosition, calcPositionProfit } from "@cryptuoso/market";
+import { BasePosition } from "@cryptuoso/market";
 import { periodStatsToArray, TradeStats, TradeStatsCalc } from "@cryptuoso/trade-stats";
 import { getPercentagePos, percentBetween, round, sum, uniqueElementsBy } from "@cryptuoso/helpers";
 import Statistics from "statistics.js";
@@ -153,29 +153,11 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
         const minShare = Math.min(...robots.map((r) => r.share));
         this.portfolio.variables.minBalance =
             round((this.portfolio.context.minTradeAmount * 100) / minShare / 100) * 100;
-
-        const leveragedBalance = this.portfolio.variables.portfolioBalance * (this.portfolio.settings.leverage || 1);
         for (const robot of robots) {
-            robot.amountInCurrency = (leveragedBalance * robot.share) / 100;
             robot.positions = robot.positions.map((pos) => {
-                const volume = robot.amountInCurrency / pos.entryPrice;
                 return {
                     ...pos,
-                    volume,
-                    profit: calcPositionProfit(
-                        pos.direction,
-                        pos.entryPrice,
-                        pos.exitPrice,
-                        volume,
-                        this.portfolio.context.feeRate
-                    ),
-                    worstProfit: calcPositionProfit(
-                        pos.direction,
-                        pos.entryPrice,
-                        pos.maxPrice,
-                        volume,
-                        this.portfolio.context.feeRate
-                    )
+                    portfolioShare: robot.share
                 };
             });
         }
@@ -189,8 +171,14 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
         const tradeStatsCalc = new TradeStatsCalc(
             positions,
             {
-                job: { type: "portfolio", portfolioId: this.portfolio.id, recalc: true },
-                initialBalance: this.portfolio.settings.initialBalance
+                job: {
+                    type: "portfolio",
+                    portfolioId: this.portfolio.id,
+                    recalc: true,
+                    feeRate: this.portfolio.context.feeRate
+                },
+                initialBalance: this.portfolio.settings.initialBalance,
+                leverage: this.portfolio.settings.leverage
             },
             null
         );

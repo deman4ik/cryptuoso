@@ -1,8 +1,8 @@
 import dayjs from "@cryptuoso/dayjs";
 import { average, chunkArray, divide, nvl, round, sortAsc, sum } from "@cryptuoso/helpers";
-import { BasePosition } from "@cryptuoso/market";
+import { BasePosition, calcPositionProfit } from "@cryptuoso/market";
 import { calcZScore, createDatesPeriod } from "./helpers";
-import { FullStats, PerformanceVals, Stats, StatsMeta, TradeStats } from "./types";
+import { FullStats, PerformanceVals, Stats, StatsMeta, TradeStats, TradeStatsPortfolio } from "./types";
 import logger from "@cryptuoso/logger";
 
 export class TradeStatsCalc implements TradeStats {
@@ -31,10 +31,92 @@ export class TradeStatsCalc implements TradeStats {
         this.prevPeriodStats = { ...this.periodStats };
     }
 
+    private preparePortfolioPositions(allPositions: BasePosition[]): BasePosition[] {
+        let netProfit = 0;
+        let currentBalance = this.meta.initialBalance;
+        let prevBalance = currentBalance;
+        const { feeRate } = <TradeStatsPortfolio>this.meta.job;
+        const results: BasePosition[] = [];
+        for (const position of allPositions) {
+            const {
+                direction,
+                entryPrice,
+                exitPrice,
+                maxPrice,
+                meta: { portfolioShare }
+            } = position;
+
+            const amountInCurrency = (currentBalance * (this.meta.leverage || 1) * portfolioShare) / 100;
+            const volume = amountInCurrency / entryPrice;
+            const profit = calcPositionProfit(direction, entryPrice, exitPrice, position.volume, feeRate);
+            let worstProfit = calcPositionProfit(direction, entryPrice, maxPrice, position.volume, feeRate);
+            if (worstProfit > 0) worstProfit = null;
+            netProfit = sum(netProfit, position.profit);
+            currentBalance = sum(this.meta.initialBalance, netProfit);
+            results.push({
+                ...position,
+                volume,
+                profit,
+                worstProfit,
+                meta: {
+                    ...position.meta,
+                    prevBalance,
+                    currentBalance
+                }
+            });
+            prevBalance = currentBalance;
+        }
+        return results;
+    }
+
+    private getMaxLeverage(allPositions: BasePosition[]) {
+        const dates = [
+            ...allPositions.map((p) => ({
+                date: p.entryDate,
+                price: p.entryPrice,
+                volume: p.volume,
+                balance: p.meta.prevBalance,
+                side: "entry"
+            })),
+            ...allPositions.map((p) => ({
+                date: p.exitDate,
+                price: p.exitPrice,
+                volume: p.volume,
+                balance: p.meta.currentBalance,
+                side: "exit"
+            }))
+        ].sort((a, b) => sortAsc(a.date, b.date));
+
+        let availableFunds = this.meta.initialBalance;
+        let maxLeverage = 0;
+        //const results = [];
+        for (const { date, price, volume, balance, side } of dates) {
+            if (side === "entry") {
+                availableFunds = availableFunds - price * volume;
+            } else {
+                availableFunds = availableFunds + price * volume;
+            }
+
+            const leverage = availableFunds / balance;
+            if (leverage < maxLeverage) maxLeverage = leverage;
+            /*   results.push({
+                date,
+                price,
+                volume,
+                balance,
+                availableFunds,
+                leverage
+            });*/
+        }
+
+        return maxLeverage;
+    }
+
     public calculate(): TradeStats {
+        if (this.meta.job.type === "portfolio") this.positions = this.preparePortfolioPositions(this.positions);
         this.periodStats = this.calcPeriodStats(this.positions, this.prevPeriodStats);
         this.fullStats = this.calcFullStats(this.positions, this.prevFullStats, this.periodStats);
-
+        if (this.meta.job.type === "portfolio") this.fullStats.maxLeverage = this.getMaxLeverage(this.positions);
         return {
             fullStats: this.fullStats,
             periodStats: this.periodStats
@@ -93,8 +175,9 @@ export class TradeStatsCalc implements TradeStats {
             currentWinSequence: nvl(prevStats?.currentWinSequence, 0),
             currentLossSequence: nvl(prevStats?.currentLossSequence, 0),
             maxDrawdown: nvl(prevStats?.maxDrawdown, 0),
-            percentMaxDrawdown: nvl(prevStats?.percentMaxDrawdown),
+            percentMaxDrawdown: nvl(prevStats?.percentMaxDrawdown, 0),
             maxDrawdownDate: nvl(prevStats?.maxDrawdownDate),
+            percentMaxDrawdownDate: nvl(prevStats?.percentMaxDrawdownDate),
             amountProportion: nvl(prevStats?.amountProportion),
             profitFactor: nvl(prevStats?.profitFactor),
             recoveryFactor: nvl(prevStats?.recoveryFactor),
@@ -128,7 +211,8 @@ export class TradeStatsCalc implements TradeStats {
             avgPercentGrossLossMonths: nvl(fullStats?.avgPercentGrossLossMonths),
             emulateNextPosition: nvl(fullStats?.emulateNextPosition, false),
             marginNextPosition: nvl(fullStats?.marginNextPosition, 1),
-            zScore: nvl(fullStats?.zScore)
+            zScore: nvl(fullStats?.zScore),
+            maxLeverage: nvl(fullStats?.maxLeverage)
         };
         if (!stats.firstPosition) stats.firstPosition = positions[0];
         if (this.hasBalance && stats.initialBalance === null) {
@@ -185,16 +269,13 @@ export class TradeStatsCalc implements TradeStats {
 
         if (!positions.length) return stats;
 
-        const winningPositions = positions.filter(({ profit }) => profit > 0);
-        const lossingPositions = positions.filter(({ profit }) => profit <= 0);
-
         if (!stats.equity.length) {
             stats.equity.push({
                 x: dayjs.utc(stats.firstPosition.entryDate).valueOf(),
                 y: 0
             });
         }
-        for (const { profit, worstProfit, exitDate } of positions) {
+        for (const { profit, worstProfit, entryDate, exitDate } of positions) {
             if (profit > 0) {
                 stats.currentWinSequence += 1;
                 stats.currentLossSequence = 0;
@@ -231,11 +312,14 @@ export class TradeStatsCalc implements TradeStats {
                
             } */
             stats.netProfit = sum(stats.netProfit, profit);
+
+            stats.currentBalance = sum(stats.initialBalance, stats.netProfit);
             if (this.meta.job.type === "robot") {
                 stats.netProfitsSMA.push(stats.netProfit);
             }
             if (stats.netProfit > stats.localMax) stats.localMax = stats.netProfit;
             const drawdown = stats.netProfit - stats.localMax;
+
             if (stats.maxDrawdown > drawdown) {
                 stats.maxDrawdown = drawdown;
                 stats.maxDrawdownDate = exitDate;
@@ -250,11 +334,23 @@ export class TradeStatsCalc implements TradeStats {
                 }
             }
 
+            if (this.hasBalance) {
+                const percentDrawdown = (Math.abs(stats.maxDrawdown) / stats.currentBalance) * 100;
+                if (percentDrawdown > stats.percentMaxDrawdown) {
+                    stats.percentMaxDrawdown = percentDrawdown;
+                    stats.percentMaxDrawdownDate = exitDate;
+                }
+            }
+
             stats.equity.push({
                 x: dayjs.utc(exitDate).valueOf(),
                 y: round(stats.netProfit, 2)
             });
         }
+
+        const winningPositions = positions.filter(({ profit }) => profit > 0);
+        const lossingPositions = positions.filter(({ profit }) => profit <= 0);
+
         stats.equityAvg = this.calculateEquityAvg(stats.equity);
         stats.tradesCount = stats.tradesCount + positions.length;
         stats.tradesWinning = stats.tradesWinning + winningPositions.length;
@@ -279,11 +375,9 @@ export class TradeStatsCalc implements TradeStats {
         stats.payoffRatio = Math.abs(divide(stats.avgGrossProfit, stats.avgGrossLoss));
 
         if (this.hasBalance) {
-            stats.currentBalance = sum(stats.initialBalance, stats.netProfit);
             stats.percentNetProfit = (stats.netProfit / stats.initialBalance) * 100;
             stats.percentGrossProfit = (stats.grossProfit / stats.initialBalance) * 100;
             stats.percentGrossLoss = (stats.grossLoss / stats.initialBalance) * 100;
-            stats.percentMaxDrawdown = (Math.abs(stats.maxDrawdown) / stats.initialBalance) * 100;
             stats.amountProportion = 100 / stats.percentMaxDrawdown;
 
             /*  stats.avgPercentNetProfit = stats.sumPercentNetProfit / stats.tradesCount;

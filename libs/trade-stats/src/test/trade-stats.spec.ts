@@ -1,37 +1,36 @@
 import { TradeStatsCalc } from "../lib/trade-stats";
 import { positions } from "./data/positions";
-import { result } from "./data/results";
+import { robotStatsResult, portfolioStatsResult } from "./data/results";
 import util from "util";
 import fs from "fs";
 import dayjs from "@cryptuoso/dayjs";
 
 describe("Test 'trade-stats'", () => {
     describe("Test calc with no previous statistics", () => {
-        it("Should calculate statistics", async () => {
+        it("Should calculate robot statistics", async () => {
             const tradeStatsCalculator = new TradeStatsCalc(positions, {
                 job: { robotId: "test", type: "robot", recalc: true, SMAWindow: 10 },
                 initialBalance: 100000
             });
             const stats = tradeStatsCalculator.calculate();
-            const { zScore, emulateNextPosition, marginNextPosition } = stats.fullStats;
-            /*  console.log(
-                Object.values(stats.periodStats.month).map(({ dateFrom, stats }) => ({
-                    dateFrom,
-                    percentNetProfit: stats.percentNetProfit,
-                    netProfit: stats.netProfit
-                }))
-            ); */
-            console.log({
-                zScore,
-                emulateNextPosition,
-                marginNextPosition
-            });
-            // expect(stats.fullStats).toEqual(result.fullStats);
-            // console.log(util.inspect(stats.periodStats.month, false, null, true));
+            //const data = JSON.stringify(stats);
+            //fs.writeFileSync("testResults/robotStatsResults.json", data);
+            expect(stats.fullStats).toEqual(robotStatsResult.fullStats);
+            expect(stats.periodStats).toEqual(robotStatsResult.periodStats);
+        });
+        it("Should calculate portfolio statistics", async () => {
+            const tradeStatsCalculator = new TradeStatsCalc(
+                positions.map((pos) => ({ ...pos, meta: { portfolioShare: 100 } })),
+                {
+                    job: { portfolioId: "test", type: "portfolio", recalc: true },
+                    initialBalance: 100000
+                }
+            );
+            const stats = tradeStatsCalculator.calculate();
             //  const data = JSON.stringify(stats);
-            // fs.writeFileSync("stats.json", data);
-            //
-            // fs.writeFileSync("positions.json", JSON.stringify(positions));
+            //fs.writeFileSync("testResults/portfolioStatsResults.json", data);
+            expect(stats.fullStats).toEqual(portfolioStatsResult.fullStats);
+            expect(stats.periodStats).toEqual(portfolioStatsResult.periodStats);
         });
     });
 
@@ -69,7 +68,7 @@ describe("Test 'trade-stats'", () => {
             const statsAll = tradeStatsCalculatorAll.calculate();
 
             expect(stats).toEqual(statsAll);
-            const { netProfitsSMA, netProfitSMA, netProfit, emulateNextPosition } = statsAll.fullStats;
+            // const { netProfitsSMA, netProfitSMA, netProfit, emulateNextPosition } = statsAll.fullStats;
 
             //  console.log(stats.fullStats);
             // expect(stats.fullStats).toEqual(result.fullStats);

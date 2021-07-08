@@ -712,6 +712,7 @@ export class Robot {
                     posVolume,
                     this._settings.feeRate
                 );
+                if (worstProfit > 0) worstProfit = null;
             }
             return {
                 ...pos,
