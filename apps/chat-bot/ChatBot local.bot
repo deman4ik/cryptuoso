@@ -1,0 +1,18 @@
+{
+    "name": "Cryptuoso ChatBot",
+    "description": "",
+    "services": [
+        {
+            "type": "endpoint",
+            "name": "localhost",
+            "id": "3c0e5c70-e0a2-11eb-a22b-2f996d262dae",
+            "appId": "e8136c17-25ea-4370-8613-682bb4e91ab6",
+            "appPassword": "RJ9d&VfM/I&IQmr|r(_j!(rkV",
+            "endpoint": "http://localhost:3978/api/messages"
+        }
+    ],
+    "padlock": "",
+    "version": "2.0",
+    "path": "/Users/deman4ik/Projects/cryptuoso/apps/chat-bot/ChatBot local.bot",
+    "overrides": null
+}

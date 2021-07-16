@@ -17,6 +17,7 @@ module.exports = {
         "<rootDir>/libs/trade-stats-events",
         "<rootDir>/apps/portfolio-manager",
         "<rootDir>/libs/portfolio-state",
-        "<rootDir>/libs/portfolio-events"
+        "<rootDir>/libs/portfolio-events",
+        "<rootDir>/apps/chat-bot"
     ]
 };

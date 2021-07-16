@@ -57,7 +57,8 @@
             "@cryptuoso/user-signal-state": ["libs/user-signal-state/src/index.ts"],
             "@cryptuoso/user-state": ["libs/user-state/src/index.ts"],
             "@cryptuoso/user-sub-events": ["libs/user-sub-events/src/index.ts"]
-        }
+        },
+        "resolveJsonModule": true
     },
     "exclude": ["node_modules", "tmp"]
 }

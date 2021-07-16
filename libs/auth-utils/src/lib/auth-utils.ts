@@ -605,6 +605,27 @@ export class Auth {
         };
     }
 
+    async refreshTokenChatBot(params: { telegramId?: number; userId?: string }) {
+        const { telegramId, userId } = params;
+        if (!telegramId && !userId) throw new ActionsHandlerError("Invalid user id", null, "UNAUTHORIZED", 401);
+        let query;
+        if (telegramId) query = sql`telegram_id = ${telegramId}`;
+        if (userId) query = sql`id = ${userId}`;
+        const user: User = await pg.maybeOne<User>(sql`
+        SELECT id, email, telegram_id, roles, access, status, settings FROM users
+        WHERE ${query};
+    `);
+
+        if (!user) throw new ActionsHandlerError("User account is not found.", null, "NOT_FOUND", 404);
+        if (user.status === UserStatus.blocked)
+            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
+
+        return {
+            user,
+            accessToken: this.generateAccessToken(user)
+        };
+    }
+
     async activateAccount(params: { userId: string; secretCode: string }) {
         const { userId, secretCode } = params;
 
