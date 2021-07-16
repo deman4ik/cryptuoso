@@ -218,16 +218,23 @@ export default class ExwatcherRunnerService extends HTTPService {
         }
     }
 
-    async updateMarket(params: { exchange: string; asset: string; currency: string }) {
-        const { exchange, asset, currency } = params;
+    async updateMarket({
+        exchange,
+        asset,
+        currency,
+        available = 15
+    }: {
+        exchange: string;
+        asset: string;
+        currency: string;
+        available?: number;
+    }) {
         this.log.debug(`Updating ${exchange}.${asset}.${currency} market...`);
         const { precision, limits, feeRate, loadFrom, info } = await this.connector.getMarket(
             exchange,
             asset,
             currency
         );
-        this.log.debug({ exchange, asset, currency, precision, limits, feeRate, loadFrom });
-        const available = 15;
         await this.db.pg.query(sql`INSERT INTO markets (
                 exchange, asset, currency, precision, limits, fee_rate, load_from, available, info )
                 VALUES (
@@ -260,8 +267,28 @@ export default class ExwatcherRunnerService extends HTTPService {
         res: any
     ) {
         try {
-            //TODO: add exchanges, assets, currencies
-            await this.updateMarket(req.body.input);
+            const { exchange, asset, currency } = req.body.input;
+
+            const assetExists = await this.db.pg.maybeOne(sql`
+            SELECT code from assets where code = ${asset};
+            `);
+            if (!assetExists)
+                await this.db.pg.query(sql`
+            INSERT INTO assets (code,name) VALUES (${asset},${asset});
+            `);
+            const currencyExists = await this.db.pg.maybeOne(sql`
+             SELECT code from currencies where code = ${currency};
+             `);
+            if (!currencyExists)
+                await this.db.pg.query(sql`
+             INSERT INTO currencies (code,name) VALUES (${currency},${currency});
+             `);
+            const marketExists = await this.db.pg.maybeOne(sql`
+            SELECT asset from markets where exchange = ${exchange}
+            AND asset = ${asset}
+            and currency = ${currency};
+            `);
+            if (!marketExists) await this.updateMarket({ ...req.body.input, available: 0 });
             res.send({ result: "OK" });
             res.end();
         } catch (error) {

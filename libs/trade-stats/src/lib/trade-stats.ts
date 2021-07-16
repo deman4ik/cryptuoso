@@ -358,7 +358,8 @@ export class TradeStatsCalc implements TradeStats {
         stats.winRate = (stats.tradesWinning / stats.tradesCount) * 100;
         stats.lossRate = (stats.tradesLosing / stats.tradesCount) * 100;
         stats.sumBarsHeld = sum(stats.sumBarsHeld, ...positions.map(({ barsHeld }) => barsHeld));
-        stats.avgBarsHeld = stats.sumBarsHeld / stats.tradesCount;
+        if (!["portfolio", "userPortfolio"].includes(this.meta.job.type))
+            stats.avgBarsHeld = stats.sumBarsHeld / stats.tradesCount;
         stats.sumBarsHeldWinning = sum(stats.sumBarsHeldWinning, ...winningPositions.map(({ barsHeld }) => barsHeld));
         stats.avgBarsHeldWinning = stats.sumBarsHeldWinning / stats.tradesCount;
         stats.sumBarsHeldLosing = sum(stats.sumBarsHeldLosing, ...lossingPositions.map(({ barsHeld }) => barsHeld));

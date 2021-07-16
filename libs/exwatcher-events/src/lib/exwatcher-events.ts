@@ -26,7 +26,8 @@ export const ExwatcherSchema = {
     [ExwatcherEvents.ADD_MARKET]: {
         exchange: "string",
         asset: "string",
-        currency: "string"
+        currency: "string",
+        available: { type: "number", integer: true }
     },
     [ExwatcherEvents.ERROR]: {
         exchange: "string",
@@ -56,6 +57,7 @@ export interface ExwatcherAddMarket {
     exchange: string;
     asset: string;
     currency: string;
+    available?: number;
 }
 
 export interface ExwatcherErrorEvent {

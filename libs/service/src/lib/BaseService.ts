@@ -197,6 +197,7 @@ export class BaseService {
             this.#queuesClean.stop();
             await this.#redisConnection.quit();
             await this.#db.pg.end();
+            await this.#lightship.shutdown();
         } catch (err) {
             this.#log.error(`Failed to correctly stop ${this.#name} service`, err);
             process.exit(1);

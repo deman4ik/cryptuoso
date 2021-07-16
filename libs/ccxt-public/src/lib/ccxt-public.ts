@@ -77,6 +77,7 @@ export class PublicConnector {
                 try {
                     return await this.connectors[exchange].loadMarkets();
                 } catch (e) {
+                    this.log.warn(e);
                     if (e instanceof ccxt.NetworkError) {
                         this.#createConnector(exchange, rateLimit);
                         throw e;
