@@ -422,6 +422,7 @@ export default class UserRobotRunnerService extends BaseService {
             this.log.error(`Robot #${userRobotId} processing ${type} job #${id} error`, err);
             try {
                 const retries = job.retries ? job.retries + 1 : 1;
+
                 await this.db.pg.query(sql`
                     UPDATE user_robot_jobs
                     SET retries = ${retries}, 
@@ -439,6 +440,20 @@ export default class UserRobotRunnerService extends BaseService {
                         timestamp: dayjs.utc().toISOString(),
                         error: err.message,
                         job
+                    }
+                });
+                await this.db.pg.query(sql`
+                UPDATE user_robots
+                SET status = ${UserRobotStatus.paused}, 
+                    error = ${err.message}
+                WHERE id = ${job.userRobotId};`);
+                await this.events.emit<UserRobotWorkerStatus>({
+                    type: UserRobotWorkerEvents.PAUSED,
+                    data: {
+                        userRobotId,
+                        timestamp: dayjs.utc().toISOString(),
+                        status: UserRobotStatus.paused,
+                        message: err.message
                     }
                 });
             }
