@@ -1,4 +1,3 @@
-import dayjs from "@cryptuoso/dayjs";
 import { createDatesPeriod } from "../lib/helpers";
 
 describe("Test 'helpers'", () => {

@@ -46,6 +46,11 @@ export interface BasePosition {
     fee?: number;
     margin?: number;
     emulated?: boolean;
+    meta?: {
+        portfolioShare?: number;
+        currentBalance?: number;
+        prevBalance?: number;
+    };
 }
 
 export const calcPositionProfit = (

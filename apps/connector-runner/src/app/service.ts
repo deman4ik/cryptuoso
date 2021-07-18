@@ -2,15 +2,26 @@ import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import { ConnectorRunnerEvents, ConnectorRunnerSchema } from "@cryptuoso/connector-events";
 import { ConnectorJob, ConnectorJobType, ConnectorRunnerJobType, Queues } from "@cryptuoso/connector-state";
 import { sql } from "slonik";
-import { UserExchangeAccStatus } from "@cryptuoso/user-state";
+import { User, UserExchangeAccStatus, UserRoles } from "@cryptuoso/user-state";
 import { Job } from "bullmq";
 import dayjs from "dayjs";
+import { ActionsHandlerError } from "@cryptuoso/errors";
 export type ConnectorRunnerServiceConfig = HTTPServiceConfig;
 
 export default class ConnectorRunnerService extends HTTPService {
     constructor(config?: ConnectorRunnerServiceConfig) {
         super(config);
         try {
+            this.createRoutes({
+                checkBalance: {
+                    auth: true,
+                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager, UserRoles.admin],
+                    inputSchema: {
+                        userExAccId: "uuid"
+                    },
+                    handler: this.HTTPWithAuthHandler.bind(this, this.checkBalance.bind(this))
+                }
+            });
             this.events.subscribe({
                 [ConnectorRunnerEvents.ADD_JOB]: {
                     schema: ConnectorRunnerSchema[ConnectorRunnerEvents.ADD_JOB],
@@ -54,17 +65,6 @@ export default class ConnectorRunnerService extends HTTPService {
             `);
 
         if (status === UserExchangeAccStatus.enabled) {
-            const lastJob = await this.queues[Queues.connector].instance.getJob(userExAccId);
-            if (lastJob) {
-                const lastJobState = await lastJob.getState();
-                if (["stuck", "completed", "failed"].includes(lastJobState))
-                    try {
-                        await lastJob.remove();
-                    } catch (e) {
-                        this.log.warn(e);
-                        return;
-                    }
-            }
             await this.addJob(
                 Queues.connector,
                 type,
@@ -100,7 +100,7 @@ export default class ConnectorRunnerService extends HTTPService {
                 await this.checkIdleOrderJobs();
                 break;
             case ConnectorRunnerJobType.checkBalance:
-                await this.checkBalance();
+                await this.checkBalances();
                 break;
             default:
                 this.log.error(`Unknow job ${job.name}`);
@@ -130,16 +130,36 @@ export default class ConnectorRunnerService extends HTTPService {
         }
     }
 
-    async checkBalance() {
+    async checkBalance({ userExAccId }: { userExAccId: string }, user: User) {
+        const userExAcc = await this.db.pg.one<{ id: string; userId: string }>(sql`
+        SELECT id, user_id from user_exchange_accs where id = ${userExAccId};
+        `);
+        if (user && user.id !== userExAcc.userId)
+            throw new ActionsHandlerError(
+                "Current user isn't owner of this User Exchange Account",
+                { userExAccId },
+                "FORBIDDEN",
+                403
+            );
+        await this.addJob(
+            Queues.connector,
+            ConnectorJobType.balance,
+            { userExAccId },
+            {
+                jobId: userExAccId,
+                removeOnComplete: true,
+                removeOnFail: 100
+            }
+        );
+    }
+
+    async checkBalances() {
         const userExAccIds = await this.db.pg.any<{ userExAccId: string }>(sql`
         select id as user_ex_acc_id 
         from user_exchange_accs 
         where status = 'enabled' 
-        and ( (((balances -> 'balances'::text) ->> 'updatedAt'::text))::timestamp without time zone is null 
-          or (((balances -> 'balances'::text) ->> 'updatedAt'::text))::timestamp without time zone < ${dayjs
-              .utc()
-              .add(-50, "minute")
-              .toISOString()})
+        and ( (balances->> 'updatedAt')::timestamp without time zone is null 
+          or (balances->> 'updatedAt')::timestamp without time zone < ${dayjs.utc().add(-50, "minute").toISOString()})
         `);
         if (userExAccIds && Array.isArray(userExAccIds) && userExAccIds.length) {
             this.log.info(`${userExAccIds.length} userExAccs need to check balance`);

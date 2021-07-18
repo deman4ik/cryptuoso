@@ -179,7 +179,7 @@ async function addUserRobotEnterVolume(ctx: any) {
             const { p: volumeType }: { p: VolumeSettingsType } = JSON.parse(ctx.callbackQuery.data);
             ctx.scene.state.volumeType = volumeType;
         }
-        if (ctx.scene.state.volumeType === VolumeSettingsType.balancePercent && !ctx.scene.state.amounts) {
+        if (ctx.scene.state.volumeType === "balancePercent" && !ctx.scene.state.amounts) {
             const { balance, availableBalancePercent } = await this.getUserAmounts(ctx);
             ctx.scene.state.amounts = { balance, availableBalancePercent };
         }
@@ -209,13 +209,13 @@ async function addUserRobotEnterVolume(ctx: any) {
 
         let asset;
         let minVolumeText;
-        if (volumeType === VolumeSettingsType.assetStatic || volumeType === VolumeSettingsType.assetDynamicDelta) {
+        if (volumeType === "assetStatic") {
             asset = robot.asset;
             minVolumeText = ctx.i18n.t("scenes.addUserRobot.minVal", { minVolume: amount, asset });
-        } else if (volumeType === VolumeSettingsType.currencyDynamic) {
+        } else if (volumeType === "currencyDynamic") {
             asset = robot.currency;
             minVolumeText = ctx.i18n.t("scenes.addUserRobot.minVal", { minVolume: amountUSD, asset });
-        } else if (volumeType === VolumeSettingsType.balancePercent) {
+        } else if (volumeType === "balancePercent") {
             const {
                 amounts: { balance, availableBalancePercent }
             }: {
@@ -287,11 +287,11 @@ async function addUserRobotConfirm(ctx: any) {
         try {
             volume = parseFloat(ctx.message.text);
             if (isNaN(volume)) error = "Volume is not a number";
-            if (volumeType === VolumeSettingsType.assetStatic || volumeType === VolumeSettingsType.assetDynamicDelta) {
+            if (volumeType === "assetStatic") {
                 checkAssetStatic(volume, min.amount, max.amount);
-            } else if (volumeType === VolumeSettingsType.currencyDynamic) {
+            } else if (volumeType === "currencyDynamic") {
                 checkCurrencyDynamic(volume, min.amountUSD, max.amountUSD);
-            } else if (volumeType === VolumeSettingsType.balancePercent) {
+            } else if (volumeType === "balancePercent") {
                 const {
                     amounts: { balance, availableBalancePercent }
                 }: {
@@ -318,22 +318,17 @@ async function addUserRobotConfirm(ctx: any) {
                 robotId: robot.id
             };
 
-            if (volumeType === VolumeSettingsType.assetStatic) {
+            if (volumeType === "assetStatic") {
                 params.settings = {
                     volumeType,
                     volume
                 };
-            } else if (volumeType === VolumeSettingsType.currencyDynamic) {
+            } else if (volumeType === "currencyDynamic") {
                 params.settings = {
                     volumeType,
                     volumeInCurrency: volume
                 };
-            } else if (volumeType === VolumeSettingsType.assetDynamicDelta) {
-                params.settings = {
-                    volumeType,
-                    initialVolume: volume
-                };
-            } else if (volumeType === VolumeSettingsType.balancePercent) {
+            } else if (volumeType === "balancePercent") {
                 params.settings = {
                     volumeType,
                     balancePercent: volume
@@ -376,11 +371,11 @@ async function addUserRobotConfirm(ctx: any) {
 
             let asset;
 
-            if (volumeType === VolumeSettingsType.assetStatic || volumeType === VolumeSettingsType.assetDynamicDelta) {
+            if (volumeType === "assetStatic") {
                 asset = robot.asset;
-            } else if (volumeType === VolumeSettingsType.currencyDynamic) {
+            } else if (volumeType === "currencyDynamic") {
                 asset = robot.currency;
-            } else if (volumeType === VolumeSettingsType.balancePercent) {
+            } else if (volumeType === "balancePercent") {
                 asset = "%";
             }
 

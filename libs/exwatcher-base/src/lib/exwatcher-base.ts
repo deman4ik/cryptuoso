@@ -584,28 +584,16 @@ export class ExwatcherBaseService extends BaseService {
                                         .utc(Timeframe.validTimeframeDatePrev(date.toISOString(), timeframe))
                                         .valueOf();
 
-                                    const candle: [
-                                        number,
-                                        number,
-                                        number,
-                                        number,
-                                        number,
-                                        number
-                                    ] = this.connector.ohlcvs[symbol][Timeframe.get(timeframe).str].find(
-                                        (c: any) => c[0] === candleTime
-                                    );
+                                    const candle: [number, number, number, number, number, number] =
+                                        this.connector.ohlcvs[symbol][Timeframe.get(timeframe).str].find(
+                                            (c: any) => c[0] === candleTime
+                                        );
                                     if (candle) {
                                         if (this.candlesCurrent[id][timeframe].time != candleTime) {
-                                            const prevCandle: [
-                                                number,
-                                                number,
-                                                number,
-                                                number,
-                                                number,
-                                                number
-                                            ] = this.connector.ohlcvs[symbol][Timeframe.get(timeframe).str].find(
-                                                (c: any) => c[0] === this.candlesCurrent[id][timeframe].time
-                                            );
+                                            const prevCandle: [number, number, number, number, number, number] =
+                                                this.connector.ohlcvs[symbol][Timeframe.get(timeframe).str].find(
+                                                    (c: any) => c[0] === this.candlesCurrent[id][timeframe].time
+                                                );
                                             if (prevCandle) {
                                                 this.candlesCurrent[id][timeframe].open = prevCandle[1];
                                                 this.candlesCurrent[id][timeframe].high = prevCandle[2];
@@ -637,16 +625,10 @@ export class ExwatcherBaseService extends BaseService {
                                                 : CandleType.loaded;
                                     }
                                 } else {
-                                    const candles: [
-                                        number,
-                                        number,
-                                        number,
-                                        number,
-                                        number,
-                                        number
-                                    ][] = this.connector.ohlcvs[symbol][Timeframe.get(timeframe).str].filter(
-                                        (c: any) => c[0] < date.valueOf()
-                                    );
+                                    const candles: [number, number, number, number, number, number][] =
+                                        this.connector.ohlcvs[symbol][Timeframe.get(timeframe).str].filter(
+                                            (c: any) => c[0] < date.valueOf()
+                                        );
                                     const candle = candles[candles.length - 1];
                                     if (candle) {
                                         this.candlesCurrent[id][timeframe] = {

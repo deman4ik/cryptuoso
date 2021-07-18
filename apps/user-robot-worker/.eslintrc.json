@@ -5,9 +5,6 @@
     "overrides": [
         {
             "files": ["*.ts", "*.tsx", "*.js", "*.jsx"],
-            "parserOptions": {
-                "project": ["apps/user-robot-worker/tsconfig.*?.json"]
-            },
             "rules": {}
         },
         {

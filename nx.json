@@ -2,7 +2,10 @@
     "npmScope": "cryptuoso",
     "implicitDependencies": {
         "workspace.json": "*",
-        "package.json": { "dependencies": "*", "devDependencies": "*" },
+        "package.json": {
+            "dependencies": "*",
+            "devDependencies": "*"
+        },
         ".eslintrc.json": "*",
         "nx.json": "*",
         "tsconfig.base.json": "*"
@@ -10,80 +13,232 @@
     "tasksRunnerOptions": {
         "default": {
             "runner": "@nrwl/workspace/tasks-runners/default",
-            "options": { "cacheableOperations": ["build", "lint", "test", "e2e"] }
+            "options": {
+                "cacheableOperations": ["build", "lint", "test", "e2e"]
+            }
         }
     },
     "projects": {
-        "dayjs": { "tags": [] },
-        "logger": { "tags": [] },
-        "errors": { "tags": [] },
-        "helpers": { "tags": [] },
-        "ccxt-public": { "tags": [] },
-        "service": { "tags": [] },
-        "importer-runner": { "tags": [] },
-        "importer-state": { "tags": [] },
-        "postgres": { "tags": [] },
-        "events": { "tags": [] },
-        "importer-events": { "tags": [] },
-        "importer-worker": { "tags": [] },
-        "exwatcher-runner": { "tags": [] },
-        "exwatcher-bitfinex": { "tags": [] },
-        "exwatcher-kraken": { "tags": [] },
-        "exwatcher-binance": { "tags": [] },
-        "exwatcher-base": { "tags": [] },
-        "market": { "tags": [] },
-        "exwatcher-events": { "tags": [] },
-        "backtester-runner": { "tags": [] },
-        "backtester-worker": { "tags": [] },
-        "backtester-state": { "tags": [] },
-        "robot-state": { "tags": [] },
-        "robot-indicators": { "tags": [] },
-        "robot-events": { "tags": [] },
-        "backtester-events": { "tags": [] },
-        "stats-calc": { "tags": [] },
-        "auth": { "tags": [] },
-        "user-state": { "tags": [] },
-        "mail": { "tags": [] },
-        "stats-calc-worker": { "tags": [] },
-        "stats-calc-runner": { "tags": [] },
-        "stats-calc-events": { "tags": [] },
-        "test-helpers": { "tags": [] },
-        "utils": { "tags": [] },
-        "events-manager": { "tags": [] },
-        "user-signal-state": { "tags": [] },
-        "user-robot-state": { "tags": [] },
-        "user-profile": { "tags": [] },
-        "robot-settings": { "tags": [] },
-        "robot-runner": { "tags": [] },
-        "robot-worker": { "tags": [] },
-        "user-robot-events": { "tags": [] },
-        "connector-events": { "tags": [] },
-        "connector-runner": { "tags": [] },
-        "connector-worker": { "tags": [] },
-        "user-robot-runner": { "tags": [] },
-        "user-robot-worker": { "tags": [] },
-        "connector-state": { "tags": [] },
-        "ccxt-private": { "tags": [] },
-        "notifications": { "tags": [] },
-        "support": { "tags": [] },
-        "telegram-bot": { "tags": [] },
-        "graphql-client": { "tags": [] },
-        "auth-utils": { "tags": [] },
-        "exwatcher-kucoin": { "tags": [] },
-        "exwatcher-huobipro": { "tags": [] },
-        "user-sub": { "tags": [] },
-        "billing": { "tags": [] },
-        "analytics": { "tags": [] },
-        "webhooks": { "tags": [] },
-        "user-sub-events": { "tags": [] },
-        "trade-stats": { "tags": [] },
-        "trade-stats-runner": { "tags": [] },
-        "trade-stats-worker": { "tags": [] },
-        "trade-stats-events": { "tags": [] },
-        "portfolio-manager": { "tags": [] },
-        "user-portfolio-manager": { "tags": [] },
-        "portfolio-state": { "tags": [] },
-        "user-portfolio-state": { "tags": [] }
+        "analytics": {
+            "tags": []
+        },
+        "auth": {
+            "tags": []
+        },
+        "auth-utils": {
+            "tags": []
+        },
+        "backtester-events": {
+            "tags": []
+        },
+        "backtester-runner": {
+            "tags": []
+        },
+        "backtester-state": {
+            "tags": []
+        },
+        "backtester-worker": {
+            "tags": []
+        },
+        "billing": {
+            "tags": []
+        },
+        "ccxt-private": {
+            "tags": []
+        },
+        "ccxt-public": {
+            "tags": []
+        },
+        "chat-bot": {
+            "tags": []
+        },
+        "connector-events": {
+            "tags": []
+        },
+        "connector-runner": {
+            "tags": []
+        },
+        "connector-state": {
+            "tags": []
+        },
+        "connector-worker": {
+            "tags": []
+        },
+        "dayjs": {
+            "tags": []
+        },
+        "errors": {
+            "tags": []
+        },
+        "events": {
+            "tags": []
+        },
+        "events-manager": {
+            "tags": []
+        },
+        "exwatcher-base": {
+            "tags": []
+        },
+        "exwatcher-binance": {
+            "tags": []
+        },
+        "exwatcher-bitfinex": {
+            "tags": []
+        },
+        "exwatcher-events": {
+            "tags": []
+        },
+        "exwatcher-huobipro": {
+            "tags": []
+        },
+        "exwatcher-kraken": {
+            "tags": []
+        },
+        "exwatcher-kucoin": {
+            "tags": []
+        },
+        "exwatcher-runner": {
+            "tags": []
+        },
+        "graphql-client": {
+            "tags": []
+        },
+        "helpers": {
+            "tags": []
+        },
+        "importer-events": {
+            "tags": []
+        },
+        "importer-runner": {
+            "tags": []
+        },
+        "importer-state": {
+            "tags": []
+        },
+        "importer-worker": {
+            "tags": []
+        },
+        "logger": {
+            "tags": []
+        },
+        "mail": {
+            "tags": []
+        },
+        "market": {
+            "tags": []
+        },
+        "notifications": {
+            "tags": []
+        },
+        "portfolio-events": {
+            "tags": []
+        },
+        "portfolio-manager": {
+            "tags": []
+        },
+        "portfolio-state": {
+            "tags": []
+        },
+        "postgres": {
+            "tags": []
+        },
+        "robot-events": {
+            "tags": []
+        },
+        "robot-indicators": {
+            "tags": []
+        },
+        "robot-runner": {
+            "tags": []
+        },
+        "robot-settings": {
+            "tags": []
+        },
+        "robot-state": {
+            "tags": []
+        },
+        "robot-worker": {
+            "tags": []
+        },
+        "service": {
+            "tags": []
+        },
+        "stats-calc": {
+            "tags": []
+        },
+        "stats-calc-events": {
+            "tags": []
+        },
+        "stats-calc-runner": {
+            "tags": []
+        },
+        "stats-calc-worker": {
+            "tags": []
+        },
+        "support": {
+            "tags": []
+        },
+        "telegram-bot": {
+            "tags": []
+        },
+        "test-helpers": {
+            "tags": []
+        },
+        "trade-stats": {
+            "tags": []
+        },
+        "trade-stats-events": {
+            "tags": []
+        },
+        "trade-stats-runner": {
+            "tags": []
+        },
+        "trade-stats-worker": {
+            "tags": []
+        },
+        "user-profile": {
+            "tags": []
+        },
+        "user-robot-events": {
+            "tags": []
+        },
+        "user-robot-runner": {
+            "tags": []
+        },
+        "user-robot-state": {
+            "tags": []
+        },
+        "user-robot-worker": {
+            "tags": []
+        },
+        "user-signal-state": {
+            "tags": []
+        },
+        "user-state": {
+            "tags": []
+        },
+        "user-sub": {
+            "tags": []
+        },
+        "user-sub-events": {
+            "tags": []
+        },
+        "utils": {
+            "tags": []
+        },
+        "webhooks": {
+            "tags": []
+        }
     },
-    "affected": { "defaultBase": "master" }
+    "affected": {
+        "defaultBase": "master"
+    },
+    "targetDependencies": {
+        "build": [
+            {
+                "target": "build",
+                "projects": "dependencies"
+            }
+        ]
+    }
 }

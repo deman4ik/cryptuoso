@@ -1,84 +1,108 @@
 {
     "version": 1,
     "projects": {
-        "dayjs": {
-            "root": "libs/dayjs",
-            "sourceRoot": "libs/dayjs/src",
+        "analytics": {
+            "root": "libs/analytics",
+            "sourceRoot": "libs/analytics/src",
             "projectType": "library",
-            "schematics": {},
             "architect": {
                 "lint": {
-                    "builder": "@nrwl/linter:lint",
+                    "builder": "@nrwl/linter:eslint",
                     "options": {
-                        "linter": "eslint",
-                        "tsConfig": ["libs/dayjs/tsconfig.lib.json", "libs/dayjs/tsconfig.spec.json"],
-                        "exclude": ["**/node_modules/**", "!libs/dayjs/**/*"]
+                        "lintFilePatterns": ["libs/analytics/**/*.ts"]
                     }
                 },
                 "test": {
                     "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/libs/analytics"],
                     "options": {
-                        "jestConfig": "libs/dayjs/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "libs/dayjs/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/libs/dayjs"]
+                        "jestConfig": "libs/analytics/jest.config.js",
+                        "passWithNoTests": true
+                    }
                 }
             }
         },
-        "logger": {
-            "root": "libs/logger",
-            "sourceRoot": "libs/logger/src",
-            "projectType": "library",
+        "auth": {
+            "root": "apps/auth",
+            "sourceRoot": "apps/auth/src",
+            "projectType": "application",
+            "prefix": "auth",
             "schematics": {},
             "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/auth",
+                        "main": "apps/auth/src/main.ts",
+                        "tsConfig": "apps/auth/tsconfig.app.json",
+                        "assets": ["apps/auth/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/auth/src/environments/environment.ts",
+                                    "with": "apps/auth/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    },
+                    "outputs": ["{options.outputPath}"]
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "auth:build"
+                    }
+                },
                 "lint": {
                     "builder": "@nrwl/linter:lint",
                     "options": {
                         "linter": "eslint",
-                        "tsConfig": ["libs/logger/tsconfig.lib.json", "libs/logger/tsconfig.spec.json"],
-                        "exclude": ["**/node_modules/**", "!libs/logger/**/*"]
+                        "tsConfig": ["apps/auth/tsconfig.app.json", "apps/auth/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!apps/auth/**/*"]
                     }
                 },
                 "test": {
                     "builder": "@nrwl/jest:jest",
                     "options": {
-                        "jestConfig": "libs/logger/jest.config.js",
+                        "jestConfig": "apps/auth/jest.config.js",
                         "passWithNoTests": true,
-                        "tsConfig": "libs/logger/tsconfig.spec.json"
+                        "tsConfig": "apps/auth/tsconfig.spec.json"
                     },
-                    "outputs": ["coverage/libs/logger"]
+                    "outputs": ["coverage/apps/auth"]
                 }
             }
         },
-        "errors": {
-            "root": "libs/errors",
-            "sourceRoot": "libs/errors/src",
+        "auth-utils": {
+            "root": "libs/auth-utils",
+            "sourceRoot": "libs/auth-utils/src",
             "projectType": "library",
             "schematics": {},
             "architect": {
                 "lint": {
-                    "builder": "@nrwl/linter:lint",
+                    "builder": "@nrwl/linter:eslint",
                     "options": {
-                        "linter": "eslint",
-                        "tsConfig": ["libs/errors/tsconfig.lib.json", "libs/errors/tsconfig.spec.json"],
-                        "exclude": ["**/node_modules/**", "!libs/errors/**/*"]
+                        "lintFilePatterns": ["libs/auth-utils/**/*.ts"]
                     }
                 },
                 "test": {
                     "builder": "@nrwl/jest:jest",
                     "options": {
-                        "jestConfig": "libs/errors/jest.config.js",
+                        "jestConfig": "libs/auth-utils/jest.config.js",
                         "passWithNoTests": true,
-                        "tsConfig": "libs/errors/tsconfig.spec.json"
+                        "tsConfig": "libs/auth-utils/tsconfig.spec.json"
                     },
-                    "outputs": ["coverage/libs/errors"]
+                    "outputs": ["coverage/libs/auth-utils"]
                 }
             }
         },
-        "helpers": {
-            "root": "libs/helpers",
-            "sourceRoot": "libs/helpers/src",
+        "backtester-events": {
+            "root": "libs/backtester-events",
+            "sourceRoot": "libs/backtester-events/src",
             "projectType": "library",
             "schematics": {},
             "architect": {
@@ -86,18 +110,210 @@
                     "builder": "@nrwl/linter:lint",
                     "options": {
                         "linter": "eslint",
-                        "tsConfig": ["libs/helpers/tsconfig.lib.json", "libs/helpers/tsconfig.spec.json"],
-                        "exclude": ["**/node_modules/**", "!libs/helpers/**/*"]
+                        "tsConfig": [
+                            "libs/backtester-events/tsconfig.lib.json",
+                            "libs/backtester-events/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!libs/backtester-events/**/*"]
                     }
                 },
                 "test": {
                     "builder": "@nrwl/jest:jest",
                     "options": {
-                        "jestConfig": "libs/helpers/jest.config.js",
+                        "jestConfig": "libs/backtester-events/jest.config.js",
                         "passWithNoTests": true,
-                        "tsConfig": "libs/helpers/tsconfig.spec.json"
+                        "tsConfig": "libs/backtester-events/tsconfig.spec.json"
                     },
-                    "outputs": ["coverage/libs/helpers"]
+                    "outputs": ["coverage/libs/backtester-events"]
+                }
+            }
+        },
+        "backtester-runner": {
+            "root": "apps/backtester-runner",
+            "sourceRoot": "apps/backtester-runner/src",
+            "projectType": "application",
+            "prefix": "backtester-runner",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/backtester-runner",
+                        "main": "apps/backtester-runner/src/main.ts",
+                        "tsConfig": "apps/backtester-runner/tsconfig.app.json",
+                        "assets": ["apps/backtester-runner/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/backtester-runner/src/environments/environment.ts",
+                                    "with": "apps/backtester-runner/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    },
+                    "outputs": ["{options.outputPath}"]
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "backtester-runner:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "apps/backtester-runner/tsconfig.app.json",
+                            "apps/backtester-runner/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!apps/backtester-runner/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/backtester-runner/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "apps/backtester-runner/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/apps/backtester-runner"]
+                }
+            }
+        },
+        "backtester-state": {
+            "root": "libs/backtester-state",
+            "sourceRoot": "libs/backtester-state/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "libs/backtester-state/tsconfig.lib.json",
+                            "libs/backtester-state/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!libs/backtester-state/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/backtester-state/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "libs/backtester-state/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/libs/backtester-state"]
+                }
+            }
+        },
+        "backtester-worker": {
+            "root": "apps/backtester-worker",
+            "sourceRoot": "apps/backtester-worker/src",
+            "projectType": "application",
+            "prefix": "backtester-worker",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/backtester-worker",
+                        "main": "apps/backtester-worker/src/main.ts",
+                        "tsConfig": "apps/backtester-worker/tsconfig.app.json",
+                        "assets": ["apps/backtester-worker/src/assets"],
+                        "webpackConfig": "apps/backtester-worker/webpack.config.js"
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/backtester-worker/src/environments/environment.ts",
+                                    "with": "apps/backtester-worker/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    },
+                    "outputs": ["{options.outputPath}"]
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "backtester-worker:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "apps/backtester-worker/tsconfig.app.json",
+                            "apps/backtester-worker/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!apps/backtester-worker/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/backtester-worker/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "apps/backtester-worker/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/apps/backtester-worker"]
+                }
+            }
+        },
+        "billing": {
+            "root": "libs/billing",
+            "sourceRoot": "libs/billing/src",
+            "projectType": "library",
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["libs/billing/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/libs/billing"],
+                    "options": {
+                        "jestConfig": "libs/billing/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "ccxt-private": {
+            "root": "libs/ccxt-private",
+            "sourceRoot": "libs/ccxt-private/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["libs/ccxt-private/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/ccxt-private/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "libs/ccxt-private/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/libs/ccxt-private"]
                 }
             }
         },
@@ -126,9 +342,212 @@
                 }
             }
         },
-        "service": {
-            "root": "libs/service",
-            "sourceRoot": "libs/service/src",
+        "chat-bot": {
+            "root": "apps/chat-bot",
+            "sourceRoot": "apps/chat-bot/src",
+            "projectType": "application",
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "outputs": ["{options.outputPath}"],
+                    "options": {
+                        "outputPath": "dist/apps/chat-bot",
+                        "main": "apps/chat-bot/src/main.ts",
+                        "tsConfig": "apps/chat-bot/tsconfig.app.json",
+                        "assets": ["apps/chat-bot/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/chat-bot/src/environments/environment.ts",
+                                    "with": "apps/chat-bot/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "chat-bot:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["apps/chat-bot/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/apps/chat-bot"],
+                    "options": {
+                        "jestConfig": "apps/chat-bot/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "connector-events": {
+            "root": "libs/connector-events",
+            "sourceRoot": "libs/connector-events/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["libs/connector-events/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/connector-events/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "libs/connector-events/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/libs/connector-events"]
+                }
+            }
+        },
+        "connector-runner": {
+            "root": "apps/connector-runner",
+            "sourceRoot": "apps/connector-runner/src",
+            "projectType": "application",
+            "prefix": "connector-runner",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/connector-runner",
+                        "main": "apps/connector-runner/src/main.ts",
+                        "tsConfig": "apps/connector-runner/tsconfig.app.json",
+                        "assets": ["apps/connector-runner/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/connector-runner/src/environments/environment.ts",
+                                    "with": "apps/connector-runner/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    },
+                    "outputs": ["{options.outputPath}"]
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "connector-runner:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["apps/connector-runner/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/connector-runner/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "apps/connector-runner/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/apps/connector-runner"]
+                }
+            }
+        },
+        "connector-state": {
+            "root": "libs/connector-state",
+            "sourceRoot": "libs/connector-state/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["libs/connector-state/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/connector-state/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "libs/connector-state/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/libs/connector-state"]
+                }
+            }
+        },
+        "connector-worker": {
+            "root": "apps/connector-worker",
+            "sourceRoot": "apps/connector-worker/src",
+            "projectType": "application",
+            "prefix": "connector-worker",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/connector-worker",
+                        "main": "apps/connector-worker/src/main.ts",
+                        "tsConfig": "apps/connector-worker/tsconfig.app.json",
+                        "assets": ["apps/connector-worker/src/assets"],
+                        "webpackConfig": "apps/connector-worker/webpack.config.js"
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/connector-worker/src/environments/environment.ts",
+                                    "with": "apps/connector-worker/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    },
+                    "outputs": ["{options.outputPath}"]
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "connector-worker:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["apps/connector-worker/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/connector-worker/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "apps/connector-worker/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/apps/connector-worker"]
+                }
+            }
+        },
+        "dayjs": {
+            "root": "libs/dayjs",
+            "sourceRoot": "libs/dayjs/src",
             "projectType": "library",
             "schematics": {},
             "architect": {
@@ -136,18 +555,586 @@
                     "builder": "@nrwl/linter:lint",
                     "options": {
                         "linter": "eslint",
-                        "tsConfig": ["libs/service/tsconfig.lib.json", "libs/service/tsconfig.spec.json"],
-                        "exclude": ["**/node_modules/**", "!libs/service/**/*"]
+                        "tsConfig": ["libs/dayjs/tsconfig.lib.json", "libs/dayjs/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/dayjs/**/*"]
                     }
                 },
                 "test": {
                     "builder": "@nrwl/jest:jest",
                     "options": {
-                        "jestConfig": "libs/service/jest.config.js",
+                        "jestConfig": "libs/dayjs/jest.config.js",
                         "passWithNoTests": true,
-                        "tsConfig": "libs/service/tsconfig.spec.json"
+                        "tsConfig": "libs/dayjs/tsconfig.spec.json"
                     },
-                    "outputs": ["coverage/libs/service"]
+                    "outputs": ["coverage/libs/dayjs"]
+                }
+            }
+        },
+        "errors": {
+            "root": "libs/errors",
+            "sourceRoot": "libs/errors/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": ["libs/errors/tsconfig.lib.json", "libs/errors/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/errors/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/errors/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "libs/errors/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/libs/errors"]
+                }
+            }
+        },
+        "events": {
+            "root": "libs/events",
+            "sourceRoot": "libs/events/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": ["libs/events/tsconfig.lib.json", "libs/events/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/events/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/events/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "libs/events/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/libs/events"]
+                }
+            }
+        },
+        "events-manager": {
+            "root": "apps/events-manager",
+            "sourceRoot": "apps/events-manager/src",
+            "projectType": "application",
+            "prefix": "events-manager",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/events-manager",
+                        "main": "apps/events-manager/src/main.ts",
+                        "tsConfig": "apps/events-manager/tsconfig.app.json",
+                        "assets": ["apps/events-manager/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/events-manager/src/environments/environment.ts",
+                                    "with": "apps/events-manager/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    },
+                    "outputs": ["{options.outputPath}"]
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "events-manager:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": ["apps/events-manager/tsconfig.app.json", "apps/events-manager/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!apps/events-manager/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/events-manager/jest.config.js",
+                        "tsConfig": "apps/events-manager/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    },
+                    "outputs": ["coverage/apps/events-manager"]
+                }
+            }
+        },
+        "exwatcher-base": {
+            "root": "libs/exwatcher-base",
+            "sourceRoot": "libs/exwatcher-base/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": ["libs/exwatcher-base/tsconfig.lib.json", "libs/exwatcher-base/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/exwatcher-base/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/exwatcher-base/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "libs/exwatcher-base/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/libs/exwatcher-base"]
+                }
+            }
+        },
+        "exwatcher-binance": {
+            "root": "apps/exwatcher-binance",
+            "sourceRoot": "apps/exwatcher-binance/src",
+            "projectType": "application",
+            "prefix": "exwatcher-binance",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/exwatcher-binance",
+                        "main": "apps/exwatcher-binance/src/main.ts",
+                        "tsConfig": "apps/exwatcher-binance/tsconfig.app.json",
+                        "assets": ["apps/exwatcher-binance/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/exwatcher-binance/src/environments/environment.ts",
+                                    "with": "apps/exwatcher-binance/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    },
+                    "outputs": ["{options.outputPath}"]
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "exwatcher-binance:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "apps/exwatcher-binance/tsconfig.app.json",
+                            "apps/exwatcher-binance/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!apps/exwatcher-binance/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/exwatcher-binance/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "apps/exwatcher-binance/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/apps/exwatcher-binance"]
+                }
+            }
+        },
+        "exwatcher-bitfinex": {
+            "root": "apps/exwatcher-bitfinex",
+            "sourceRoot": "apps/exwatcher-bitfinex/src",
+            "projectType": "application",
+            "prefix": "exwatcher-bitfinex",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/exwatcher-bitfinex",
+                        "main": "apps/exwatcher-bitfinex/src/main.ts",
+                        "tsConfig": "apps/exwatcher-bitfinex/tsconfig.app.json",
+                        "assets": ["apps/exwatcher-bitfinex/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/exwatcher-bitfinex/src/environments/environment.ts",
+                                    "with": "apps/exwatcher-bitfinex/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    },
+                    "outputs": ["{options.outputPath}"]
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "exwatcher-bitfinex:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "apps/exwatcher-bitfinex/tsconfig.app.json",
+                            "apps/exwatcher-bitfinex/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!apps/exwatcher-bitfinex/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/exwatcher-bitfinex/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "apps/exwatcher-bitfinex/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/apps/exwatcher-bitfinex"]
+                }
+            }
+        },
+        "exwatcher-events": {
+            "root": "libs/exwatcher-events",
+            "sourceRoot": "libs/exwatcher-events/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "libs/exwatcher-events/tsconfig.lib.json",
+                            "libs/exwatcher-events/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!libs/exwatcher-events/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/exwatcher-events/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "libs/exwatcher-events/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/libs/exwatcher-events"]
+                }
+            }
+        },
+        "exwatcher-huobipro": {
+            "root": "apps/exwatcher-huobipro",
+            "sourceRoot": "apps/exwatcher-huobipro/src",
+            "projectType": "application",
+            "prefix": "exwatcher-huobipro",
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "outputs": ["{options.outputPath}"],
+                    "options": {
+                        "outputPath": "dist/apps/exwatcher-huobipro",
+                        "main": "apps/exwatcher-huobipro/src/main.ts",
+                        "tsConfig": "apps/exwatcher-huobipro/tsconfig.app.json",
+                        "assets": ["apps/exwatcher-huobipro/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/exwatcher-huobipro/src/environments/environment.ts",
+                                    "with": "apps/exwatcher-huobipro/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "exwatcher-huobipro:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["apps/exwatcher-huobipro/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/apps/exwatcher-huobipro"],
+                    "options": {
+                        "jestConfig": "apps/exwatcher-huobipro/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "exwatcher-kraken": {
+            "root": "apps/exwatcher-kraken",
+            "sourceRoot": "apps/exwatcher-kraken/src",
+            "projectType": "application",
+            "prefix": "exwatcher-kraken",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/exwatcher-kraken",
+                        "main": "apps/exwatcher-kraken/src/main.ts",
+                        "tsConfig": "apps/exwatcher-kraken/tsconfig.app.json",
+                        "assets": ["apps/exwatcher-kraken/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/exwatcher-kraken/src/environments/environment.ts",
+                                    "with": "apps/exwatcher-kraken/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    },
+                    "outputs": ["{options.outputPath}"]
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "exwatcher-kraken:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "apps/exwatcher-kraken/tsconfig.app.json",
+                            "apps/exwatcher-kraken/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!apps/exwatcher-kraken/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/exwatcher-kraken/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "apps/exwatcher-kraken/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/apps/exwatcher-kraken"]
+                }
+            }
+        },
+        "exwatcher-kucoin": {
+            "root": "apps/exwatcher-kucoin",
+            "sourceRoot": "apps/exwatcher-kucoin/src",
+            "projectType": "application",
+            "prefix": "exwatcher-kucoin",
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "outputs": ["{options.outputPath}"],
+                    "options": {
+                        "outputPath": "dist/apps/exwatcher-kucoin",
+                        "main": "apps/exwatcher-kucoin/src/main.ts",
+                        "tsConfig": "apps/exwatcher-kucoin/tsconfig.app.json",
+                        "assets": ["apps/exwatcher-kucoin/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/exwatcher-kucoin/src/environments/environment.ts",
+                                    "with": "apps/exwatcher-kucoin/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "exwatcher-kucoin:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["apps/exwatcher-kucoin/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/apps/exwatcher-kucoin"],
+                    "options": {
+                        "jestConfig": "apps/exwatcher-kucoin/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "exwatcher-runner": {
+            "root": "apps/exwatcher-runner",
+            "sourceRoot": "apps/exwatcher-runner/src",
+            "projectType": "application",
+            "prefix": "exwatcher-runner",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/exwatcher-runner",
+                        "main": "apps/exwatcher-runner/src/main.ts",
+                        "tsConfig": "apps/exwatcher-runner/tsconfig.app.json",
+                        "assets": ["apps/exwatcher-runner/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/exwatcher-runner/src/environments/environment.ts",
+                                    "with": "apps/exwatcher-runner/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    },
+                    "outputs": ["{options.outputPath}"]
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "exwatcher-runner:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "apps/exwatcher-runner/tsconfig.app.json",
+                            "apps/exwatcher-runner/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!apps/exwatcher-runner/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/exwatcher-runner/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "apps/exwatcher-runner/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/apps/exwatcher-runner"]
+                }
+            }
+        },
+        "graphql-client": {
+            "root": "libs/graphql-client",
+            "sourceRoot": "libs/graphql-client/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["libs/graphql-client/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/graphql-client/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "libs/graphql-client/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/libs/graphql-client"]
+                }
+            }
+        },
+        "helpers": {
+            "root": "libs/helpers",
+            "sourceRoot": "libs/helpers/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": ["libs/helpers/tsconfig.lib.json", "libs/helpers/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/helpers/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/helpers/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "libs/helpers/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/libs/helpers"]
+                }
+            }
+        },
+        "importer-events": {
+            "root": "libs/importer-events",
+            "sourceRoot": "libs/importer-events/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "libs/importer-events/tsconfig.lib.json",
+                            "libs/importer-events/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!libs/importer-events/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/importer-events/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "libs/importer-events/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/libs/importer-events"]
                 }
             }
         },
@@ -234,84 +1221,6 @@
                 }
             }
         },
-        "postgres": {
-            "root": "libs/postgres",
-            "sourceRoot": "libs/postgres/src",
-            "projectType": "library",
-            "schematics": {},
-            "architect": {
-                "lint": {
-                    "builder": "@nrwl/linter:lint",
-                    "options": {
-                        "linter": "eslint",
-                        "tsConfig": ["libs/postgres/tsconfig.lib.json", "libs/postgres/tsconfig.spec.json"],
-                        "exclude": ["**/node_modules/**", "!libs/postgres/**/*"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "libs/postgres/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "libs/postgres/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/libs/postgres"]
-                }
-            }
-        },
-        "events": {
-            "root": "libs/events",
-            "sourceRoot": "libs/events/src",
-            "projectType": "library",
-            "schematics": {},
-            "architect": {
-                "lint": {
-                    "builder": "@nrwl/linter:lint",
-                    "options": {
-                        "linter": "eslint",
-                        "tsConfig": ["libs/events/tsconfig.lib.json", "libs/events/tsconfig.spec.json"],
-                        "exclude": ["**/node_modules/**", "!libs/events/**/*"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "libs/events/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "libs/events/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/libs/events"]
-                }
-            }
-        },
-        "importer-events": {
-            "root": "libs/importer-events",
-            "sourceRoot": "libs/importer-events/src",
-            "projectType": "library",
-            "schematics": {},
-            "architect": {
-                "lint": {
-                    "builder": "@nrwl/linter:lint",
-                    "options": {
-                        "linter": "eslint",
-                        "tsConfig": [
-                            "libs/importer-events/tsconfig.lib.json",
-                            "libs/importer-events/tsconfig.spec.json"
-                        ],
-                        "exclude": ["**/node_modules/**", "!libs/importer-events/**/*"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "libs/importer-events/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "libs/importer-events/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/libs/importer-events"]
-                }
-            }
-        },
         "importer-worker": {
             "root": "apps/importer-worker",
             "sourceRoot": "apps/importer-worker/src",
@@ -371,241 +1280,9 @@
                 }
             }
         },
-        "exwatcher-runner": {
-            "root": "apps/exwatcher-runner",
-            "sourceRoot": "apps/exwatcher-runner/src",
-            "projectType": "application",
-            "prefix": "exwatcher-runner",
-            "schematics": {},
-            "architect": {
-                "build": {
-                    "builder": "@nrwl/node:build",
-                    "options": {
-                        "outputPath": "dist/apps/exwatcher-runner",
-                        "main": "apps/exwatcher-runner/src/main.ts",
-                        "tsConfig": "apps/exwatcher-runner/tsconfig.app.json",
-                        "assets": ["apps/exwatcher-runner/src/assets"]
-                    },
-                    "configurations": {
-                        "production": {
-                            "optimization": true,
-                            "extractLicenses": true,
-                            "inspect": false,
-                            "fileReplacements": [
-                                {
-                                    "replace": "apps/exwatcher-runner/src/environments/environment.ts",
-                                    "with": "apps/exwatcher-runner/src/environments/environment.prod.ts"
-                                }
-                            ]
-                        }
-                    },
-                    "outputs": ["{options.outputPath}"]
-                },
-                "serve": {
-                    "builder": "@nrwl/node:execute",
-                    "options": {
-                        "buildTarget": "exwatcher-runner:build"
-                    }
-                },
-                "lint": {
-                    "builder": "@nrwl/linter:lint",
-                    "options": {
-                        "linter": "eslint",
-                        "tsConfig": [
-                            "apps/exwatcher-runner/tsconfig.app.json",
-                            "apps/exwatcher-runner/tsconfig.spec.json"
-                        ],
-                        "exclude": ["**/node_modules/**", "!apps/exwatcher-runner/**/*"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "apps/exwatcher-runner/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "apps/exwatcher-runner/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/apps/exwatcher-runner"]
-                }
-            }
-        },
-        "exwatcher-bitfinex": {
-            "root": "apps/exwatcher-bitfinex",
-            "sourceRoot": "apps/exwatcher-bitfinex/src",
-            "projectType": "application",
-            "prefix": "exwatcher-bitfinex",
-            "schematics": {},
-            "architect": {
-                "build": {
-                    "builder": "@nrwl/node:build",
-                    "options": {
-                        "outputPath": "dist/apps/exwatcher-bitfinex",
-                        "main": "apps/exwatcher-bitfinex/src/main.ts",
-                        "tsConfig": "apps/exwatcher-bitfinex/tsconfig.app.json",
-                        "assets": ["apps/exwatcher-bitfinex/src/assets"]
-                    },
-                    "configurations": {
-                        "production": {
-                            "optimization": true,
-                            "extractLicenses": true,
-                            "inspect": false,
-                            "fileReplacements": [
-                                {
-                                    "replace": "apps/exwatcher-bitfinex/src/environments/environment.ts",
-                                    "with": "apps/exwatcher-bitfinex/src/environments/environment.prod.ts"
-                                }
-                            ]
-                        }
-                    },
-                    "outputs": ["{options.outputPath}"]
-                },
-                "serve": {
-                    "builder": "@nrwl/node:execute",
-                    "options": {
-                        "buildTarget": "exwatcher-bitfinex:build"
-                    }
-                },
-                "lint": {
-                    "builder": "@nrwl/linter:lint",
-                    "options": {
-                        "linter": "eslint",
-                        "tsConfig": [
-                            "apps/exwatcher-bitfinex/tsconfig.app.json",
-                            "apps/exwatcher-bitfinex/tsconfig.spec.json"
-                        ],
-                        "exclude": ["**/node_modules/**", "!apps/exwatcher-bitfinex/**/*"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "apps/exwatcher-bitfinex/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "apps/exwatcher-bitfinex/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/apps/exwatcher-bitfinex"]
-                }
-            }
-        },
-        "exwatcher-kraken": {
-            "root": "apps/exwatcher-kraken",
-            "sourceRoot": "apps/exwatcher-kraken/src",
-            "projectType": "application",
-            "prefix": "exwatcher-kraken",
-            "schematics": {},
-            "architect": {
-                "build": {
-                    "builder": "@nrwl/node:build",
-                    "options": {
-                        "outputPath": "dist/apps/exwatcher-kraken",
-                        "main": "apps/exwatcher-kraken/src/main.ts",
-                        "tsConfig": "apps/exwatcher-kraken/tsconfig.app.json",
-                        "assets": ["apps/exwatcher-kraken/src/assets"]
-                    },
-                    "configurations": {
-                        "production": {
-                            "optimization": true,
-                            "extractLicenses": true,
-                            "inspect": false,
-                            "fileReplacements": [
-                                {
-                                    "replace": "apps/exwatcher-kraken/src/environments/environment.ts",
-                                    "with": "apps/exwatcher-kraken/src/environments/environment.prod.ts"
-                                }
-                            ]
-                        }
-                    },
-                    "outputs": ["{options.outputPath}"]
-                },
-                "serve": {
-                    "builder": "@nrwl/node:execute",
-                    "options": {
-                        "buildTarget": "exwatcher-kraken:build"
-                    }
-                },
-                "lint": {
-                    "builder": "@nrwl/linter:lint",
-                    "options": {
-                        "linter": "eslint",
-                        "tsConfig": [
-                            "apps/exwatcher-kraken/tsconfig.app.json",
-                            "apps/exwatcher-kraken/tsconfig.spec.json"
-                        ],
-                        "exclude": ["**/node_modules/**", "!apps/exwatcher-kraken/**/*"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "apps/exwatcher-kraken/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "apps/exwatcher-kraken/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/apps/exwatcher-kraken"]
-                }
-            }
-        },
-        "exwatcher-binance": {
-            "root": "apps/exwatcher-binance",
-            "sourceRoot": "apps/exwatcher-binance/src",
-            "projectType": "application",
-            "prefix": "exwatcher-binance",
-            "schematics": {},
-            "architect": {
-                "build": {
-                    "builder": "@nrwl/node:build",
-                    "options": {
-                        "outputPath": "dist/apps/exwatcher-binance",
-                        "main": "apps/exwatcher-binance/src/main.ts",
-                        "tsConfig": "apps/exwatcher-binance/tsconfig.app.json",
-                        "assets": ["apps/exwatcher-binance/src/assets"]
-                    },
-                    "configurations": {
-                        "production": {
-                            "optimization": true,
-                            "extractLicenses": true,
-                            "inspect": false,
-                            "fileReplacements": [
-                                {
-                                    "replace": "apps/exwatcher-binance/src/environments/environment.ts",
-                                    "with": "apps/exwatcher-binance/src/environments/environment.prod.ts"
-                                }
-                            ]
-                        }
-                    },
-                    "outputs": ["{options.outputPath}"]
-                },
-                "serve": {
-                    "builder": "@nrwl/node:execute",
-                    "options": {
-                        "buildTarget": "exwatcher-binance:build"
-                    }
-                },
-                "lint": {
-                    "builder": "@nrwl/linter:lint",
-                    "options": {
-                        "linter": "eslint",
-                        "tsConfig": [
-                            "apps/exwatcher-binance/tsconfig.app.json",
-                            "apps/exwatcher-binance/tsconfig.spec.json"
-                        ],
-                        "exclude": ["**/node_modules/**", "!apps/exwatcher-binance/**/*"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "apps/exwatcher-binance/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "apps/exwatcher-binance/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/apps/exwatcher-binance"]
-                }
-            }
-        },
-        "exwatcher-base": {
-            "root": "libs/exwatcher-base",
-            "sourceRoot": "libs/exwatcher-base/src",
+        "logger": {
+            "root": "libs/logger",
+            "sourceRoot": "libs/logger/src",
             "projectType": "library",
             "schematics": {},
             "architect": {
@@ -613,18 +1290,43 @@
                     "builder": "@nrwl/linter:lint",
                     "options": {
                         "linter": "eslint",
-                        "tsConfig": ["libs/exwatcher-base/tsconfig.lib.json", "libs/exwatcher-base/tsconfig.spec.json"],
-                        "exclude": ["**/node_modules/**", "!libs/exwatcher-base/**/*"]
+                        "tsConfig": ["libs/logger/tsconfig.lib.json", "libs/logger/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/logger/**/*"]
                     }
                 },
                 "test": {
                     "builder": "@nrwl/jest:jest",
                     "options": {
-                        "jestConfig": "libs/exwatcher-base/jest.config.js",
+                        "jestConfig": "libs/logger/jest.config.js",
                         "passWithNoTests": true,
-                        "tsConfig": "libs/exwatcher-base/tsconfig.spec.json"
+                        "tsConfig": "libs/logger/tsconfig.spec.json"
                     },
-                    "outputs": ["coverage/libs/exwatcher-base"]
+                    "outputs": ["coverage/libs/logger"]
+                }
+            }
+        },
+        "mail": {
+            "root": "libs/mail",
+            "sourceRoot": "libs/mail/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": ["libs/mail/tsconfig.lib.json", "libs/mail/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/mail/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/mail/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "libs/mail/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/libs/mail"]
                 }
             }
         },
@@ -653,48 +1355,20 @@
                 }
             }
         },
-        "exwatcher-events": {
-            "root": "libs/exwatcher-events",
-            "sourceRoot": "libs/exwatcher-events/src",
-            "projectType": "library",
-            "schematics": {},
-            "architect": {
-                "lint": {
-                    "builder": "@nrwl/linter:lint",
-                    "options": {
-                        "linter": "eslint",
-                        "tsConfig": [
-                            "libs/exwatcher-events/tsconfig.lib.json",
-                            "libs/exwatcher-events/tsconfig.spec.json"
-                        ],
-                        "exclude": ["**/node_modules/**", "!libs/exwatcher-events/**/*"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "libs/exwatcher-events/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "libs/exwatcher-events/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/libs/exwatcher-events"]
-                }
-            }
-        },
-        "backtester-runner": {
-            "root": "apps/backtester-runner",
-            "sourceRoot": "apps/backtester-runner/src",
+        "notifications": {
+            "root": "apps/notifications",
+            "sourceRoot": "apps/notifications/src",
             "projectType": "application",
-            "prefix": "backtester-runner",
+            "prefix": "notifications",
             "schematics": {},
             "architect": {
                 "build": {
                     "builder": "@nrwl/node:build",
                     "options": {
-                        "outputPath": "dist/apps/backtester-runner",
-                        "main": "apps/backtester-runner/src/main.ts",
-                        "tsConfig": "apps/backtester-runner/tsconfig.app.json",
-                        "assets": ["apps/backtester-runner/src/assets"]
+                        "outputPath": "dist/apps/notifications",
+                        "main": "apps/notifications/src/main.ts",
+                        "tsConfig": "apps/notifications/tsconfig.app.json",
+                        "assets": ["apps/notifications/src/assets"]
                     },
                     "configurations": {
                         "production": {
@@ -703,8 +1377,8 @@
                             "inspect": false,
                             "fileReplacements": [
                                 {
-                                    "replace": "apps/backtester-runner/src/environments/environment.ts",
-                                    "with": "apps/backtester-runner/src/environments/environment.prod.ts"
+                                    "replace": "apps/notifications/src/environments/environment.ts",
+                                    "with": "apps/notifications/src/environments/environment.prod.ts"
                                 }
                             ]
                         }
@@ -714,46 +1388,62 @@
                 "serve": {
                     "builder": "@nrwl/node:execute",
                     "options": {
-                        "buildTarget": "backtester-runner:build"
+                        "buildTarget": "notifications:build"
                     }
                 },
                 "lint": {
-                    "builder": "@nrwl/linter:lint",
+                    "builder": "@nrwl/linter:eslint",
                     "options": {
-                        "linter": "eslint",
-                        "tsConfig": [
-                            "apps/backtester-runner/tsconfig.app.json",
-                            "apps/backtester-runner/tsconfig.spec.json"
-                        ],
-                        "exclude": ["**/node_modules/**", "!apps/backtester-runner/**/*"]
+                        "lintFilePatterns": ["apps/notifications/**/*.ts"]
                     }
                 },
                 "test": {
                     "builder": "@nrwl/jest:jest",
                     "options": {
-                        "jestConfig": "apps/backtester-runner/jest.config.js",
+                        "jestConfig": "apps/notifications/jest.config.js",
                         "passWithNoTests": true,
-                        "tsConfig": "apps/backtester-runner/tsconfig.spec.json"
+                        "tsConfig": "apps/notifications/tsconfig.spec.json"
                     },
-                    "outputs": ["coverage/apps/backtester-runner"]
+                    "outputs": ["coverage/apps/notifications"]
                 }
             }
         },
-        "backtester-worker": {
-            "root": "apps/backtester-worker",
-            "sourceRoot": "apps/backtester-worker/src",
+        "portfolio-events": {
+            "root": "libs/portfolio-events",
+            "sourceRoot": "libs/portfolio-events/src",
+            "projectType": "library",
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["libs/portfolio-events/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/libs/portfolio-events"],
+                    "options": {
+                        "jestConfig": "libs/portfolio-events/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "portfolio-manager": {
+            "root": "apps/portfolio-manager",
+            "sourceRoot": "apps/portfolio-manager/src",
             "projectType": "application",
-            "prefix": "backtester-worker",
-            "schematics": {},
+            "prefix": "portfolio-manager",
             "architect": {
                 "build": {
                     "builder": "@nrwl/node:build",
+                    "outputs": ["{options.outputPath}"],
                     "options": {
-                        "outputPath": "dist/apps/backtester-worker",
-                        "main": "apps/backtester-worker/src/main.ts",
-                        "tsConfig": "apps/backtester-worker/tsconfig.app.json",
-                        "assets": ["apps/backtester-worker/src/assets"],
-                        "webpackConfig": "apps/backtester-worker/webpack.config.js"
+                        "outputPath": "dist/apps/portfolio-manager",
+                        "main": "apps/portfolio-manager/src/main.ts",
+                        "tsConfig": "apps/portfolio-manager/tsconfig.app.json",
+                        "assets": ["apps/portfolio-manager/src/assets"],
+                        "webpackConfig": "apps/portfolio-manager/webpack.config.js"
                     },
                     "configurations": {
                         "production": {
@@ -762,45 +1452,59 @@
                             "inspect": false,
                             "fileReplacements": [
                                 {
-                                    "replace": "apps/backtester-worker/src/environments/environment.ts",
-                                    "with": "apps/backtester-worker/src/environments/environment.prod.ts"
+                                    "replace": "apps/portfolio-manager/src/environments/environment.ts",
+                                    "with": "apps/portfolio-manager/src/environments/environment.prod.ts"
                                 }
                             ]
                         }
-                    },
-                    "outputs": ["{options.outputPath}"]
+                    }
                 },
                 "serve": {
                     "builder": "@nrwl/node:execute",
                     "options": {
-                        "buildTarget": "backtester-worker:build"
+                        "buildTarget": "portfolio-manager:build"
                     }
                 },
                 "lint": {
-                    "builder": "@nrwl/linter:lint",
+                    "builder": "@nrwl/linter:eslint",
                     "options": {
-                        "linter": "eslint",
-                        "tsConfig": [
-                            "apps/backtester-worker/tsconfig.app.json",
-                            "apps/backtester-worker/tsconfig.spec.json"
-                        ],
-                        "exclude": ["**/node_modules/**", "!apps/backtester-worker/**/*"]
+                        "lintFilePatterns": ["apps/portfolio-manager/**/*.ts"]
                     }
                 },
                 "test": {
                     "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/apps/portfolio-manager"],
                     "options": {
-                        "jestConfig": "apps/backtester-worker/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "apps/backtester-worker/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/apps/backtester-worker"]
+                        "jestConfig": "apps/portfolio-manager/jest.config.js",
+                        "passWithNoTests": true
+                    }
                 }
             }
         },
-        "backtester-state": {
-            "root": "libs/backtester-state",
-            "sourceRoot": "libs/backtester-state/src",
+        "portfolio-state": {
+            "root": "libs/portfolio-state",
+            "sourceRoot": "libs/portfolio-state/src",
+            "projectType": "library",
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["libs/portfolio-state/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/libs/portfolio-state"],
+                    "options": {
+                        "jestConfig": "libs/portfolio-state/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "postgres": {
+            "root": "libs/postgres",
+            "sourceRoot": "libs/postgres/src",
             "projectType": "library",
             "schematics": {},
             "architect": {
@@ -808,27 +1512,24 @@
                     "builder": "@nrwl/linter:lint",
                     "options": {
                         "linter": "eslint",
-                        "tsConfig": [
-                            "libs/backtester-state/tsconfig.lib.json",
-                            "libs/backtester-state/tsconfig.spec.json"
-                        ],
-                        "exclude": ["**/node_modules/**", "!libs/backtester-state/**/*"]
+                        "tsConfig": ["libs/postgres/tsconfig.lib.json", "libs/postgres/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/postgres/**/*"]
                     }
                 },
                 "test": {
                     "builder": "@nrwl/jest:jest",
                     "options": {
-                        "jestConfig": "libs/backtester-state/jest.config.js",
+                        "jestConfig": "libs/postgres/jest.config.js",
                         "passWithNoTests": true,
-                        "tsConfig": "libs/backtester-state/tsconfig.spec.json"
+                        "tsConfig": "libs/postgres/tsconfig.spec.json"
                     },
-                    "outputs": ["coverage/libs/backtester-state"]
+                    "outputs": ["coverage/libs/postgres"]
                 }
             }
         },
-        "robot-state": {
-            "root": "libs/robot-state",
-            "sourceRoot": "libs/robot-state/src",
+        "robot-events": {
+            "root": "libs/robot-events",
+            "sourceRoot": "libs/robot-events/src",
             "projectType": "library",
             "schematics": {},
             "architect": {
@@ -836,18 +1537,18 @@
                     "builder": "@nrwl/linter:lint",
                     "options": {
                         "linter": "eslint",
-                        "tsConfig": ["libs/robot-state/tsconfig.lib.json", "libs/robot-state/tsconfig.spec.json"],
-                        "exclude": ["**/node_modules/**", "!libs/robot-state/**/*"]
+                        "tsConfig": ["libs/robot-events/tsconfig.lib.json", "libs/robot-events/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/robot-events/**/*"]
                     }
                 },
                 "test": {
                     "builder": "@nrwl/jest:jest",
                     "options": {
-                        "jestConfig": "libs/robot-state/jest.config.js",
+                        "jestConfig": "libs/robot-events/jest.config.js",
                         "passWithNoTests": true,
-                        "tsConfig": "libs/robot-state/tsconfig.spec.json"
+                        "tsConfig": "libs/robot-events/tsconfig.spec.json"
                     },
-                    "outputs": ["coverage/libs/robot-state"]
+                    "outputs": ["coverage/libs/robot-events"]
                 }
             }
         },
@@ -879,34 +1580,64 @@
                 }
             }
         },
-        "robot-events": {
-            "root": "libs/robot-events",
-            "sourceRoot": "libs/robot-events/src",
-            "projectType": "library",
+        "robot-runner": {
+            "root": "apps/robot-runner",
+            "sourceRoot": "apps/robot-runner/src",
+            "projectType": "application",
+            "prefix": "robot-runner",
             "schematics": {},
             "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/robot-runner",
+                        "main": "apps/robot-runner/src/main.ts",
+                        "tsConfig": "apps/robot-runner/tsconfig.app.json",
+                        "assets": ["apps/robot-runner/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/robot-runner/src/environments/environment.ts",
+                                    "with": "apps/robot-runner/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    },
+                    "outputs": ["{options.outputPath}"]
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "robot-runner:build"
+                    }
+                },
                 "lint": {
                     "builder": "@nrwl/linter:lint",
                     "options": {
                         "linter": "eslint",
-                        "tsConfig": ["libs/robot-events/tsconfig.lib.json", "libs/robot-events/tsconfig.spec.json"],
-                        "exclude": ["**/node_modules/**", "!libs/robot-events/**/*"]
+                        "tsConfig": ["apps/robot-runner/tsconfig.app.json", "apps/robot-runner/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!apps/robot-runner/**/*"]
                     }
                 },
                 "test": {
                     "builder": "@nrwl/jest:jest",
                     "options": {
-                        "jestConfig": "libs/robot-events/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "libs/robot-events/tsconfig.spec.json"
+                        "jestConfig": "apps/robot-runner/jest.config.js",
+                        "tsConfig": "apps/robot-runner/tsconfig.spec.json",
+                        "passWithNoTests": true
                     },
-                    "outputs": ["coverage/libs/robot-events"]
+                    "outputs": ["coverage/apps/robot-runner"]
                 }
             }
         },
-        "backtester-events": {
-            "root": "libs/backtester-events",
-            "sourceRoot": "libs/backtester-events/src",
+        "robot-settings": {
+            "root": "libs/robot-settings",
+            "sourceRoot": "libs/robot-settings/src",
             "projectType": "library",
             "schematics": {},
             "architect": {
@@ -914,21 +1645,124 @@
                     "builder": "@nrwl/linter:lint",
                     "options": {
                         "linter": "eslint",
-                        "tsConfig": [
-                            "libs/backtester-events/tsconfig.lib.json",
-                            "libs/backtester-events/tsconfig.spec.json"
-                        ],
-                        "exclude": ["**/node_modules/**", "!libs/backtester-events/**/*"]
+                        "tsConfig": ["libs/robot-settings/tsconfig.lib.json", "libs/robot-settings/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/robot-settings/**/*"]
                     }
                 },
                 "test": {
                     "builder": "@nrwl/jest:jest",
                     "options": {
-                        "jestConfig": "libs/backtester-events/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "libs/backtester-events/tsconfig.spec.json"
+                        "jestConfig": "libs/robot-settings/jest.config.js",
+                        "tsConfig": "libs/robot-settings/tsconfig.spec.json",
+                        "passWithNoTests": true
                     },
-                    "outputs": ["coverage/libs/backtester-events"]
+                    "outputs": ["coverage/libs/robot-settings"]
+                }
+            }
+        },
+        "robot-state": {
+            "root": "libs/robot-state",
+            "sourceRoot": "libs/robot-state/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": ["libs/robot-state/tsconfig.lib.json", "libs/robot-state/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/robot-state/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/robot-state/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "libs/robot-state/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/libs/robot-state"]
+                }
+            }
+        },
+        "robot-worker": {
+            "root": "apps/robot-worker",
+            "sourceRoot": "apps/robot-worker/src",
+            "projectType": "application",
+            "prefix": "robot-worker",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/robot-worker",
+                        "main": "apps/robot-worker/src/main.ts",
+                        "tsConfig": "apps/robot-worker/tsconfig.app.json",
+                        "assets": ["apps/robot-worker/src/assets"],
+                        "webpackConfig": "apps/robot-worker/webpack.config.js"
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/robot-worker/src/environments/environment.ts",
+                                    "with": "apps/robot-worker/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    },
+                    "outputs": ["{options.outputPath}"]
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "robot-worker:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": ["apps/robot-worker/tsconfig.app.json", "apps/robot-worker/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!apps/robot-worker/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/robot-worker/jest.config.js",
+                        "tsConfig": "apps/robot-worker/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    },
+                    "outputs": ["coverage/apps/robot-worker"]
+                }
+            }
+        },
+        "service": {
+            "root": "libs/service",
+            "sourceRoot": "libs/service/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": ["libs/service/tsconfig.lib.json", "libs/service/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/service/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/service/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "libs/service/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/libs/service"]
                 }
             }
         },
@@ -957,167 +1791,31 @@
                 }
             }
         },
-        "auth": {
-            "root": "apps/auth",
-            "sourceRoot": "apps/auth/src",
-            "projectType": "application",
-            "prefix": "auth",
-            "schematics": {},
-            "architect": {
-                "build": {
-                    "builder": "@nrwl/node:build",
-                    "options": {
-                        "outputPath": "dist/apps/auth",
-                        "main": "apps/auth/src/main.ts",
-                        "tsConfig": "apps/auth/tsconfig.app.json",
-                        "assets": ["apps/auth/src/assets"]
-                    },
-                    "configurations": {
-                        "production": {
-                            "optimization": true,
-                            "extractLicenses": true,
-                            "inspect": false,
-                            "fileReplacements": [
-                                {
-                                    "replace": "apps/auth/src/environments/environment.ts",
-                                    "with": "apps/auth/src/environments/environment.prod.ts"
-                                }
-                            ]
-                        }
-                    },
-                    "outputs": ["{options.outputPath}"]
-                },
-                "serve": {
-                    "builder": "@nrwl/node:execute",
-                    "options": {
-                        "buildTarget": "auth:build"
-                    }
-                },
-                "lint": {
-                    "builder": "@nrwl/linter:lint",
-                    "options": {
-                        "linter": "eslint",
-                        "tsConfig": ["apps/auth/tsconfig.app.json", "apps/auth/tsconfig.spec.json"],
-                        "exclude": ["**/node_modules/**", "!apps/auth/**/*"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "apps/auth/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "apps/auth/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/apps/auth"]
-                }
-            }
-        },
-        "user-state": {
-            "root": "libs/user-state",
-            "sourceRoot": "libs/user-state/src",
+        "stats-calc-events": {
+            "root": "libs/stats-calc-events",
+            "sourceRoot": "libs/stats-calc-events/src",
             "projectType": "library",
             "schematics": {},
             "architect": {
-                "lint": {
-                    "builder": "@nrwl/linter:lint",
-                    "options": {
-                        "linter": "eslint",
-                        "tsConfig": ["libs/user-state/tsconfig.lib.json", "libs/user-state/tsconfig.spec.json"],
-                        "exclude": ["**/node_modules/**", "!libs/user-state/**/*"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "libs/user-state/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "libs/user-state/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/libs/user-state"]
-                }
-            }
-        },
-        "mail": {
-            "root": "libs/mail",
-            "sourceRoot": "libs/mail/src",
-            "projectType": "library",
-            "schematics": {},
-            "architect": {
-                "lint": {
-                    "builder": "@nrwl/linter:lint",
-                    "options": {
-                        "linter": "eslint",
-                        "tsConfig": ["libs/mail/tsconfig.lib.json", "libs/mail/tsconfig.spec.json"],
-                        "exclude": ["**/node_modules/**", "!libs/mail/**/*"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "libs/mail/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "libs/mail/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/libs/mail"]
-                }
-            }
-        },
-        "stats-calc-worker": {
-            "root": "apps/stats-calc-worker",
-            "sourceRoot": "apps/stats-calc-worker/src",
-            "projectType": "application",
-            "prefix": "stats-calc-worker",
-            "schematics": {},
-            "architect": {
-                "build": {
-                    "builder": "@nrwl/node:build",
-                    "options": {
-                        "outputPath": "dist/apps/stats-calc-worker",
-                        "main": "apps/stats-calc-worker/src/main.ts",
-                        "tsConfig": "apps/stats-calc-worker/tsconfig.app.json",
-                        "assets": ["apps/stats-calc-worker/src/assets"],
-                        "webpackConfig": "apps/stats-calc-worker/webpack.config.js"
-                    },
-                    "configurations": {
-                        "production": {
-                            "optimization": true,
-                            "extractLicenses": true,
-                            "inspect": false,
-                            "fileReplacements": [
-                                {
-                                    "replace": "apps/stats-calc-worker/src/environments/environment.ts",
-                                    "with": "apps/stats-calc-worker/src/environments/environment.prod.ts"
-                                }
-                            ]
-                        }
-                    },
-                    "outputs": ["{options.outputPath}"]
-                },
-                "serve": {
-                    "builder": "@nrwl/node:execute",
-                    "options": {
-                        "buildTarget": "stats-calc-worker:build"
-                    }
-                },
                 "lint": {
                     "builder": "@nrwl/linter:lint",
                     "options": {
                         "linter": "eslint",
                         "tsConfig": [
-                            "apps/stats-calc-worker/tsconfig.app.json",
-                            "apps/stats-calc-worker/tsconfig.spec.json"
+                            "libs/stats-calc-events/tsconfig.lib.json",
+                            "libs/stats-calc-events/tsconfig.spec.json"
                         ],
-                        "exclude": ["**/node_modules/**", "!apps/stats-calc-worker/**/*"]
+                        "exclude": ["**/node_modules/**", "!libs/stats-calc-events/**/*"]
                     }
                 },
                 "test": {
                     "builder": "@nrwl/jest:jest",
                     "options": {
-                        "jestConfig": "apps/stats-calc-worker/jest.config.js",
-                        "tsConfig": "apps/stats-calc-worker/tsconfig.spec.json",
+                        "jestConfig": "libs/stats-calc-events/jest.config.js",
+                        "tsConfig": "libs/stats-calc-events/tsconfig.spec.json",
                         "passWithNoTests": true
                     },
-                    "outputs": ["coverage/apps/stats-calc-worker"]
+                    "outputs": ["coverage/libs/stats-calc-events"]
                 }
             }
         },
@@ -1179,772 +1877,62 @@
                 }
             }
         },
-        "stats-calc-events": {
-            "root": "libs/stats-calc-events",
-            "sourceRoot": "libs/stats-calc-events/src",
-            "projectType": "library",
+        "stats-calc-worker": {
+            "root": "apps/stats-calc-worker",
+            "sourceRoot": "apps/stats-calc-worker/src",
+            "projectType": "application",
+            "prefix": "stats-calc-worker",
             "schematics": {},
             "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/stats-calc-worker",
+                        "main": "apps/stats-calc-worker/src/main.ts",
+                        "tsConfig": "apps/stats-calc-worker/tsconfig.app.json",
+                        "assets": ["apps/stats-calc-worker/src/assets"],
+                        "webpackConfig": "apps/stats-calc-worker/webpack.config.js"
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/stats-calc-worker/src/environments/environment.ts",
+                                    "with": "apps/stats-calc-worker/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    },
+                    "outputs": ["{options.outputPath}"]
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "stats-calc-worker:build"
+                    }
+                },
                 "lint": {
                     "builder": "@nrwl/linter:lint",
                     "options": {
                         "linter": "eslint",
                         "tsConfig": [
-                            "libs/stats-calc-events/tsconfig.lib.json",
-                            "libs/stats-calc-events/tsconfig.spec.json"
+                            "apps/stats-calc-worker/tsconfig.app.json",
+                            "apps/stats-calc-worker/tsconfig.spec.json"
                         ],
-                        "exclude": ["**/node_modules/**", "!libs/stats-calc-events/**/*"]
+                        "exclude": ["**/node_modules/**", "!apps/stats-calc-worker/**/*"]
                     }
                 },
                 "test": {
                     "builder": "@nrwl/jest:jest",
                     "options": {
-                        "jestConfig": "libs/stats-calc-events/jest.config.js",
-                        "tsConfig": "libs/stats-calc-events/tsconfig.spec.json",
+                        "jestConfig": "apps/stats-calc-worker/jest.config.js",
+                        "tsConfig": "apps/stats-calc-worker/tsconfig.spec.json",
                         "passWithNoTests": true
                     },
-                    "outputs": ["coverage/libs/stats-calc-events"]
-                }
-            }
-        },
-        "test-helpers": {
-            "root": "libs/test-helpers",
-            "sourceRoot": "libs/test-helpers/src",
-            "projectType": "library",
-            "schematics": {},
-            "architect": {
-                "lint": {
-                    "builder": "@nrwl/linter:lint",
-                    "options": {
-                        "linter": "eslint",
-                        "tsConfig": ["libs/test-helpers/tsconfig.lib.json", "libs/test-helpers/tsconfig.spec.json"],
-                        "exclude": ["**/node_modules/**", "!libs/test-helpers/**/*"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "libs/test-helpers/jest.config.js",
-                        "tsConfig": "libs/test-helpers/tsconfig.spec.json",
-                        "passWithNoTests": true
-                    },
-                    "outputs": ["coverage/libs/test-helpers"]
-                }
-            }
-        },
-        "utils": {
-            "root": "apps/utils",
-            "sourceRoot": "apps/utils/src",
-            "projectType": "application",
-            "prefix": "utils",
-            "schematics": {},
-            "architect": {
-                "build": {
-                    "builder": "@nrwl/node:build",
-                    "options": {
-                        "outputPath": "dist/apps/utils",
-                        "main": "apps/utils/src/main.ts",
-                        "tsConfig": "apps/utils/tsconfig.app.json",
-                        "assets": ["apps/utils/src/assets"]
-                    },
-                    "configurations": {
-                        "production": {
-                            "optimization": true,
-                            "extractLicenses": true,
-                            "inspect": false,
-                            "fileReplacements": [
-                                {
-                                    "replace": "apps/utils/src/environments/environment.ts",
-                                    "with": "apps/utils/src/environments/environment.prod.ts"
-                                }
-                            ]
-                        }
-                    },
-                    "outputs": ["{options.outputPath}"]
-                },
-                "serve": {
-                    "builder": "@nrwl/node:execute",
-                    "options": {
-                        "buildTarget": "utils:build"
-                    }
-                },
-                "lint": {
-                    "builder": "@nrwl/linter:lint",
-                    "options": {
-                        "linter": "eslint",
-                        "tsConfig": ["apps/utils/tsconfig.app.json", "apps/utils/tsconfig.spec.json"],
-                        "exclude": ["**/node_modules/**", "!apps/utils/**/*"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "apps/utils/jest.config.js",
-                        "tsConfig": "apps/utils/tsconfig.spec.json",
-                        "passWithNoTests": true
-                    },
-                    "outputs": ["coverage/apps/utils"]
-                }
-            }
-        },
-        "user-signal-state": {
-            "root": "libs/user-signal-state",
-            "sourceRoot": "libs/user-signal-state/src",
-            "projectType": "library",
-            "schematics": {},
-            "architect": {
-                "lint": {
-                    "builder": "@nrwl/linter:lint",
-                    "options": {
-                        "linter": "eslint",
-                        "tsConfig": [
-                            "libs/user-signal-state/tsconfig.lib.json",
-                            "libs/user-signal-state/tsconfig.spec.json"
-                        ],
-                        "exclude": ["**/node_modules/**", "!libs/user-signal-state/**/*"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "libs/user-signal-state/jest.config.js",
-                        "tsConfig": "libs/user-signal-state/tsconfig.spec.json",
-                        "passWithNoTests": true
-                    },
-                    "outputs": ["coverage/libs/user-signal-state"]
-                }
-            }
-        },
-        "user-robot-state": {
-            "root": "libs/user-robot-state",
-            "sourceRoot": "libs/user-robot-state/src",
-            "projectType": "library",
-            "schematics": {},
-            "architect": {
-                "lint": {
-                    "builder": "@nrwl/linter:lint",
-                    "options": {
-                        "linter": "eslint",
-                        "tsConfig": [
-                            "libs/user-robot-state/tsconfig.lib.json",
-                            "libs/user-robot-state/tsconfig.spec.json"
-                        ],
-                        "exclude": ["**/node_modules/**", "!libs/user-robot-state/**/*"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "libs/user-robot-state/jest.config.js",
-                        "tsConfig": "libs/user-robot-state/tsconfig.spec.json",
-                        "passWithNoTests": true
-                    },
-                    "outputs": ["coverage/libs/user-robot-state"]
-                }
-            }
-        },
-        "events-manager": {
-            "root": "apps/events-manager",
-            "sourceRoot": "apps/events-manager/src",
-            "projectType": "application",
-            "prefix": "events-manager",
-            "schematics": {},
-            "architect": {
-                "build": {
-                    "builder": "@nrwl/node:build",
-                    "options": {
-                        "outputPath": "dist/apps/events-manager",
-                        "main": "apps/events-manager/src/main.ts",
-                        "tsConfig": "apps/events-manager/tsconfig.app.json",
-                        "assets": ["apps/events-manager/src/assets"]
-                    },
-                    "configurations": {
-                        "production": {
-                            "optimization": true,
-                            "extractLicenses": true,
-                            "inspect": false,
-                            "fileReplacements": [
-                                {
-                                    "replace": "apps/events-manager/src/environments/environment.ts",
-                                    "with": "apps/events-manager/src/environments/environment.prod.ts"
-                                }
-                            ]
-                        }
-                    },
-                    "outputs": ["{options.outputPath}"]
-                },
-                "serve": {
-                    "builder": "@nrwl/node:execute",
-                    "options": {
-                        "buildTarget": "events-manager:build"
-                    }
-                },
-                "lint": {
-                    "builder": "@nrwl/linter:lint",
-                    "options": {
-                        "linter": "eslint",
-                        "tsConfig": ["apps/events-manager/tsconfig.app.json", "apps/events-manager/tsconfig.spec.json"],
-                        "exclude": ["**/node_modules/**", "!apps/events-manager/**/*"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "apps/events-manager/jest.config.js",
-                        "tsConfig": "apps/events-manager/tsconfig.spec.json",
-                        "passWithNoTests": true
-                    },
-                    "outputs": ["coverage/apps/events-manager"]
-                }
-            }
-        },
-        "user-profile": {
-            "root": "apps/user-profile",
-            "sourceRoot": "apps/user-profile/src",
-            "projectType": "application",
-            "prefix": "user-profile",
-            "schematics": {},
-            "architect": {
-                "build": {
-                    "builder": "@nrwl/node:build",
-                    "options": {
-                        "outputPath": "dist/apps/user-profile",
-                        "main": "apps/user-profile/src/main.ts",
-                        "tsConfig": "apps/user-profile/tsconfig.app.json",
-                        "assets": ["apps/user-profile/src/assets"],
-                        "webpackConfig": "apps/user-profile/webpack.config.js"
-                    },
-                    "configurations": {
-                        "production": {
-                            "optimization": true,
-                            "extractLicenses": true,
-                            "inspect": false,
-                            "fileReplacements": [
-                                {
-                                    "replace": "apps/user-profile/src/environments/environment.ts",
-                                    "with": "apps/user-profile/src/environments/environment.prod.ts"
-                                }
-                            ]
-                        }
-                    },
-                    "outputs": ["{options.outputPath}"]
-                },
-                "serve": {
-                    "builder": "@nrwl/node:execute",
-                    "options": {
-                        "buildTarget": "user-profile:build"
-                    }
-                },
-                "lint": {
-                    "builder": "@nrwl/linter:lint",
-                    "options": {
-                        "linter": "eslint",
-                        "tsConfig": ["apps/user-profile/tsconfig.app.json", "apps/user-profile/tsconfig.spec.json"],
-                        "exclude": ["**/node_modules/**", "!apps/user-profile/**/*"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "apps/user-profile/jest.config.js",
-                        "tsConfig": "apps/user-profile/tsconfig.spec.json",
-                        "passWithNoTests": true
-                    },
-                    "outputs": ["coverage/apps/user-profile"]
-                }
-            }
-        },
-        "robot-settings": {
-            "root": "libs/robot-settings",
-            "sourceRoot": "libs/robot-settings/src",
-            "projectType": "library",
-            "schematics": {},
-            "architect": {
-                "lint": {
-                    "builder": "@nrwl/linter:lint",
-                    "options": {
-                        "linter": "eslint",
-                        "tsConfig": ["libs/robot-settings/tsconfig.lib.json", "libs/robot-settings/tsconfig.spec.json"],
-                        "exclude": ["**/node_modules/**", "!libs/robot-settings/**/*"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "libs/robot-settings/jest.config.js",
-                        "tsConfig": "libs/robot-settings/tsconfig.spec.json",
-                        "passWithNoTests": true
-                    },
-                    "outputs": ["coverage/libs/robot-settings"]
-                }
-            }
-        },
-        "robot-runner": {
-            "root": "apps/robot-runner",
-            "sourceRoot": "apps/robot-runner/src",
-            "projectType": "application",
-            "prefix": "robot-runner",
-            "schematics": {},
-            "architect": {
-                "build": {
-                    "builder": "@nrwl/node:build",
-                    "options": {
-                        "outputPath": "dist/apps/robot-runner",
-                        "main": "apps/robot-runner/src/main.ts",
-                        "tsConfig": "apps/robot-runner/tsconfig.app.json",
-                        "assets": ["apps/robot-runner/src/assets"]
-                    },
-                    "configurations": {
-                        "production": {
-                            "optimization": true,
-                            "extractLicenses": true,
-                            "inspect": false,
-                            "fileReplacements": [
-                                {
-                                    "replace": "apps/robot-runner/src/environments/environment.ts",
-                                    "with": "apps/robot-runner/src/environments/environment.prod.ts"
-                                }
-                            ]
-                        }
-                    },
-                    "outputs": ["{options.outputPath}"]
-                },
-                "serve": {
-                    "builder": "@nrwl/node:execute",
-                    "options": {
-                        "buildTarget": "robot-runner:build"
-                    }
-                },
-                "lint": {
-                    "builder": "@nrwl/linter:lint",
-                    "options": {
-                        "linter": "eslint",
-                        "tsConfig": ["apps/robot-runner/tsconfig.app.json", "apps/robot-runner/tsconfig.spec.json"],
-                        "exclude": ["**/node_modules/**", "!apps/robot-runner/**/*"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "apps/robot-runner/jest.config.js",
-                        "tsConfig": "apps/robot-runner/tsconfig.spec.json",
-                        "passWithNoTests": true
-                    },
-                    "outputs": ["coverage/apps/robot-runner"]
-                }
-            }
-        },
-        "robot-worker": {
-            "root": "apps/robot-worker",
-            "sourceRoot": "apps/robot-worker/src",
-            "projectType": "application",
-            "prefix": "robot-worker",
-            "schematics": {},
-            "architect": {
-                "build": {
-                    "builder": "@nrwl/node:build",
-                    "options": {
-                        "outputPath": "dist/apps/robot-worker",
-                        "main": "apps/robot-worker/src/main.ts",
-                        "tsConfig": "apps/robot-worker/tsconfig.app.json",
-                        "assets": ["apps/robot-worker/src/assets"],
-                        "webpackConfig": "apps/robot-worker/webpack.config.js"
-                    },
-                    "configurations": {
-                        "production": {
-                            "optimization": true,
-                            "extractLicenses": true,
-                            "inspect": false,
-                            "fileReplacements": [
-                                {
-                                    "replace": "apps/robot-worker/src/environments/environment.ts",
-                                    "with": "apps/robot-worker/src/environments/environment.prod.ts"
-                                }
-                            ]
-                        }
-                    },
-                    "outputs": ["{options.outputPath}"]
-                },
-                "serve": {
-                    "builder": "@nrwl/node:execute",
-                    "options": {
-                        "buildTarget": "robot-worker:build"
-                    }
-                },
-                "lint": {
-                    "builder": "@nrwl/linter:lint",
-                    "options": {
-                        "linter": "eslint",
-                        "tsConfig": ["apps/robot-worker/tsconfig.app.json", "apps/robot-worker/tsconfig.spec.json"],
-                        "exclude": ["**/node_modules/**", "!apps/robot-worker/**/*"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "apps/robot-worker/jest.config.js",
-                        "tsConfig": "apps/robot-worker/tsconfig.spec.json",
-                        "passWithNoTests": true
-                    },
-                    "outputs": ["coverage/apps/robot-worker"]
-                }
-            }
-        },
-        "user-robot-events": {
-            "root": "libs/user-robot-events",
-            "sourceRoot": "libs/user-robot-events/src",
-            "projectType": "library",
-            "schematics": {},
-            "architect": {
-                "lint": {
-                    "builder": "@nrwl/linter:eslint",
-                    "options": {
-                        "lintFilePatterns": ["libs/user-robot-events/**/*.ts"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "libs/user-robot-events/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "libs/user-robot-events/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/libs/user-robot-events"]
-                }
-            }
-        },
-        "connector-events": {
-            "root": "libs/connector-events",
-            "sourceRoot": "libs/connector-events/src",
-            "projectType": "library",
-            "schematics": {},
-            "architect": {
-                "lint": {
-                    "builder": "@nrwl/linter:eslint",
-                    "options": {
-                        "lintFilePatterns": ["libs/connector-events/**/*.ts"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "libs/connector-events/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "libs/connector-events/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/libs/connector-events"]
-                }
-            }
-        },
-        "connector-runner": {
-            "root": "apps/connector-runner",
-            "sourceRoot": "apps/connector-runner/src",
-            "projectType": "application",
-            "prefix": "connector-runner",
-            "schematics": {},
-            "architect": {
-                "build": {
-                    "builder": "@nrwl/node:build",
-                    "options": {
-                        "outputPath": "dist/apps/connector-runner",
-                        "main": "apps/connector-runner/src/main.ts",
-                        "tsConfig": "apps/connector-runner/tsconfig.app.json",
-                        "assets": ["apps/connector-runner/src/assets"]
-                    },
-                    "configurations": {
-                        "production": {
-                            "optimization": true,
-                            "extractLicenses": true,
-                            "inspect": false,
-                            "fileReplacements": [
-                                {
-                                    "replace": "apps/connector-runner/src/environments/environment.ts",
-                                    "with": "apps/connector-runner/src/environments/environment.prod.ts"
-                                }
-                            ]
-                        }
-                    },
-                    "outputs": ["{options.outputPath}"]
-                },
-                "serve": {
-                    "builder": "@nrwl/node:execute",
-                    "options": {
-                        "buildTarget": "connector-runner:build"
-                    }
-                },
-                "lint": {
-                    "builder": "@nrwl/linter:eslint",
-                    "options": {
-                        "lintFilePatterns": ["apps/connector-runner/**/*.ts"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "apps/connector-runner/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "apps/connector-runner/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/apps/connector-runner"]
-                }
-            }
-        },
-        "connector-worker": {
-            "root": "apps/connector-worker",
-            "sourceRoot": "apps/connector-worker/src",
-            "projectType": "application",
-            "prefix": "connector-worker",
-            "schematics": {},
-            "architect": {
-                "build": {
-                    "builder": "@nrwl/node:build",
-                    "options": {
-                        "outputPath": "dist/apps/connector-worker",
-                        "main": "apps/connector-worker/src/main.ts",
-                        "tsConfig": "apps/connector-worker/tsconfig.app.json",
-                        "assets": ["apps/connector-worker/src/assets"],
-                        "webpackConfig": "apps/connector-worker/webpack.config.js"
-                    },
-                    "configurations": {
-                        "production": {
-                            "optimization": true,
-                            "extractLicenses": true,
-                            "inspect": false,
-                            "fileReplacements": [
-                                {
-                                    "replace": "apps/connector-worker/src/environments/environment.ts",
-                                    "with": "apps/connector-worker/src/environments/environment.prod.ts"
-                                }
-                            ]
-                        }
-                    },
-                    "outputs": ["{options.outputPath}"]
-                },
-                "serve": {
-                    "builder": "@nrwl/node:execute",
-                    "options": {
-                        "buildTarget": "connector-worker:build"
-                    }
-                },
-                "lint": {
-                    "builder": "@nrwl/linter:eslint",
-                    "options": {
-                        "lintFilePatterns": ["apps/connector-worker/**/*.ts"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "apps/connector-worker/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "apps/connector-worker/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/apps/connector-worker"]
-                }
-            }
-        },
-        "user-robot-runner": {
-            "root": "apps/user-robot-runner",
-            "sourceRoot": "apps/user-robot-runner/src",
-            "projectType": "application",
-            "prefix": "user-robot-runner",
-            "schematics": {},
-            "architect": {
-                "build": {
-                    "builder": "@nrwl/node:build",
-                    "options": {
-                        "outputPath": "dist/apps/user-robot-runner",
-                        "main": "apps/user-robot-runner/src/main.ts",
-                        "tsConfig": "apps/user-robot-runner/tsconfig.app.json",
-                        "assets": ["apps/user-robot-runner/src/assets"]
-                    },
-                    "configurations": {
-                        "production": {
-                            "optimization": true,
-                            "extractLicenses": true,
-                            "inspect": false,
-                            "fileReplacements": [
-                                {
-                                    "replace": "apps/user-robot-runner/src/environments/environment.ts",
-                                    "with": "apps/user-robot-runner/src/environments/environment.prod.ts"
-                                }
-                            ]
-                        }
-                    },
-                    "outputs": ["{options.outputPath}"]
-                },
-                "serve": {
-                    "builder": "@nrwl/node:execute",
-                    "options": {
-                        "buildTarget": "user-robot-runner:build"
-                    }
-                },
-                "lint": {
-                    "builder": "@nrwl/linter:eslint",
-                    "options": {
-                        "lintFilePatterns": ["apps/user-robot-runner/**/*.ts"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "apps/user-robot-runner/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "apps/user-robot-runner/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/apps/user-robot-runner"]
-                }
-            }
-        },
-        "user-robot-worker": {
-            "root": "apps/user-robot-worker",
-            "sourceRoot": "apps/user-robot-worker/src",
-            "projectType": "application",
-            "prefix": "user-robot-worker",
-            "schematics": {},
-            "architect": {
-                "build": {
-                    "builder": "@nrwl/node:build",
-                    "options": {
-                        "outputPath": "dist/apps/user-robot-worker",
-                        "main": "apps/user-robot-worker/src/main.ts",
-                        "tsConfig": "apps/user-robot-worker/tsconfig.app.json",
-                        "assets": ["apps/user-robot-worker/src/assets"]
-                    },
-                    "configurations": {
-                        "production": {
-                            "optimization": true,
-                            "extractLicenses": true,
-                            "inspect": false,
-                            "fileReplacements": [
-                                {
-                                    "replace": "apps/user-robot-worker/src/environments/environment.ts",
-                                    "with": "apps/user-robot-worker/src/environments/environment.prod.ts"
-                                }
-                            ]
-                        }
-                    },
-                    "outputs": ["{options.outputPath}"]
-                },
-                "serve": {
-                    "builder": "@nrwl/node:execute",
-                    "options": {
-                        "buildTarget": "user-robot-worker:build"
-                    }
-                },
-                "lint": {
-                    "builder": "@nrwl/linter:eslint",
-                    "options": {
-                        "lintFilePatterns": ["apps/user-robot-worker/**/*.ts"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "apps/user-robot-worker/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "apps/user-robot-worker/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/apps/user-robot-worker"]
-                }
-            }
-        },
-        "connector-state": {
-            "root": "libs/connector-state",
-            "sourceRoot": "libs/connector-state/src",
-            "projectType": "library",
-            "schematics": {},
-            "architect": {
-                "lint": {
-                    "builder": "@nrwl/linter:eslint",
-                    "options": {
-                        "lintFilePatterns": ["libs/connector-state/**/*.ts"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "libs/connector-state/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "libs/connector-state/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/libs/connector-state"]
-                }
-            }
-        },
-        "ccxt-private": {
-            "root": "libs/ccxt-private",
-            "sourceRoot": "libs/ccxt-private/src",
-            "projectType": "library",
-            "schematics": {},
-            "architect": {
-                "lint": {
-                    "builder": "@nrwl/linter:eslint",
-                    "options": {
-                        "lintFilePatterns": ["libs/ccxt-private/**/*.ts"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "libs/ccxt-private/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "libs/ccxt-private/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/libs/ccxt-private"]
-                }
-            }
-        },
-        "notifications": {
-            "root": "apps/notifications",
-            "sourceRoot": "apps/notifications/src",
-            "projectType": "application",
-            "prefix": "notifications",
-            "schematics": {},
-            "architect": {
-                "build": {
-                    "builder": "@nrwl/node:build",
-                    "options": {
-                        "outputPath": "dist/apps/notifications",
-                        "main": "apps/notifications/src/main.ts",
-                        "tsConfig": "apps/notifications/tsconfig.app.json",
-                        "assets": ["apps/notifications/src/assets"]
-                    },
-                    "configurations": {
-                        "production": {
-                            "optimization": true,
-                            "extractLicenses": true,
-                            "inspect": false,
-                            "fileReplacements": [
-                                {
-                                    "replace": "apps/notifications/src/environments/environment.ts",
-                                    "with": "apps/notifications/src/environments/environment.prod.ts"
-                                }
-                            ]
-                        }
-                    },
-                    "outputs": ["{options.outputPath}"]
-                },
-                "serve": {
-                    "builder": "@nrwl/node:execute",
-                    "options": {
-                        "buildTarget": "notifications:build"
-                    }
-                },
-                "lint": {
-                    "builder": "@nrwl/linter:eslint",
-                    "options": {
-                        "lintFilePatterns": ["apps/notifications/**/*.ts"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "apps/notifications/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "apps/notifications/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/apps/notifications"]
+                    "outputs": ["coverage/apps/stats-calc-worker"]
                 }
             }
         },
@@ -2054,316 +2042,28 @@
                 }
             }
         },
-        "graphql-client": {
-            "root": "libs/graphql-client",
-            "sourceRoot": "libs/graphql-client/src",
+        "test-helpers": {
+            "root": "libs/test-helpers",
+            "sourceRoot": "libs/test-helpers/src",
             "projectType": "library",
             "schematics": {},
             "architect": {
                 "lint": {
-                    "builder": "@nrwl/linter:eslint",
+                    "builder": "@nrwl/linter:lint",
                     "options": {
-                        "lintFilePatterns": ["libs/graphql-client/**/*.ts"]
+                        "linter": "eslint",
+                        "tsConfig": ["libs/test-helpers/tsconfig.lib.json", "libs/test-helpers/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/test-helpers/**/*"]
                     }
                 },
                 "test": {
                     "builder": "@nrwl/jest:jest",
                     "options": {
-                        "jestConfig": "libs/graphql-client/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "libs/graphql-client/tsconfig.spec.json"
+                        "jestConfig": "libs/test-helpers/jest.config.js",
+                        "tsConfig": "libs/test-helpers/tsconfig.spec.json",
+                        "passWithNoTests": true
                     },
-                    "outputs": ["coverage/libs/graphql-client"]
-                }
-            }
-        },
-        "auth-utils": {
-            "root": "libs/auth-utils",
-            "sourceRoot": "libs/auth-utils/src",
-            "projectType": "library",
-            "schematics": {},
-            "architect": {
-                "lint": {
-                    "builder": "@nrwl/linter:eslint",
-                    "options": {
-                        "lintFilePatterns": ["libs/auth-utils/**/*.ts"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "libs/auth-utils/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "libs/auth-utils/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/libs/auth-utils"]
-                }
-            }
-        },
-        "exwatcher-kucoin": {
-            "root": "apps/exwatcher-kucoin",
-            "sourceRoot": "apps/exwatcher-kucoin/src",
-            "projectType": "application",
-            "prefix": "exwatcher-kucoin",
-            "architect": {
-                "build": {
-                    "builder": "@nrwl/node:build",
-                    "outputs": ["{options.outputPath}"],
-                    "options": {
-                        "outputPath": "dist/apps/exwatcher-kucoin",
-                        "main": "apps/exwatcher-kucoin/src/main.ts",
-                        "tsConfig": "apps/exwatcher-kucoin/tsconfig.app.json",
-                        "assets": ["apps/exwatcher-kucoin/src/assets"]
-                    },
-                    "configurations": {
-                        "production": {
-                            "optimization": true,
-                            "extractLicenses": true,
-                            "inspect": false,
-                            "fileReplacements": [
-                                {
-                                    "replace": "apps/exwatcher-kucoin/src/environments/environment.ts",
-                                    "with": "apps/exwatcher-kucoin/src/environments/environment.prod.ts"
-                                }
-                            ]
-                        }
-                    }
-                },
-                "serve": {
-                    "builder": "@nrwl/node:execute",
-                    "options": {
-                        "buildTarget": "exwatcher-kucoin:build"
-                    }
-                },
-                "lint": {
-                    "builder": "@nrwl/linter:eslint",
-                    "options": {
-                        "lintFilePatterns": ["apps/exwatcher-kucoin/**/*.ts"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "outputs": ["coverage/apps/exwatcher-kucoin"],
-                    "options": {
-                        "jestConfig": "apps/exwatcher-kucoin/jest.config.js",
-                        "passWithNoTests": true
-                    }
-                }
-            }
-        },
-        "exwatcher-huobipro": {
-            "root": "apps/exwatcher-huobipro",
-            "sourceRoot": "apps/exwatcher-huobipro/src",
-            "projectType": "application",
-            "prefix": "exwatcher-huobipro",
-            "architect": {
-                "build": {
-                    "builder": "@nrwl/node:build",
-                    "outputs": ["{options.outputPath}"],
-                    "options": {
-                        "outputPath": "dist/apps/exwatcher-huobipro",
-                        "main": "apps/exwatcher-huobipro/src/main.ts",
-                        "tsConfig": "apps/exwatcher-huobipro/tsconfig.app.json",
-                        "assets": ["apps/exwatcher-huobipro/src/assets"]
-                    },
-                    "configurations": {
-                        "production": {
-                            "optimization": true,
-                            "extractLicenses": true,
-                            "inspect": false,
-                            "fileReplacements": [
-                                {
-                                    "replace": "apps/exwatcher-huobipro/src/environments/environment.ts",
-                                    "with": "apps/exwatcher-huobipro/src/environments/environment.prod.ts"
-                                }
-                            ]
-                        }
-                    }
-                },
-                "serve": {
-                    "builder": "@nrwl/node:execute",
-                    "options": {
-                        "buildTarget": "exwatcher-huobipro:build"
-                    }
-                },
-                "lint": {
-                    "builder": "@nrwl/linter:eslint",
-                    "options": {
-                        "lintFilePatterns": ["apps/exwatcher-huobipro/**/*.ts"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "outputs": ["coverage/apps/exwatcher-huobipro"],
-                    "options": {
-                        "jestConfig": "apps/exwatcher-huobipro/jest.config.js",
-                        "passWithNoTests": true
-                    }
-                }
-            }
-        },
-        "user-sub": {
-            "root": "apps/user-sub",
-            "sourceRoot": "apps/user-sub/src",
-            "projectType": "application",
-            "prefix": "user-sub",
-            "architect": {
-                "build": {
-                    "builder": "@nrwl/node:build",
-                    "outputs": ["{options.outputPath}"],
-                    "options": {
-                        "outputPath": "dist/apps/user-sub",
-                        "main": "apps/user-sub/src/main.ts",
-                        "tsConfig": "apps/user-sub/tsconfig.app.json",
-                        "assets": ["apps/user-sub/src/assets"]
-                    },
-                    "configurations": {
-                        "production": {
-                            "optimization": true,
-                            "extractLicenses": true,
-                            "inspect": false,
-                            "fileReplacements": [
-                                {
-                                    "replace": "apps/user-sub/src/environments/environment.ts",
-                                    "with": "apps/user-sub/src/environments/environment.prod.ts"
-                                }
-                            ]
-                        }
-                    }
-                },
-                "serve": {
-                    "builder": "@nrwl/node:execute",
-                    "options": {
-                        "buildTarget": "user-sub:build"
-                    }
-                },
-                "lint": {
-                    "builder": "@nrwl/linter:eslint",
-                    "options": {
-                        "lintFilePatterns": ["apps/user-sub/**/*.ts"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "outputs": ["coverage/apps/user-sub"],
-                    "options": {
-                        "jestConfig": "apps/user-sub/jest.config.js",
-                        "passWithNoTests": true
-                    }
-                }
-            }
-        },
-        "billing": {
-            "root": "libs/billing",
-            "sourceRoot": "libs/billing/src",
-            "projectType": "library",
-            "architect": {
-                "lint": {
-                    "builder": "@nrwl/linter:eslint",
-                    "options": {
-                        "lintFilePatterns": ["libs/billing/**/*.ts"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "outputs": ["coverage/libs/billing"],
-                    "options": {
-                        "jestConfig": "libs/billing/jest.config.js",
-                        "passWithNoTests": true
-                    }
-                }
-            }
-        },
-        "analytics": {
-            "root": "libs/analytics",
-            "sourceRoot": "libs/analytics/src",
-            "projectType": "library",
-            "architect": {
-                "lint": {
-                    "builder": "@nrwl/linter:eslint",
-                    "options": {
-                        "lintFilePatterns": ["libs/analytics/**/*.ts"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "outputs": ["coverage/libs/analytics"],
-                    "options": {
-                        "jestConfig": "libs/analytics/jest.config.js",
-                        "passWithNoTests": true
-                    }
-                }
-            }
-        },
-        "webhooks": {
-            "root": "apps/webhooks",
-            "sourceRoot": "apps/webhooks/src",
-            "projectType": "application",
-            "prefix": "webhooks",
-            "architect": {
-                "build": {
-                    "builder": "@nrwl/node:build",
-                    "outputs": ["{options.outputPath}"],
-                    "options": {
-                        "outputPath": "dist/apps/webhooks",
-                        "main": "apps/webhooks/src/main.ts",
-                        "tsConfig": "apps/webhooks/tsconfig.app.json",
-                        "assets": ["apps/webhooks/src/assets"]
-                    },
-                    "configurations": {
-                        "production": {
-                            "optimization": true,
-                            "extractLicenses": true,
-                            "inspect": false,
-                            "fileReplacements": [
-                                {
-                                    "replace": "apps/webhooks/src/environments/environment.ts",
-                                    "with": "apps/webhooks/src/environments/environment.prod.ts"
-                                }
-                            ]
-                        }
-                    }
-                },
-                "serve": {
-                    "builder": "@nrwl/node:execute",
-                    "options": {
-                        "buildTarget": "webhooks:build"
-                    }
-                },
-                "lint": {
-                    "builder": "@nrwl/linter:eslint",
-                    "options": {
-                        "lintFilePatterns": ["apps/webhooks/**/*.ts"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "outputs": ["coverage/apps/webhooks"],
-                    "options": {
-                        "jestConfig": "apps/webhooks/jest.config.js",
-                        "passWithNoTests": true
-                    }
-                }
-            }
-        },
-        "user-sub-events": {
-            "root": "libs/user-sub-events",
-            "sourceRoot": "libs/user-sub-events/src",
-            "projectType": "library",
-            "architect": {
-                "lint": {
-                    "builder": "@nrwl/linter:eslint",
-                    "options": {
-                        "lintFilePatterns": ["libs/user-sub-events/**/*.ts"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "outputs": ["coverage/libs/user-sub-events"],
-                    "options": {
-                        "jestConfig": "libs/user-sub-events/jest.config.js",
-                        "passWithNoTests": true
-                    }
+                    "outputs": ["coverage/libs/test-helpers"]
                 }
             }
         },
@@ -2383,6 +2083,27 @@
                     "outputs": ["coverage/libs/trade-stats"],
                     "options": {
                         "jestConfig": "libs/trade-stats/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
+        "trade-stats-events": {
+            "root": "libs/trade-stats-events",
+            "sourceRoot": "libs/trade-stats-events/src",
+            "projectType": "library",
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["libs/trade-stats-events/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/libs/trade-stats-events"],
+                    "options": {
+                        "jestConfig": "libs/trade-stats-events/jest.config.js",
                         "passWithNoTests": true
                     }
                 }
@@ -2491,42 +2212,21 @@
                 }
             }
         },
-        "trade-stats-events": {
-            "root": "libs/trade-stats-events",
-            "sourceRoot": "libs/trade-stats-events/src",
-            "projectType": "library",
-            "architect": {
-                "lint": {
-                    "builder": "@nrwl/linter:eslint",
-                    "options": {
-                        "lintFilePatterns": ["libs/trade-stats-events/**/*.ts"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "outputs": ["coverage/libs/trade-stats-events"],
-                    "options": {
-                        "jestConfig": "libs/trade-stats-events/jest.config.js",
-                        "passWithNoTests": true
-                    }
-                }
-            }
-        },
-        "portfolio-manager": {
-            "root": "apps/portfolio-manager",
-            "sourceRoot": "apps/portfolio-manager/src",
+        "user-profile": {
+            "root": "apps/user-profile",
+            "sourceRoot": "apps/user-profile/src",
             "projectType": "application",
-            "prefix": "portfolio-manager",
+            "prefix": "user-profile",
+            "schematics": {},
             "architect": {
                 "build": {
                     "builder": "@nrwl/node:build",
-                    "outputs": ["{options.outputPath}"],
                     "options": {
-                        "outputPath": "dist/apps/portfolio-manager",
-                        "main": "apps/portfolio-manager/src/main.ts",
-                        "tsConfig": "apps/portfolio-manager/tsconfig.app.json",
-                        "assets": ["apps/portfolio-manager/src/assets"],
-                        "webpackConfig": "apps/portfolio-manager/webpack.config.js"
+                        "outputPath": "dist/apps/user-profile",
+                        "main": "apps/user-profile/src/main.ts",
+                        "tsConfig": "apps/user-profile/tsconfig.app.json",
+                        "assets": ["apps/user-profile/src/assets"],
+                        "webpackConfig": "apps/user-profile/webpack.config.js"
                     },
                     "configurations": {
                         "production": {
@@ -2535,49 +2235,76 @@
                             "inspect": false,
                             "fileReplacements": [
                                 {
-                                    "replace": "apps/portfolio-manager/src/environments/environment.ts",
-                                    "with": "apps/portfolio-manager/src/environments/environment.prod.ts"
+                                    "replace": "apps/user-profile/src/environments/environment.ts",
+                                    "with": "apps/user-profile/src/environments/environment.prod.ts"
                                 }
                             ]
                         }
-                    }
+                    },
+                    "outputs": ["{options.outputPath}"]
                 },
                 "serve": {
                     "builder": "@nrwl/node:execute",
                     "options": {
-                        "buildTarget": "portfolio-manager:build"
+                        "buildTarget": "user-profile:build"
                     }
                 },
                 "lint": {
-                    "builder": "@nrwl/linter:eslint",
+                    "builder": "@nrwl/linter:lint",
                     "options": {
-                        "lintFilePatterns": ["apps/portfolio-manager/**/*.ts"]
+                        "linter": "eslint",
+                        "tsConfig": ["apps/user-profile/tsconfig.app.json", "apps/user-profile/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!apps/user-profile/**/*"]
                     }
                 },
                 "test": {
                     "builder": "@nrwl/jest:jest",
-                    "outputs": ["coverage/apps/portfolio-manager"],
                     "options": {
-                        "jestConfig": "apps/portfolio-manager/jest.config.js",
+                        "jestConfig": "apps/user-profile/jest.config.js",
+                        "tsConfig": "apps/user-profile/tsconfig.spec.json",
                         "passWithNoTests": true
-                    }
+                    },
+                    "outputs": ["coverage/apps/user-profile"]
                 }
             }
         },
-        "user-portfolio-manager": {
-            "root": "apps/user-portfolio-manager",
-            "sourceRoot": "apps/user-portfolio-manager/src",
+        "user-robot-events": {
+            "root": "libs/user-robot-events",
+            "sourceRoot": "libs/user-robot-events/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["libs/user-robot-events/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/user-robot-events/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "libs/user-robot-events/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/libs/user-robot-events"]
+                }
+            }
+        },
+        "user-robot-runner": {
+            "root": "apps/user-robot-runner",
+            "sourceRoot": "apps/user-robot-runner/src",
             "projectType": "application",
-            "prefix": "user-portfolio-manager",
+            "prefix": "user-robot-runner",
+            "schematics": {},
             "architect": {
                 "build": {
                     "builder": "@nrwl/node:build",
-                    "outputs": ["{options.outputPath}"],
                     "options": {
-                        "outputPath": "dist/apps/user-portfolio-manager",
-                        "main": "apps/user-portfolio-manager/src/main.ts",
-                        "tsConfig": "apps/user-portfolio-manager/tsconfig.app.json",
-                        "assets": ["apps/user-portfolio-manager/src/assets"]
+                        "outputPath": "dist/apps/user-robot-runner",
+                        "main": "apps/user-robot-runner/src/main.ts",
+                        "tsConfig": "apps/user-robot-runner/tsconfig.app.json",
+                        "assets": ["apps/user-robot-runner/src/assets"]
                     },
                     "configurations": {
                         "production": {
@@ -2586,8 +2313,195 @@
                             "inspect": false,
                             "fileReplacements": [
                                 {
-                                    "replace": "apps/user-portfolio-manager/src/environments/environment.ts",
-                                    "with": "apps/user-portfolio-manager/src/environments/environment.prod.ts"
+                                    "replace": "apps/user-robot-runner/src/environments/environment.ts",
+                                    "with": "apps/user-robot-runner/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    },
+                    "outputs": ["{options.outputPath}"]
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "user-robot-runner:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["apps/user-robot-runner/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/user-robot-runner/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "apps/user-robot-runner/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/apps/user-robot-runner"]
+                }
+            }
+        },
+        "user-robot-state": {
+            "root": "libs/user-robot-state",
+            "sourceRoot": "libs/user-robot-state/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "libs/user-robot-state/tsconfig.lib.json",
+                            "libs/user-robot-state/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!libs/user-robot-state/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/user-robot-state/jest.config.js",
+                        "tsConfig": "libs/user-robot-state/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    },
+                    "outputs": ["coverage/libs/user-robot-state"]
+                }
+            }
+        },
+        "user-robot-worker": {
+            "root": "apps/user-robot-worker",
+            "sourceRoot": "apps/user-robot-worker/src",
+            "projectType": "application",
+            "prefix": "user-robot-worker",
+            "schematics": {},
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "options": {
+                        "outputPath": "dist/apps/user-robot-worker",
+                        "main": "apps/user-robot-worker/src/main.ts",
+                        "tsConfig": "apps/user-robot-worker/tsconfig.app.json",
+                        "assets": ["apps/user-robot-worker/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/user-robot-worker/src/environments/environment.ts",
+                                    "with": "apps/user-robot-worker/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    },
+                    "outputs": ["{options.outputPath}"]
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "user-robot-worker:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["apps/user-robot-worker/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "apps/user-robot-worker/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "apps/user-robot-worker/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/apps/user-robot-worker"]
+                }
+            }
+        },
+        "user-signal-state": {
+            "root": "libs/user-signal-state",
+            "sourceRoot": "libs/user-signal-state/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": [
+                            "libs/user-signal-state/tsconfig.lib.json",
+                            "libs/user-signal-state/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!libs/user-signal-state/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/user-signal-state/jest.config.js",
+                        "tsConfig": "libs/user-signal-state/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    },
+                    "outputs": ["coverage/libs/user-signal-state"]
+                }
+            }
+        },
+        "user-state": {
+            "root": "libs/user-state",
+            "sourceRoot": "libs/user-state/src",
+            "projectType": "library",
+            "schematics": {},
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": ["libs/user-state/tsconfig.lib.json", "libs/user-state/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!libs/user-state/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "libs/user-state/jest.config.js",
+                        "passWithNoTests": true,
+                        "tsConfig": "libs/user-state/tsconfig.spec.json"
+                    },
+                    "outputs": ["coverage/libs/user-state"]
+                }
+            }
+        },
+        "user-sub": {
+            "root": "apps/user-sub",
+            "sourceRoot": "apps/user-sub/src",
+            "projectType": "application",
+            "prefix": "user-sub",
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "outputs": ["{options.outputPath}"],
+                    "options": {
+                        "outputPath": "dist/apps/user-sub",
+                        "main": "apps/user-sub/src/main.ts",
+                        "tsConfig": "apps/user-sub/tsconfig.app.json",
+                        "assets": ["apps/user-sub/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/user-sub/src/environments/environment.ts",
+                                    "with": "apps/user-sub/src/environments/environment.prod.ts"
                                 }
                             ]
                         }
@@ -2596,62 +2510,147 @@
                 "serve": {
                     "builder": "@nrwl/node:execute",
                     "options": {
-                        "buildTarget": "user-portfolio-manager:build"
+                        "buildTarget": "user-sub:build"
                     }
                 },
                 "lint": {
                     "builder": "@nrwl/linter:eslint",
                     "options": {
-                        "lintFilePatterns": ["apps/user-portfolio-manager/**/*.ts"]
+                        "lintFilePatterns": ["apps/user-sub/**/*.ts"]
                     }
                 },
                 "test": {
                     "builder": "@nrwl/jest:jest",
-                    "outputs": ["coverage/apps/user-portfolio-manager"],
+                    "outputs": ["coverage/apps/user-sub"],
                     "options": {
-                        "jestConfig": "apps/user-portfolio-manager/jest.config.js",
+                        "jestConfig": "apps/user-sub/jest.config.js",
                         "passWithNoTests": true
                     }
                 }
             }
         },
-        "portfolio-state": {
-            "root": "libs/portfolio-state",
-            "sourceRoot": "libs/portfolio-state/src",
+        "user-sub-events": {
+            "root": "libs/user-sub-events",
+            "sourceRoot": "libs/user-sub-events/src",
             "projectType": "library",
             "architect": {
                 "lint": {
                     "builder": "@nrwl/linter:eslint",
                     "options": {
-                        "lintFilePatterns": ["libs/portfolio-state/**/*.ts"]
+                        "lintFilePatterns": ["libs/user-sub-events/**/*.ts"]
                     }
                 },
                 "test": {
                     "builder": "@nrwl/jest:jest",
-                    "outputs": ["coverage/libs/portfolio-state"],
+                    "outputs": ["coverage/libs/user-sub-events"],
                     "options": {
-                        "jestConfig": "libs/portfolio-state/jest.config.js",
+                        "jestConfig": "libs/user-sub-events/jest.config.js",
                         "passWithNoTests": true
                     }
                 }
             }
         },
-        "user-portfolio-state": {
-            "root": "libs/user-portfolio-state",
-            "sourceRoot": "libs/user-portfolio-state/src",
-            "projectType": "library",
+        "utils": {
+            "root": "apps/utils",
+            "sourceRoot": "apps/utils/src",
+            "projectType": "application",
+            "prefix": "utils",
+            "schematics": {},
             "architect": {
-                "lint": {
-                    "builder": "@nrwl/linter:eslint",
+                "build": {
+                    "builder": "@nrwl/node:build",
                     "options": {
-                        "lintFilePatterns": ["libs/user-portfolio-state/**/*.ts"]
+                        "outputPath": "dist/apps/utils",
+                        "main": "apps/utils/src/main.ts",
+                        "tsConfig": "apps/utils/tsconfig.app.json",
+                        "assets": ["apps/utils/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/utils/src/environments/environment.ts",
+                                    "with": "apps/utils/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    },
+                    "outputs": ["{options.outputPath}"]
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "utils:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:lint",
+                    "options": {
+                        "linter": "eslint",
+                        "tsConfig": ["apps/utils/tsconfig.app.json", "apps/utils/tsconfig.spec.json"],
+                        "exclude": ["**/node_modules/**", "!apps/utils/**/*"]
                     }
                 },
                 "test": {
                     "builder": "@nrwl/jest:jest",
-                    "outputs": ["coverage/libs/user-portfolio-state"],
                     "options": {
-                        "jestConfig": "libs/user-portfolio-state/jest.config.js",
+                        "jestConfig": "apps/utils/jest.config.js",
+                        "tsConfig": "apps/utils/tsconfig.spec.json",
+                        "passWithNoTests": true
+                    },
+                    "outputs": ["coverage/apps/utils"]
+                }
+            }
+        },
+        "webhooks": {
+            "root": "apps/webhooks",
+            "sourceRoot": "apps/webhooks/src",
+            "projectType": "application",
+            "prefix": "webhooks",
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "outputs": ["{options.outputPath}"],
+                    "options": {
+                        "outputPath": "dist/apps/webhooks",
+                        "main": "apps/webhooks/src/main.ts",
+                        "tsConfig": "apps/webhooks/tsconfig.app.json",
+                        "assets": ["apps/webhooks/src/assets"]
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/webhooks/src/environments/environment.ts",
+                                    "with": "apps/webhooks/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "webhooks:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["apps/webhooks/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/apps/webhooks"],
+                    "options": {
+                        "jestConfig": "apps/webhooks/jest.config.js",
                         "passWithNoTests": true
                     }
                 }

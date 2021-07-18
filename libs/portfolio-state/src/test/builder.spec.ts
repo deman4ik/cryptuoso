@@ -1,9 +1,10 @@
 import positions from "./data/positions";
 import { PortfolioBuilder } from "../lib/builder";
 import { PortfolioState } from "../lib/types";
-import util from "util";
-import fs from "fs";
-import combinate from "combinate";
+import { amounts } from "./data/amountsResults";
+import { portfolioResult } from "./data/portfolioResult";
+//import util from "util";
+//import fs from "fs";
 
 const portfolio: PortfolioState = {
     id: "testId",
@@ -19,10 +20,14 @@ const portfolio: PortfolioState = {
             winRate: true,
             efficiency: true
         },
-        minBalance: 0,
-        initialBalance: 0,
-        feeRate: 0.01,
-        minTradeAmount: 65
+        tradingAmountType: "balancePercent",
+        balancePercent: 100,
+        initialBalance: 100000,
+        leverage: 3
+    },
+    context: {
+        minTradeAmount: 65,
+        feeRate: 0.01
     }
 };
 
@@ -49,17 +54,13 @@ describe("Test portfolio state", () => {
             portfolioBuilder.calculateRobotsStats();
             portfolioBuilder.sortRobots();
             const result = portfolioBuilder.calcAmounts(portfolioBuilder.sortedRobotsList);
-            fs.writeFileSync(
-                "./testResults/amounts.json",
-                JSON.stringify(
-                    result.robots.map((r) => ({
-                        robotId: r.robotId,
-                        amountInCurrency: r.amountInCurrency,
-                        share: r.share
-                    }))
-                )
-            );
-            expect(result).toBeDefined();
+            expect(
+                result.robots.map((r) => ({
+                    robotId: r.robotId,
+                    amountInCurrency: r.amountInCurrency,
+                    share: r.share
+                }))
+            ).toEqual(amounts);
         });
         it("Should calc portfolio", async () => {
             const portfolioBuilder = new PortfolioBuilder(portfolio, positions);
@@ -71,7 +72,7 @@ describe("Test portfolio state", () => {
             ]);
             expect(result).toBeDefined();
         });
-        it("Should comparePortfolios", async () => {
+        it("Should compare portfolios", async () => {
             const portfolioBuilder = new PortfolioBuilder(portfolio, positions);
             portfolioBuilder.calculateRobotsStats();
             portfolioBuilder.sortRobots();
@@ -86,9 +87,57 @@ describe("Test portfolio state", () => {
         it("Should build new portfolio", async () => {
             const portfolioBuilder = new PortfolioBuilder(portfolio, positions);
             const result = await portfolioBuilder.build();
-
-            fs.writeFileSync("./testResults/pf.json", JSON.stringify(result));
-            // console.log(util.inspect(result.steps, false, null, true));
+            expect(result).toEqual(portfolioResult);
+        });
+        it("Should build new portfolio with 30 robots", async () => {
+            const portfolioBuilder = new PortfolioBuilder(
+                { ...portfolio, settings: { ...portfolio.settings, maxRobotsCount: 30 } },
+                positions
+            );
+            const result = await portfolioBuilder.build();
+            expect(result.portfolio.robots.length).toBe(30);
+        });
+        it("Should build new portfolio with 5 robots", async () => {
+            const portfolioBuilder = new PortfolioBuilder(
+                { ...portfolio, settings: { ...portfolio.settings, initialBalance: 325 } },
+                positions
+            );
+            const result = await portfolioBuilder.build();
+            expect(result.portfolio.robots.length).toBe(5);
+        });
+        it("Should build new portfolio with 6 robots", async () => {
+            const portfolioBuilder = new PortfolioBuilder(
+                {
+                    ...portfolio,
+                    settings: { ...portfolio.settings, initialBalance: 390, maxRobotsCount: 6, minRobotsCount: 6 }
+                },
+                positions
+            );
+            const result = await portfolioBuilder.build();
+            expect(result.portfolio.robots.length).toBe(6);
+        });
+        it("Should throw Error (Portfolio balance is insufficient) with wrong min robots count", async () => {
+            try {
+                new PortfolioBuilder(
+                    {
+                        ...portfolio,
+                        settings: { ...portfolio.settings, initialBalance: 325, maxRobotsCount: 6, minRobotsCount: 6 }
+                    },
+                    positions
+                );
+            } catch (e) {
+                expect(e.message).toBe("Portfolio balance is insufficient");
+            }
+        });
+        it("Should throw Error (Portfolio balance is insufficient) with low initital balance", async () => {
+            try {
+                new PortfolioBuilder(
+                    { ...portfolio, settings: { ...portfolio.settings, initialBalance: 324 } },
+                    positions
+                );
+            } catch (e) {
+                expect(e.message).toBe("Portfolio balance is insufficient");
+            }
         });
     });
 });

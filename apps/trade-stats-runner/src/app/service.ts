@@ -1,8 +1,8 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import {
-    TradeStatsRunnerEvent,
     TradeStatsRunnerEvents,
     TradeStatsRunnerPortfolio,
+    TradeStatsRunnerPortfolioRobot,
     TradeStatsRunnerRecalcAllPortfolios,
     TradeStatsRunnerRecalcAllRobots,
     TradeStatsRunnerRecalcAllUserPortfolios,
@@ -16,6 +16,7 @@ import { RobotStatus } from "@cryptuoso/robot-state";
 import { UserRoles } from "@cryptuoso/user-state";
 import { TradeStatsJob } from "@cryptuoso/trade-stats";
 import { sql } from "@cryptuoso/postgres";
+import { UserRobotDB } from "@cryptuoso/user-robot-state";
 
 export type StatisticCalcWorkerServiceConfig = HTTPServiceConfig;
 
@@ -27,48 +28,57 @@ export default class StatisticCalcRunnerService extends HTTPService {
                 calcStatsRobot: {
                     inputSchema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.ROBOT],
                     roles: [UserRoles.admin, UserRoles.manager],
-                    handler: this._HTTPHandler.bind(this, this.handleStatsCalcRobotEvent.bind(this))
+                    handler: this.HTTPHandler.bind(this, this.handleStatsCalcRobotEvent.bind(this))
                 },
                 calcStatsPortfolio: {
                     inputSchema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.PORTFOLIO],
                     roles: [UserRoles.admin, UserRoles.manager],
-                    handler: this._HTTPHandler.bind(this, this.handleStatsCalcPortfolioEvent.bind(this))
+                    handler: this.HTTPHandler.bind(this, this.handleStatsCalcPortfolioEvent.bind(this))
+                },
+                calcStatsPortfolioRobot: {
+                    inputSchema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.PORTFOLIO_ROBOT],
+                    roles: [UserRoles.admin, UserRoles.manager],
+                    handler: this.HTTPHandler.bind(this, this.handleStatsCalcPortfolioRobotEvent.bind(this))
                 },
                 calcStatsUserRobot: {
                     inputSchema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.USER_ROBOT],
                     roles: [UserRoles.admin, UserRoles.manager],
-                    handler: this._HTTPHandler.bind(this, this.handleStatsCalcUserRobotEvent.bind(this))
+                    handler: this.HTTPHandler.bind(this, this.handleStatsCalcUserRobotEvent.bind(this))
                 },
                 calcStatsUserPortfolio: {
                     inputSchema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.USER_PORTFOLIO],
                     roles: [UserRoles.admin, UserRoles.manager],
-                    handler: this._HTTPHandler.bind(this, this.handleStatsCalcUserPortfolioEvent.bind(this))
+                    handler: this.HTTPHandler.bind(this, this.handleStatsCalcUserPortfolioEvent.bind(this))
                 },
                 recalcStatsAllRobots: {
                     inputSchema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.RECALC_ALL_ROBOTS],
                     roles: [UserRoles.admin, UserRoles.manager],
-                    handler: this._HTTPHandler.bind(this, this.handleRecalcAllRobotsEvent.bind(this))
+                    handler: this.HTTPHandler.bind(this, this.handleRecalcAllRobotsEvent.bind(this))
                 },
                 recalcStatsAllUserRobots: {
                     inputSchema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.RECALC_ALL_USER_ROBOTS],
                     roles: [UserRoles.admin, UserRoles.manager],
-                    handler: this._HTTPHandler.bind(this, this.handleRecalcAllUserRobotsEvent.bind(this))
+                    handler: this.HTTPHandler.bind(this, this.handleRecalcAllUserRobotsEvent.bind(this))
                 },
                 recalcStatsAllPortfolios: {
                     inputSchema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.RECALC_ALL_PORTFOLIOS],
                     roles: [UserRoles.admin, UserRoles.manager],
-                    handler: this._HTTPHandler.bind(this, this.handleRecalcAllPorfoliosEvent.bind(this))
+                    handler: this.HTTPHandler.bind(this, this.handleRecalcAllPorfoliosEvent.bind(this))
                 },
                 recalcStatsAllUserPortfolios: {
                     inputSchema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.RECALC_ALL_USER_PORTFOLIOS],
                     roles: [UserRoles.admin, UserRoles.manager],
-                    handler: this._HTTPHandler.bind(this, this.handleRecalcAllUserPortfoliosEvent.bind(this))
+                    handler: this.HTTPHandler.bind(this, this.handleRecalcAllUserPortfoliosEvent.bind(this))
                 }
             });
             this.events.subscribe({
                 [TradeStatsRunnerEvents.ROBOT]: {
                     schema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.ROBOT],
                     handler: this.handleStatsCalcRobotEvent.bind(this)
+                },
+                [TradeStatsRunnerEvents.PORTFOLIO_ROBOT]: {
+                    schema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.PORTFOLIO_ROBOT],
+                    handler: this.handleStatsCalcPortfolioRobotEvent.bind(this)
                 },
                 [TradeStatsRunnerEvents.USER_ROBOT]: {
                     schema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.USER_ROBOT],
@@ -83,24 +93,6 @@ export default class StatisticCalcRunnerService extends HTTPService {
 
     async onServiceStart() {
         this.createQueue("stats-calc");
-    }
-
-    async _HTTPHandler(
-        handler: {
-            (params: TradeStatsRunnerEvent): Promise<void>;
-        },
-        req: {
-            body: {
-                input: TradeStatsRunnerEvent;
-            };
-        },
-        res: any
-    ) {
-        await handler(req.body.input);
-
-        res.send({ result: "OK" });
-
-        res.end();
     }
 
     async queueJob(job: TradeStatsJob) {
@@ -124,15 +116,29 @@ export default class StatisticCalcRunnerService extends HTTPService {
 
         this.log.info(`New ${TradeStatsRunnerEvents.ROBOT} event - ${robotId}`);
 
-        const robot = await this.db.pg.maybeOne<{ exchange: string; asset: string }>(this.db.sql`
-            SELECT exchange, asset
+        const robot = await this.db.pg.maybeOne<{ id: string }>(this.db.sql`
+        SELECT id
+        FROM robots
+        WHERE id = ${robotId};
+         `);
+
+        if (!robot) return;
+
+        await this.queueJob({ type: "robot", recalc, robotId });
+    }
+
+    async handleStatsCalcPortfolioRobotEvent(params: TradeStatsRunnerPortfolioRobot) {
+        const { recalc, robotId } = params;
+
+        this.log.info(`New ${TradeStatsRunnerEvents.ROBOT} event - ${robotId}`);
+
+        const robot = await this.db.pg.maybeOne<{ id: string }>(this.db.sql`
+            SELECT id
             FROM robots
             WHERE id = ${robotId};
         `);
 
         if (!robot) return;
-
-        await this.queueJob({ type: "robot", recalc, robotId });
 
         const portfolios = await this.db.pg.any<{ portfolioId: string }>(
             sql`
@@ -144,24 +150,6 @@ export default class StatisticCalcRunnerService extends HTTPService {
         );
         for (const { portfolioId } of portfolios) {
             await this.queueJob({ type: "portfolio", recalc, portfolioId });
-        }
-
-        if (portfolios.length) {
-            const userPortfolios = await this.db.pg.any<{ userPortfolioId: string }>(
-                sql`
-            SELECT up.id as user_portfolio_id
-            FROM user_portfolios up
-            WHERE up.portfolio_id in (${sql.join(
-                portfolios.map((p) => p.portfolioId),
-                sql`, `
-            )})
-            AND up.status = 'signals';
-            `
-            );
-
-            for (const { userPortfolioId } of userPortfolios) {
-                await this.queueJob({ type: "userPortfolio", recalc, userPortfolioId });
-            }
         }
     }
 
@@ -177,20 +165,21 @@ export default class StatisticCalcRunnerService extends HTTPService {
 
         this.log.info(`New ${TradeStatsRunnerEvents.USER_ROBOT} event - ${userRobotId}`);
         const userRobot = await this.db.pg.maybeOne<{
-            userId: string;
-            exchange: string;
-            asset: string;
+            id: UserRobotDB["id"];
+            userPortfolioId?: UserRobotDB["userPortfolioId"];
         }>(this.db.sql`
-            SELECT ur.user_id, r.exchange, r.asset
-            FROM user_robots ur,
-                    robots r
-            WHERE ur.id = ${userRobotId}
-                AND r.id = ur.robot_id;
+            SELECT ur.id, ur.user_portfolio_id
+            FROM user_robots ur
+            WHERE ur.id = ${userRobotId};
         `);
 
         if (!userRobot) return;
 
         await this.queueJob({ type: "userRobot", recalc, userRobotId });
+
+        if (userRobot.userPortfolioId) {
+            await this.queueJob({ type: "userPortfolio", recalc, userPortfolioId: userRobot.userPortfolioId });
+        }
     }
 
     async handleStatsCalcUserPortfolioEvent(params: TradeStatsRunnerUserPortfolio) {

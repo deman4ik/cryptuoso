@@ -5,7 +5,7 @@ import {
     UserPositionDB,
     UserPositionState,
     UserPositionStatus,
-    UserRobotCurrentSettings,
+    UserRobotConfirmTradeJob,
     UserRobotDB,
     UserRobotInternalState,
     UserRobotState,
@@ -18,17 +18,13 @@ import { OrdersStatusEvent } from "@cryptuoso/connector-events";
 import { BaseError } from "@cryptuoso/errors";
 import { ConnectorJob } from "@cryptuoso/connector-state";
 import logger from "@cryptuoso/logger";
-import { UserPorfolioDB } from "@cryptuoso/user-portfolio-state";
-import { UserRobotSettings } from "@cryptuoso/robot-settings";
 
 export class UserRobot {
     _id: string;
     _userExAccId: string;
     _userId: string;
     _robotId: string;
-
-    _settings: UserRobotCurrentSettings;
-    _userRobotSettings: UserRobotSettings;
+    _settings: UserRobotDB["settings"];
     _internalState: UserRobotInternalState;
     _status: UserRobotStatus;
     _startedAt?: string;
@@ -41,8 +37,7 @@ export class UserRobot {
     _positions: GenericObject<UserPosition>;
     _message?: string;
     _userPortfolioId?: string;
-    _userPortfolioStatus?: UserPorfolioDB["status"];
-    _userPortfolioSettings?: UserPorfolioDB["settings"];
+    _userPortfolio?: UserRobotState["userPortfolio"];
     _currentPrice?: number;
 
     constructor(state: UserRobotState) {
@@ -51,7 +46,6 @@ export class UserRobot {
         this._userId = state.userId;
         this._robotId = state.robotId;
         this._settings = state.settings;
-        this._userRobotSettings = state.userRobotSettings;
         this._status = state.status;
         this._startedAt = state.startedAt;
         this._stoppedAt = state.stoppedAt;
@@ -62,11 +56,10 @@ export class UserRobot {
         this._tradeSettings = state.tradeSettings;
         this._message = state.message;
         this._internalState = state.internalState || {};
-        this._positions = {}; // key -> positionId not id
+        this._positions = {};
         this._setPositions(state.positions);
         this._userPortfolioId = state.userPortfolioId;
-        this._userPortfolioSettings = state.userPortfolioSettings;
-        this._userPortfolioStatus = state.userPortfolioStatus;
+        this._userPortfolio = state.userPortfolio;
         this._currentPrice = state.currentPrice;
     }
 
@@ -226,7 +219,7 @@ export class UserRobot {
             );
 
         if (signal.action === TradeAction.long || signal.action === TradeAction.short) {
-            if (this._userRobotSettings?.active === false) return;
+            if (this._settings?.active === false) return;
             let hasPreviousActivePositions = false;
 
             if (signal.positionParentId) {
@@ -299,7 +292,7 @@ export class UserRobot {
                         exitSlippageCount: 0,
                         delayedSignal: delay && signal
                     },
-                    emulated: this._userPortfolioStatus === "signals"
+                    emulated: this._userPortfolio?.type === "signals"
                 });
 
                 if (!delay || this._positions[newPositionId].emulated) {
@@ -360,7 +353,7 @@ export class UserRobot {
         if (!this.hasActivePositions) this.handleDelayedPositions();
     }
 
-    confirmTrade(userPositionId: string, cancel = false) {
+    confirmTrade({ userPositionId, cancel = false }: UserRobotConfirmTradeJob) {
         const position = this._positions[userPositionId];
         if (!position)
             throw new BaseError(

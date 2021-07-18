@@ -1,4 +1,3 @@
-import { GenericObject } from "@cryptuoso/helpers";
 import { TradeStats } from "@cryptuoso/stats-calc";
 
 export enum UserAggrStatsTypes {

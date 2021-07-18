@@ -4,7 +4,7 @@ import { Auth } from "@cryptuoso/auth-utils";
 import { gql, GraphQLClient } from "@cryptuoso/graphql-client";
 import { Telegraf, Extra, Stage } from "telegraf";
 import Validator from "fastest-validator";
-import { I18n, match, reply } from "@edjopato/telegraf-i18n";
+import { I18n, match } from "@edjopato/telegraf-i18n";
 import { TelegrafSessionRedis } from "@ivaniuk/telegraf-session-redis";
 import telegrafThrottler from "telegraf-throttler";
 import path from "path";
@@ -436,9 +436,7 @@ export default class TelegramBotService extends BaseService {
         `);
     }
 
-    async getExchanges(
-        ctx: any
-    ): Promise<
+    async getExchanges(ctx: any): Promise<
         {
             code: string;
         }[]
@@ -810,9 +808,7 @@ export default class TelegramBotService extends BaseService {
         };
     }
 
-    async getUserMarket(
-        ctx: any
-    ): Promise<{
+    async getUserMarket(ctx: any): Promise<{
         limits: UserMarketState["limits"];
         precision: UserMarketState["precision"];
     }> {
@@ -852,9 +848,7 @@ export default class TelegramBotService extends BaseService {
         return markets[0];
     }
 
-    async getUserAmounts(
-        ctx: any
-    ): Promise<{
+    async getUserAmounts(ctx: any): Promise<{
         balance: number;
         availableBalancePercent: number;
     }> {

@@ -42,6 +42,7 @@ export interface Stats {
     maxConsecLosses: number;
     maxDrawdown: number;
     percentMaxDrawdown: number | null;
+    percentMaxDrawdownDate: string | null;
     amountProportion: number | null;
     maxDrawdownDate: string | null;
     profitFactor: number | null;
@@ -74,6 +75,7 @@ export interface FullStats extends Stats {
     emulateNextPosition: boolean | null;
     marginNextPosition: number | null;
     zScore: number | null;
+    maxLeverage: number | null;
 }
 
 export interface PeriodStats {
@@ -128,6 +130,7 @@ export interface TradeStatsRobot extends BaseTradeStatsJob {
 export interface TradeStatsPortfolio extends BaseTradeStatsJob {
     type: "portfolio";
     portfolioId: string;
+    feeRate?: number;
 }
 
 export interface TradeStatsUserSignal extends BaseTradeStatsJob {
@@ -205,4 +208,5 @@ export type TradeStatsAggrJob =
 export interface StatsMeta {
     job: TradeStatsJob;
     initialBalance?: number;
+    leverage?: number;
 }

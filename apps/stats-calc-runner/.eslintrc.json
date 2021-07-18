@@ -5,9 +5,6 @@
     "overrides": [
         {
             "files": ["*.ts", "*.tsx", "*.js", "*.jsx"],
-            "parserOptions": {
-                "project": ["apps/stats-calc-runner/tsconfig.*?.json"]
-            },
             "rules": {}
         },
         {

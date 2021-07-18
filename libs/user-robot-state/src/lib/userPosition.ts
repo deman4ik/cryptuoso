@@ -21,8 +21,8 @@ import {
     UserPositionJob,
     UserPositionOrderStatus,
     UserPositionStatus,
-    UserRobotCurrentSettings,
-    UserPositionDB
+    UserPositionDB,
+    UserRobotDB
 } from "./types";
 import { ConnectorJob, Priority } from "@cryptuoso/connector-state";
 import { addPercent, average, round, sortAsc, sum } from "@cryptuoso/helpers";
@@ -40,7 +40,7 @@ export class UserPosition {
     _userPortfolioId: string;
     _userId: string;
     _userExAccId: string;
-    _settings: UserRobotCurrentSettings;
+    _settings: UserRobotDB["settings"];
     _exchange: string;
     _asset: string;
     _currency: string;
@@ -885,6 +885,8 @@ export class UserPosition {
                 } else if (!this.hasOpenEntryOrders) {
                     this._entryStatus = UserPositionOrderStatus.canceled;
                     this._status = UserPositionStatus.canceled;
+                    this._nextJob = null;
+                    this._nextJobAt = null;
                 }
             } else if (this._entryStatus === UserPositionOrderStatus.partial) {
                 // Entry already executed
@@ -965,6 +967,8 @@ export class UserPosition {
             }
         } else if (!this._entryStatus && !this._exitStatus && !this.hasOpenEntryOrders && !this.hasOpenExitOrders) {
             this._status = UserPositionStatus.canceled;
+            this._nextJob = null;
+            this._nextJobAt = null;
         }
     }
 

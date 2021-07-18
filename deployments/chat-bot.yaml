@@ -69,11 +69,52 @@ spec:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
                                 key: REDISCS
+                      - name: HASURA_URL
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: HASURA_URL
+                      - name: MicrosoftAppId
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: MicrosoftAppId
+                      - name: MicrosoftAppPassword
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: MicrosoftAppPassword
+                      - name: MAILGUN_API_KEY
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: MAILGUN_API_KEY
+                      - name: MAILGUN_DOMAIN
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: MAILGUN_DOMAIN
+                      - name: REFRESH_TOKEN_EXPIRES
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: REFRESH_TOKEN_EXPIRES
+                      - name: JWT_SECRET
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: JWT_SECRET
+                      - name: JWT_TOKEN_EXPIRES
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: JWT_TOKEN_EXPIRES
                       - name: GA_UA_TRACKING_ID
                         valueFrom:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
                                 key: GA_UA_TRACKING_ID
+
                   ports:
                       - containerPort: 3000
                         protocol: TCP
@@ -82,9 +123,9 @@ spec:
                   resources:
                       requests:
                           memory: 128Mi
-                          cpu: "20m"
+                          cpu: "100m"
                       limits:
-                          memory: 256Mi
+                          memory: 512Mi
                           cpu: "300m"
 ---
 apiVersion: v1
@@ -124,8 +165,8 @@ spec:
         - type: Resource
           resource:
               name: cpu
-              targetAverageUtilization: 150
+              targetAverageUtilization: 200
         - type: Resource
           resource:
               name: memory
-              targetAverageUtilization: 150
+              targetAverageUtilization: 200

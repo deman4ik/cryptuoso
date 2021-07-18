@@ -201,7 +201,7 @@ export default class ConnectorRunnerService extends BaseService {
                             const [nextJob] = orderJobs.sort((a, b) =>
                                 sortDesc(dayjs.utc(a.nextJobAt).valueOf(), dayjs.utc(b.nextJobAt).valueOf())
                             );
-                            ({ updateBalances } = await this.processNextJob(exchangeAcc, nextJob));
+                            ({ updateBalances } = await this.processNextOrderJob(exchangeAcc, nextJob));
                         })
                     );
 
@@ -216,19 +216,20 @@ export default class ConnectorRunnerService extends BaseService {
             `);
             }
 
-            if (job.name === ConnectorJobType.balance) {
-                const exchangeAcc: UserExchangeAccount = await this.#getUserExAcc(userExAccId);
-
-                if (exchangeAcc.status !== UserExchangeAccStatus.enabled)
-                    throw new Error(`User Exchange Account #${userExAccId} is not enabled`);
-                await this.initConnector(exchangeAcc);
-            }
-
             if (job.name === ConnectorJobType.balance || updateBalances) {
+                const exchangeAcc: UserExchangeAccount = await this.#getUserExAcc(userExAccId);
+                this.log.debug(exchangeAcc.id, exchangeAcc.status);
+                if (job.name === ConnectorJobType.balance) await this.initConnector(exchangeAcc);
                 const balances: UserExchangeAccBalances = await this.connectors[userExAccId].getBalances();
-
+                this.log.debug(userExAccId, balances.totalUSD, balances.updatedAt);
+                let status = exchangeAcc.status;
+                if (exchangeAcc.status !== UserExchangeAccStatus.enabled) {
+                    status = UserExchangeAccStatus.enabled;
+                    this.log.info(`User Exchange Account #${userExAccId} is enabled`);
+                }
                 await this.db.pg.query(sql`
-                UPDATE user_exchange_accs SET balances = ${JSON.stringify(balances) || null}
+                UPDATE user_exchange_accs SET balances = ${JSON.stringify(balances) || null},
+                status = ${status}
                 WHERE id = ${userExAccId};
                 `);
             }
@@ -249,7 +250,8 @@ export default class ConnectorRunnerService extends BaseService {
                 //e.message.includes("balance-insufficient") ||
                 e.message.includes("EAPI:Invalid key") ||
                 e.message.includes("Invalid API-key") ||
-                e.message.includes("Failed to save order")
+                e.message.includes("Failed to save order") ||
+                e.message.includes("Could not find a key")
             ) {
                 await this.events.emit<UserExchangeAccountErrorEvent>({
                     type: ConnectorWorkerEvents.USER_EX_ACC_ERROR,
@@ -271,7 +273,7 @@ export default class ConnectorRunnerService extends BaseService {
         }
     }
 
-    async processNextJob(exAcc: UserExchangeAccount, job: ConnectorJob): Promise<{ updateBalances: boolean }> {
+    async processNextOrderJob(exAcc: UserExchangeAccount, job: ConnectorJob): Promise<{ updateBalances: boolean }> {
         const { exchange } = exAcc;
         const { userExAccId, orderId } = job;
         try {

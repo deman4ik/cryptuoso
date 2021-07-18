@@ -1,15 +1,12 @@
 import { DatabasePoolType, sql, TaggedTemplateLiteralInvocationType } from "slonik";
+import { nvl } from "@cryptuoso/helpers";
 
 export const prepareUnnest = (arr: { [key: string]: any }[], fields: string[]): any[][] =>
     arr.map((item) => {
         const newItem: { [key: string]: any } = {};
         fields.forEach((field) => {
-            newItem[field] =
-                item[field] === undefined
-                    ? null
-                    : typeof item[field] === "object"
-                    ? JSON.stringify(item[field])
-                    : item[field];
+            newItem[field] = nvl(item[field]);
+            if (typeof item[field] === "object") newItem[field] = JSON.stringify(item[field]);
         });
         return Object.values(newItem);
     });

@@ -3,7 +3,7 @@ import { Order, PositionDirection, SignalEvent, TradeAction, TradeSettings, Vali
 import { UserRobotSettings } from "@cryptuoso/robot-settings";
 import { UserMarketState } from "@cryptuoso/market";
 import { OrdersStatusEvent } from "@cryptuoso/connector-events";
-import { UserPorfolioDB } from "@cryptuoso/user-portfolio-state";
+import { UserPortfolioDB, UserPortfolioState } from "@cryptuoso/portfolio-state";
 
 export const enum UserPositionStatus {
     delayed = "delayed",
@@ -32,10 +32,6 @@ export interface UserPositionInternalState {
     entrySlippageCount: number;
     exitSlippageCount: number;
     delayedSignal?: SignalEvent;
-}
-
-export interface UserRobotCurrentSettings {
-    volume: number;
 }
 
 export interface UserPositionDB {
@@ -83,10 +79,10 @@ export interface UserPositionDB {
 export interface UserPositionState extends UserPositionDB {
     timeframe: ValidTimeframe;
     userExAccId: string;
-    settings: UserRobotCurrentSettings;
     tradeSettings: TradeSettings;
     entryOrders?: Order[];
     exitOrders?: Order[];
+    settings?: UserRobotDB["settings"];
 }
 
 export interface UserRobotInternalState {
@@ -104,7 +100,7 @@ export const enum UserRobotStatus {
 
 export interface UserRobotDB {
     id: string;
-    userExAccId: string;
+    userExAccId?: string;
     userId: string;
     robotId: string;
     userPortfolioId?: string;
@@ -113,7 +109,12 @@ export interface UserRobotDB {
     startedAt?: string;
     stoppedAt?: string;
     message?: string;
-    settings?: UserRobotCurrentSettings;
+    settings: {
+        volume: number;
+        active?: boolean;
+        emulated?: boolean;
+        share?: number;
+    };
 }
 
 export interface UserRobotState extends UserRobotDB {
@@ -123,30 +124,40 @@ export interface UserRobotState extends UserRobotDB {
     timeframe: ValidTimeframe;
     tradeSettings: TradeSettings;
     positions: UserPositionState[];
-    userPortfolioStatus?: UserPorfolioDB["status"];
-    userPortfolioSettings?: UserPorfolioDB["settings"];
+    userPortfolio?: {
+        type: UserPortfolioDB["type"];
+        status?: UserPortfolioDB["status"];
+        settings?: UserPortfolioState["settings"];
+    };
     currentPrice?: number;
-    userRobotSettings?: UserRobotSettings;
 }
 
 export interface UserRobotStateExt extends UserRobotState {
     limits: UserMarketState["limits"]["userRobot"];
     precision: { amount: number; price: number };
     totalBalanceUsd: number;
+    userRobotSettings?: UserRobotSettings; //TODO: deprecate
 }
 
 export const enum UserRobotJobType {
     stop = "stop",
     pause = "pause",
     signal = "signal",
-    order = "order"
+    order = "order",
+    disable = "disable",
+    confirmTrade = "confirmTrade"
+}
+
+export interface UserRobotConfirmTradeJob {
+    userPositionId: string;
+    cancel?: boolean;
 }
 
 export interface UserRobotJob {
     id?: string;
     userRobotId: string;
     type: UserRobotJobType;
-    data?: SignalEvent | OrdersStatusEvent | { message?: string };
+    data?: SignalEvent | OrdersStatusEvent | { message?: string } | UserRobotConfirmTradeJob;
     retries?: number;
     error?: string;
 }

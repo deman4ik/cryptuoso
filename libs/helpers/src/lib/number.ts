@@ -75,6 +75,10 @@ export function divideRound(a: number, b: number): number | 0 {
     return +round(result, 2);
 }
 
+export function calcPercentValue(num: number, percent: number) {
+    return (percent / 100) * num;
+}
+
 /**
  * Returns the number increased by the specified percentage, rounded up to 6 digits.
  *

@@ -89,10 +89,10 @@ async function subscribeSignalsEnterVolume(ctx: any) {
 
         let asset;
         let minVolume;
-        if (volumeType === VolumeSettingsType.assetStatic) {
+        if (volumeType === "assetStatic") {
             asset = robot.asset;
             minVolume = amount;
-        } else if (volumeType === VolumeSettingsType.currencyDynamic) {
+        } else if (volumeType === "currencyDynamic") {
             asset = robot.currency;
             minVolume = amountUSD;
         } else throw new BaseError("Unknown amount type", { volumeType });
@@ -147,9 +147,9 @@ async function subscribeSignalsConfirm(ctx: any) {
         try {
             volume = parseFloat(ctx.message.text);
             if (isNaN(volume)) error = "Volume is not a number";
-            if (volumeType === VolumeSettingsType.assetStatic) {
+            if (volumeType === "assetStatic") {
                 checkAssetStatic(volume, min.amount, max.amount);
-            } else if (volumeType === VolumeSettingsType.currencyDynamic) {
+            } else if (volumeType === "currencyDynamic") {
                 checkCurrencyDynamic(volume, min.amountUSD, max.amountUSD);
             } else throw new BaseError("Unknown amount type", { volumeType });
         } catch (e) {
@@ -164,12 +164,12 @@ async function subscribeSignalsConfirm(ctx: any) {
                 robotId: robot.id
             };
 
-            if (volumeType === VolumeSettingsType.assetStatic) {
+            if (volumeType === "assetStatic") {
                 params.settings = {
                     volumeType,
                     volume
                 };
-            } else if (volumeType === VolumeSettingsType.currencyDynamic) {
+            } else if (volumeType === "currencyDynamic") {
                 params.settings = {
                     volumeType,
                     volumeInCurrency: volume
@@ -208,9 +208,9 @@ async function subscribeSignalsConfirm(ctx: any) {
         if (result) {
             let asset;
 
-            if (volumeType === VolumeSettingsType.assetStatic) {
+            if (volumeType === "assetStatic") {
                 asset = robot.asset;
-            } else if (volumeType === VolumeSettingsType.currencyDynamic) {
+            } else if (volumeType === "currencyDynamic") {
                 asset = robot.currency;
             }
             await ctx.reply(

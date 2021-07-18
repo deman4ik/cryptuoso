@@ -46,17 +46,18 @@ export class PublicConnector {
         return result;
     }
 
-    async initAllConnectors(): Promise<void> {
+    async initAllConnectors(rateLimit = false): Promise<void> {
         logger.info("Initializing all public connectors...");
         for (const exchange of EXCHANGES) {
-            await this.initConnector(exchange);
+            await this.initConnector(exchange, rateLimit);
         }
         logger.info("All public connectors inited!");
     }
 
-    #createConnector = (exchange: string) => {
+    #createConnector = (exchange: string, rateLimit = false) => {
         const config: { [key: string]: any } = {
-            agent: this.agent
+            agent: this.agent,
+            rateLimit
         };
         if (exchange === "bitfinex" || exchange === "kraken" || exchange === "kucoin" || exchange === "huobipro") {
             this.connectors[exchange] = new ccxt[exchange](config);
@@ -68,16 +69,17 @@ export class PublicConnector {
         } else throw new Error("Unsupported exchange");
     };
 
-    async initConnector(exchange: string): Promise<void> {
+    async initConnector(exchange: string, rateLimit = false): Promise<void> {
         if (!(exchange in this.connectors) || !this.connectors[exchange].markets) {
-            this.#createConnector(exchange);
+            this.#createConnector(exchange, rateLimit);
 
             const call = async (bail: (e: Error) => void) => {
                 try {
                     return await this.connectors[exchange].loadMarkets();
                 } catch (e) {
+                    this.log.warn(e);
                     if (e instanceof ccxt.NetworkError) {
-                        this.#createConnector(exchange);
+                        this.#createConnector(exchange, rateLimit);
                         throw e;
                     }
                     bail(e);
@@ -174,9 +176,7 @@ export class PublicConnector {
         }
     }
 
-    async getTimeframes(
-        exchange: string
-    ): Promise<{
+    async getTimeframes(exchange: string): Promise<{
         [key: string]: Timeframe;
     }> {
         await this.initConnector(exchange);

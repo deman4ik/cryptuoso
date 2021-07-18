@@ -10,5 +10,6 @@ module.exports = {
         "^.+\\.[tj]s$": "ts-jest"
     },
     moduleFileExtensions: ["ts", "js", "html"],
-    coverageDirectory: "../../coverage/apps/webhooks"
+    coverageDirectory: "../../coverage/apps/webhooks",
+    testEnvironment: "node"
 };

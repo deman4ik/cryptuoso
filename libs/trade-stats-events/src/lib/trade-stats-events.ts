@@ -5,6 +5,7 @@ export const TRADE_STATS_TOPIC = "in-trade-stats-runner";
 export const enum TradeStatsRunnerEvents {
     ROBOT = `stats-calc.robot`,
     PORTFOLIO = `stats-calc.portfolio`,
+    PORTFOLIO_ROBOT = `stats-calc.portfolio-robot`,
     USER_ROBOT = `stats-calc.user-robot`,
     USER_PORTFOLIO = `stats-calc.user-portfolio`,
     RECALC_ALL_ROBOTS = `stats-calc.recalc-all-robots`,
@@ -37,6 +38,16 @@ export const TradeStatsRunnerSchema = {
             default: false
         },
         portfolioId: {
+            type: "uuid"
+        }
+    },
+    [TradeStatsRunnerEvents.PORTFOLIO_ROBOT]: {
+        recalc: {
+            type: "boolean",
+            optional: true,
+            default: false
+        },
+        robotId: {
             type: "uuid"
         }
     },
@@ -119,6 +130,8 @@ export interface TradeStatsRunnerPortfolio {
     recalc?: boolean;
     portfolioId: string;
 }
+
+export type TradeStatsRunnerPortfolioRobot = TradeStatsRunnerRobot;
 
 export interface TradeStatsRunnerUserRobot {
     recalc?: boolean;

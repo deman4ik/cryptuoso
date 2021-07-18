@@ -218,110 +218,69 @@ class BacktesterWorker {
     };
 
     #savePositions = async (positions: BacktesterPositionState[]) => {
+        let unnest;
         try {
             if (positions && Array.isArray(positions) && positions.length > 0) {
                 this.log.info(
                     `Backtester #${positions[0].backtestId} - Saving robot's #${positions[0].robotId} ${positions.length} positions`
                 );
-                const chunks = chunkArray(positions, this.defaultInsertChunkSize);
-                for (const chunk of chunks) {
+
+                for (const position of positions) {
                     await this.db.pg.query(sql`
-        INSERT INTO backtest_positions
-        (id, backtest_id, robot_id, prefix, code, parent_id,
-         direction, status, entry_status, entry_price, 
-         entry_date,
-         entry_order_type, entry_action, 
-         entry_candle_timestamp,
-         exit_status, exit_price,
-         exit_date, 
-         exit_order_type,
-         exit_action, 
-         exit_candle_timestamp,
-         alerts,
-         bars_held,
-         internal_state,
-         emulated,
-         margin,
-         volume,
-         profit,
-         max_price
-        )
-        SELECT * FROM 
-        ${sql.unnest(
-            this.db.util.prepareUnnest(
-                chunk.map((pos) => ({
-                    ...pos,
-                    alerts: JSON.stringify(pos.alerts),
-                    internalState: JSON.stringify(pos.internalState)
-                })),
-                [
-                    "id",
-                    "backtestId",
-                    "robotId",
-                    "prefix",
-                    "code",
-                    "parentId",
-                    "direction",
-                    "status",
-                    "entryStatus",
-                    "entryPrice",
-                    "entryDate",
-                    "entryOrderType",
-                    "entryAction",
-                    "entryCandleTimestamp",
-                    "exitStatus",
-                    "exitPrice",
-                    "exitDate",
-                    "exitOrderType",
-                    "exitAction",
-                    "exitCandleTimestamp",
-                    "alerts",
-                    "barsHeld",
-                    "internalState",
-                    "emulated",
-                    "margin",
-                    "volume",
-                    "profit",
-                    "maxPrice"
-                ]
-            ),
-            [
-                "uuid",
-                "uuid",
-                "uuid",
-                "varchar",
-                "varchar",
-                "uuid",
-                "varchar",
-                "varchar",
-                "varchar",
-                "numeric",
-                "timestamp",
-                "varchar",
-                "varchar",
-                "timestamp",
-                "varchar",
-                "numeric",
-                "timestamp",
-                "varchar",
-                "varchar",
-                "timestamp",
-                "jsonb",
-                "numeric",
-                "jsonb",
-                "bool",
-                "numeric",
-                "numeric",
-                "numeric",
-                "numeric"
-            ]
-        )}
-        `);
+                    INSERT INTO backtest_positions
+                    (id, backtest_id, robot_id, prefix, code, parent_id,
+                     direction, status, entry_status, entry_price, 
+                     entry_date,
+                     entry_order_type, entry_action, 
+                     entry_candle_timestamp,
+                     exit_status, exit_price,
+                     exit_date, 
+                     exit_order_type,
+                     exit_action, 
+                     exit_candle_timestamp,
+                     alerts,
+                     bars_held,
+                     internal_state,
+                     emulated,
+                     margin,
+                     volume,
+                     profit,
+                     max_price
+                    ) VALUES (
+                        ${position.id},
+                        ${position.backtestId},
+                        ${position.robotId},
+                        ${position.prefix},
+                        ${position.code},
+                        ${position.parentId || null},
+                        ${position.direction || null},
+                        ${position.status || null},
+                        ${position.entryStatus || null},
+                        ${position.entryPrice || null},
+                        ${position.entryDate || null}, 
+                        ${position.entryOrderType || null},
+                        ${position.entryAction || null},
+                        ${position.entryCandleTimestamp || null},
+                        ${position.exitStatus || null},
+                        ${position.exitPrice || null},
+                        ${position.exitDate || null},
+                        ${position.exitOrderType || null},
+                        ${position.exitAction || null},
+                        ${position.exitCandleTimestamp || null},
+                        ${JSON.stringify(position.alerts)},
+                        ${position.barsHeld || null},
+                        ${JSON.stringify(position.internalState)},
+                        ${position.emulated || false},
+                        ${position.margin || null},
+                        ${position.volume || null},
+                        ${position.profit || null},
+                        ${position.maxPrice || null}
+                    )`);
                 }
             }
         } catch (err) {
             this.log.error(`Failed to save backtester positions`, err);
-            this.log.debug(positions[positions.length - 1]);
+            this.log.debug(unnest);
             throw err;
         }
     };
@@ -543,96 +502,52 @@ class BacktesterWorker {
             this.log.info(`Robot #${robotId} - Saving positions`);
             await this.db.pg.query(sql`DELETE FROM robot_positions where robot_id = ${robotId}`);
             if (positions && Array.isArray(positions) && positions.length > 0) {
-                const chunks = chunkArray(positions, this.defaultInsertChunkSize);
-                for (const chunk of chunks) {
-                    try {
-                        await this.db.pg.query(sql`
-        INSERT INTO robot_positions
-        ( id, robot_id, prefix, code, parent_id,
-         direction, status, entry_status, entry_price, 
-         entry_date,
-         entry_order_type, entry_action, 
-         entry_candle_timestamp,
-         exit_status, exit_price,
-         exit_date, 
-         exit_order_type,
-         exit_action, 
-         exit_candle_timestamp,
-         alerts,
-         bars_held,
-         internal_state,
-         emulated,
-         margin,
-         max_price
-        )
-        SELECT * FROM 
-        ${sql.unnest(
-            this.db.util.prepareUnnest(
-                chunk.map((pos) => ({
-                    ...pos,
-                    alerts: JSON.stringify(pos.alerts),
-                    internalState: JSON.stringify(pos.internalState)
-                })),
-                [
-                    "id",
-                    "robotId",
-                    "prefix",
-                    "code",
-                    "parentId",
-                    "direction",
-                    "status",
-                    "entryStatus",
-                    "entryPrice",
-                    "entryDate",
-                    "entryOrderType",
-                    "entryAction",
-                    "entryCandleTimestamp",
-                    "exitStatus",
-                    "exitPrice",
-                    "exitDate",
-                    "exitOrderType",
-                    "exitAction",
-                    "exitCandleTimestamp",
-                    "alerts",
-                    "barsHeld",
-                    "internalState",
-                    "emulated",
-                    "margin",
-                    "maxPrice"
-                ]
-            ),
-            [
-                "uuid",
-                "uuid",
-                "varchar",
-                "varchar",
-                "uuid",
-                "varchar",
-                "varchar",
-                "varchar",
-                "numeric",
-                "timestamp",
-                "varchar",
-                "varchar",
-                "timestamp",
-                "varchar",
-                "numeric",
-                "timestamp",
-                "varchar",
-                "varchar",
-                "timestamp",
-                "jsonb",
-                "numeric",
-                "jsonb",
-                "bool",
-                "numeric",
-                "numeric"
-            ]
-        )}
-        `);
-                    } catch (err) {
-                        this.log.error(err);
-                    }
+                for (const position of positions) {
+                    await this.db.pg.query(sql`
+                    INSERT INTO robot_positions
+                    ( id, robot_id, prefix, code, parent_id,
+                     direction, status, entry_status, entry_price, 
+                     entry_date,
+                     entry_order_type, entry_action, 
+                     entry_candle_timestamp,
+                     exit_status, exit_price,
+                     exit_date, 
+                     exit_order_type,
+                     exit_action, 
+                     exit_candle_timestamp,
+                     alerts,
+                     bars_held,
+                     internal_state,
+                     emulated,
+                     margin,
+                     max_price
+                    ) VALUES (
+                    ${position.id},
+                    ${position.robotId},
+                    ${position.prefix},
+                    ${position.code},
+                    ${position.parentId || null},
+                    ${position.direction || null},
+                    ${position.status},
+                    ${position.entryStatus || null},
+                    ${position.entryPrice || null},
+                    ${position.entryDate || null},
+                    ${position.entryOrderType || null},
+                    ${position.entryAction || null},
+                    ${position.entryCandleTimestamp || null},
+                    ${position.exitStatus || null},
+                    ${position.exitPrice || null},
+                    ${position.exitDate || null},
+                    ${position.exitOrderType || null},
+                    ${position.exitAction || null},
+                    ${position.exitCandleTimestamp || null},
+                    ${JSON.stringify(position.alerts)},
+                    ${position.barsHeld || null},
+                    ${JSON.stringify(position.internalState)},
+                    ${position.emulated || false},
+                    ${position.margin || null},
+                    ${position.maxPrice || null}
+                    );`);
                 }
             }
         } catch (err) {

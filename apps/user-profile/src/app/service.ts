@@ -27,8 +27,7 @@ import {
     UserRobotSettings,
     UserRobotSettingsSchema,
     UserSignalSettings,
-    UserSignalSettingsSchema,
-    VolumeSettingsType
+    UserSignalSettingsSchema
 } from "@cryptuoso/robot-settings";
 import { PrivateConnector } from "@cryptuoso/ccxt-private";
 import { GA } from "@cryptuoso/analytics";
@@ -312,19 +311,19 @@ export default class UserProfileService extends HTTPService {
 
         let newUserSignalSettings: UserSignalSettings;
 
-        if (settings.volumeType === VolumeSettingsType.assetStatic) {
+        if (settings.volumeType === "assetStatic") {
             const volume = round(settings.volume, precision?.amount || 6);
             const amountMin = limits?.min?.amount;
             const amountMax = limits?.max?.amount;
             checkAssetStatic(volume, amountMin, amountMax);
-            newUserSignalSettings = { volumeType: VolumeSettingsType.assetStatic, volume };
-        } else if (settings.volumeType === VolumeSettingsType.currencyDynamic) {
+            newUserSignalSettings = { volumeType: "assetStatic", volume };
+        } else if (settings.volumeType === "currencyDynamic") {
             const volumeInCurrency = round(settings.volumeInCurrency, precision?.price || 2);
             const amountMin = limits?.min?.amountUSD;
             const amountMax = limits?.max?.amountUSD;
             checkCurrencyDynamic(volumeInCurrency, amountMin, amountMax);
 
-            newUserSignalSettings = { volumeType: VolumeSettingsType.currencyDynamic, volumeInCurrency };
+            newUserSignalSettings = { volumeType: "currencyDynamic", volumeInCurrency };
         }
 
         return newUserSignalSettings;
@@ -394,10 +393,7 @@ export default class UserProfileService extends HTTPService {
             );
         `);
 
-        const volume =
-            newSettings.volumeType === VolumeSettingsType.assetStatic
-                ? newSettings.volume
-                : newSettings.volumeInCurrency;
+        const volume = newSettings.volumeType === "assetStatic" ? newSettings.volume : newSettings.volumeInCurrency;
         GA.event(user.id, "signals", "subscribe");
         return volume;
     }
@@ -421,11 +417,11 @@ export default class UserProfileService extends HTTPService {
         `);
 
         if (
-            (currentUserSignalSettings?.volumeType === VolumeSettingsType.assetStatic &&
-                settings.volumeType === VolumeSettingsType.assetStatic &&
+            (currentUserSignalSettings?.volumeType === "assetStatic" &&
+                settings.volumeType === "assetStatic" &&
                 settings.volume === currentUserSignalSettings.volume) ||
-            (currentUserSignalSettings?.volumeType === VolumeSettingsType.currencyDynamic &&
-                settings.volumeType === VolumeSettingsType.currencyDynamic &&
+            (currentUserSignalSettings?.volumeType === "currencyDynamic" &&
+                settings.volumeType === "currencyDynamic" &&
                 settings.volumeInCurrency === currentUserSignalSettings.volumeInCurrency)
         )
             return;
@@ -454,10 +450,7 @@ export default class UserProfileService extends HTTPService {
             );
         `);
 
-        const volume =
-            newSettings.volumeType === VolumeSettingsType.assetStatic
-                ? newSettings.volume
-                : newSettings.volumeInCurrency;
+        const volume = newSettings.volumeType === "assetStatic" ? newSettings.volume : newSettings.volumeInCurrency;
         GA.event(user.id, "signals", "edit");
         return volume;
     }
@@ -553,6 +546,22 @@ export default class UserProfileService extends HTTPService {
             }
         }
 
+        if (!existed) {
+            const anotherAccountExists = await this.db.pg.oneFirst<number>(sql`
+                SELECT count(1)
+                FROM user_exchange_accs
+                WHERE user_id = ${userId}
+                 AND exchange = ${exchange};
+            `);
+            if (anotherAccountExists > 0)
+                throw new ActionsHandlerError(
+                    "User Exchange Account already exists. Delete Exchange Account before creating a new one.",
+                    null,
+                    "FORBIDDEN",
+                    500
+                );
+        }
+
         const connector = new PrivateConnector({
             exchange,
             keys: {
@@ -580,6 +589,7 @@ export default class UserProfileService extends HTTPService {
             pass: pass && (await this.encrypt(userId, pass))
         };
 
+        /*
         if (!existed) {
             if (!name || name === "") {
                 const accExists = await this.db.pg.maybeOne<{ name: string }>(sql`
@@ -611,6 +621,10 @@ export default class UserProfileService extends HTTPService {
                         403
                     );
             }
+        }
+        */
+        if (!name) {
+            name = `${formatExchange(exchange)}`;
         }
 
         const exchangeAcc: UserExchangeAccount = {
@@ -769,19 +783,19 @@ export default class UserProfileService extends HTTPService {
 
         let newUserRobotSettings: UserRobotSettings;
 
-        if (settings.volumeType === VolumeSettingsType.assetStatic) {
+        if (settings.volumeType === "assetStatic") {
             const volume = round(settings.volume, precision?.amount || 6);
             const amountMin = limits?.min?.amount;
             const amountMax = limits?.max?.amount;
             checkAssetStatic(volume, amountMin, amountMax);
-            newUserRobotSettings = { volumeType: VolumeSettingsType.assetStatic, volume };
-        } else if (settings.volumeType === VolumeSettingsType.currencyDynamic) {
+            newUserRobotSettings = { volumeType: "assetStatic", volume };
+        } else if (settings.volumeType === "currencyDynamic") {
             const volumeInCurrency = round(settings.volumeInCurrency, precision?.price || 2);
             const amountMin = limits?.min?.amountUSD;
             const amountMax = limits?.max?.amountUSD;
             checkCurrencyDynamic(volumeInCurrency, amountMin, amountMax);
-            newUserRobotSettings = { volumeType: VolumeSettingsType.currencyDynamic, volumeInCurrency };
-        } else if (settings.volumeType === VolumeSettingsType.balancePercent) {
+            newUserRobotSettings = { volumeType: "currencyDynamic", volumeInCurrency };
+        } else if (settings.volumeType === "balancePercent") {
             const balancePercent = round(settings.balancePercent);
             const volumeInCurrency = round((balancePercent / 100) * totalBalance, precision?.price || 2);
             const amountMin = limits?.min?.amountUSD;
@@ -789,7 +803,7 @@ export default class UserProfileService extends HTTPService {
 
             checkBalancePercent(balancePercent, availableBalancePercent, volumeInCurrency, amountMin, amountMax);
 
-            newUserRobotSettings = { volumeType: VolumeSettingsType.balancePercent, balancePercent };
+            newUserRobotSettings = { volumeType: "balancePercent", balancePercent };
         }
         return newUserRobotSettings;
     }
@@ -882,13 +896,14 @@ export default class UserProfileService extends HTTPService {
 
         await this.db.pg.query(sql`
             INSERT INTO user_robots(
-                id, robot_id, user_ex_acc_id, user_id, status
+                id, robot_id, user_ex_acc_id, user_id, status, settings
             ) VALUES (
                 ${userRobotId},
                 ${robotId},
                 ${userExAccId},
                 ${userId},
-                ${RobotStatus.stopped}
+                ${RobotStatus.stopped},
+                ${JSON.stringify({ active: true })}
             );
         `);
 
@@ -909,12 +924,13 @@ export default class UserProfileService extends HTTPService {
 
         const userRobotExists = await this.db.pg.maybeOne<{
             id: UserRobotDB["id"];
+            userPortfolioId?: UserRobotDB["userPortfolioId"];
             userId: UserRobotDB["userId"];
             robotId: UserRobotDB["robotId"];
             userExAccId: UserRobotDB["userExAccId"];
             userRobotSettings: UserRobotSettings;
         }>(sql`
-            SELECT ur.id, ur.user_id, ur.robot_id, ur.user_ex_acc_id, s.user_robot_settings
+            SELECT ur.id, ur.user_portfolio_id, ur.user_id, ur.robot_id, ur.user_ex_acc_id, s.user_robot_settings
             FROM user_robots ur, v_user_robot_settings s
             WHERE user_robot_id = ur.id
               AND ur.id = ${id};
@@ -930,14 +946,22 @@ export default class UserProfileService extends HTTPService {
                 "FORBIDDEN",
                 403
             );
+
+        if (userRobotExists.userPortfolioId)
+            throw new ActionsHandlerError(
+                "Editing user robot from portfolio is not allowed",
+                { userRobotId: id, userPortfolioId: userRobotExists.userPortfolioId },
+                "FORBIDDEN",
+                500
+            );
         const { userRobotSettings: currentUserRobotSettings } = userRobotExists;
 
         if (
-            (currentUserRobotSettings?.volumeType === VolumeSettingsType.assetStatic &&
-                settings.volumeType === VolumeSettingsType.assetStatic &&
+            (currentUserRobotSettings?.volumeType === "assetStatic" &&
+                settings.volumeType === "assetStatic" &&
                 settings.volume === currentUserRobotSettings.volume) ||
-            (currentUserRobotSettings?.volumeType === VolumeSettingsType.currencyDynamic &&
-                settings.volumeType === VolumeSettingsType.currencyDynamic &&
+            (currentUserRobotSettings?.volumeType === "currencyDynamic" &&
+                settings.volumeType === "currencyDynamic" &&
                 settings.volumeInCurrency === currentUserRobotSettings.volumeInCurrency)
         )
             return;
@@ -960,7 +984,7 @@ export default class UserProfileService extends HTTPService {
         `);
 
         const currentAvailableBalancePercent =
-            currentUserRobotSettings?.volumeType === VolumeSettingsType.balancePercent
+            currentUserRobotSettings?.volumeType === "balancePercent"
                 ? availableBalancePercent + currentUserRobotSettings.balancePercent
                 : availableBalancePercent;
 
@@ -988,11 +1012,12 @@ export default class UserProfileService extends HTTPService {
 
         const userRobotExists = await this.db.pg.maybeOne<{
             id: UserRobotDB["id"];
+            userPortfolioId?: UserRobotDB["userPortfolioId"];
             robotId: UserRobotDB["robotId"];
             userId: UserRobotDB["userId"];
             status: UserRobotDB["status"];
         }>(sql`
-            SELECT id, robot_id, user_id, status
+            SELECT id, user_portfolio_id, robot_id, user_id, status
             FROM user_robots
             WHERE id = ${id};
         `);
@@ -1006,6 +1031,14 @@ export default class UserProfileService extends HTTPService {
                 { userRobotId: id },
                 "FORBIDDEN",
                 403
+            );
+
+        if (userRobotExists.userPortfolioId)
+            throw new ActionsHandlerError(
+                "Editing user robot from portfolio is not allowed",
+                { userRobotId: id, userPortfolioId: userRobotExists.userPortfolioId },
+                "FORBIDDEN",
+                500
             );
 
         if (userRobotExists.status !== UserRobotStatus.stopped && userRobotExists.status !== UserRobotStatus.paused)

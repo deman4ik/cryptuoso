@@ -11,11 +11,13 @@ export interface PortfolioOptions {
 
 export interface PortfolioSettings {
     options: PortfolioOptions;
-    minBalance: number;
-    minTradeAmount: number;
-    feeRate: number;
+    tradingAmountType: "currencyFixed" | "balancePercent";
+    balancePercent?: number;
+    tradingAmountCurrency?: number;
     initialBalance: number;
     leverage: number;
+    maxRobotsCount?: number;
+    minRobotsCount?: number;
 }
 
 export interface PortfolioDB {
@@ -38,10 +40,54 @@ export interface PortfolioRobot extends PortfolioRobotDB {
     amountInCurrency?: number;
 }
 
+export interface PortfolioContext {
+    minTradeAmount: number;
+    feeRate: number;
+    currentBalance: number;
+}
+
 export interface PortfolioState extends PortfolioDB {
+    context: PortfolioContext;
+    variables?: {
+        portfolioBalance: number;
+        minBalance: number;
+        maxRobotsCount: number;
+        minRobotsCount: number;
+    };
     robots?: PortfolioRobot[];
 }
 
 export interface PortfolioBuilderJob {
     portfolioId: string;
+    type: "portfolio";
+}
+
+export interface UserPortfolioBuilderJob {
+    userPortfolioId: string;
+    type: "userPortfolio";
+}
+
+export interface UserPortfolioDB {
+    id: string;
+    userId: string;
+    userExAccId?: string;
+    exchange: string;
+    type: "signals" | "trading";
+    status: "starting" | "started" | "stopping" | "stopped" | "paused";
+    fullStats?: FullStats;
+    periodStats?: PeriodStats[];
+}
+
+export interface UserPortfolioState extends UserPortfolioDB {
+    userPortfolioSettingsId?: string;
+    userPortfolioSettingsActiveFrom?: string;
+    settings: PortfolioSettings;
+    context: PortfolioContext;
+    variables?: {
+        portfolioBalance: number;
+        minBalance: number;
+        maxRobotsCount: number;
+        minRobotsCount: number;
+    };
+    robots?: PortfolioRobotDB[];
 }

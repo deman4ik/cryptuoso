@@ -206,9 +206,7 @@ class ImporterWorker {
         }
     }
 
-    async loadTrades(
-        chunk: TradesChunk
-    ): Promise<{
+    async loadTrades(chunk: TradesChunk): Promise<{
         timeframes: number[];
         chunk: TradesChunk;
         trades: ExchangeTrade[];
@@ -249,9 +247,7 @@ class ImporterWorker {
         }
     }
 
-    async loadCandles(
-        chunk: CandlesChunk
-    ): Promise<{
+    async loadCandles(chunk: CandlesChunk): Promise<{
         chunk: TradesChunk;
         candles: ExchangeCandle[];
     }> {

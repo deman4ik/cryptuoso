@@ -10,7 +10,8 @@ import {
     UserPositionDB,
     UserRobotStateExt,
     UserPositionStatus,
-    UserTradeEvent
+    UserTradeEvent,
+    UserRobotConfirmTradeJob
 } from "@cryptuoso/user-robot-state";
 import {
     UserRobotWorkerError,
@@ -25,9 +26,10 @@ import { BaseError } from "@cryptuoso/errors";
 import { NewEvent } from "@cryptuoso/events";
 import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
 import { DatabaseTransactionConnectionType } from "slonik";
-import { calcBalancePercent, calcCurrencyDynamic, VolumeSettingsType } from "@cryptuoso/robot-settings";
+import { calcBalancePercent, calcCurrencyDynamic } from "@cryptuoso/robot-settings";
 import dayjs from "@cryptuoso/dayjs";
 import { keysToCamelCase, round, roundFirstSignificant } from "@cryptuoso/helpers";
+import { TradeStatsRunnerEvents, TradeStatsRunnerUserRobot } from "@cryptuoso/trade-stats-events";
 
 export type UserRobotRunnerServiceConfig = BaseServiceConfig;
 
@@ -88,202 +90,75 @@ export default class UserRobotRunnerService extends BaseService {
 
     #getUserRobotState = async (userRobotId: string) => {
         const rawData = await this.db.pg.one<UserRobotStateExt>(sql`
-    SELECT ur.id,
-           ur.user_ex_acc_id,
-           ur.user_id,
-           ur.user_portfolio_id,
-           ur.robot_id,
-           ur.internal_state,
-           ur.status,
-           ur.started_at,
-           ur.stopped_at,
-           ur.message,
-           r.exchange,
-           r.asset,
-           r.currency,
-           r.timeframe,
-           m.current_price,
-           m.limits->'userRobot' as limits,
-           m.precision,
-           ea.total_balance_usd,
-           st.net_profit as profit,
-           m.trade_settings,
-           urs.user_robot_settings,
-           up.status as user_portfolio_status,
-           up.settings as user_portfolio_settings,
-           (SELECT array_to_json(array_agg(pos))
-FROM
-(SELECT p.id,
-    p.position_id,
-    p.user_robot_id,
-    p.user_portfolio_id,
-    p.parent_id,
-    p.direction,
-    p.entry_status,
-    p.entry_price,
-    to_char(p.entry_date::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as entry_date,
-    p.exit_status,
-    p.exit_price,
-    to_char(p.exit_date::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as exit_date,
-    p.exit_volume,
-    p.reason,
-    p.profit,
-    p.bars_held,
-    to_char(p.created_at::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as created_at,
-    to_char(p.updated_at::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as updated_at,
-    p.internal_state,
-    p.prefix,
-    p.code,
-    to_char(p.next_job_at::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as next_job_at,
-    p.next_job,
-    p.entry_executed,
-    p.entry_remaining,
-    p.exit_executed,
-    p.exit_remaining,
-    p.entry_signal_price,
-    p.exit_signal_price,
-    p.status,
-    p.entry_volume,
-    p.position_code,
-    p.exchange,
-    p.asset,
-    p.currency,
-    p.user_id,
-    p.entry_action,
-    p.exit_action,
-    to_char(p.entry_candle_timestamp::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as entry_candle_timestamp,
-    to_char(p.exit_candle_timestamp::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as exit_candle_timestamp,
-    p.emulated,
-  (SELECT array_to_json(array_agg(eo))
-   FROM
-     (SELECT o.id,
-    o.user_ex_acc_id,
-    o.user_robot_id,
-    o.position_id,
-    o.user_position_id,
-    o.exchange,
-    o.asset,
-    o.currency,
-    o.action,
-    o.direction,
-    o.type,
-    o.signal_price,
-    o.price,
-    o.volume,
-    o.status,
-    o.ex_id,
-    to_char(o.ex_timestamp::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as ex_timestamp,
-    to_char(o.ex_last_trade_at::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as ex_last_trade_at,
-    o.remaining,
-    o.executed,
-    to_char(o.last_checked_at::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as last_checked_at,
-    o.params,
-    to_char(o.created_at::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as created_at,
-    to_char(o.updated_at::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as updated_at,
-    o.next_job,
-    o.fee,
-    o.error
-      FROM user_orders o
-      WHERE o.user_position_id = p.id
-        AND (o.action = 'long'
-             OR o.action = 'short') order by o.created_at asc) eo) AS entry_orders,
-  (SELECT array_to_json(array_agg(eo))
-   FROM
-     (SELECT o.id,
-    o.user_ex_acc_id,
-    o.user_robot_id,
-    o.position_id,
-    o.user_position_id,
-    o.exchange,
-    o.asset,
-    o.currency,
-    o.action,
-    o.direction,
-    o.type,
-    o.signal_price,
-    o.price,
-    o.volume,
-    o.status,
-    o.ex_id,
-    to_char(o.ex_timestamp::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as ex_timestamp,
-    to_char(o.ex_last_trade_at::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as ex_last_trade_at,
-    o.remaining,
-    o.executed,
-    to_char(o.last_checked_at::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as last_checked_at,
-    o.params,
-    to_char(o.created_at::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as created_at,
-    to_char(o.updated_at::timestamp without time zone at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as updated_at,
-    o.next_job,
-    o.fee,
-    o.error
-      FROM user_orders o
-      WHERE o.user_position_id = p.id
-        AND (o.action = 'closeLong'
-             OR o.action = 'closeShort') order by o.created_at asc) eo) AS exit_orders
-FROM user_positions p
-WHERE p.user_robot_id =${userRobotId}
-  AND p.status IN ('delayed',
-                   'new',
-                   'open')) pos) AS positions
-    FROM user_robots ur, robots r, 
-    v_user_markets m, 
-    v_user_amounts a, v_user_exchange_accs ea
-    LEFT JOIN v_user_robot_stats st
-    ON st.user_robot_id = ${userRobotId}
-    LEFT JOIN v_user_robot_settings urs
-    ON urs.user_robot_id = ${userRobotId}
-    LEFT JOIN user_portfolios up
-    ON up.id = ur.user_portfolio_id
-    WHERE ur.robot_id = r.id  
-      AND m.exchange = r.exchange
-      AND m.asset = r.asset
-      AND m.currency = r.currency
-      AND m.user_id = ur.user_id    
-      AND a.user_ex_acc_id = ur.user_ex_acc_id
-      AND ea.id = ur.user_ex_acc_id
-      AND ur.id = ${userRobotId};                   
-  `);
+    SELECT * FROM v_user_robot_state WHERE id = ${userRobotId};                   
+  `); //TODO: fields
 
         return keysToCamelCase(rawData) as UserRobotStateExt;
     };
 
-    #getCurrentVolume = (state: UserRobotStateExt) => {
+    #getCurrentSettings = ({
+        settings,
+        currentPrice,
+        totalBalanceUsd,
+        userPortfolioId,
+        userPortfolio: { type: userPortfolioType, settings: userPortfolioSettings },
+        limits,
+        precision,
+        userRobotSettings //TODO: deprecate
+    }: UserRobotStateExt): UserRobotDB["settings"] => {
         let volume: number;
-        if (state.userPortfolioId) {
-            const { userPortfolioSettings } = state;
+        let volumeInCurrency: number;
+        let balance;
+
+        if (userPortfolioId) {
+            if (userPortfolioType === "signals") balance = userPortfolioSettings.initialBalance;
+            else balance = totalBalanceUsd; //? или тоже initialBalance
             if (userPortfolioSettings.tradingAmountType === "balancePercent") {
-                const currentPortfolioBalance = (userPortfolioSettings.balancePercent / 100) * state.totalBalanceUsd;
+                const currentPortfolioBalance = (userPortfolioSettings.balancePercent / 100) * balance;
 
-                volume = calcBalancePercent(state.userRobotSettings.share, currentPortfolioBalance, state.currentPrice);
+                ({ volume, volumeInCurrency } = calcBalancePercent(
+                    settings.share,
+                    currentPortfolioBalance,
+                    currentPrice
+                ));
             } else if (userPortfolioSettings.tradingAmountType === "currencyFixed") {
-                volume = calcBalancePercent(
-                    state.userRobotSettings.share,
+                ({ volume, volumeInCurrency } = calcBalancePercent(
+                    settings.share,
                     userPortfolioSettings.tradingAmountCurrency,
-                    state.currentPrice
-                );
+                    currentPrice
+                ));
             }
-
             if (userPortfolioSettings.leverage) {
                 volume = roundFirstSignificant(volume * userPortfolioSettings.leverage);
             }
         } else {
-            //TODO: deprecated
-            const { userRobotSettings } = state;
+            //TODO: deprecate
 
-            if (userRobotSettings.volumeType === VolumeSettingsType.assetStatic) {
+            if (userRobotSettings.volumeType === "assetStatic") {
                 volume = userRobotSettings.volume;
-            } else if (userRobotSettings.volumeType === VolumeSettingsType.currencyDynamic) {
+            } else if (userRobotSettings.volumeType === "currencyDynamic") {
                 const { volumeInCurrency } = userRobotSettings;
-                volume = calcCurrencyDynamic(volumeInCurrency, state.currentPrice);
-            } else if (userRobotSettings.volumeType === VolumeSettingsType.balancePercent) {
+                volume = calcCurrencyDynamic(volumeInCurrency, currentPrice);
+            } else if (userRobotSettings.volumeType === "balancePercent") {
                 const { balancePercent } = userRobotSettings;
 
-                volume = calcBalancePercent(balancePercent, state.totalBalanceUsd, state.currentPrice);
+                ({ volume } = calcBalancePercent(balancePercent, totalBalanceUsd, currentPrice));
             } else throw new BaseError("Unknown volume type", userRobotSettings);
         }
-        if (volume < state.limits.min.amount) volume = state.limits.min.amount;
-        else if (state.limits.max?.amount && volume > state.limits.max?.amount) volume = state.limits.max?.amount;
-        return { volume: round(volume, state.precision?.amount || 6) };
+
+        if (volume < limits.min.amount) {
+            volume = limits.min.amount;
+            volumeInCurrency = limits.min.amountUSD;
+        } else if (limits.max?.amount && volume > limits.max?.amount) {
+            volume = limits.max?.amount;
+            volumeInCurrency = limits.max.amountUSD;
+        }
+
+        if (userPortfolioId) {
+            if (balance < volumeInCurrency) throw new Error("Exchange account balance is insufficient");
+        }
+
+        return { ...settings, volume: round(volume, precision?.amount || 6) };
     };
 
     #savePositions = async (transaction: DatabaseTransactionConnectionType, positions: UserPositionDB[]) => {
@@ -404,7 +279,7 @@ WHERE p.user_robot_id =${userRobotId}
         try {
             const userRobotState = await this.#getUserRobotState(userRobotId);
             this.log.info(userRobotState);
-            const settings = await this.#getCurrentVolume(userRobotState);
+            const settings = await this.#getCurrentSettings(userRobotState);
 
             const userRobot = new UserRobot({ ...userRobotState, settings });
             const eventsToSend: NewEvent<any>[] = [];
@@ -450,9 +325,14 @@ WHERE p.user_robot_id =${userRobotId}
                     }
                 };
                 eventsToSend.push(pausedEvent);
+            } else if (type === UserRobotJobType.confirmTrade) {
+                if (userRobot.state.settings.emulated) userRobot.confirmTrade(data as UserRobotConfirmTradeJob);
             } else throw new BaseError(`Unknown user robot job type "${type}"`, job);
 
-            if (userRobot.status === UserRobotStatus.stopping && !userRobot.hasActivePositions) {
+            if (
+                (userRobot.status === UserRobotStatus.stopping || userRobot.state.settings?.active === false) &&
+                !userRobot.hasActivePositions
+            ) {
                 userRobot.setStop();
                 const stoppedEvent: NewEvent<UserRobotWorkerStatus> = {
                     type: UserRobotWorkerEvents.STOPPED,
@@ -493,6 +373,17 @@ WHERE p.user_robot_id =${userRobotId}
                         }
                     };
                     eventsToSend.push(statsCalcEvent);
+                    //TODO: deprecate
+
+                    if (userRobot.state.userPortfolioId) {
+                        const tradeStatsEvent: NewEvent<TradeStatsRunnerUserRobot> = {
+                            type: TradeStatsRunnerEvents.USER_ROBOT,
+                            data: {
+                                userRobotId: userRobot.id
+                            }
+                        };
+                        eventsToSend.push(tradeStatsEvent);
+                    }
                 }
 
                 if (userRobot.recentTrades.length) {
@@ -531,6 +422,7 @@ WHERE p.user_robot_id =${userRobotId}
             this.log.error(`Robot #${userRobotId} processing ${type} job #${id} error`, err);
             try {
                 const retries = job.retries ? job.retries + 1 : 1;
+
                 await this.db.pg.query(sql`
                     UPDATE user_robot_jobs
                     SET retries = ${retries}, 
@@ -548,6 +440,20 @@ WHERE p.user_robot_id =${userRobotId}
                         timestamp: dayjs.utc().toISOString(),
                         error: err.message,
                         job
+                    }
+                });
+                await this.db.pg.query(sql`
+                UPDATE user_robots
+                SET status = ${UserRobotStatus.paused}, 
+                    error = ${err.message}
+                WHERE id = ${job.userRobotId};`);
+                await this.events.emit<UserRobotWorkerStatus>({
+                    type: UserRobotWorkerEvents.PAUSED,
+                    data: {
+                        userRobotId,
+                        timestamp: dayjs.utc().toISOString(),
+                        status: UserRobotStatus.paused,
+                        message: err.message
                     }
                 });
             }

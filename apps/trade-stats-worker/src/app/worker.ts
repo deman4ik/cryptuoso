@@ -19,7 +19,6 @@ import {
 import logger, { Logger } from "@cryptuoso/logger";
 import { sql, pg, pgUtil, makeChunksGenerator } from "@cryptuoso/postgres";
 import { PortfolioSettings } from "@cryptuoso/portfolio-state";
-import { UserPortfolioSettings } from "@cryptuoso/user-portfolio-state";
 import { equals } from "@cryptuoso/helpers";
 
 class StatsCalcWorker {
@@ -161,7 +160,7 @@ class StatsCalcWorker {
         SET full_stats = ${JSON.stringify(newStats.fullStats)},
         period_stats = ${JSON.stringify(periodStatsToArray(newStats.periodStats))},
         emulated_full_stats = ${JSON.stringify(newEmulatedStats.fullStats)},
-        emulated_period_stats = ${JSON.stringify(periodStatsToArray(newEmulatedStats.periodStats))},
+        emulated_period_stats = ${JSON.stringify(periodStatsToArray(newEmulatedStats.periodStats))}
         WHERE id = ${robotId};
         `);
         } catch (err) {
@@ -212,7 +211,7 @@ class StatsCalcWorker {
             SELECT p.id, p.direction, p.entry_date, p.entry_price, p.exit_date, p.exit_price, p.volume, p.worst_profit, p.profit, p.bars_held
         `;
             const queryFromAndConditionPart = sql`
-            FROM v_portfolio_positions p
+            FROM v_portfolio_robot_positions p
             WHERE p.portfolio_id = ${portfolioId}
                 AND p.status = 'closed'
                 ${conditionExitDate}
@@ -350,7 +349,7 @@ class StatsCalcWorker {
                 }
             };
 
-            const userPortfolio = await this.db.pg.maybeOne<TradeStatsDB & { settings: UserPortfolioSettings }>(sql`
+            const userPortfolio = await this.db.pg.maybeOne<TradeStatsDB & { settings: PortfolioSettings }>(sql`
             SELECT r.full_stats, r.period_stats, r.settings
             FROM user_portfolios r
             WHERE r.id = ${userPortfolioId};
@@ -377,7 +376,7 @@ class StatsCalcWorker {
             SELECT p.id, p.direction, p.entry_date, p.entry_price, p.exit_date, p.exit_price, p.volume, p.worst_profit, p.profit, p.bars_held
         `;
             const queryFromAndConditionPart = sql`
-            FROM v_user_portfolio_positions p
+            FROM v_user_positions p
             WHERE p.user_portfolio_id = ${userPortfolioId}
                 AND p.status = 'closed'
                 ${conditionExitDate}

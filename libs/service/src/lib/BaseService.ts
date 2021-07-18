@@ -72,8 +72,9 @@ export class BaseService {
             };
             this.#redisConnection = new Redis(
                 process.env.REDISCS, //,{enableReadyCheck: false}
-                { maxRetriesPerRequest: null }
+                { maxRetriesPerRequest: null, connectTimeout: 60000 }
             );
+            this.#redisConnection.on("error", this.#hanleRedisError.bind(this));
 
             this.#redLock = new RedLock([this.#redisConnection], {
                 retryCount: 0,
@@ -108,6 +109,11 @@ export class BaseService {
     };
     #handleUnhandledRejection = (err: Error) => {
         this.#log.error("unhandledRejection", err);
+    };
+
+    #hanleRedisError = (err: Error) => {
+        this.#log.error(`REDIS Error: `, err.message);
+        if (err.message.toLowerCase().includes("eai_again")) process.exit(1);
     };
 
     #addOnStartHandler = async (func: () => Promise<void>) => {
@@ -191,6 +197,7 @@ export class BaseService {
             this.#queuesClean.stop();
             await this.#redisConnection.quit();
             await this.#db.pg.end();
+            await this.#lightship.shutdown();
         } catch (err) {
             this.#log.error(`Failed to correctly stop ${this.#name} service`, err);
             process.exit(1);
