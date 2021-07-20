@@ -24,6 +24,7 @@ export class TradeStatsCalc implements TradeStats {
                 round: meta.job.round === true || meta.job.round === false ? meta.job.round : true
             }
         };
+        if (this.meta.job.type === "portfolio") this.positions = this.preparePortfolioPositions(this.positions);
         this.fullStats = this.initFullStats(this.positions, prevStats?.fullStats);
         this.periodStats = this.initPeriodStats(prevStats?.periodStats);
 
@@ -113,7 +114,6 @@ export class TradeStatsCalc implements TradeStats {
     }
 
     public calculate(): TradeStats {
-        if (this.meta.job.type === "portfolio") this.positions = this.preparePortfolioPositions(this.positions);
         this.periodStats = this.calcPeriodStats(this.positions, this.prevPeriodStats);
         this.fullStats = this.calcFullStats(this.positions, this.prevFullStats, this.periodStats);
         if (this.meta.job.type === "portfolio") this.fullStats.maxLeverage = this.getMaxLeverage(this.positions);

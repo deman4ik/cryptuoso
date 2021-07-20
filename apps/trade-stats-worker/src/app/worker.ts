@@ -208,7 +208,7 @@ class StatsCalcWorker {
 
             const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
             const querySelectPart = sql`
-            SELECT p.id, p.direction, p.entry_date, p.entry_price, p.exit_date, p.exit_price, p.volume, p.worst_profit, p.profit, p.bars_held
+            SELECT p.id, p.direction, p.entry_date, p.entry_price, p.exit_date, p.exit_price, p.volume, p.worst_profit, p.profit, p.bars_held, p.meta
         `;
             const queryFromAndConditionPart = sql`
             FROM v_portfolio_robot_positions p

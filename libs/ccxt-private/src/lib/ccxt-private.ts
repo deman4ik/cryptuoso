@@ -239,7 +239,9 @@ export class PrivateConnector {
                     );
                 } catch (e) {
                     if (
-                        (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
+                        (e instanceof ccxt.NetworkError &&
+                            !(e instanceof ccxt.InvalidNonce) &&
+                            !(e instanceof ccxt.DDoSProtection)) ||
                         e.message?.toLowerCase().includes("gateway") ||
                         e.message?.toLowerCase().includes("getaddrinfo") ||
                         e.message?.toLowerCase().includes("network") ||
@@ -272,7 +274,9 @@ export class PrivateConnector {
                     return await this.connector.cancelOrder(order.id, this.getSymbol(asset, currency));
                 } catch (e) {
                     if (
-                        (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
+                        (e instanceof ccxt.NetworkError &&
+                            !(e instanceof ccxt.InvalidNonce) &&
+                            !(e instanceof ccxt.DDoSProtection)) ||
                         e.message?.toLowerCase().includes("gateway") ||
                         e.message?.toLowerCase().includes("getaddrinfo") ||
                         e.message?.toLowerCase().includes("network") ||
@@ -466,7 +470,9 @@ export class PrivateConnector {
                 return await connector.fetchBalance(params);
             } catch (e) {
                 if (
-                    (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
+                    (e instanceof ccxt.NetworkError &&
+                        !(e instanceof ccxt.InvalidNonce) &&
+                        !(e instanceof ccxt.DDoSProtection)) ||
                     e.message?.toLowerCase().includes("gateway") ||
                     e.message?.toLowerCase().includes("getaddrinfo") ||
                     e.message?.toLowerCase().includes("network") ||
@@ -664,7 +670,10 @@ export class PrivateConnector {
                         return await this.connector.fetchOrders(this.getSymbol(asset, currency), creationDate);
                     } catch (e) {
                         if (
-                            (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
+                            (e instanceof ccxt.NetworkError &&
+                                !(e instanceof ccxt.InvalidNonce) &&
+                                !(e instanceof ccxt.DDoSProtection) &&
+                                !(e instanceof ccxt.DDoSProtection)) ||
                             e.message?.toLowerCase().includes("gateway") ||
                             e.message?.toLowerCase().includes("getaddrinfo") ||
                             e.message?.toLowerCase().includes("network") ||
@@ -684,7 +693,9 @@ export class PrivateConnector {
                         return await this.connector.fetchOpenOrders(this.getSymbol(asset, currency), creationDate);
                     } catch (e) {
                         if (
-                            (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
+                            (e instanceof ccxt.NetworkError &&
+                                !(e instanceof ccxt.InvalidNonce) &&
+                                !(e instanceof ccxt.DDoSProtection)) ||
                             e.message?.toLowerCase().includes("gateway") ||
                             e.message?.toLowerCase().includes("getaddrinfo") ||
                             e.message?.toLowerCase().includes("network") ||
@@ -702,7 +713,9 @@ export class PrivateConnector {
                         return await this.connector.fetchClosedOrders(this.getSymbol(asset, currency), creationDate);
                     } catch (e) {
                         if (
-                            (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
+                            (e instanceof ccxt.NetworkError &&
+                                !(e instanceof ccxt.InvalidNonce) &&
+                                !(e instanceof ccxt.DDoSProtection)) ||
                             e.message?.toLowerCase().includes("gateway") ||
                             e.message?.toLowerCase().includes("getaddrinfo") ||
                             e.message?.toLowerCase().includes("network") ||
@@ -774,7 +787,9 @@ export class PrivateConnector {
                     return await this.connector.fetchOrder(exId, this.getSymbol(asset, currency));
                 } catch (e) {
                     if (
-                        (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
+                        (e instanceof ccxt.NetworkError &&
+                            !(e instanceof ccxt.InvalidNonce) &&
+                            !(e instanceof ccxt.DDoSProtection)) ||
                         e.message?.toLowerCase().includes("gateway") ||
                         e.message?.toLowerCase().includes("getaddrinfo") ||
                         e.message?.toLowerCase().includes("network") ||
@@ -891,7 +906,9 @@ export class PrivateConnector {
                     return await this.connector.cancelOrder(exId, this.getSymbol(asset, currency));
                 } catch (e) {
                     if (
-                        (e instanceof ccxt.NetworkError && !(e instanceof ccxt.InvalidNonce)) ||
+                        (e instanceof ccxt.NetworkError &&
+                            !(e instanceof ccxt.InvalidNonce) &&
+                            !(e instanceof ccxt.DDoSProtection)) ||
                         e.message?.toLowerCase().includes("gateway") ||
                         e.message?.toLowerCase().includes("getaddrinfo") ||
                         e.message?.toLowerCase().includes("network") ||
