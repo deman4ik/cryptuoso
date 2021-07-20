@@ -118,7 +118,7 @@ export default class ImporterRunnerService extends HTTPService {
                 status: Status.queued
             });
             importer.init();
-
+            this.log.debug("Starting", { id, exchange, asset, currency, type, timeframes, dateFrom, dateTo, amount });
             await this.addJob("importCandles", importer.type, importer.state, {
                 jobId: importer.id,
                 removeOnComplete: true,

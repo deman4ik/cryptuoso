@@ -191,6 +191,7 @@ export class ExwatcherBaseService extends BaseService {
     }
 
     async handleImporterFinishedEvent(event: ImporterWorkerFinished) {
+        this.log.debug(event);
         const { id: importerId, type, exchange, asset, currency } = event;
         if (exchange !== this.exchange && type !== "recent") return;
         const subscription = Object.values(this.subscriptions).find(
@@ -411,6 +412,7 @@ export class ExwatcherBaseService extends BaseService {
     }
 
     async subscribe(subscription: Exwatcher) {
+        this.log.debug(subscription);
         try {
             if (subscription) {
                 const { id, status } = subscription;
@@ -455,6 +457,7 @@ export class ExwatcherBaseService extends BaseService {
     }
 
     async subscribeCCXT(id: string) {
+        this.log.debug(id);
         try {
             const symbol = this.getSymbol(this.subscriptions[id].asset, this.subscriptions[id].currency);
             if (["binance_futures"].includes(this.exchange)) {

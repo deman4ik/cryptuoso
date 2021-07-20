@@ -128,17 +128,25 @@ export default class ImporterWorkerService extends BaseService {
                     throw new BaseError(importer.error, { importerId: importer.id });
                 }
                 if (importer.isFinished)
-                    await this.events.emit<ImporterWorkerFinished>({
-                        type: ImporterWorkerEvents.FINISHED,
-                        data: {
-                            id: importer.id,
-                            type: importer.type,
-                            exchange: importer.exchange,
-                            asset: importer.asset,
-                            currency: importer.currency,
-                            status: importer.status
-                        }
+                    this.log.debug(`Emiting FINISHED event`, {
+                        id: importer.id,
+                        type: importer.type,
+                        exchange: importer.exchange,
+                        asset: importer.asset,
+                        currency: importer.currency,
+                        status: importer.status
                     });
+                await this.events.emit<ImporterWorkerFinished>({
+                    type: ImporterWorkerEvents.FINISHED,
+                    data: {
+                        id: importer.id,
+                        type: importer.type,
+                        exchange: importer.exchange,
+                        asset: importer.asset,
+                        currency: importer.currency,
+                        status: importer.status
+                    }
+                });
                 this.log.info(`Job ${job.id} processed - Importer is ${importer.status}!`);
                 return importer.status;
             } finally {
