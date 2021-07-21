@@ -538,6 +538,101 @@ describe("Test User Robot", () => {
         expect(userRobot.positions[0].status).toBe(UserPositionStatus.closed);
     });
 
+    it("Should not create new exit orders", () => {
+        const signalOpen: SignalEvent = {
+            id: uuid(),
+            robotId,
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            timestamp: dayjs.utc("2019-10-26T00:05:01.000Z").toISOString(),
+            type: SignalType.trade,
+            positionId: uuid(),
+            positionPrefix: "p",
+            positionCode: "p_1",
+            candleTimestamp: dayjs.utc("2019-10-26T00:05:00.000Z").toISOString(),
+            action: TradeAction.short,
+            orderType: OrderType.market,
+            price: 6500
+        };
+
+        userRobot.handleSignal(signalOpen);
+        const openOrder = {
+            ...userRobot.ordersToCreate[0],
+            status: OrderStatus.closed,
+            exId: uuid(),
+            exTimestamp: dayjs.utc().toISOString(),
+            exLastTradeAt: dayjs.utc().toISOString(),
+            executed: userRobot.ordersToCreate[0].volume,
+            remaining: 0
+        };
+        userRobot = new UserRobot({
+            ...userRobot.state,
+            ...robotParams,
+            positions: [
+                {
+                    ...userRobot.positions[0],
+                    entryOrders: [openOrder]
+                }
+            ]
+        });
+        userRobot.handleOrder(openOrder);
+        const signalClose: SignalEvent = {
+            id: uuid(),
+            robotId,
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            timestamp: dayjs.utc("2019-10-26T00:05:01.000Z").toISOString(),
+            type: SignalType.trade,
+            positionId: signalOpen.positionId,
+            positionPrefix: "p",
+            positionCode: "p_1",
+            candleTimestamp: dayjs.utc("2019-10-26T00:05:00.000Z").toISOString(),
+            action: TradeAction.closeShort,
+            orderType: OrderType.market,
+            price: 5998
+        };
+        userRobot.handleSignal(signalClose);
+        const closeOrder = {
+            ...userRobot.ordersToCreate[0]
+        };
+        userRobot = new UserRobot({
+            ...userRobot.state,
+            ...robotParams,
+            positions: [
+                {
+                    ...userRobot.positions[0],
+                    entryOrders: [openOrder],
+                    exitOrders: [closeOrder]
+                }
+            ]
+        });
+        const newSignalOpen: SignalEvent = {
+            id: uuid(),
+            robotId,
+            exchange: "kraken",
+            asset: "BTC",
+            currency: "USD",
+            timeframe: 5,
+            timestamp: dayjs.utc("2019-10-26T00:05:01.000Z").toISOString(),
+            type: SignalType.trade,
+            positionId: uuid(),
+            positionPrefix: "p",
+            positionCode: "p_2",
+            candleTimestamp: dayjs.utc("2019-10-26T00:05:00.000Z").toISOString(),
+            action: TradeAction.long,
+            orderType: OrderType.market,
+            price: 6500
+        };
+        userRobot.handleSignal(newSignalOpen);
+
+        expect(userRobot.connectorJobs[0].type).toBe("cancel");
+        expect(userRobot.ordersToCreate.length).toBe(0);
+    });
+
     it("Should handle entry partial order", () => {
         userRobot = new UserRobot({
             ...userRobot.state,
