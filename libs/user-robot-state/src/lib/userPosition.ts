@@ -479,7 +479,8 @@ export class UserPosition {
         return (
             this._entryOrders &&
             Array.isArray(this._entryOrders) &&
-            this._entryOrders.filter((o) => o.status === OrderStatus.new || o.status === OrderStatus.open).length > 0
+            this._entryOrders.filter((o) => o.status !== OrderStatus.canceled && o.status !== OrderStatus.closed)
+                .length > 0
         );
     }
 
@@ -487,7 +488,8 @@ export class UserPosition {
         return (
             this._exitOrders &&
             Array.isArray(this._exitOrders) &&
-            this._exitOrders.filter((o) => o.status === OrderStatus.new || o.status === OrderStatus.open).length > 0
+            this._exitOrders.filter((o) => o.status !== OrderStatus.canceled && o.status !== OrderStatus.closed)
+                .length > 0
         );
     }
 
