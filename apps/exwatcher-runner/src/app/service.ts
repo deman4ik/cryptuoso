@@ -87,7 +87,8 @@ export default class ExwatcherRunnerService extends HTTPService {
                          FROM markets
                          WHERE exchange = ${exchange}
                          AND asset = ${asset}
-                         AND currency = ${currency};`
+                         AND currency = ${currency}
+                         AND available > 0;`
             );
             this.log.info("Markets count", count);
             if (count === 0) throw new Error(`Market ${exchange} ${asset}/${currency} doesn't exists`);
@@ -131,7 +132,8 @@ export default class ExwatcherRunnerService extends HTTPService {
             const count = await this.db.pg.oneFirst<number>(
                 sql`SELECT count(1) 
                          FROM markets
-                         WHERE exchange = ${exchange};`
+                         WHERE exchange = ${exchange}
+                         AND available > 0;`
             );
             if (count === 0) throw new Error(`Market ${exchange} doesn't exists`);
             await this.events.emit<ExwatcherSubscribeAll>({
