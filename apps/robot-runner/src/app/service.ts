@@ -200,12 +200,13 @@ export default class RobotRunnerService extends HTTPService {
 
             if (robotsExists && Array.isArray(robotsExists) && robotsExists.length > 0) {
                 const haveSameSettings = robotsExists.find((r) => equals(strategySettings, r.strategySettings));
+                this.log.debug(haveSameSettings);
                 if (haveSameSettings) continue;
-                const lastRobot = [...robotsExists].sort((a, b) =>
-                    sortDesc(dayjs.utc(a.createdAt).valueOf(), dayjs.utc(b.createdAt).valueOf())
-                )[robotsExists.length - 1];
-                const tryNumMod = +lastRobot.mod;
-                mode = (tryNumMod && `${tryNumMod + 1}`) || `${lastRobot.mod}-1`;
+                const lastRobot = [...robotsExists].sort((a, b) => sortDesc(+a.mod, +b.mod))[0];
+                this.log.debug(lastRobot?.mod);
+                const tryNumMod = +lastRobot?.mod;
+                mode = (tryNumMod && `${tryNumMod + 1}`) || `${lastRobot.mod - 1}`;
+                this.log.debug(mode);
             }
             const id = uuid();
             await this.db.pg.transaction(async (t) => {
