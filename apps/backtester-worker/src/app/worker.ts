@@ -26,7 +26,7 @@ class BacktesterWorker {
     #log: Logger;
     #backtester: Backtester;
     #db: { sql: typeof sql; pg: typeof pg; util: typeof pgUtil };
-    defaultChunkSize = 10000;
+    defaultChunkSize = 100000;
     defaultInsertChunkSize = 10000;
     constructor(state: BacktesterState) {
         this.#log = logger;
@@ -654,33 +654,35 @@ class BacktesterWorker {
                SELECT COUNT(1) ${query}`));
             this.backtester.init(candlesCount);
 
-            /*  await DataStream.from(
-                makeChunksGenerator(
-                    this.db.pg,
-                    sql`SELECT * ${query} ORDER BY timestamp`,
-                    candlesCount > this.defaultChunkSize ? this.defaultChunkSize : candlesCount
-                ),
-                { maxParallel: 1 }
-            )
-                .flatMap((i) => i)
-                .each(async (candle: Candle) => {
+            if (candlesCount > this.defaultChunkSize) {
+                await DataStream.from(
+                    makeChunksGenerator(
+                        this.db.pg,
+                        sql`SELECT * ${query} ORDER BY timestamp`,
+                        candlesCount > this.defaultChunkSize ? this.defaultChunkSize : candlesCount
+                    ),
+                    { maxParallel: 1 }
+                )
+                    .flatMap((i) => i)
+                    .each(async (candle: Candle) => {
+                        await this.backtester.handleCandle(candle);
+                        const percentUpdated = this.backtester.incrementProgress();
+                        if (percentUpdated) subject.next(this.backtester.state);
+                    })
+                    .catch((err: Error) => {
+                        this.log.error(`Backtester #${this.backtester.id} - Error`, err.message);
+                        throw new BaseError(err.message, err);
+                    })
+                    .whenEnd();
+            } else {
+                const candles = await this.db.pg.many<Candle>(sql`
+                SELECT * ${query}`);
+
+                for (const candle of candles) {
                     await this.backtester.handleCandle(candle);
                     const percentUpdated = this.backtester.incrementProgress();
                     if (percentUpdated) subject.next(this.backtester.state);
-                })
-                .catch((err: Error) => {
-                    this.log.error(`Backtester #${this.backtester.id} - Error`, err.message);
-                    throw new BaseError(err.message, err);
-                })
-                .whenEnd(); */
-
-            const candles = await this.db.pg.many<Candle>(sql`
-                SELECT * ${query}`);
-
-            for (const candle of candles) {
-                await this.backtester.handleCandle(candle);
-                const percentUpdated = this.backtester.incrementProgress();
-                if (percentUpdated) subject.next(this.backtester.state);
+                }
             }
 
             if (this.backtester.settings.populateHistory) {
