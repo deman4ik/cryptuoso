@@ -74,6 +74,16 @@ spec:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
                                 key: GA_UA_TRACKING_ID
+                      - name: WORKER_CONCURRENCY
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: PORTFOLIO_MANAGER_WORKER_CONCURRENCY
+                      - name: THREADS_WORKER_INIT_TIMEOUT
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: THREADS_WORKER_INIT_TIMEOUT
                   ports:
                       - containerPort: 3000
                         protocol: TCP
