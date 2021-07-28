@@ -203,7 +203,8 @@ export class Events {
                         logger.info(`Handled "${topic}" event #${msgId} (${event.id})`);
                     })
                 );
-                this.#state[topic].unbalanced.lastId = data[topic][data[topic].length - 1].msgId;
+                this.#state[topic].unbalanced.lastId =
+                    data[topic][data[topic].length - 1]?.msgId || this.#state[topic].unbalanced.lastId;
             }
         } catch (error) {
             logger.error(`Failed to receive message - ${error.message}`, error);
