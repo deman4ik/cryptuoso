@@ -18,6 +18,8 @@ export interface PortfolioSettings {
     leverage: number;
     maxRobotsCount?: number;
     minRobotsCount?: number;
+    includeAssets?: string[];
+    excludeAssets?: string[];
 }
 
 export interface PortfolioDB {
