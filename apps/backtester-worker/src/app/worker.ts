@@ -654,7 +654,7 @@ class BacktesterWorker {
                SELECT COUNT(1) ${query}`));
             this.backtester.init(candlesCount);
 
-            await DataStream.from(
+            /*  await DataStream.from(
                 makeChunksGenerator(
                     this.db.pg,
                     sql`SELECT * ${query} ORDER BY timestamp`,
@@ -672,7 +672,16 @@ class BacktesterWorker {
                     this.log.error(`Backtester #${this.backtester.id} - Error`, err.message);
                     throw new BaseError(err.message, err);
                 })
-                .whenEnd();
+                .whenEnd(); */
+
+            const candles = await this.db.pg.many<Candle>(sql`
+                SELECT * ${query}`);
+
+            for (const candle of candles) {
+                await this.backtester.handleCandle(candle);
+                const percentUpdated = this.backtester.incrementProgress();
+                if (percentUpdated) subject.next(this.backtester.state);
+            }
 
             if (this.backtester.settings.populateHistory) {
                 const robot = this.backtester.robots[this.backtester.robotId];
