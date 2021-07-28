@@ -104,6 +104,7 @@ export class ExwatcherBaseService extends BaseService {
             }
         });
         this.addOnStartHandler(this.onServiceStart);
+        this.addOnStartedHandler(this.onServiceStarted);
         this.addOnStopHandler(this.onServiceStop);
     }
 
@@ -171,6 +172,9 @@ export class ExwatcherBaseService extends BaseService {
 
     async onServiceStart() {
         await this.initConnector();
+    }
+
+    async onServiceStarted() {
         await this.resubscribe();
         this.cronHandleChanges.start();
         this.cronCheck.start();

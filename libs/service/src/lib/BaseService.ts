@@ -30,6 +30,7 @@ export class BaseService {
     #lightship: Lightship;
     #name: string;
     #onServiceStart: { (): Promise<void> }[] = [];
+    #onServiceStarted: { (): Promise<void> }[] = [];
     #onServiceStop: { (): Promise<void> }[] = [];
     #redisConnection: Redis.Redis;
     #redLock: RedLock;
@@ -124,6 +125,14 @@ export class BaseService {
         return this.#addOnStartHandler;
     }
 
+    #addOnStartedHandler = async (func: () => Promise<void>) => {
+        if (func && typeof func === "function") this.#onServiceStarted.push(func.bind(this));
+    };
+
+    get addOnStartedHandler() {
+        return this.#addOnStartedHandler;
+    }
+
     #addOnStopHandler = async (func: () => Promise<void>) => {
         if (func && typeof func === "function") this.#onServiceStop.push(func.bind(this));
     };
@@ -146,6 +155,13 @@ export class BaseService {
 
             this.#lightship.signalReady();
             this.#log.info(`Started ${this.#name} service`);
+            if (this.#onServiceStarted.length > 0) {
+                for (const onStartedFunc of this.#onServiceStarted) {
+                    await onStartedFunc();
+                }
+            } else {
+                await Promise.resolve();
+            }
         } catch (err) {
             console.error(err);
             this.#log.error(`Failed to start ${this.#name} service`, err);
