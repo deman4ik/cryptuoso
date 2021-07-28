@@ -15,11 +15,11 @@ import { IN_USER_SUB_TOPIC, OUT_USER_SUB_TOPIC } from "@cryptuoso/user-sub-event
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
 const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
+//const DAY = 24 * HOUR;
 //const WEEK = 7 * DAY;
 
 class TopicConfig {
-    constructor(public eventTTL: number = DAY, public consumerIdleTTL: number = HOUR) {}
+    constructor(public eventTTL: number = HOUR, public consumerIdleTTL: number = HOUR) {}
 }
 
 interface TopicConfigs {
@@ -43,7 +43,7 @@ export const eventsManagementConfig: {
     common: new TopicConfig(),
     configs: {
         ...modifyConfigEventsNames({
-            [DEAD_LETTER_TOPIC]: new TopicConfig(),
+            [`${DEAD_LETTER_TOPIC}.*`]: new TopicConfig(),
             [`${BACKTESTER_RUNNER_TOPIC}.*`]: new TopicConfig(),
             [`${IN_BACKTESTER_WORKER_TOPIC}.*`]: new TopicConfig(),
             [`${OUT_BACKTESTER_WORKER_TOPIC}.*`]: new TopicConfig(),
