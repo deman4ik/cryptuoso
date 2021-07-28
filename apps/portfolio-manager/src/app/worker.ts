@@ -28,6 +28,19 @@ const worker = {
             WHERE p.exchange = m.exchange
               AND p.id = ${job.portfolioId}; 
         `);
+        const includeAssetsCondition =
+            portfolio.settings.includeAssets &&
+            Array.isArray(portfolio.settings.includeAssets) &&
+            portfolio.settings.includeAssets.length
+                ? sql`AND r.asset IN (${sql.join(portfolio.settings.includeAssets, sql`, `)})`
+                : sql``;
+        const excludeAssetsCondition =
+            portfolio.settings.excludeAssets &&
+            Array.isArray(portfolio.settings.excludeAssets) &&
+            portfolio.settings.excludeAssets.length
+                ? sql`AND r.asset IN (${sql.join(portfolio.settings.excludeAssets, sql`, `)})`
+                : sql``;
+
         const positions: BasePosition[] = await DataStream.from(
             makeChunksGenerator(
                 pg,
@@ -41,6 +54,8 @@ const worker = {
           AND r.available >= ${portfolio.available}
           AND p.emulated = 'false'
           AND p.status = 'closed'
+          ${includeAssetsCondition}
+          ${excludeAssetsCondition}
           ORDER BY p.exit_date
         `,
                 10000
@@ -105,6 +120,18 @@ const worker = {
                   )
               AND p.id = ${job.userPortfolioId}; 
         `);
+        const includeAssetsCondition =
+            portfolio.settings.includeAssets &&
+            Array.isArray(portfolio.settings.includeAssets) &&
+            portfolio.settings.includeAssets.length
+                ? sql`AND r.asset IN (${sql.join(portfolio.settings.includeAssets, sql`, `)})`
+                : sql``;
+        const excludeAssetsCondition =
+            portfolio.settings.excludeAssets &&
+            Array.isArray(portfolio.settings.excludeAssets) &&
+            portfolio.settings.excludeAssets.length
+                ? sql`AND r.asset IN (${sql.join(portfolio.settings.excludeAssets, sql`, `)})`
+                : sql``;
         const positions: BasePosition[] = await DataStream.from(
             makeChunksGenerator(
                 pg,
@@ -119,6 +146,8 @@ const worker = {
           AND r.available >= u.access
           AND p.emulated = 'false'
           AND p.status = 'closed'
+          ${includeAssetsCondition}
+          ${excludeAssetsCondition}
           ORDER BY p.exit_date
         `,
                 10000
