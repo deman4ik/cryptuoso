@@ -147,7 +147,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
         const propСoefficient = 100 / sum(...robots.map((r) => r.stats.fullStats.amountProportion));
 
         for (const robot of robots) {
-            robot.share = round(robot.stats.fullStats.amountProportion * propСoefficient);
+            robot.share = round(robot.stats.fullStats.amountProportion * propСoefficient, 2);
         }
 
         const minShare = Math.min(...robots.map((r) => r.share));
@@ -157,7 +157,9 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
             robot.positions = robot.positions.map((pos) => {
                 return {
                     ...pos,
-                    portfolioShare: robot.share
+                    meta: {
+                        portfolioShare: robot.share
+                    }
                 };
             });
         }
