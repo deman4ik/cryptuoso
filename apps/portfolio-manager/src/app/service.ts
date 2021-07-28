@@ -18,7 +18,7 @@ import { User, UserExchangeAccountInfo, UserRoles } from "@cryptuoso/user-state"
 import { v4 as uuid } from "uuid";
 import combinate from "combinate";
 import { sql } from "@cryptuoso/postgres";
-import { equals, nvl } from "@cryptuoso/helpers";
+import { capitalize, equals, nvl } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
 import { ActionsHandlerError, BaseError } from "@cryptuoso/errors";
 import {
@@ -177,6 +177,14 @@ export default class PortfolioManagerService extends HTTPService {
             .join("+");
     }
 
+    generateName(options: PortfolioOptions) {
+        return Object.entries(options)
+            .filter(([, value]) => value)
+            .map(([key]) => capitalize(key))
+            .sort()
+            .join(" ");
+    }
+
     async initPortfolios({
         exchange,
         tradingAmountType,
@@ -212,7 +220,7 @@ export default class PortfolioManagerService extends HTTPService {
         const allPortfolios: PortfolioDB[] = allOptions.map<PortfolioDB>((options) => ({
             id: uuid(),
             code: `${exchange}:${this.generateCode(options)}`,
-            name: null,
+            name: `${exchange} ${this.generateName(options)}`,
             exchange,
             available: 5,
             settings: {

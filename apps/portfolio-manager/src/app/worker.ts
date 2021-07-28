@@ -78,6 +78,9 @@ const worker = {
             `);
 
             await t.query(sql`
+                DELETE FROM  portfolio_robots 
+                WHERE portfolio_id = ${result.portfolio.id};`);
+            await t.query(sql`
             INSERT INTO portfolio_robots 
             (portfolio_id, robot_id, active, share)
             SELECT *
@@ -87,10 +90,7 @@ const worker = {
                         ["portfolioId", "robotId", "active", "share"]
                     ),
                     ["uuid", "uuid", "bool", "numeric"]
-                )}
-                ON CONFLICT ON CONSTRAINT portfolio_robots_pkey
-                DO UPDATE SET active = excluded.active,
-                share = excluded.share;
+                )};
             `);
         });
         logger.info(`#${portfolioBuilder.portfolio.id} portfolio build finished`);

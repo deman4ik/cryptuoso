@@ -547,8 +547,8 @@ export class TradeStatsCalc implements TradeStats {
                     } else if (this.hasBalance) {
                         periodStats.year[year.key].stats.initialBalance =
                             prevPeriodStats?.stats?.currentBalance || null;
-                        periodStats.quarter[year.year].stats.currentBalance =
-                            periodStats.quarter[year.year].stats.initialBalance;
+                        periodStats.year[year.year].stats.currentBalance =
+                            periodStats.year[year.year].stats.initialBalance;
                     }
                 }
 
