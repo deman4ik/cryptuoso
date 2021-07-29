@@ -205,7 +205,7 @@ export default class RobotRunnerService extends HTTPService {
                 const lastRobot = [...robotsExists].sort((a, b) => sortDesc(+a.mod, +b.mod))[0];
                 this.log.debug(lastRobot?.mod);
                 const tryNumMod = +lastRobot?.mod;
-                mode = (tryNumMod && `${tryNumMod + 1}`) || `${lastRobot.mod - 1}`;
+                mode = (tryNumMod && `${tryNumMod + 1}`) || `${lastRobot.mod}-1`;
                 this.log.debug(mode);
             }
             const id = uuid();
@@ -251,7 +251,7 @@ export default class RobotRunnerService extends HTTPService {
                   ${id},
                   ${JSON.stringify(strategySettings)},
                   ${JSON.stringify(robotSettings)},
-                  ${dayjs.utc().toISOString()}
+                  ${dayjs.utc("01.01.2016").toISOString()}
               )
               `);
             });

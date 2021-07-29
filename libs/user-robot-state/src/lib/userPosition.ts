@@ -25,7 +25,7 @@ import {
     UserRobotDB
 } from "./types";
 import { ConnectorJob, Priority } from "@cryptuoso/connector-state";
-import { addPercent, average, round, sortAsc, sum } from "@cryptuoso/helpers";
+import { addPercent, average, round, sortAsc, sortDesc, sum } from "@cryptuoso/helpers";
 import { BaseError } from "@cryptuoso/errors";
 
 const ORDER_OPEN_TIMEOUT = 120; //TODO: env var
@@ -252,9 +252,7 @@ export class UserPosition {
             this._entryOrders &&
             this._entryOrders.length
         ) {
-            const order = this._entryOrders.sort((a, b) => sortAsc(a.createdAt, b.createdAt))[
-                this._entryOrders.length - 1
-            ];
+            const order = this.lastEntryOrder;
             if (order && order.exLastTradeAt) {
                 this._entryDate = dayjs.utc(order.exLastTradeAt).toISOString();
             } else if (order && order.exTimestamp) {
@@ -314,9 +312,7 @@ export class UserPosition {
             this._exitOrders &&
             this._exitOrders.length
         ) {
-            const order = this._exitOrders.sort((a, b) => sortAsc(a.createdAt, b.createdAt))[
-                this._exitOrders.length - 1
-            ];
+            const order = this.lastExitOrder;
             if (order && order.exLastTradeAt) {
                 this._exitDate = dayjs.utc(order.exLastTradeAt).toISOString();
             } else if (order && order.exTimestamp) {
@@ -498,7 +494,7 @@ export class UserPosition {
             this._entryOrders &&
             Array.isArray(this._entryOrders) &&
             this._entryOrders.length > 0 &&
-            this._entryOrders[this._entryOrders.length - 1]
+            this._entryOrders.sort((a, b) => sortAsc(a.createdAt, b.createdAt))[this._entryOrders.length - 1]
         );
     }
 
@@ -507,7 +503,7 @@ export class UserPosition {
             this._exitOrders &&
             Array.isArray(this._exitOrders) &&
             this._exitOrders.length > 0 &&
-            this._exitOrders[this._exitOrders.length - 1]
+            this._exitOrders.sort((a, b) => sortAsc(a.createdAt, b.createdAt))[this._exitOrders.length - 1]
         );
     }
 

@@ -125,6 +125,13 @@ export default class ConnectorRunnerService extends BaseService {
         `);
     };
 
+    #getOrderByPrevId = async (orderId: string) => {
+        return this.db.pg.maybeOne<Order>(sql`
+        SELECT * from user_orders
+        WHERE prev_order_id = ${orderId}
+        `);
+    };
+
     #createOrder = async (transaction: DatabaseTransactionConnectionType, order: Order) => {
         this.log.info(order);
         await transaction.query(sql`
@@ -132,6 +139,7 @@ export default class ConnectorRunnerService extends BaseService {
             (
                 id, user_ex_acc_id, user_robot_id, 
                 position_id, user_position_id,
+                prev_order_id,
                 exchange, asset, currency,
                 action, direction, type,
                 signal_price, price, 
@@ -143,6 +151,7 @@ export default class ConnectorRunnerService extends BaseService {
             ) VALUES (
                 ${order.id}, ${order.userExAccId}, ${order.userRobotId},
                 ${order.positionId || null}, ${order.userPositionId},
+                ${order.prevOrderId || null},
                 ${order.exchange}, ${order.asset}, ${order.currency},
                 ${order.action}, ${order.direction}, ${order.type}, 
                 ${order.signalPrice || null}, ${order.price || null},
@@ -158,7 +167,8 @@ export default class ConnectorRunnerService extends BaseService {
     #saveOrder = async (transaction: DatabaseTransactionConnectionType, order: Order) => {
         try {
             return transaction.query(sql`
-         UPDATE user_orders SET price = ${order.price || null},
+         UPDATE user_orders SET prev_order_id = ${order.prevOrderId || null},
+         price = ${order.price || null},
          params = ${JSON.stringify(order.params) || null},
          status = ${order.status},
          ex_id = ${order.exId || null},
@@ -430,35 +440,48 @@ export default class ConnectorRunnerService extends BaseService {
                 this.log.info(`UserExAcc #${userExAccId} recreating order ${order.positionId}/${order.id}`);
                 const response = await this.connectors[userExAccId].checkOrder(order);
                 if (response.order.status === OrderStatus.canceled) {
-                    const newOrder: Order = {
-                        id: uuid(),
-                        userExAccId: response.order.userExAccId,
-                        userRobotId: response.order.userRobotId,
-                        positionId: response.order.positionId,
-                        userPositionId: response.order.userPositionId,
-                        exchange: response.order.exchange,
-                        asset: response.order.asset,
-                        currency: response.order.currency,
-                        action: response.order.action,
-                        direction: response.order.direction,
-                        type: response.order.type,
-                        signalPrice: response.order.signalPrice,
-                        price: orderJobData.price,
-                        volume: response.order.volume,
-                        executed: 0,
-                        exId: null,
-                        params: response.order.params,
-                        createdAt: dayjs.utc().toISOString(),
-                        status: OrderStatus.new,
-                        nextJob: {
-                            type: OrderJobType.create
-                        }
-                    };
-                    await this.db.pg.transaction(async (t) => {
-                        await this.#saveOrder(t, response.order);
-                        await this.#createOrder(t, newOrder);
-                    });
-                    ({ order, nextJob } = await this.connectors[userExAccId].createOrder(newOrder));
+                    const orderExists = await this.#getOrderByPrevId(order.id);
+
+                    if (orderExists) {
+                        this.log.warn(
+                            `UserExAcc #${userExAccId} recreating order ${order.positionId}/${order.id} - Order exists`
+                        );
+                        await this.db.pg.transaction(async (t) => {
+                            await this.#saveOrder(t, response.order);
+                        });
+                        ({ order, nextJob } = await this.connectors[userExAccId].checkOrder(orderExists));
+                    } else {
+                        const newOrder: Order = {
+                            id: uuid(),
+                            userExAccId: response.order.userExAccId,
+                            userRobotId: response.order.userRobotId,
+                            positionId: response.order.positionId,
+                            userPositionId: response.order.userPositionId,
+                            prevOrderId: order.id,
+                            exchange: response.order.exchange,
+                            asset: response.order.asset,
+                            currency: response.order.currency,
+                            action: response.order.action,
+                            direction: response.order.direction,
+                            type: response.order.type,
+                            signalPrice: response.order.signalPrice,
+                            price: orderJobData.price,
+                            volume: response.order.volume,
+                            executed: 0,
+                            exId: null,
+                            params: response.order.params,
+                            createdAt: dayjs.utc().toISOString(),
+                            status: OrderStatus.new,
+                            nextJob: {
+                                type: OrderJobType.create
+                            }
+                        };
+                        await this.db.pg.transaction(async (t) => {
+                            await this.#saveOrder(t, response.order);
+                            await this.#createOrder(t, newOrder);
+                        });
+                        ({ order, nextJob } = await this.connectors[userExAccId].createOrder(newOrder));
+                    }
                 } else {
                     order = response.order;
                     nextJob = response.nextJob;
