@@ -236,6 +236,7 @@ export default class UserRobotRunnerService extends BaseService {
             (
                 id, user_ex_acc_id, user_robot_id, 
                 position_id, user_position_id,
+                prev_order_id,
                 exchange, asset, currency,
                 action, direction, type,
                 signal_price, price, 
@@ -247,6 +248,7 @@ export default class UserRobotRunnerService extends BaseService {
             ) VALUES (
                 ${order.id}, ${order.userExAccId}, ${order.userRobotId},
                 ${order.positionId || null}, ${order.userPositionId},
+                ${order.prevOrderId || null},
                 ${order.exchange}, ${order.asset}, ${order.currency},
                 ${order.action}, ${order.direction}, ${order.type}, 
                 ${order.signalPrice || null}, ${order.price || null},
