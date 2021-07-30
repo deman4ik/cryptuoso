@@ -426,7 +426,7 @@ export default class RobotWorkerService extends BaseService {
                 if (success) {
                     await robot.calcIndicators();
                     robot.runStrategy();
-                    // TODO:  robot.calcStats();
+                    // TODO: await robot.calcStats();
                     robot.finalize();
                 } else {
                     this.log.error(error);

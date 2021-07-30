@@ -63,7 +63,7 @@ class StatsCalcWorker {
         }
     }
 
-    calcStats(positions: BasePosition[], meta: StatsMeta, prevStats?: TradeStats) {
+    async calcStats(positions: BasePosition[], meta: StatsMeta, prevStats?: TradeStats) {
         const tradeStatsCalc = new TradeStatsCalc(positions, meta, prevStats);
         return tradeStatsCalc.calculate();
     }
@@ -142,7 +142,7 @@ class StatsCalcWorker {
         `);
 
             if (!fullPositions || !fullPositions.length) return;
-            const newEmulatedStats = this.calcStats([...fullPositions], { job }, initialEmulatedStats);
+            const newEmulatedStats = await this.calcStats([...fullPositions], { job }, initialEmulatedStats);
 
             const notEmulatedPositions = fullPositions.filter((p) => !p.emulated);
 
@@ -153,7 +153,7 @@ class StatsCalcWorker {
                     equals(initialEmulatedStats, initialStats)
                 ) {
                     newStats = newEmulatedStats;
-                } else newStats = this.calcStats([...notEmulatedPositions], { job }, initialStats);
+                } else newStats = await this.calcStats([...notEmulatedPositions], { job }, initialStats);
             }
             await this.db.pg.query(sql`
         UPDATE robots 

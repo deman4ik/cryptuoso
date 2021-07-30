@@ -580,6 +580,12 @@ export default class PortfolioManagerService extends HTTPService {
 
             try {
                 if (job.data.type === "portfolio") {
+                    portfolioWorker.progress().subscribe(async (progress: number) => {
+                        this.log.info(
+                            `Portfolio #${(job.data as PortfolioBuilderJob).portfolioId} build progress - ${progress}%`
+                        );
+                        await job.updateProgress(progress);
+                    });
                     await portfolioWorker.buildPortfolio(job.data);
                     await this.events.emit<PortfolioManagerPortfolioBuilded>({
                         type: PortfolioManagerOutEvents.PORTFOLIO_BUILDED,
@@ -588,6 +594,14 @@ export default class PortfolioManagerService extends HTTPService {
                         }
                     });
                 } else if (job.data.type === "userPortfolio") {
+                    portfolioWorker.progress().subscribe(async (progress: number) => {
+                        this.log.info(
+                            `Portfolio #${
+                                (job.data as UserPortfolioBuilderJob).userPortfolioId
+                            } build progress - ${progress}%`
+                        );
+                        await job.updateProgress(progress);
+                    });
                     await portfolioWorker.buildUserPortfolio(job.data);
                     await this.events.emit<PortfolioManagerUserPortfolioBuilded>({
                         type: PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED,

@@ -91,7 +91,7 @@ export class TradeStatsCalc implements TradeStats {
         let availableFunds = this.meta.initialBalance;
         let maxLeverage = 0;
         //const results = [];
-        for (const { date, price, volume, balance, side } of dates) {
+        for (const { price, volume, balance, side } of dates) {
             if (side === "entry") {
                 availableFunds = availableFunds - price * volume;
             } else {
@@ -113,7 +113,7 @@ export class TradeStatsCalc implements TradeStats {
         return maxLeverage;
     }
 
-    public calculate(): TradeStats {
+    public async calculate(): Promise<TradeStats> {
         this.periodStats = this.calcPeriodStats(this.positions, this.prevPeriodStats);
         this.fullStats = this.calcFullStats(this.positions, this.prevFullStats, this.periodStats);
         if (this.meta.job.type === "portfolio") this.fullStats.maxLeverage = this.getMaxLeverage(this.positions);
@@ -275,7 +275,7 @@ export class TradeStatsCalc implements TradeStats {
                 y: 0
             });
         }
-        for (const { profit, worstProfit, entryDate, exitDate } of positions) {
+        for (const { profit, worstProfit, exitDate } of positions) {
             if (profit > 0) {
                 stats.currentWinSequence += 1;
                 stats.currentLossSequence = 0;

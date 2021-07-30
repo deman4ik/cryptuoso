@@ -587,7 +587,7 @@ export class Robot {
         };
     }
 
-    calcStats() {
+    async calcStats() {
         if (this.hasClosedPositions) {
             logger.debug(`Calculating #${this._id} robot stats`);
 
@@ -611,7 +611,7 @@ export class Robot {
                 },
                 this._emulatedStats
             );
-            const newEmulatedStats = tradeStatsCalc.calculate();
+            const newEmulatedStats = await tradeStatsCalc.calculate();
 
             this._strategyInstance._handleEmulation(this.emulateNextPosition);
             this._strategyInstance._handleMargin(this.marginNextPosition);
@@ -638,7 +638,7 @@ export class Robot {
                         },
                         this._stats
                     );
-                    newStats = tradeStatsCalc.calculate();
+                    newStats = await tradeStatsCalc.calculate();
                 }
             }
 
