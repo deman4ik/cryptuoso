@@ -1,5 +1,5 @@
-"use strict";
 import logger, { Logger } from "@cryptuoso/logger";
+import { Subject } from "threads/observable";
 import { PortfolioOptions, PortfolioRobot, PortfolioState, UserPortfolioState } from "./types";
 import { BasePosition } from "@cryptuoso/market";
 import { periodStatsToArray, TradeStats, TradeStatsCalc } from "@cryptuoso/trade-stats";
@@ -20,6 +20,7 @@ interface PortfolioCalculated {
 
 export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
     #log: Logger;
+    #subject: Subject<number>;
     portfolio: T;
     optionWeights: { [Weight in keyof PortfolioOptions]: number } = {
         diversification: 1.1,
@@ -32,14 +33,10 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
     robots: {
         [key: string]: PortoflioRobotState;
     } = {};
-    sortedRobotsList: string[] = [];
-    currentRobotsList: string[] = [];
-    prevPortfolio: Readonly<PortfolioCalculated>;
 
-    currentPortfolio: PortfolioCalculated;
-
-    constructor(portfolio: T, positions: BasePosition[]) {
+    constructor(portfolio: T, positions: BasePosition[], subject?: Subject<number>) {
         this.#log = logger;
+        this.#subject = subject;
         this.portfolio = portfolio;
         this.#calcPortfolioVariables();
         const robotIds = uniqueElementsBy(
@@ -61,6 +58,12 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
             {}
         );
         this.log.debug(`Portfolio #${this.portfolio.id} inited ${Object.keys(this.robots).length} robots`);
+    }
+
+    progress(percent: number) {
+        if (this.#subject) {
+            this.#subject.next(percent);
+        }
     }
 
     #calcPortfolioVariables = () => {
@@ -99,7 +102,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
 
     async calculateRobotsStats() {
         this.log.debug(`Portfolio #${this.portfolio.id} - Calculating robots stats`);
-        await Promise.all(
+        const results = await Promise.all(
             Object.values(this.robots).map(async ({ robotId, positions }) => {
                 const tradeStatsCalc = new TradeStatsCalc(
                     positions,
@@ -110,9 +113,16 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
                     null
                 );
 
-                this.robots[robotId].stats = tradeStatsCalc.calculate();
+                return {
+                    robotId,
+                    stats: await tradeStatsCalc.calculate()
+                };
             })
         );
+
+        for (const { robotId, stats } of results) {
+            this.robots[robotId].stats = stats;
+        }
 
         /*  for (const { robotId, positions } of Object.values(this.robots)) {
             const tradeStatsCalc = new TradeStatsCalc(
@@ -128,9 +138,10 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
         } */
     }
 
-    sortRobots() {
+    async sortRobots(robots: { [key: string]: PortoflioRobotState }) {
+        this.log.debug(`Portfolio #${this.portfolio.id} - Sorting ${Object.keys(robots).length} robots`);
         const { diversification, profit, risk, moneyManagement, winRate, efficiency } = this.portfolio.settings.options;
-        this.sortedRobotsList = Object.values(this.robots)
+        return Object.values(robots)
             .sort(({ stats: { fullStats: a } }, { stats: { fullStats: b } }) => {
                 if (profit && !diversification && !risk && !moneyManagement && !winRate && !efficiency) {
                     if (a.netProfit > b.netProfit) return -1;
@@ -156,12 +167,15 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
                 if (a.recoveryFactor < b.recoveryFactor) return 1;
                 return 0;
             })
-            .map(({ robotId }) => robotId);
+            .map(({ robotId }) => robotId)
+            .reverse();
     }
 
-    calcAmounts(robotIds: string[]): Readonly<{
-        [key: string]: PortoflioRobotState;
-    }> {
+    async calcAmounts(robotIds: string[]): Promise<
+        Readonly<{
+            [key: string]: PortoflioRobotState;
+        }>
+    > {
         const robots: {
             [key: string]: PortoflioRobotState;
         } = Object.values({ ...this.robots })
@@ -173,7 +187,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
         const propСoefficient = 100 / sum(...Object.values(robots).map((r) => r.stats.fullStats.amountProportion));
 
         for (const [key, robot] of Object.entries(robots)) {
-            robots[key].share = robot.stats.fullStats.amountProportion * propСoefficient;
+            robots[key].share = round(robot.stats.fullStats.amountProportion * propСoefficient, 2);
         }
 
         const minShare = Math.min(...Object.values(robots).map((r) => r.share));
@@ -193,7 +207,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
         return robots;
     }
 
-    calcPortfolioStats(robots: Readonly<{ [key: string]: PortoflioRobotState }>) {
+    async calcPortfolioStats(robots: Readonly<{ [key: string]: PortoflioRobotState }>) {
         this.log.debug(`Portfolio #${this.portfolio.id} - Calculating portfolio stats`);
         const positions = Object.values(robots).reduce((prev, cur) => [...prev, ...cur.positions], []);
         const tradeStatsCalc = new TradeStatsCalc(
@@ -214,17 +228,17 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
         return tradeStatsCalc.calculate();
     }
 
-    calcPortfolio(robotIds: string[]): PortfolioCalculated {
+    async calcPortfolio(robotIds: string[]): Promise<PortfolioCalculated> {
         this.log.debug(`Portfolio #${this.portfolio.id} - Calculating portfolio with ${robotIds.length} robots`);
-        const robots = this.calcAmounts(robotIds);
-        const tradeStats = this.calcPortfolioStats(robots);
+        const robots = await this.calcAmounts(robotIds);
+        const tradeStats = await this.calcPortfolioStats(robots);
         return {
             robots,
             tradeStats
         };
     }
 
-    comparePortfolios(prevPortfolio: PortfolioCalculated, currentPortfolio: PortfolioCalculated) {
+    async comparePortfolios(prevPortfolio: PortfolioCalculated, currentPortfolio: PortfolioCalculated) {
         this.log.debug(`Portfolio #${this.portfolio.id} - Comparing portfolios `);
         const { diversification, profit, risk, moneyManagement, winRate, efficiency } = this.portfolio.settings.options;
         const comparison: {
@@ -338,44 +352,47 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
 
     async build(): Promise<{ portfolio: T; steps: any }> {
         try {
+            console.log("build");
             this.log.debug(`Portfolio #${this.portfolio.id} - Building portfolio`);
             await this.calculateRobotsStats();
-            this.sortRobots();
+            const robotsList = await this.sortRobots(this.robots);
             const steps = [];
-            const robotsList = this.sortedRobotsList.reverse();
-            this.currentRobotsList = [...robotsList];
-            this.prevPortfolio = Object.freeze(this.calcPortfolio(this.sortedRobotsList));
 
+            let currentRobotsList = [...robotsList];
+            let prevPortfolio: PortfolioCalculated = Object.freeze(await this.calcPortfolio(robotsList));
+            let currentPortfolio: PortfolioCalculated;
+            let currentRobot = 0;
             for (const robotId of robotsList) {
-                const list = this.currentRobotsList.filter((r) => r !== robotId);
+                currentRobot += 1;
+                console.log(robotId);
+                const list = currentRobotsList.filter((r) => r !== robotId);
                 if (list.length < this.portfolio.variables.minRobotsCount) break;
-                this.currentPortfolio = this.calcPortfolio(list);
+                currentPortfolio = await this.calcPortfolio(list);
 
-                const result = this.comparePortfolios(this.prevPortfolio, this.currentPortfolio);
+                const result = await this.comparePortfolios(prevPortfolio, currentPortfolio);
                 if (result.approve) {
-                    this.prevPortfolio = Object.freeze({ ...this.currentPortfolio });
-                    this.currentRobotsList = [...list];
+                    prevPortfolio = Object.freeze({ ...currentPortfolio });
+                    currentRobotsList = [...list];
                 }
                 steps.push(result);
+                this.progress(round((currentRobot / robotsList.length) * 100));
             }
-            if (this.currentRobotsList.length > this.portfolio.variables.maxRobotsCount) {
+            if (currentRobotsList.length > this.portfolio.variables.maxRobotsCount) {
                 this.log.debug(
-                    `Portfolio #${this.portfolio.id} - Portfolio builded to much ${this.currentRobotsList.length} robots max is ${this.portfolio.variables.maxRobotsCount}`
+                    `Portfolio #${this.portfolio.id} - Portfolio builded to much ${currentRobotsList.length} robots max is ${this.portfolio.variables.maxRobotsCount}`
                 );
-                const list = this.currentRobotsList.slice(-this.portfolio.variables.maxRobotsCount);
-                this.currentPortfolio = this.calcPortfolio(list);
-                this.prevPortfolio = Object.freeze({ ...this.currentPortfolio });
-                this.currentRobotsList = [...list];
+                const list = currentRobotsList.slice(-this.portfolio.variables.maxRobotsCount);
+                currentPortfolio = await this.calcPortfolio(list);
+                prevPortfolio = Object.freeze({ ...currentPortfolio });
+                currentRobotsList = [...list];
             }
-            this.log.debug(
-                `Portfolio #${this.portfolio.id} - Portfolio builded ${this.currentRobotsList.length} robots`
-            );
+            this.log.debug(`Portfolio #${this.portfolio.id} - Portfolio builded ${currentRobotsList.length} robots`);
             return {
                 portfolio: {
                     ...this.portfolio,
-                    fullStats: this.prevPortfolio.tradeStats.fullStats,
-                    periodStats: periodStatsToArray(this.prevPortfolio.tradeStats.periodStats),
-                    robots: Object.values(this.prevPortfolio.robots).map((r) => ({
+                    fullStats: prevPortfolio.tradeStats.fullStats,
+                    periodStats: periodStatsToArray(prevPortfolio.tradeStats.periodStats),
+                    robots: Object.values(prevPortfolio.robots).map((r) => ({
                         robotId: r.robotId,
                         active: true,
                         share: r.share

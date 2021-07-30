@@ -12,7 +12,7 @@ describe("Test 'trade-stats'", () => {
                 job: { robotId: "test", type: "robot", recalc: true, SMAWindow: 10 },
                 initialBalance: 100000
             });
-            const stats = tradeStatsCalculator.calculate();
+            const stats = await tradeStatsCalculator.calculate();
             //const data = JSON.stringify(stats);
             //fs.writeFileSync("testResults/robotStatsResults.json", data);
             expect(stats.fullStats).toEqual(robotStatsResult.fullStats);
@@ -26,7 +26,7 @@ describe("Test 'trade-stats'", () => {
                     initialBalance: 100000
                 }
             );
-            const stats = tradeStatsCalculator.calculate();
+            const stats = await tradeStatsCalculator.calculate();
             //  const data = JSON.stringify(stats);
             //fs.writeFileSync("testResults/portfolioStatsResults.json", data);
             expect(stats.fullStats).toEqual(portfolioStatsResult.fullStats);
@@ -45,7 +45,7 @@ describe("Test 'trade-stats'", () => {
                     initialBalance: 1000
                 }
             );
-            const prevStats = prevTradeStatsCalculator.calculate();
+            const prevStats = await prevTradeStatsCalculator.calculate();
 
             //  console.log(prevStats.fullStats);
 
@@ -59,7 +59,7 @@ describe("Test 'trade-stats'", () => {
                 },
                 prevStats
             );
-            const stats = tradeStatsCalculator.calculate();
+            const stats = await tradeStatsCalculator.calculate();
 
             const tradeStatsCalculatorAll = new TradeStatsCalc(positions, {
                 job: { robotId: "test", type: "robot", recalc: true, round: false },

@@ -25,7 +25,7 @@ import {
     UserRobotDB
 } from "./types";
 import { ConnectorJob, Priority } from "@cryptuoso/connector-state";
-import { addPercent, average, round, sortAsc, sortDesc, sum } from "@cryptuoso/helpers";
+import { addPercent, average, round, sortAsc, sum } from "@cryptuoso/helpers";
 import { BaseError } from "@cryptuoso/errors";
 
 const ORDER_OPEN_TIMEOUT = 120; //TODO: env var

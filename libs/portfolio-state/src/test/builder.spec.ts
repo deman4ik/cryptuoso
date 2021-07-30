@@ -41,20 +41,20 @@ describe("Test portfolio state", () => {
         });
         it("Should calculate robots stats", async () => {
             const portfolioBuilder = new PortfolioBuilder(portfolio, positions);
-            portfolioBuilder.calculateRobotsStats();
+            await portfolioBuilder.calculateRobotsStats();
             expect(portfolioBuilder.robots[positions[0].robotId].stats.fullStats).toBeDefined();
         });
         it("Should sort robots", async () => {
             const portfolioBuilder = new PortfolioBuilder(portfolio, positions);
-            portfolioBuilder.calculateRobotsStats();
-            portfolioBuilder.sortRobots();
-            expect(portfolioBuilder.sortedRobotsList.length).toBe(55);
+            await portfolioBuilder.calculateRobotsStats();
+            const sortedRobotsList = await portfolioBuilder.sortRobots(portfolioBuilder.robots);
+            expect(sortedRobotsList.length).toBe(55);
         });
         it("Should calc amounts", async () => {
             const portfolioBuilder = new PortfolioBuilder(portfolio, positions);
-            portfolioBuilder.calculateRobotsStats();
-            portfolioBuilder.sortRobots();
-            const result = portfolioBuilder.calcAmounts(portfolioBuilder.sortedRobotsList);
+            await portfolioBuilder.calculateRobotsStats();
+            const sortedRobotsList = await portfolioBuilder.sortRobots(portfolioBuilder.robots);
+            const result = await portfolioBuilder.calcAmounts(sortedRobotsList);
             expect(
                 Object.values(result.robots).map((r) => ({
                     robotId: r.robotId,
@@ -65,24 +65,18 @@ describe("Test portfolio state", () => {
         });
         it("Should calc portfolio", async () => {
             const portfolioBuilder = new PortfolioBuilder(portfolio, positions);
-            portfolioBuilder.calculateRobotsStats();
-            portfolioBuilder.sortRobots();
-            const result = portfolioBuilder.calcPortfolio([
-                portfolioBuilder.sortedRobotsList[0],
-                portfolioBuilder.sortedRobotsList[1]
-            ]);
+            await portfolioBuilder.calculateRobotsStats();
+            const sortedRobotsList = await portfolioBuilder.sortRobots(portfolioBuilder.robots);
+            const result = portfolioBuilder.calcPortfolio([sortedRobotsList[0], sortedRobotsList[1]]);
             expect(result).toBeDefined();
         });
         it("Should compare portfolios", async () => {
             const portfolioBuilder = new PortfolioBuilder(portfolio, positions);
-            portfolioBuilder.calculateRobotsStats();
-            portfolioBuilder.sortRobots();
-            const prevPortfolio = portfolioBuilder.calcPortfolio([portfolioBuilder.sortedRobotsList[0]]);
-            const currentPortfolio = portfolioBuilder.calcPortfolio([
-                portfolioBuilder.sortedRobotsList[0],
-                portfolioBuilder.sortedRobotsList[1]
-            ]);
-            const result = portfolioBuilder.comparePortfolios(prevPortfolio, currentPortfolio);
+            await portfolioBuilder.calculateRobotsStats();
+            const sortedRobotsList = await portfolioBuilder.sortRobots(portfolioBuilder.robots);
+            const prevPortfolio = await portfolioBuilder.calcPortfolio([sortedRobotsList[0]]);
+            const currentPortfolio = await portfolioBuilder.calcPortfolio([sortedRobotsList[0], sortedRobotsList[1]]);
+            const result = await portfolioBuilder.comparePortfolios(prevPortfolio, currentPortfolio);
             expect(result.approve).toBe(false);
         });
         it("Should build new portfolio", async () => {

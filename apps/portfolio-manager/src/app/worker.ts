@@ -1,3 +1,4 @@
+import { Observable, Subject } from "threads/observable";
 import { expose } from "threads/worker";
 import logger from "@cryptuoso/logger";
 import { DataStream } from "scramjet";
@@ -11,6 +12,9 @@ import {
 } from "@cryptuoso/portfolio-state";
 import { BasePosition } from "@cryptuoso/market";
 import dayjs from "@cryptuoso/dayjs";
+import { sleep } from "@cryptuoso/helpers";
+
+const subject = new Subject<number>();
 
 const worker = {
     async buildPortfolio(job: PortfolioBuilderJob) {
@@ -62,10 +66,11 @@ const worker = {
             )
         ).reduce(async (accum: BasePosition[], chunk: BasePosition[]) => [...accum, ...chunk], []);
 
-        const portfolioBuilder = new PortfolioBuilder<PortfolioState>(portfolio, positions);
+        const portfolioBuilder = new PortfolioBuilder<PortfolioState>(portfolio, positions, subject);
         logger.info(`#${job.portfolioId} portfolio builder inited`);
 
         logger.info(`Processing #${portfolioBuilder.portfolio.id} portfolio build`);
+        await sleep(1);
         const result = await portfolioBuilder.build();
 
         await pg.transaction(async (t) => {
@@ -154,7 +159,7 @@ const worker = {
             )
         ).reduce(async (accum: BasePosition[], chunk: BasePosition[]) => [...accum, ...chunk], []);
 
-        const userPortfolioBuilder = new PortfolioBuilder<UserPortfolioState>(portfolio, positions);
+        const userPortfolioBuilder = new PortfolioBuilder<UserPortfolioState>(portfolio, positions, subject);
         logger.info(`#${job.userPortfolioId} user portfolio builder inited`);
         logger.info(`Processing #${userPortfolioBuilder.portfolio.id} user portfolio build`);
         const result = await userPortfolioBuilder.build();
@@ -188,6 +193,9 @@ const worker = {
             }
         });
         logger.info(`#${userPortfolioBuilder.portfolio.id} user portfolio build finished`);
+    },
+    progress() {
+        return Observable.from(subject);
     }
 };
 
