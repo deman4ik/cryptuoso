@@ -38,7 +38,7 @@ const worker = {
             portfolio.settings.excludeAssets &&
             Array.isArray(portfolio.settings.excludeAssets) &&
             portfolio.settings.excludeAssets.length
-                ? sql`AND r.asset IN (${sql.join(portfolio.settings.excludeAssets, sql`, `)})`
+                ? sql`AND r.asset NOT IN (${sql.join(portfolio.settings.excludeAssets, sql`, `)})`
                 : sql``;
 
         const positions: BasePosition[] = await DataStream.from(
