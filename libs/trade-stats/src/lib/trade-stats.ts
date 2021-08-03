@@ -24,7 +24,8 @@ export class TradeStatsCalc implements TradeStats {
                 round: meta.job.round === true || meta.job.round === false ? meta.job.round : true
             }
         };
-        if (this.meta.job.type === "portfolio") this.positions = this.preparePortfolioPositions(this.positions);
+        if (this.meta.job.type === "portfolio")
+            this.positions = this.preparePortfolioPositions(this.positions, prevStats?.fullStats);
         this.fullStats = this.initFullStats(this.positions, prevStats?.fullStats);
         this.periodStats = this.initPeriodStats(prevStats?.periodStats);
 
@@ -32,9 +33,9 @@ export class TradeStatsCalc implements TradeStats {
         this.prevPeriodStats = { ...this.periodStats };
     }
 
-    private preparePortfolioPositions(allPositions: BasePosition[]): BasePosition[] {
+    private preparePortfolioPositions(allPositions: BasePosition[], fullStats: FullStats): BasePosition[] {
         let netProfit = 0;
-        let currentBalance = this.meta.initialBalance;
+        let currentBalance = fullStats.currentBalance ?? this.meta.initialBalance;
         let prevBalance = currentBalance;
         const { feeRate } = <TradeStatsPortfolio>this.meta.job;
         const results: BasePosition[] = [];
