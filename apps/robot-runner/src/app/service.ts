@@ -380,7 +380,7 @@ export default class RobotRunnerService extends HTTPService {
     }
 
     async stop({ robotId }: RobotRunnerStop): Promise<{ result: string }> {
-        const status: RobotStatus = await this.db.pg.one(sql`
+        const { status } = await this.db.pg.one<{ status: RobotStatus }>(sql`
         SELECT status 
          FROM robots
         WHERE id = ${robotId}

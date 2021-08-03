@@ -20,6 +20,14 @@ export default class ConnectorRunnerService extends HTTPService {
                         userExAccId: "uuid"
                     },
                     handler: this.HTTPWithAuthHandler.bind(this, this.checkBalance.bind(this))
+                },
+                checkUnknownOrders: {
+                    auth: true,
+                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager, UserRoles.admin],
+                    inputSchema: {
+                        userExAccId: "uuid"
+                    },
+                    handler: this.HTTPWithAuthHandler.bind(this, this.checkUserUnknownOrders.bind(this))
                 }
             });
             this.events.subscribe({
@@ -53,6 +61,14 @@ export default class ConnectorRunnerService extends HTTPService {
             jobId: ConnectorRunnerJobType.checkBalance,
             repeat: {
                 every: 1000 * 60
+            },
+            removeOnComplete: 1,
+            removeOnFail: 10
+        });
+        await this.addJob(Queues.connectorRunner, ConnectorRunnerJobType.checkUnknownOrders, null, {
+            jobId: ConnectorRunnerJobType.checkUnknownOrders,
+            repeat: {
+                cron: "0 15 */12 * * *"
             },
             removeOnComplete: 1,
             removeOnFail: 10
@@ -101,6 +117,9 @@ export default class ConnectorRunnerService extends HTTPService {
                 break;
             case ConnectorRunnerJobType.checkBalance:
                 await this.checkBalances();
+                break;
+            case ConnectorRunnerJobType.checkUnknownOrders:
+                await this.checkUnknownOrders();
                 break;
             default:
                 this.log.error(`Unknow job ${job.name}`);
@@ -166,6 +185,39 @@ export default class ConnectorRunnerService extends HTTPService {
             for (const { userExAccId } of userExAccIds) {
                 try {
                     await this.queueJob(userExAccId, ConnectorJobType.balance);
+                } catch (e) {
+                    this.log.error(e);
+                }
+            }
+        }
+    }
+
+    async checkUserUnknownOrders({ userExAccId }: { userExAccId: string }, user: User) {
+        const userExAcc = await this.db.pg.one<{ id: string; userId: string }>(sql`
+        SELECT id, user_id from user_exchange_accs where id = ${userExAccId};
+        `);
+        if (user && user.id !== userExAcc.userId)
+            throw new ActionsHandlerError(
+                "Current user isn't owner of this User Exchange Account",
+                { userExAccId },
+                "FORBIDDEN",
+                403
+            );
+        await this.queueJob(userExAccId, ConnectorJobType.unknownOrders);
+    }
+
+    async checkUnknownOrders() {
+        const userExAccIds = await this.db.pg.any<{ userExAccId: string }>(sql`
+        select uea.id as user_ex_acc_id 
+        from user_exchange_accs uea
+        where status = 'enabled'
+        and exists (select id from user_robots ur where ur.user_ex_acc_id = uea.id and ur.status in ('started','stopping','paused')); 
+        `);
+        if (userExAccIds && Array.isArray(userExAccIds) && userExAccIds.length) {
+            this.log.info(`${userExAccIds.length} userExAccs need to check unknown orders`);
+            for (const { userExAccId } of userExAccIds) {
+                try {
+                    await this.queueJob(userExAccId, ConnectorJobType.unknownOrders);
                 } catch (e) {
                     this.log.error(e);
                 }
