@@ -915,6 +915,7 @@ export default class UserRobotRunnerService extends HTTPService {
               AND up.status NOT IN (${UserPositionStatus.closed}, ${UserPositionStatus.closedAuto}, 
                                     ${UserPositionStatus.canceled})
               AND ur.status in (${UserRobotStatus.started},${UserRobotStatus.stopping})
+              AND NOT EXISTS (select id from user_orders puv where puv.prev_order_id = uo.id)
               AND uo.updated_at < ${dayjs.utc().add(-30, "second").toISOString()};
             `);
             for (const idleOrder of idleOrders) {
