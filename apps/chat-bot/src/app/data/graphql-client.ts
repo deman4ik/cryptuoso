@@ -2,7 +2,7 @@ import { GraphQLClient as Client, gql } from "graphql-request";
 import logger from "@cryptuoso/logger";
 import { GenericObject } from "@cryptuoso/helpers";
 import { StatePropertyAccessor, TurnContext } from "botbuilder";
-import { ChatUser } from "./types";
+import { ChatUser } from "../types";
 import { Auth } from "@cryptuoso/auth-utils";
 export { gql };
 
@@ -37,7 +37,7 @@ export class GraphQLClient {
             if (err.message.includes("JWT")) {
                 logger.info(`Retrying to get refresh token for ${user?.telegramId}`);
                 const { user: existedUser, accessToken } = await this.#refreshToken(user);
-                userAccessor.set(context, { ...existedUser, accessToken });
+                await userAccessor.set(context, { ...existedUser, accessToken });
                 return this.#client.request<T, V>(query, variables, {
                     authorization: `Bearer ${accessToken}`
                 });
