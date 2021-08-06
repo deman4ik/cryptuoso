@@ -223,6 +223,7 @@ export default class PortfolioManagerService extends HTTPService {
             name: `${exchange} ${this.generateName(options)}`,
             exchange,
             available: 5,
+            base: true,
             settings: {
                 options,
                 tradingAmountType,

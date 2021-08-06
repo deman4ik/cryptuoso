@@ -34,11 +34,14 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
         [key: string]: PortoflioRobotState;
     } = {};
 
-    constructor(portfolio: T, positions: BasePosition[], subject?: Subject<number>) {
+    constructor(portfolio: T, subject?: Subject<number>) {
         this.#log = logger;
         this.#subject = subject;
         this.portfolio = portfolio;
         this.#calcPortfolioVariables();
+    }
+
+    init(positions: BasePosition[]) {
         const robotIds = uniqueElementsBy(
             positions.map(({ robotId }) => robotId),
             (a, b) => a === b
@@ -52,6 +55,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
                     active: false,
                     share: 0,
                     amountInCurrency: 0,
+                    priority: 0,
                     positions: positions.filter(({ robotId }) => robotId === cur)
                 }
             }),
@@ -95,6 +99,22 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
             minBalance
         };
     };
+
+    get portfolioBalance() {
+        return this.portfolio.variables.portfolioBalance;
+    }
+
+    get minRobotsCount() {
+        return this.portfolio.variables.minRobotsCount;
+    }
+
+    get maxRobotsCount() {
+        return this.portfolio.variables.maxRobotsCount;
+    }
+
+    get minBalance() {
+        return this.portfolio.variables.minBalance;
+    }
 
     get log() {
         return this.#log;
@@ -352,10 +372,9 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
 
     async build(): Promise<{ portfolio: T; steps: any }> {
         try {
-            console.log("build");
             this.log.debug(`Portfolio #${this.portfolio.id} - Building portfolio`);
             await this.calculateRobotsStats();
-            const robotsList = await this.sortRobots(this.robots);
+            const robotsList = await this.sortRobots(this.robots); // сортировка от худших к лучшим
             const steps = [];
 
             let currentRobotsList = [...robotsList];
@@ -387,18 +406,48 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
                 currentRobotsList = [...list];
             }
             this.log.debug(`Portfolio #${this.portfolio.id} - Portfolio builded ${currentRobotsList.length} robots`);
+
             return {
                 portfolio: {
                     ...this.portfolio,
                     fullStats: prevPortfolio.tradeStats.fullStats,
                     periodStats: periodStatsToArray(prevPortfolio.tradeStats.periodStats),
-                    robots: Object.values(prevPortfolio.robots).map((r) => ({
+                    robots: Object.values(prevPortfolio.robots).map((r, index) => ({
                         robotId: r.robotId,
                         active: true,
-                        share: r.share
+                        share: r.share,
+                        priority: Object.keys(prevPortfolio.robots).length - index // сортировка от лучших к худшим по порядку
                     }))
                 },
                 steps
+            };
+        } catch (error) {
+            this.log.error(error);
+            throw error;
+        }
+    }
+
+    async buildOnce(): Promise<{ portfolio: T }> {
+        try {
+            this.log.debug(`Portfolio #${this.portfolio.id} - Building portfolio once`);
+            await this.calculateRobotsStats();
+            const robotsList = await this.sortRobots(this.robots); // сортировка от худших к лучшим
+
+            const currentPortfolio = Object.freeze(await this.calcPortfolio(robotsList));
+            this.log.debug(`Portfolio #${this.portfolio.id} - Portfolio builded ${robotsList.length} robots`);
+
+            return {
+                portfolio: {
+                    ...this.portfolio,
+                    fullStats: currentPortfolio.tradeStats.fullStats,
+                    periodStats: periodStatsToArray(currentPortfolio.tradeStats.periodStats),
+                    robots: Object.values(currentPortfolio.robots).map((r, index) => ({
+                        robotId: r.robotId,
+                        active: true,
+                        share: r.share,
+                        priority: Object.keys(currentPortfolio.robots).length - index // сортировка от лучших к худшим по порядку
+                    }))
+                }
             };
         } catch (error) {
             this.log.error(error);
