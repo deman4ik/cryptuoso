@@ -30,7 +30,7 @@ import {
     // MarketEvents
 } from "@cryptuoso/exwatcher-events";
 import { sql } from "@cryptuoso/postgres";
-import { Status } from "@cryptuoso/importer-state";
+import { ImporterState, Status } from "@cryptuoso/importer-state";
 import logger from "@cryptuoso/logger";
 
 // !FIXME: ccxt.pro typings
@@ -241,11 +241,18 @@ export class ExwatcherBaseService extends BaseService {
                     pendingSubscriptions.map(async (subscription: Exwatcher) => {
                         const { asset, currency, importerId } = subscription;
                         if (importerId) {
-                            const importer = await this.db.pg.maybeOne<{ status: Status }>(
-                                sql`SELECT status FROM importers WHERE id = ${importerId};`
-                            );
-                            if (importer.status === Status.finished) {
+                            const importer = await this.db.pg.maybeOne<{
+                                status: ImporterState["status"];
+                                startedAt: ImporterState["startedAt"];
+                            }>(sql`SELECT status, started_at FROM importers WHERE id = ${importerId};`);
+                            if (importer && importer?.status === Status.finished) {
                                 await this.subscribe(subscription);
+                                return;
+                            } else if (
+                                importer &&
+                                importer?.startedAt &&
+                                dayjs.utc().diff(dayjs.utc(importer.startedAt), "minute") < 5
+                            ) {
                                 return;
                             }
                         }
