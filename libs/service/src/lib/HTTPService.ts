@@ -155,7 +155,7 @@ export class HTTPService extends BaseService {
                     if (!this._routes[req.url].roles.includes(role))
                         throw new ActionsHandlerError("Invalid role", null, "FORBIDDEN", 403);
                 }
-
+                req.meta = { ...req.meta };
                 return next();
             }
 
@@ -327,7 +327,7 @@ export class HTTPService extends BaseService {
         req: RequestExtended,
         res: any
     ) {
-        const result = await handler(req.body.input, req.meta.user);
+        const result = await handler(req.body.input, req.meta?.user);
 
         res.send(result || { result: "OK" });
 

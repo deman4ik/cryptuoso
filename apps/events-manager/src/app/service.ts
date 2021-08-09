@@ -257,7 +257,7 @@ export default class EventsManager extends HTTPService {
                 await locker.lock();
                 await this.events.emitRaw(`${BASE_REDIS_PREFIX}${dl.topic}`, {
                     ...dl.data,
-                    time: new Date()
+                    time: dayjs.utc().toISOString()
                 });
 
                 this.log.info(`Dead letter event: #${dl.eventId} ${dl.type} resend`);

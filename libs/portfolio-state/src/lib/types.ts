@@ -31,12 +31,14 @@ export interface PortfolioDB {
     settings: PortfolioSettings;
     fullStats?: FullStats;
     periodStats?: PeriodStats[];
+    base: boolean;
 }
 
 export interface PortfolioRobotDB {
     robotId: string;
     active: boolean;
     share: number;
+    priority: number;
 }
 export interface PortfolioRobot extends PortfolioRobotDB {
     amountInCurrency?: number;

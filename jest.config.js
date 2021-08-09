@@ -1,23 +1,3 @@
-module.exports = {
-    projects: [
-        "<rootDir>/apps/support",
-        "<rootDir>/apps/telegram-bot",
-        "<rootDir>/libs/graphql-client",
-        "<rootDir>/libs/auth-utils",
-        "<rootDir>/apps/exwatcher-kucoin",
-        "<rootDir>/apps/exwatcher-huobipro",
-        "<rootDir>/apps/user-sub",
-        "<rootDir>/libs/billing",
-        "<rootDir>/libs/analytics",
-        "<rootDir>/apps/webhooks",
-        "<rootDir>/libs/user-sub-events",
-        "<rootDir>/libs/trade-stats",
-        "<rootDir>/apps/trade-stats-runner",
-        "<rootDir>/apps/trade-stats-worker",
-        "<rootDir>/libs/trade-stats-events",
-        "<rootDir>/apps/portfolio-manager",
-        "<rootDir>/libs/portfolio-state",
-        "<rootDir>/libs/portfolio-events",
-        "<rootDir>/apps/chat-bot"
-    ]
-};
+const { getJestProjects } = require("@nrwl/jest");
+
+module.exports = { projects: getJestProjects() };

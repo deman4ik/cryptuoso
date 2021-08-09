@@ -330,7 +330,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 timestamp: dayjs.utc().toISOString(),
                 error: err.message
             });
-            await this.events.emit<StatsCalcWorkerErrorEvent>({
+            /* await this.events.emit<StatsCalcWorkerErrorEvent>({
                 type: StatsCalcWorkerEvents.ERROR,
                 data: {
                     method: "calcRobot",
@@ -339,7 +339,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     timestamp: dayjs.utc().toISOString(),
                     error: err.message
                 }
-            });
+            });*/
             throw err;
         }
     }
@@ -458,7 +458,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 timestamp: dayjs.utc().toISOString(),
                 error: err.message
             });
-            await this.events.emit<StatsCalcWorkerErrorEvent>({
+            /*     await this.events.emit<StatsCalcWorkerErrorEvent>({
                 type: StatsCalcWorkerEvents.ERROR,
                 data: {
                     method: "calcRobotsAggr",
@@ -468,7 +468,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     timestamp: dayjs.utc().toISOString(),
                     error: err.message
                 }
-            });
+            }); */
             throw err;
         }
     }
@@ -578,7 +578,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 timestamp: dayjs.utc().toISOString(),
                 error: err.message
             });
-            await this.events.emit<StatsCalcWorkerErrorEvent>({
+            /*      await this.events.emit<StatsCalcWorkerErrorEvent>({
                 type: StatsCalcWorkerEvents.ERROR,
                 data: {
                     method: "calcUsersRobotsAggr",
@@ -588,7 +588,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     timestamp: dayjs.utc().toISOString(),
                     error: err.message
                 }
-            });
+            });*/
             throw err;
         }
     }
@@ -692,7 +692,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 timestamp: dayjs.utc().toISOString(),
                 error: err.message
             });
-            await this.events.emit<StatsCalcWorkerErrorEvent>({
+            /* await this.events.emit<StatsCalcWorkerErrorEvent>({
                 type: StatsCalcWorkerEvents.ERROR,
                 data: {
                     method: "calcUserSignal",
@@ -702,7 +702,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     timestamp: dayjs.utc().toISOString(),
                     error: err.message
                 }
-            });
+            });*/
             throw err;
         }
     }
@@ -745,7 +745,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 timestamp: dayjs.utc().toISOString(),
                 error: err.message
             });
-            await this.events.emit<StatsCalcWorkerErrorEvent>({
+            /* await this.events.emit<StatsCalcWorkerErrorEvent>({
                 type: StatsCalcWorkerEvents.ERROR,
                 data: {
                     method: "calcUserSignal",
@@ -754,7 +754,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     timestamp: dayjs.utc().toISOString(),
                     error: err.message
                 }
-            });
+            });*/
             throw err;
         }
     }
@@ -878,7 +878,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 timestamp: dayjs.utc().toISOString(),
                 error: err.message
             });
-            await this.events.emit<StatsCalcWorkerErrorEvent>({
+            /*await this.events.emit<StatsCalcWorkerErrorEvent>({
                 type: StatsCalcWorkerEvents.ERROR,
                 data: {
                     method: "calcUserSignalsAggr",
@@ -889,7 +889,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     timestamp: dayjs.utc().toISOString(),
                     error: err.message
                 }
-            });
+            });*/
             throw err;
         }
     }
@@ -965,7 +965,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 timestamp: dayjs.utc().toISOString(),
                 error: err.message
             });
-            await this.events.emit<StatsCalcWorkerErrorEvent>({
+            /* await this.events.emit<StatsCalcWorkerErrorEvent>({
                 type: StatsCalcWorkerEvents.ERROR,
                 data: {
                     method: "calcUserRobot",
@@ -974,7 +974,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     timestamp: dayjs.utc().toISOString(),
                     error: err.message
                 }
-            });
+            });*/
             throw err;
         }
     }
@@ -1091,7 +1091,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                 timestamp: dayjs.utc().toISOString(),
                 error: err.message
             });
-            await this.events.emit<StatsCalcWorkerErrorEvent>({
+            /*   await this.events.emit<StatsCalcWorkerErrorEvent>({
                 type: StatsCalcWorkerEvents.ERROR,
                 data: {
                     method: "calcUserRobotsAggr",
@@ -1102,7 +1102,7 @@ export default class StatisticCalcWorkerService extends BaseService {
                     timestamp: dayjs.utc().toISOString(),
                     error: err.message
                 }
-            });
+            });*/
             throw err;
         }
     }

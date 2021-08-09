@@ -402,6 +402,7 @@ export class Events {
                             }
                         }
                     } catch (error) {
+                        logger.error(error);
                         logger.error(`Failed to claim pending "${topic}" event #${msgId}  - ${error.message}`);
                     }
                 }
@@ -469,8 +470,8 @@ export class Events {
                 "event",
                 JSON.stringify(cloudEvent.toJSON())
             ];
-            await this.#redis.xadd(topic, "*", ...args);
-            logger.debug(`Emited Event ${type}`);
+            const result = await this.#redis.xadd(topic, "*", ...args);
+            logger.debug(`Emited Event ${type} - ${result}`);
         } catch (error) {
             logger.error(`Failed to emit event - ${error.message}`, event);
         }

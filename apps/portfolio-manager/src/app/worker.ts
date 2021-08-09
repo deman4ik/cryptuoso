@@ -66,7 +66,8 @@ const worker = {
             )
         ).reduce(async (accum: BasePosition[], chunk: BasePosition[]) => [...accum, ...chunk], []);
 
-        const portfolioBuilder = new PortfolioBuilder<PortfolioState>(portfolio, positions, subject);
+        const portfolioBuilder = new PortfolioBuilder<PortfolioState>(portfolio, subject);
+        portfolioBuilder.init(positions);
         logger.info(`#${job.portfolioId} portfolio builder inited`);
 
         logger.info(`Processing #${portfolioBuilder.portfolio.id} portfolio build`);
@@ -137,6 +138,34 @@ const worker = {
             portfolio.settings.excludeAssets.length
                 ? sql`AND r.asset IN (${sql.join(portfolio.settings.excludeAssets, sql`, `)})`
                 : sql``;
+
+        const userPortfolioBuilder = new PortfolioBuilder<UserPortfolioState>(portfolio, subject);
+        const maxRobotsCount = userPortfolioBuilder.maxRobotsCount;
+        const { risk, profit, winRate, efficiency, diversification, moneyManagement } = portfolio.settings.options;
+        const portfolioRobots = await pg.any<{
+            robotId: string;
+        }>(sql`SELECT pr.robot_id FROM portfolio_robots pr, v_portfolios p, robots r
+        WHERE pr.portfolio_id = p.id 
+        AND pr.robot_id = r.id
+        AND p.option_risk = ${risk}
+        AND p.option_profit = ${profit}
+        AND p.option_win_rate = ${winRate}
+        AND p.option_efficiency = ${efficiency}
+        AND p.option_diversification = ${diversification}
+        AND p.option_money_management = ${moneyManagement}
+        ${includeAssetsCondition}
+        ${excludeAssetsCondition}
+        ORDER BY pr.priority 
+        LIMIT ${maxRobotsCount}`);
+
+        const hasPredefinedRobots = portfolioRobots && Array.isArray(portfolioRobots) && portfolioRobots.length;
+        const portfolioRobotsCondition = hasPredefinedRobots
+            ? sql`r.id in (${sql.join(
+                  portfolioRobots.map((r) => r.robotId),
+                  sql`, `
+              )})`
+            : sql``;
+
         const positions: BasePosition[] = await DataStream.from(
             makeChunksGenerator(
                 pg,
@@ -153,16 +182,20 @@ const worker = {
           AND p.status = 'closed'
           ${includeAssetsCondition}
           ${excludeAssetsCondition}
+          ${portfolioRobotsCondition}
           ORDER BY p.exit_date
         `,
                 10000
             )
         ).reduce(async (accum: BasePosition[], chunk: BasePosition[]) => [...accum, ...chunk], []);
 
-        const userPortfolioBuilder = new PortfolioBuilder<UserPortfolioState>(portfolio, positions, subject);
+        userPortfolioBuilder.init(positions);
+
         logger.info(`#${job.userPortfolioId} user portfolio builder inited`);
         logger.info(`Processing #${userPortfolioBuilder.portfolio.id} user portfolio build`);
-        const result = await userPortfolioBuilder.build();
+        const result = hasPredefinedRobots
+            ? await userPortfolioBuilder.buildOnce()
+            : await userPortfolioBuilder.build();
 
         await pg.transaction(async (t) => {
             await t.query(sql`UPDATE user_portfolio_settings 

@@ -89,6 +89,7 @@ export const ImporterWorkerSchema = {
         exchange: "string",
         asset: "string",
         currency: "string",
+        status: "string",
         error: { type: "string", optional: true }
     }
 };
@@ -119,7 +120,7 @@ export interface ImporterWorkerFinished {
     asset: string;
     currency: string;
     type: ImportType;
-    status: Status;
+    status: Status.finished;
 }
 
 export interface ImporterWorkerFailed {
@@ -128,5 +129,6 @@ export interface ImporterWorkerFailed {
     asset: string;
     currency: string;
     type: ImportType;
+    status: Status.failed;
     error?: string;
 }

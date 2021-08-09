@@ -73,3 +73,28 @@ export interface Order {
     nextJob?: OrderJob;
     info?: ccxt.Order;
 }
+
+export interface UnknownOrder {
+    exchange: string;
+    asset: string;
+    currency: string;
+    direction: OrderDirection;
+    type: OrderType;
+    price?: number;
+    volume: number;
+    status: OrderStatus;
+    exId?: string;
+    exTimestamp?: string;
+    exLastTradeAt?: string;
+    remaining?: number;
+    executed?: number;
+    lastCheckedAt?: string;
+    info?: ccxt.Order;
+}
+
+export interface UnknownUserOrder extends UnknownOrder {
+    userExAccId: string;
+    createdAt?: string;
+    updatedAt?: string;
+    note?: string;
+}

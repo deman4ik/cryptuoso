@@ -14,16 +14,18 @@ import { Dialog, DialogState } from "botbuilder-dialogs";
 import { CardsSampleDialog } from "./dialogs/cardsSampleDialog";
 import logger from "@cryptuoso/logger";
 import { Auth } from "@cryptuoso/auth-utils";
-import { gql, GraphQLClient } from "./graphql-client";
+import { gql, GraphQLClient } from "./data/graphql-client";
 import { UserProfileSampleDialog } from "./dialogs/userProfileSampleDialog";
+import { MainDialog } from "./dialogs/mainDialog";
 import { ChatUser } from "./types";
+import { pg, sql } from "@cryptuoso/postgres";
 export class Bot extends ActivityHandler {
     private authUtils: Auth;
     private gqlClient: GraphQLClient;
     private conversationState: BotState;
     private userState: UserState;
     private userAccessor: StatePropertyAccessor<ChatUser>;
-    private mainDialog: Dialog;
+    private mainDialog: MainDialog;
     private dialogState: StatePropertyAccessor<DialogState>;
     /**
      *
@@ -41,25 +43,33 @@ export class Bot extends ActivityHandler {
         });
         this.conversationState = conversationState as ConversationState;
         this.userState = userState;
-        //this.mainDialog = new MainDialog();
-        this.mainDialog = new UserProfileSampleDialog(this.userState);
+        this.mainDialog = new MainDialog(this.userState);
         this.dialogState = this.conversationState.createProperty("DialogState");
         this.userAccessor = this.userState.createProperty<ChatUser>("user");
         this.onMessage(async (context, next) => {
-            logger.debug("Running dialog with Message Activity.");
+            //   logger.debug("Running dialog with Message Activity.");
 
-            logger.debug(context);
-            const from = context.activity.from.id;
+            //  logger.debug(context);
+            await this.auth(context);
             // Run the Dialog with the new message Activity.
             //  if (context.activity.text === "card") await (this.mainDialog as MainDialog).run(context, this.dialogState);
             // else if (context.activity.text === "profile")
-            await (this.mainDialog as UserProfileSampleDialog).run(context, this.dialogState);
+            await this.mainDialog.run(context, this.dialogState);
             //else context.sendActivity("Use card or profile");
             await next();
         });
 
+        this.onMembersAdded(async (context, next) => {
+            for (const idx in context.activity.membersAdded) {
+                if (context.activity.membersAdded[idx].id !== context.activity.recipient.id) {
+                    await this.auth(context);
+                    await this.mainDialog.run(context, this.dialogState);
+                }
+            }
+            await next();
+        });
         this.onDialog(async (context, next) => {
-            logger.debug("onDialog");
+            // logger.debug("onDialog");
             // Save any state changes. The load happened during the execution of the Dialog.
             await this.conversationState.saveChanges(context, false);
             await this.userState.saveChanges(context, false);
@@ -68,16 +78,29 @@ export class Bot extends ActivityHandler {
     }
 
     async auth(context: TurnContext) {
-        const user = await this.userAccessor.get(context);
-        if (user) return user;
+        const userExists = await this.userAccessor.get(context);
+        if (userExists) return;
 
+        let telegramId, userId;
         if (context.activity.channelId === "telegram") {
-            const telegramId = context.activity.from.id;
+            telegramId = +context.activity.from.id;
+        } else {
+            userId = context.activity.from.id;
+        }
+        try {
+            const { user: existedUser, accessToken } = await this.authUtils.refreshTokenChatBot({ telegramId, userId });
+            await this.userAccessor.set(context, { ...existedUser, accessToken });
+            logger.info(`User ${existedUser.id} authenticated with ${context.activity.channelId}`);
+        } catch (err) {
+            //TODO: login/register
+            logger.error(err);
+            await context.sendActivity(err.message);
+            throw err;
         }
     }
 
     async run(context: TurnContext) {
-        logger.debug("run");
+        // logger.debug("run");
         await super.run(context);
 
         // Save any state changes. The load happened during the execution of the Dialog.

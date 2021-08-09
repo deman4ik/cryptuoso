@@ -21,10 +21,12 @@ export const enum Queues {
 
 export const enum ConnectorJobType {
     order = "order",
-    balance = "balance"
+    balance = "balance",
+    unknownOrders = "unknownOrders"
 }
 
 export const enum ConnectorRunnerJobType {
     idleOrderJobs = "idleOrderJobs",
-    checkBalance = "checkBalance"
+    checkBalance = "checkBalance",
+    checkUnknownOrders = "checkUnknownOrders"
 }

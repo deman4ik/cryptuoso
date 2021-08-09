@@ -19,11 +19,12 @@ import { PrivateConnector } from "@cryptuoso/ccxt-private";
 import { Pool, spawn, Worker as ThreadsWorker } from "threads";
 import { Decrypt } from "./decryptWorker";
 import { groupBy, sortDesc } from "@cryptuoso/helpers";
-import { Order, OrderJobType, OrderStatus } from "@cryptuoso/market";
+import { Order, OrderJobType, OrderStatus, UnknownUserOrder } from "@cryptuoso/market";
 import { BaseError } from "@cryptuoso/errors";
 import { DatabaseTransactionConnectionType } from "slonik";
 import { v4 as uuid } from "uuid";
 import ccxt from "ccxt";
+import { json } from "body-parser";
 
 export type ConnectorRunnerServiceConfig = BaseServiceConfig;
 
@@ -258,10 +259,10 @@ export default class ConnectorRunnerService extends BaseService {
 
             if (job.name === ConnectorJobType.balance || updateBalances) {
                 const exchangeAcc: UserExchangeAccount = await this.#getUserExAcc(userExAccId);
-                this.log.debug(exchangeAcc.id, exchangeAcc.status);
+
                 if (job.name === ConnectorJobType.balance) await this.initConnector(exchangeAcc);
                 const balances: UserExchangeAccBalances = await this.connectors[userExAccId].getBalances();
-                this.log.debug(userExAccId, balances.totalUSD, balances.updatedAt);
+
                 let status = exchangeAcc.status;
                 if (exchangeAcc.status !== UserExchangeAccStatus.enabled) {
                     status = UserExchangeAccStatus.enabled;
@@ -274,7 +275,104 @@ export default class ConnectorRunnerService extends BaseService {
                 `);
             }
 
-            delete this.connectors[userExAccId];
+            if (job.name === ConnectorJobType.unknownOrders) {
+                const pairs = await this.db.pg.any<{ asset: string; currency: string }>(sql`
+                select distinct asset, currency from user_robots ur, robots r
+                    where ur.robot_id = r.id and ur.user_ex_acc_id = ${userExAccId};
+                `);
+                if (pairs && Array.isArray(pairs) && pairs.length > 0) {
+                    const exchangeAcc: UserExchangeAccount = await this.#getUserExAcc(userExAccId);
+                    await this.initConnector(exchangeAcc);
+                    for (const { asset, currency } of pairs) {
+                        const orders = await this.connectors[userExAccId].getRecentOrders(asset, currency);
+                        if (orders && orders.length) {
+                            const ids = orders.map((o) => o.exId);
+                            const ordersExists = await this.db.pg.any<{ exId: string }>(sql`
+                        SELECT ex_id FROM user_orders 
+                        WHERE user_ex_acc_id = ${userExAccId} 
+                        AND ex_id in (${sql.join(ids, sql`, `)});
+                        `);
+                            const idsNotExists = ids.filter((exId) => !ordersExists.map((o) => o.exId).includes(exId));
+                            if (idsNotExists.length) {
+                                const unknownOrders = orders
+                                    .filter(({ exId }) => idsNotExists.includes(exId))
+                                    .map((o) => ({
+                                        ...o,
+                                        userExAccId,
+                                        info: JSON.stringify(o.info)
+                                    }));
+                                await this.db.pg.query(sql`
+                                INSERT INTO user_orders_unknown (
+                                    user_ex_acc_id,
+                                    exchange,
+                                    asset,
+                                    currency,
+                                    direction,
+                                    type,
+                                    price,
+                                    status,
+                                    ex_id,
+                                    ex_timestamp,
+                                    ex_last_trade_at,
+                                    volume,
+                                    remaining,
+                                    executed,
+                                    last_checked_at,
+                                    info
+                                ) SELECT * FROM ${sql.unnest(
+                                    this.db.util.prepareUnnest(unknownOrders, [
+                                        "userExAccId",
+                                        "exchange",
+                                        "asset",
+                                        "currency",
+                                        "direction",
+                                        "type",
+                                        "price",
+                                        "status",
+                                        "exId",
+                                        "exTimestamp",
+                                        "exLastTradeAt",
+                                        "volume",
+                                        "remaining",
+                                        "executed",
+                                        "lastCheckedAt",
+                                        "info"
+                                    ]),
+                                    [
+                                        "uuid",
+                                        "varchar",
+                                        "varchar",
+                                        "varchar",
+                                        "varchar",
+                                        "varchar",
+                                        "numeric",
+                                        "varchar",
+                                        "varchar",
+                                        "timestamp",
+                                        "timestamp",
+                                        "numeric",
+                                        "numeric",
+                                        "numeric",
+                                        "timestamp",
+                                        "jsonb"
+                                    ]
+                                )} ON CONFLICT ON CONSTRAINT user_orders_unknown_pkey
+                                DO UPDATE SET price = excluded.price,
+                                status = excluded.status,
+                                ex_timestamp = excluded.ex_timestamp,
+                                ex_last_trade_at = excluded.ex_last_trade_at,
+                                remaining = excluded.remaining,
+                                executed = excluded.executed,
+                                last_checked_at = excluded.last_checked_at,
+                                info = excluded.info;
+                                `);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (this.connectors[userExAccId]) delete this.connectors[userExAccId];
 
             this.log.info(`Connector #${userExAccId} finished processing jobs`);
 

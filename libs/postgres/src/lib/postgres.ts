@@ -43,11 +43,7 @@ const config: ClientConfigurationInputType = {
 
 const pg = createPool(process.env.PGCS, config);
 
-const createJSPool = (pgConfig: ClientConfigurationInputType = {}) =>
-    createPool(process.env.PGCS, { ...config, preferNativeBindings: false, ...pgConfig });
-
 const pgUtil = {
-    createJSPool,
     prepareUnnest
 };
 

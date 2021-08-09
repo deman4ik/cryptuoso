@@ -5,7 +5,16 @@ import logger, { Logger } from "@cryptuoso/logger";
 import { GenericObject, round, sortAsc, valuesString } from "@cryptuoso/helpers";
 import { createSocksProxyAgent } from "@cryptuoso/ccxt-public";
 import { BaseError } from "@cryptuoso/errors";
-import { ExchangePrice, Market, Order, OrderDirection, OrderJobType, OrderStatus, OrderType } from "@cryptuoso/market";
+import {
+    ExchangePrice,
+    Market,
+    Order,
+    OrderDirection,
+    OrderJobType,
+    OrderStatus,
+    OrderType,
+    UnknownOrder
+} from "@cryptuoso/market";
 import { pg, sql } from "@cryptuoso/postgres";
 import { UserExchangeAccBalances, UserExchangeAccount } from "@cryptuoso/user-state";
 import { Priority } from "@cryptuoso/connector-state";
@@ -769,6 +778,109 @@ export class PrivateConnector {
         } catch (e) {
             this.log.error(e);
             return null;
+        }
+    }
+
+    async getRecentOrders(asset: string, currency: string, creationDate?: number): Promise<UnknownOrder[]> {
+        try {
+            let orders: ccxt.Order[] = [];
+            if (this.connector.has["fetchOrders"]) {
+                const call = async (bail: (e: Error) => void) => {
+                    try {
+                        return await this.connector.fetchOrders(this.getSymbol(asset, currency), creationDate);
+                    } catch (e) {
+                        if (
+                            (e instanceof ccxt.NetworkError &&
+                                !(e instanceof ccxt.InvalidNonce) &&
+                                !(e instanceof ccxt.DDoSProtection) &&
+                                !(e instanceof ccxt.DDoSProtection)) ||
+                            e.message?.toLowerCase().includes("gateway") ||
+                            e.message?.toLowerCase().includes("getaddrinfo") ||
+                            e.message?.toLowerCase().includes("network") ||
+                            e.message?.toLowerCase().includes("request") ||
+                            e.message?.toLowerCase().includes("econnreset")
+                        ) {
+                            await this.initConnector();
+                            throw e;
+                        }
+                        bail(e);
+                    }
+                };
+                orders = await retry(call, this.retryOptions);
+            } else if (this.connector.has["fetchOpenOrders"] && this.connector.has["fetchClosedOrders"]) {
+                const callOpen = async (bail: (e: Error) => void) => {
+                    try {
+                        return await this.connector.fetchOpenOrders(this.getSymbol(asset, currency), creationDate);
+                    } catch (e) {
+                        if (
+                            (e instanceof ccxt.NetworkError &&
+                                !(e instanceof ccxt.InvalidNonce) &&
+                                !(e instanceof ccxt.DDoSProtection)) ||
+                            e.message?.toLowerCase().includes("gateway") ||
+                            e.message?.toLowerCase().includes("getaddrinfo") ||
+                            e.message?.toLowerCase().includes("network") ||
+                            e.message?.toLowerCase().includes("request") ||
+                            e.message?.toLowerCase().includes("econnreset")
+                        ) {
+                            await this.initConnector();
+                            throw e;
+                        }
+                        bail(e);
+                    }
+                };
+                const callClosed = async (bail: (e: Error) => void) => {
+                    try {
+                        return await this.connector.fetchClosedOrders(this.getSymbol(asset, currency), creationDate);
+                    } catch (e) {
+                        if (
+                            (e instanceof ccxt.NetworkError &&
+                                !(e instanceof ccxt.InvalidNonce) &&
+                                !(e instanceof ccxt.DDoSProtection)) ||
+                            e.message?.toLowerCase().includes("gateway") ||
+                            e.message?.toLowerCase().includes("getaddrinfo") ||
+                            e.message?.toLowerCase().includes("network") ||
+                            e.message?.toLowerCase().includes("request") ||
+                            e.message?.toLowerCase().includes("econnreset")
+                        ) {
+                            await this.initConnector();
+                            throw e;
+                        }
+                        bail(e);
+                    }
+                };
+                const openOrders = await retry(callOpen, this.retryOptions);
+                const closedOrders = await retry(callClosed, this.retryOptions);
+                orders = [...closedOrders, ...openOrders];
+            } else {
+                this.log.error(`Can't fetch orders from ${this.exchange}`);
+                return null;
+            }
+
+            if (!orders || !Array.isArray(orders) || orders.length === 0) return [];
+
+            return orders.map((order) => {
+                const { id, side, type, datetime, status, price, average, amount: volume, remaining, filled } = order;
+                return {
+                    exchange: this.exchange,
+                    asset,
+                    currency,
+                    direction: <OrderDirection>side,
+                    type: <OrderType>type,
+                    exId: id,
+                    exTimestamp: datetime && dayjs.utc(datetime).toISOString(),
+                    exLastTradeAt: this.getCloseOrderDate(<string>this.exchange, order),
+                    status: <OrderStatus>status,
+                    price: (average && +average) || (price && +price) || null,
+                    volume: volume && +volume,
+                    remaining: remaining && +remaining,
+                    executed: filled,
+                    lastCheckedAt: dayjs.utc().toISOString(),
+                    info: order
+                };
+            });
+        } catch (e) {
+            this.log.error(e);
+            return [];
         }
     }
 

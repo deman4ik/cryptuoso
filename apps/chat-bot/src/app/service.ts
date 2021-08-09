@@ -8,6 +8,7 @@ import {
     ActivityHandler
 } from "botbuilder";
 import * as restify from "restify";
+import { MultiLanguageLG } from "botbuilder-lg";
 import { Bot } from "./bot";
 
 export type ChatBotServiceConfig = BaseServiceConfig;
@@ -20,6 +21,7 @@ export default class ChatBotService extends BaseService {
     userState: UserState;
     port = 3978;
     server: restify.Server;
+    lg: MultiLanguageLG;
     constructor(config?: ChatBotServiceConfig) {
         super(config);
         try {
@@ -31,6 +33,11 @@ export default class ChatBotService extends BaseService {
             this.storage = new MemoryStorage(); //TODO: update to redis/pg storage
             this.conversationState = new ConversationState(this.storage);
             this.userState = new UserState(this.storage);
+            const filesPerLocale = new Map();
+            filesPerLocale.set("", `${__dirname}/assets/lg/en/defaultErrorHandler.lg`);
+            filesPerLocale.set("ru", `${__dirname}/assets/lg/ru/defaultErrorHandler.lg`);
+
+            this.lg = new MultiLanguageLG(undefined, filesPerLocale);
             this.bot = new Bot(this.conversationState, this.userState);
             this.server = restify.createServer();
 
@@ -56,7 +63,7 @@ export default class ChatBotService extends BaseService {
         // This check writes out errors to console log .vs. app insights.
         // NOTE: In production environment, you should consider logging this to Azure
         //       application insights.
-        console.error(`\n [onTurnError] unhandled error: ${error}`);
+        this.log.error(`[onTurnError] unhandled error: ${error}`);
 
         // Send a trace activity, which will be displayed in Bot Framework Emulator
         await context.sendTraceActivity(
@@ -67,8 +74,7 @@ export default class ChatBotService extends BaseService {
         );
 
         // Send a message to the user
-        await context.sendActivity("The bot encountered an error or bug.");
-        await context.sendActivity("To continue to run this bot, please fix the bot source code.");
+        await context.sendActivity(this.lg.generate("UnknownError", { error }));
         // Clear out state
         await this.conversationState.delete(context);
     };

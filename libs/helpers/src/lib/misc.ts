@@ -18,5 +18,4 @@ export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve
  * @param {any} value
  * @param {any} [defaultValue=null]
  */
-export const nvl = (value: any, defaultValue: any = null) =>
-    value === null || value === undefined ? defaultValue : value;
+export const nvl = (value: any, defaultValue: any = null) => value ?? defaultValue; //TODO: deprecate
