@@ -402,6 +402,7 @@ export class Events {
                             }
                         }
                     } catch (error) {
+                        logger.error(error);
                         logger.error(`Failed to claim pending "${topic}" event #${msgId}  - ${error.message}`);
                     }
                 }

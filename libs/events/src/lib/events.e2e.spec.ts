@@ -27,7 +27,7 @@ const GROUPS = {
     divide2: `${SERVICES.calc2}-divide`,
     subtract: `${SERVICES.calc}-substract`
 };
-jest.mock("tslog");
+
 jest.setTimeout(40000);
 const itif = (name: string, condition: () => boolean, cb: (...args: any[]) => unknown) => {
     it(name, (done) => {
