@@ -8,7 +8,6 @@ import { CloudEvent as Event, CloudEventV1 } from "cloudevents";
 import { BaseError } from "@cryptuoso/errors";
 import { EventsCatalog, EventHandler, BASE_REDIS_PREFIX } from "./catalog";
 import dayjs from "@cryptuoso/dayjs";
-import { isArray } from "util";
 
 export { Event };
 export interface NewEvent<T> {
@@ -163,8 +162,8 @@ export class Events {
                 topic,
                 ...[this.#state[topic].unbalanced.lastId]
             );
-            logger.debug("_receiveMessagesTick");
-            logger.debug(JSON.stringify(rawData) || "no data");
+            // logger.debug("_receiveMessagesTick");
+            //  logger.debug(JSON.stringify(rawData) || "no data");
             if (rawData) {
                 const data: {
                     [key: string]: { msgId: string; data: { [key: string]: any } }[];
@@ -250,8 +249,8 @@ export class Events {
                 topic,
                 ">"
             );
-            logger.debug("_receiveGroupMessagesTick");
-            logger.debug(JSON.stringify(rawData) || "no data");
+            // logger.debug("_receiveGroupMessagesTick");
+            //  logger.debug(JSON.stringify(rawData) || "no data");
             if (rawData) {
                 const data = this._parseStreamResponse(rawData);
                 const events: { [key: string]: Event } = this._parseEvents(data[topic]);
@@ -344,9 +343,8 @@ export class Events {
                 for (const { msgId, retries } of data.filter(
                     ({ idleSeconds, retries }) => idleSeconds > retries * this.#pendingRetryRate
                 )) {
-                    let result;
                     try {
-                        result = await this.#redis.xclaim(
+                        const result = await this.#redis.xclaim(
                             topic,
                             group,
                             this.#consumerId,
@@ -354,7 +352,7 @@ export class Events {
                             msgId
                         );
 
-                        if (result) {
+                        if (result && Array.isArray(result) && result.length && result[0]) {
                             const [event]: Event[] = Object.values(
                                 this._parseEvents(this._parseMessageResponse(result))
                             );
@@ -406,9 +404,7 @@ export class Events {
                             }
                         }
                     } catch (error) {
-                        logger.error(error);
-                        logger.error(result);
-                        logger.error(`Failed to claim pending "${topic}" event #${msgId}  - ${error.message}`);
+                        logger.error(`Failed to claim pending "${topic}" event #${msgId}  - ${error.message}`, error);
                     }
                 }
             }
