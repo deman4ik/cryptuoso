@@ -38,7 +38,7 @@ function modifyConfigEventsNames(configs: TopicConfigs) {
 
 const ExwatcherTopics = Object.values(EXCHANGES)
     .map((ex) => `${IN_EXWATCHER_TOPIC}-${ex}.*`)
-    .reduce((p, v) => ({ ...p, v: new TopicConfig() }), {});
+    .reduce((p, v) => ({ ...p, [v]: new TopicConfig() }), {});
 
 export const eventsManagementConfig: {
     common: TopicConfig;
