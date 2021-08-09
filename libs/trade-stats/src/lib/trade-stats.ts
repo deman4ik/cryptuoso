@@ -49,11 +49,11 @@ export class TradeStatsCalc implements TradeStats {
             } = position;
 
             const amountInCurrency = (currentBalance * (this.meta.leverage || 1) * portfolioShare) / 100;
-            const volume = amountInCurrency / entryPrice;
-            const profit = calcPositionProfit(direction, entryPrice, exitPrice, position.volume, feeRate);
-            let worstProfit = calcPositionProfit(direction, entryPrice, maxPrice, position.volume, feeRate);
+            const volume = round(amountInCurrency / entryPrice, 6);
+            const profit = calcPositionProfit(direction, entryPrice, exitPrice, volume, feeRate);
+            let worstProfit = calcPositionProfit(direction, entryPrice, maxPrice, volume, feeRate);
             if (worstProfit > 0) worstProfit = null;
-            netProfit = sum(netProfit, position.profit);
+            netProfit = sum(netProfit, profit);
             currentBalance = sum(this.meta.initialBalance, netProfit);
             results.push({
                 ...position,
@@ -117,7 +117,8 @@ export class TradeStatsCalc implements TradeStats {
     public async calculate(): Promise<TradeStats> {
         this.periodStats = this.calcPeriodStats(this.positions, this.prevPeriodStats);
         this.fullStats = this.calcFullStats(this.positions, this.prevFullStats, this.periodStats);
-        if (this.meta.job.type === "portfolio") this.fullStats.maxLeverage = this.getMaxLeverage(this.positions);
+        if (this.meta.job.type === "portfolio" && this.meta.job.recalc)
+            this.fullStats.maxLeverage = this.getMaxLeverage(this.positions);
         return {
             fullStats: this.fullStats,
             periodStats: this.periodStats
