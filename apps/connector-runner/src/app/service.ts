@@ -22,7 +22,6 @@ export default class ConnectorRunnerService extends HTTPService {
                     handler: this.HTTPWithAuthHandler.bind(this, this.checkBalance.bind(this))
                 },
                 checkUnknownOrders: {
-                    auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager, UserRoles.admin],
                     inputSchema: {
                         userExAccId: "uuid"

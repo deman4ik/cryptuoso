@@ -317,9 +317,9 @@ export default class ConnectorRunnerService extends BaseService {
                                     volume,
                                     remaining,
                                     executed,
-                                    last_checked,
+                                    last_checked_at,
                                     info
-                                ) ${sql.unnest(
+                                ) SELECT * FROM ${sql.unnest(
                                     this.db.util.prepareUnnest(unknownOrders, [
                                         "userExAccId",
                                         "exchange",
@@ -357,7 +357,7 @@ export default class ConnectorRunnerService extends BaseService {
                                         "jsonb"
                                     ]
                                 )} ON CONFLICT ON CONSTRAINT user_orders_unknown_pkey
-                                DO UPDATE price = excluded.price,
+                                DO UPDATE SET price = excluded.price,
                                 status = excluded.status,
                                 ex_timestamp = excluded.ex_timestamp,
                                 ex_last_trade_at = excluded.ex_last_trade_at,
