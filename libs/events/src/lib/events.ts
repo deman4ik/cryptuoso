@@ -8,6 +8,7 @@ import { CloudEvent as Event, CloudEventV1 } from "cloudevents";
 import { BaseError } from "@cryptuoso/errors";
 import { EventsCatalog, EventHandler, BASE_REDIS_PREFIX } from "./catalog";
 import dayjs from "@cryptuoso/dayjs";
+import { isArray } from "util";
 
 export { Event };
 export interface NewEvent<T> {
@@ -153,7 +154,7 @@ export class Events {
         try {
             //FIXME: must be [string, [string, string[]][]][]
             // but in ioredis it is [string, string[]][] 🤷
-            const rawData: any = await this.#state[topic].unbalanced.redis.xread(
+            const rawData = await this.#state[topic].unbalanced.redis.xread(
                 "BLOCK",
                 this.#blockTimeout,
                 "COUNT",
@@ -162,6 +163,8 @@ export class Events {
                 topic,
                 ...[this.#state[topic].unbalanced.lastId]
             );
+            logger.debug("_receiveMessagesTick");
+            logger.debug(JSON.stringify(rawData) || "no data");
             if (rawData) {
                 const data: {
                     [key: string]: { msgId: string; data: { [key: string]: any } }[];
@@ -247,8 +250,8 @@ export class Events {
                 topic,
                 ">"
             );
-            // logger.debug(rawData || "no data");
-
+            logger.debug("_receiveGroupMessagesTick");
+            logger.debug(JSON.stringify(rawData) || "no data");
             if (rawData) {
                 const data = this._parseStreamResponse(rawData);
                 const events: { [key: string]: Event } = this._parseEvents(data[topic]);
@@ -329,7 +332,6 @@ export class Events {
                 "+",
                 ...[this.#state[`${topic}-${group}`].pending.count]
             );
-            //  logger.debug(rawData || "no data");
 
             if (rawData) {
                 const data: {
@@ -342,14 +344,16 @@ export class Events {
                 for (const { msgId, retries } of data.filter(
                     ({ idleSeconds, retries }) => idleSeconds > retries * this.#pendingRetryRate
                 )) {
+                    let result;
                     try {
-                        const result = await this.#redis.xclaim(
+                        result = await this.#redis.xclaim(
                             topic,
                             group,
                             this.#consumerId,
                             this.#pendingMinIdleTime,
                             msgId
                         );
+
                         if (result) {
                             const [event]: Event[] = Object.values(
                                 this._parseEvents(this._parseMessageResponse(result))
@@ -403,6 +407,7 @@ export class Events {
                         }
                     } catch (error) {
                         logger.error(error);
+                        logger.error(result);
                         logger.error(`Failed to claim pending "${topic}" event #${msgId}  - ${error.message}`);
                     }
                 }
@@ -429,7 +434,7 @@ export class Events {
         try {
             if (!this.#state[`${topic}-${group}`]) this.#state[`${topic}-${group}`] = {};
             this.#state[`${topic}-${group}`].pending = {
-                count: 100,
+                count: 10,
                 timerId: setTimeout(this._receivePendingGroupMessagesTick.bind(this, topic, group), 0)
             };
         } catch (error) {
