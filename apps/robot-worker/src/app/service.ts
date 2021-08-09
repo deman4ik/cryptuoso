@@ -19,7 +19,6 @@ import { RobotWorkerError, RobotWorkerEvents, Signal } from "@cryptuoso/robot-ev
 import dayjs from "dayjs";
 import { BaseError } from "@cryptuoso/errors";
 import { Utils } from "./utils";
-import { BaseServiceError, BaseServiceEvents } from "@cryptuoso/events";
 import { TradeStatsRunnerEvents, TradeStatsRunnerPortfolioRobot } from "@cryptuoso/trade-stats-events";
 
 export type RobotWorkerServiceConfig = BaseServiceConfig;
@@ -170,20 +169,8 @@ export default class RobotWorkerService extends BaseService {
         try {
             const { exchange, asset, currency, timeframe } = job.data;
 
-            const { result, error } = await this.checkAlertsUtils(exchange, asset, currency, timeframe);
-            if (error) {
-                await this.events.emit<BaseServiceError>({
-                    type: BaseServiceEvents.ERROR,
-                    data: {
-                        service: this.name,
-                        exchange,
-                        asset,
-                        currency,
-                        timeframe,
-                        error
-                    }
-                });
-            } else if (result && Array.isArray(result) && result.length) {
+            const { result } = await this.checkAlertsUtils(exchange, asset, currency, timeframe);
+            if (result && Array.isArray(result) && result.length) {
                 await Promise.all(
                     result.map(async ({ robotId, status }) =>
                         this.addRobotJob({ robotId, type: RobotJobType.tick }, status)
