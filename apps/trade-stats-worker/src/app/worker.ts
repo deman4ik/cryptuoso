@@ -133,11 +133,25 @@ class StatsCalcWorker {
                 ${conditionExitDate}
         `;
 
-            const fullPositions = await this.db.pg.any<BasePosition>(sql`
-            ${querySelectPart}
-            ${queryFromAndConditionPart}
-            ORDER BY p.exit_date;
-        `);
+            const queryCommonPart = sql`
+                ${querySelectPart}
+                ${queryFromAndConditionPart}
+                ORDER BY p.exit_date;`;
+
+            const positionsCount = await this.db.pg.oneFirst<number>(sql`
+                        SELECT COUNT(1)
+                ${queryFromAndConditionPart};
+                    `);
+
+            if (positionsCount == 0) return false;
+
+            const fullPositions: BasePosition[] = await DataStream.from(
+                makeChunksGenerator(
+                    this.db.pg,
+                    queryCommonPart,
+                    positionsCount > this.defaultChunkSize ? this.defaultChunkSize : positionsCount
+                )
+            ).reduce(async (accum: BasePosition[], chunk: BasePosition[]) => [...accum, ...chunk], []);
 
             if (!fullPositions || !fullPositions.length) return;
             const newEmulatedStats = await this.calcStats([...fullPositions], { job }, initialEmulatedStats);
@@ -229,17 +243,20 @@ class StatsCalcWorker {
 
             if (positionsCount == 0) return false;
 
-            const newStats: TradeStats = await DataStream.from(
+            const positions: BasePosition[] = await DataStream.from(
                 makeChunksGenerator(
                     this.db.pg,
                     queryCommonPart,
                     positionsCount > this.defaultChunkSize ? this.defaultChunkSize : positionsCount
                 )
-            ).reduce(
-                async (prevStats: TradeStats, chunk: BasePosition[]) =>
-                    await this.calcStats(chunk, { job, initialBalance: portfolio.settings.initialBalance }, prevStats),
+            ).reduce(async (accum: BasePosition[], chunk: BasePosition[]) => [...accum, ...chunk], []);
+
+            const newStats: TradeStats = await this.calcStats(
+                positions,
+                { job, initialBalance: portfolio.settings.initialBalance },
                 initialStats
             );
+
             await this.db.pg.query(sql`
             UPDATE portfolios 
             SET full_stats = ${JSON.stringify(newStats.fullStats)},
@@ -313,16 +330,15 @@ class StatsCalcWorker {
 
             if (positionsCount == 0) return false;
 
-            const newStats: TradeStats = await DataStream.from(
+            const positions: BasePosition[] = await DataStream.from(
                 makeChunksGenerator(
                     this.db.pg,
                     queryCommonPart,
                     positionsCount > this.defaultChunkSize ? this.defaultChunkSize : positionsCount
                 )
-            ).reduce(
-                async (prevStats: TradeStats, chunk: BasePosition[]) => await this.calcStats(chunk, { job }, prevStats),
-                initialStats
-            );
+            ).reduce(async (accum: BasePosition[], chunk: BasePosition[]) => [...accum, ...chunk], []);
+
+            const newStats: TradeStats = await this.calcStats(positions, { job }, initialStats);
 
             await this.db.pg.query(sql`
             UPDATE user_robots 
@@ -397,19 +413,17 @@ class StatsCalcWorker {
 
             if (positionsCount == 0) return false;
 
-            const newStats: TradeStats = await DataStream.from(
+            const positions: BasePosition[] = await DataStream.from(
                 makeChunksGenerator(
                     this.db.pg,
                     queryCommonPart,
                     positionsCount > this.defaultChunkSize ? this.defaultChunkSize : positionsCount
                 )
-            ).reduce(
-                async (prevStats: TradeStats, chunk: BasePosition[]) =>
-                    await this.calcStats(
-                        chunk,
-                        { job, initialBalance: userPortfolio.settings.initialBalance },
-                        prevStats
-                    ),
+            ).reduce(async (accum: BasePosition[], chunk: BasePosition[]) => [...accum, ...chunk], []);
+
+            const newStats: TradeStats = await this.calcStats(
+                positions,
+                { job, initialBalance: userPortfolio.settings.initialBalance },
                 initialStats
             );
 

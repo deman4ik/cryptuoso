@@ -62,7 +62,7 @@ const worker = {
           ${excludeAssetsCondition}
           ORDER BY p.exit_date
         `,
-                10000
+                1000
             )
         ).reduce(async (accum: BasePosition[], chunk: BasePosition[]) => [...accum, ...chunk], []);
 
@@ -185,7 +185,7 @@ const worker = {
           ${portfolioRobotsCondition}
           ORDER BY p.exit_date
         `,
-                10000
+                1000
             )
         ).reduce(async (accum: BasePosition[], chunk: BasePosition[]) => [...accum, ...chunk], []);
 
