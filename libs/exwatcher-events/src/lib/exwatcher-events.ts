@@ -7,9 +7,37 @@ export const enum ExwatcherEvents {
     SUBSCRIBE = "in-exwatcher.subscribe",
     SUBSCRIBE_ALL = "in-exwatcher.subscribe-all",
     UNSUBSCRIBE_ALL = "in-exwatcher.unsubscribe-all",
-    ADD_MARKET = "in-exwatcher.add-market",
+    IMPORTER_STATUS = "in-exwatcher.importer-status",
     ERROR = "out-exwatcher.error"
 }
+
+export const EXCHANGES = {
+    binance_futures: "binance_futures",
+    bitfinex: "bitfinex",
+    huobipro: "huobipro",
+    kraken: "kraken",
+    kucoin: "kucoin"
+};
+
+export const getExwatcherSubscribeEventName = (exchange: string) => {
+    if (!Object.values(EXCHANGES).includes(exchange)) throw new Error(`Exchange ${exchange} is not supported`);
+    return `in-exwatcher-${exchange}.subscribe`;
+};
+
+export const getExwatcherSubscribeAllEventName = (exchange: string) => {
+    if (!Object.values(EXCHANGES).includes(exchange)) throw new Error(`Exchange ${exchange} is not supported`);
+    return `in-exwatcher-${exchange}.subscribe-all`;
+};
+
+export const getExwatcherUnsubscribeAllEventName = (exchange: string) => {
+    if (!Object.values(EXCHANGES).includes(exchange)) throw new Error(`Exchange ${exchange} is not supported`);
+    return `in-exwatcher-${exchange}.unsubscribe-all`;
+};
+
+export const getExwatcherImporterStatusEventName = (exchange: string) => {
+    if (!Object.values(EXCHANGES).includes(exchange)) throw new Error(`Exchange ${exchange} is not supported`);
+    return `in-exwatcher-${exchange}.importer-status`;
+};
 
 export const ExwatcherSchema = {
     [ExwatcherEvents.SUBSCRIBE]: {
@@ -22,12 +50,6 @@ export const ExwatcherSchema = {
     },
     [ExwatcherEvents.UNSUBSCRIBE_ALL]: {
         exchange: "string"
-    },
-    [ExwatcherEvents.ADD_MARKET]: {
-        exchange: "string",
-        asset: "string",
-        currency: "string",
-        available: { type: "number", integer: true }
     },
     [ExwatcherEvents.ERROR]: {
         exchange: "string",

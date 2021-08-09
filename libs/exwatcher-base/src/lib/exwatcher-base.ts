@@ -21,11 +21,17 @@ import {
     ExwatcherSchema,
     ExwatcherSubscribe,
     ExwatcherSubscribeAll,
-    ExwatcherUnsubscribeAll
+    ExwatcherUnsubscribeAll,
+    getExwatcherImporterStatusEventName,
+    getExwatcherSubscribeAllEventName,
+    getExwatcherSubscribeEventName,
+    getExwatcherUnsubscribeAllEventName
     // ExwatcherTick,
     // MarketEvents
 } from "@cryptuoso/exwatcher-events";
 import { sql } from "@cryptuoso/postgres";
+import { Status } from "@cryptuoso/importer-state";
+import logger from "@cryptuoso/logger";
 
 // !FIXME: ccxt.pro typings
 
@@ -80,27 +86,31 @@ export class ExwatcherBaseService extends BaseService {
         this.exchange = config.exchange;
         this.publicConnector = new PublicConnector();
         this.events.subscribe({
-            [ExwatcherEvents.SUBSCRIBE]: {
+            [getExwatcherSubscribeEventName(this.exchange)]: {
                 schema: ExwatcherSchema[ExwatcherEvents.SUBSCRIBE],
                 handler: this.addSubscription.bind(this)
             },
-            [ExwatcherEvents.SUBSCRIBE_ALL]: {
+            [getExwatcherSubscribeAllEventName(this.exchange)]: {
                 schema: ExwatcherSchema[ExwatcherEvents.SUBSCRIBE_ALL],
                 handler: this.subscribeAll.bind(this)
             },
-            [ExwatcherEvents.UNSUBSCRIBE_ALL]: {
+            [getExwatcherUnsubscribeAllEventName(this.exchange)]: {
                 schema: ExwatcherSchema[ExwatcherEvents.UNSUBSCRIBE_ALL],
                 handler: this.unsubscribeAll.bind(this)
             },
-            [ImporterWorkerEvents.FAILED]: {
-                schema: ImporterWorkerSchema[ImporterWorkerEvents.FAILED],
-                handler: this.handleImporterFailedEvent.bind(this),
-                unbalanced: true
-            },
-            [ImporterWorkerEvents.FINISHED]: {
-                schema: ImporterWorkerSchema[ImporterWorkerEvents.FINISHED],
-                handler: this.handleImporterFinishedEvent.bind(this),
-                unbalanced: true
+            [getExwatcherImporterStatusEventName(this.exchange)]: {
+                schema: {
+                    id: "uuid",
+                    type: {
+                        type: "enum",
+                        values: ["recent", "history"]
+                    },
+                    exchange: "string",
+                    asset: "string",
+                    currency: "string",
+                    status: "string"
+                },
+                handler: this.handleImporterStatusEvent.bind(this)
             }
         });
         this.addOnStartHandler(this.onServiceStart);
@@ -194,36 +204,26 @@ export class ExwatcherBaseService extends BaseService {
         }
     }
 
-    async handleImporterFinishedEvent(event: ImporterWorkerFinished) {
-        this.log.debug(event);
-        const { id: importerId, type, exchange, asset, currency } = event;
+    async handleImporterStatusEvent(event: ImporterWorkerFinished | ImporterWorkerFailed) {
+        const { id: importerId, type, exchange, asset, currency, status } = event;
         if (exchange !== this.exchange && type !== "recent") return;
         const subscription = Object.values(this.subscriptions).find(
             (sub: Exwatcher) =>
-                sub.status != ExwatcherStatus.subscribed &&
+                sub.status !== ExwatcherStatus.subscribed &&
                 (sub.importerId === importerId || (sub.asset === asset && sub.currency === currency))
         );
-        if (subscription) {
+        if (subscription && status === Status.finished) {
             this.log.info(`Importer ${importerId} finished!`);
             await this.subscribe(subscription);
-        }
-    }
-
-    async handleImporterFailedEvent(event: ImporterWorkerFailed) {
-        const { id: importerId, type, exchange, asset, currency, error } = event;
-        if (exchange !== this.exchange && type !== "recent") return;
-        const subscription = Object.values(this.subscriptions).find(
-            (sub: Exwatcher) =>
-                sub.status != ExwatcherStatus.subscribed &&
-                (sub.importerId === importerId || (sub.asset === asset && sub.currency === currency))
-        );
-
-        if (subscription && subscription.id) {
+        } else if (subscription && subscription.id && status === Status.failed) {
+            const { error } = event as ImporterWorkerFailed;
             this.log.warn(`Importer ${importerId} failed!`, error);
             this.subscriptions[subscription.id].status = ExwatcherStatus.failed;
             this.subscriptions[subscription.id].importStartedAt = null;
             this.subscriptions[subscription.id].error = error;
             await this.saveSubscription(this.subscriptions[subscription.id]);
+        } else {
+            logger.warn("Unknown Importer event", event);
         }
     }
 
@@ -238,9 +238,19 @@ export class ExwatcherBaseService extends BaseService {
             );
             if (pendingSubscriptions.length > 0)
                 await Promise.all(
-                    pendingSubscriptions.map(async ({ asset, currency }: Exwatcher) =>
-                        this.addSubscription({ exchange: this.exchange, asset, currency })
-                    )
+                    pendingSubscriptions.map(async (subscription: Exwatcher) => {
+                        const { asset, currency, importerId } = subscription;
+                        if (importerId) {
+                            const importer = await this.db.pg.maybeOne<{ status: Status }>(
+                                sql`SELECT status FROM importers WHERE id = ${importerId};`
+                            );
+                            if (importer.status === Status.finished) {
+                                await this.subscribe(subscription);
+                                return;
+                            }
+                        }
+                        await this.addSubscription({ exchange: this.exchange, asset, currency });
+                    })
                 );
 
             await this.watch();

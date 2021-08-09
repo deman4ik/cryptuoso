@@ -5,7 +5,10 @@ import {
     ExwatcherSubscribe,
     ExwatcherSubscribeAll,
     ExwatcherUnsubscribeAll,
-    ExwatcherAddMarket
+    ExwatcherAddMarket,
+    getExwatcherSubscribeEventName,
+    getExwatcherSubscribeAllEventName,
+    getExwatcherUnsubscribeAllEventName
 } from "@cryptuoso/exwatcher-events";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { sql } from "slonik";
@@ -41,7 +44,12 @@ export default class ExwatcherRunnerService extends HTTPService {
                 handler: this.unsubscribeAll
             },
             addMarket: {
-                inputSchema: ExwatcherSchema[ExwatcherEvents.ADD_MARKET],
+                inputSchema: {
+                    exchange: "string",
+                    asset: "string",
+                    currency: "string",
+                    available: { type: "number", integer: true }
+                },
                 roles: [UserRoles.admin, UserRoles.manager],
                 handler: this.addMarket
             },
@@ -102,7 +110,7 @@ export default class ExwatcherRunnerService extends HTTPService {
 
             if (!exwatcher) {
                 await this.events.emit<ExwatcherSubscribe>({
-                    type: ExwatcherEvents.SUBSCRIBE,
+                    type: getExwatcherSubscribeEventName(exchange),
                     data: {
                         exchange,
                         asset,
@@ -137,7 +145,7 @@ export default class ExwatcherRunnerService extends HTTPService {
             );
             if (count === 0) throw new Error(`Market ${exchange} doesn't exists`);
             await this.events.emit<ExwatcherSubscribeAll>({
-                type: ExwatcherEvents.SUBSCRIBE_ALL,
+                type: getExwatcherSubscribeAllEventName(exchange),
                 data: { exchange }
             });
             res.send({ result: "OK" });
@@ -165,7 +173,7 @@ export default class ExwatcherRunnerService extends HTTPService {
             );
             if (count === 0) throw new Error(`Market ${exchange} doesn't exists`);
             await this.events.emit<ExwatcherUnsubscribeAll>({
-                type: ExwatcherEvents.UNSUBSCRIBE_ALL,
+                type: getExwatcherUnsubscribeAllEventName(exchange),
                 data: { exchange }
             });
             res.send({ result: "OK" });

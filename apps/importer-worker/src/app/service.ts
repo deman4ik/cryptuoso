@@ -11,6 +11,7 @@ import {
     ImporterWorkerSchema,
     ImporterWorkerEvents
 } from "@cryptuoso/importer-events";
+import { getExwatcherImporterStatusEventName } from "@cryptuoso/exwatcher-events";
 import { sql } from "@cryptuoso/postgres";
 import { ImportWorker } from "./worker";
 
@@ -122,31 +123,51 @@ export default class ImporterWorkerService extends BaseService {
                             exchange: importer.exchange,
                             asset: importer.asset,
                             currency: importer.currency,
+                            status: Status.failed,
                             error: importer.error
                         }
                     });
+                    if (importer.type === "recent") {
+                        await this.events.emit<ImporterWorkerFailed>({
+                            type: getExwatcherImporterStatusEventName(importer.exchange),
+                            data: {
+                                id: importer.id,
+                                type: importer.type,
+                                exchange: importer.exchange,
+                                asset: importer.asset,
+                                currency: importer.currency,
+                                status: Status.failed,
+                                error: importer.error
+                            }
+                        });
+                    }
                     throw new BaseError(importer.error, { importerId: importer.id });
                 }
                 if (importer.isFinished)
-                    this.log.debug(`Emiting FINISHED event`, {
-                        id: importer.id,
-                        type: importer.type,
-                        exchange: importer.exchange,
-                        asset: importer.asset,
-                        currency: importer.currency,
-                        status: importer.status
+                    await this.events.emit<ImporterWorkerFinished>({
+                        type: ImporterWorkerEvents.FINISHED,
+                        data: {
+                            id: importer.id,
+                            type: importer.type,
+                            exchange: importer.exchange,
+                            asset: importer.asset,
+                            currency: importer.currency,
+                            status: Status.finished
+                        }
                     });
-                await this.events.emit<ImporterWorkerFinished>({
-                    type: ImporterWorkerEvents.FINISHED,
-                    data: {
-                        id: importer.id,
-                        type: importer.type,
-                        exchange: importer.exchange,
-                        asset: importer.asset,
-                        currency: importer.currency,
-                        status: importer.status
-                    }
-                });
+                if (importer.type === "recent") {
+                    await this.events.emit<ImporterWorkerFinished>({
+                        type: getExwatcherImporterStatusEventName(importer.exchange),
+                        data: {
+                            id: importer.id,
+                            type: importer.type,
+                            exchange: importer.exchange,
+                            asset: importer.asset,
+                            currency: importer.currency,
+                            status: Status.finished
+                        }
+                    });
+                }
                 this.log.info(`Job ${job.id} processed - Importer is ${importer.status}!`);
                 return importer.status;
             } finally {
