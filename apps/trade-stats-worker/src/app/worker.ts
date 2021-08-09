@@ -22,11 +22,9 @@ import { PortfolioSettings } from "@cryptuoso/portfolio-state";
 import { equals } from "@cryptuoso/helpers";
 
 class StatsCalcWorker {
-    private dummy = "-";
     #log: Logger;
     #db: { sql: typeof sql; pg: typeof pg; util: typeof pgUtil };
-    maxSingleQueryPosCount = 10000;
-    defaultChunkSize = 10000;
+    defaultChunkSize = 1000;
 
     constructor() {
         this.#log = logger;
@@ -205,6 +203,8 @@ class StatsCalcWorker {
             if (!recalc && initialStats?.fullStats) {
                 calcFrom = initialStats.fullStats.lastPosition.exitDate;
             }
+            if (calcFrom) logger.debug(`Calculating portfolio #${portfolioId} stats from ${calcFrom}`);
+            else logger.debug(`Calculating portfolio #${portfolioId} stats full`);
 
             const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
             const querySelectPart = sql`
@@ -233,7 +233,7 @@ class StatsCalcWorker {
                 makeChunksGenerator(
                     this.db.pg,
                     queryCommonPart,
-                    positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
+                    positionsCount > this.defaultChunkSize ? this.defaultChunkSize : positionsCount
                 )
             ).reduce(
                 async (prevStats: TradeStats, chunk: BasePosition[]) =>
@@ -288,7 +288,8 @@ class StatsCalcWorker {
             if (!recalc && initialStats?.fullStats) {
                 calcFrom = initialStats.fullStats.lastPosition.exitDate;
             }
-
+            if (calcFrom) logger.debug(`Calculating User Robot #${userRobotId} stats from ${calcFrom}`);
+            else logger.debug(`Calculating  User Robot #${userRobotId} stats full`);
             const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
             const querySelectPart = sql`
             SELECT p.id, p.direction, p.entry_date, p.entry_price, p.exit_date, p.exit_price, p.exit_executed as volume, p.worst_profit, p.profit, p.bars_held
@@ -316,7 +317,7 @@ class StatsCalcWorker {
                 makeChunksGenerator(
                     this.db.pg,
                     queryCommonPart,
-                    positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
+                    positionsCount > this.defaultChunkSize ? this.defaultChunkSize : positionsCount
                 )
             ).reduce(
                 async (prevStats: TradeStats, chunk: BasePosition[]) => await this.calcStats(chunk, { job }, prevStats),
@@ -370,6 +371,8 @@ class StatsCalcWorker {
             if (!recalc && initialStats?.fullStats) {
                 calcFrom = initialStats.fullStats.lastPosition.exitDate;
             }
+            if (calcFrom) logger.debug(`Calculating User Portfolio #${userPortfolioId} stats from ${calcFrom}`);
+            else logger.debug(`Calculating  User Portfolio #${userPortfolioId} stats full`);
 
             const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
             const querySelectPart = sql`
@@ -398,7 +401,7 @@ class StatsCalcWorker {
                 makeChunksGenerator(
                     this.db.pg,
                     queryCommonPart,
-                    positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
+                    positionsCount > this.defaultChunkSize ? this.defaultChunkSize : positionsCount
                 )
             ).reduce(
                 async (prevStats: TradeStats, chunk: BasePosition[]) =>
