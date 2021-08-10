@@ -59,7 +59,7 @@ export default class RobotRunnerService extends HTTPService {
 
     async onServiceStart() {
         this.createQueue(Queues.robot);
-
+        this.createQueue(Queues.alerts);
         this.createQueue(Queues.robotRunner);
         this.createWorker(Queues.robotRunner, this.process);
 
@@ -424,7 +424,7 @@ export default class RobotRunnerService extends HTTPService {
                 await Promise.all(
                     entities.map(async ({ exchange, asset, currency, timeframe }) => {
                         await this.addJob(
-                            Queues.robot,
+                            Queues.alerts,
                             "checkAlerts",
                             { exchange, asset, currency, timeframe },
                             {

@@ -106,6 +106,7 @@ export interface RobotJob {
 
 export const enum Queues {
     robot = "robot",
+    alerts = "alerts",
     robotRunner = "robot-runner"
 }
 
