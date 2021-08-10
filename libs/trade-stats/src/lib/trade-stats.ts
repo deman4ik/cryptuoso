@@ -35,7 +35,7 @@ export class TradeStatsCalc implements TradeStats {
 
     private preparePortfolioPositions(allPositions: BasePosition[], fullStats: FullStats): BasePosition[] {
         let netProfit = 0;
-        let currentBalance = fullStats.currentBalance ?? this.meta.initialBalance;
+        let currentBalance = fullStats?.currentBalance ?? this.meta.initialBalance;
         let prevBalance = currentBalance;
         const { feeRate } = <TradeStatsPortfolio>this.meta.job;
         const results: BasePosition[] = [];
