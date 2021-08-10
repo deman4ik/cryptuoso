@@ -54,7 +54,9 @@ export default class RobotWorkerService extends BaseService {
         });
         await this.loadCode();
         this.createQueue(Queues.robot);
-        this.createWorker(Queues.robot, this.process);
+        this.createQueue(Queues.alerts);
+        this.createWorker(Queues.robot, this.processRobot);
+        this.createWorker(Queues.alerts, this.processAlerts);
     }
 
     async onServiceStop(): Promise<void> {
@@ -142,12 +144,27 @@ export default class RobotWorkerService extends BaseService {
         if (status === RobotStatus.started) await this.queueRobotJob(robotId);
     }
 
-    async process(job: Job) {
+    async processRobot(job: Job) {
         this.log.debug(`Processing job ${job.name} #${job.id}`);
         switch (job.name) {
             case "job":
                 await this.robotJob(job);
                 break;
+            case "checkAlerts": //TODO: deprecate
+                await this.checkAlerts(job);
+                break;
+            default:
+                this.log.error(`Unknow job ${job.name}`);
+                this.log.error(job);
+                break;
+        }
+        this.log.debug(`Finished processing job ${job.name} #${job.id}`);
+        return { result: "ok" };
+    }
+
+    async processAlerts(job: Job) {
+        this.log.debug(`Processing job ${job.name} #${job.id}`);
+        switch (job.name) {
             case "checkAlerts":
                 await this.checkAlerts(job);
                 break;
