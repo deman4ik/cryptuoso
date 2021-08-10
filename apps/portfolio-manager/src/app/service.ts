@@ -527,7 +527,7 @@ export default class PortfolioManagerService extends HTTPService {
 
     async buildPortfolios({ exchange }: PotrfolioManagerBuildPortfolios) {
         const portfolios = await this.db.pg.many<{ id: PortfolioDB["id"] }>(sql`
-        SELECT id FROM portfolios where exchange = ${exchange};
+        SELECT id FROM portfolios where exchange = ${exchange} and status = 'stopped';
         `);
         for (const { id } of portfolios) {
             await this.addJob<PortfolioBuilderJob>(
