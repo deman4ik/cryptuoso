@@ -223,6 +223,7 @@ export default class PortfolioManagerService extends HTTPService {
             name: `${exchange} ${this.generateName(options)}`,
             exchange,
             available: 5,
+            status: "stopped",
             base: true,
             settings: {
                 options,
@@ -237,14 +238,14 @@ export default class PortfolioManagerService extends HTTPService {
         }));
         await this.db.pg.query(sql`
                 insert into portfolios
-                (id, code, name, exchange, available, settings)
+                (id, code, name, exchange, available, status, base, settings)
                 SELECT *
                 FROM ${sql.unnest(
                     this.db.util.prepareUnnest(
                         allPortfolios.map((p) => ({ ...p, settings: JSON.stringify(p.settings) })),
-                        ["id", "code", "name", "exchange", "available", "settings"]
+                        ["id", "code", "name", "exchange", "available", "status", "base", "settings"]
                     ),
-                    ["uuid", "varchar", "varchar", "varchar", "int8", "jsonb"]
+                    ["uuid", "varchar", "varchar", "varchar", "int8", "varchar", "bool", "jsonb"]
                 )}
                 ON CONFLICT ON CONSTRAINT portfolios_code_key
                 DO UPDATE SET settings = excluded.settings;`);
@@ -526,7 +527,7 @@ export default class PortfolioManagerService extends HTTPService {
 
     async buildPortfolios({ exchange }: PotrfolioManagerBuildPortfolios) {
         const portfolios = await this.db.pg.many<{ id: PortfolioDB["id"] }>(sql`
-        SELECT id FROM portfolios where exchange = ${exchange};
+        SELECT id FROM portfolios where exchange = ${exchange} and status = 'stopped';
         `);
         for (const { id } of portfolios) {
             await this.addJob<PortfolioBuilderJob>(

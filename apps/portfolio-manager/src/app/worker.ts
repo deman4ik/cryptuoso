@@ -20,7 +20,7 @@ const worker = {
     async buildPortfolio(job: PortfolioBuilderJob) {
         logger.info(`Initing #${job.portfolioId} portfolio builder`);
         const portfolio = await pg.one<PortfolioState>(sql`
-            SELECT p.id, p.code, p.name, p.exchange, p.available, p.settings,
+            SELECT p.id, p.code, p.name, p.exchange, p.available, p.status, p.base, p.settings,
                    json_build_object('minTradeAmount', m.min_trade_amount,
                                      'feeRate', m.fee_rate) as context
             FROM portfolios p, 
@@ -79,7 +79,8 @@ const worker = {
             UPDATE portfolios SET full_stats = ${JSON.stringify(
                 result.portfolio.fullStats
             )}, period_stats = ${JSON.stringify(result.portfolio.periodStats)},
-            settings = ${JSON.stringify(result.portfolio.settings)}
+            settings = ${JSON.stringify(result.portfolio.settings)},
+            status = 'started'
             WHERE id = ${result.portfolio.id}
             `);
 
@@ -147,6 +148,7 @@ const worker = {
         }>(sql`SELECT pr.robot_id FROM portfolio_robots pr, v_portfolios p, robots r
         WHERE pr.portfolio_id = p.id 
         AND pr.robot_id = r.id
+        AND p.status = 'started'
         AND p.option_risk = ${risk}
         AND p.option_profit = ${profit}
         AND p.option_win_rate = ${winRate}
