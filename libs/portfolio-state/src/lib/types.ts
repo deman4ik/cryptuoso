@@ -28,6 +28,7 @@ export interface PortfolioDB {
     name?: string;
     exchange: string;
     available: number;
+    status: "started" | "stopped";
     settings: PortfolioSettings;
     fullStats?: FullStats;
     periodStats?: PeriodStats[];

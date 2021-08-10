@@ -143,8 +143,10 @@ export default class StatisticCalcRunnerService extends HTTPService {
         const portfolios = await this.db.pg.any<{ portfolioId: string }>(
             sql`
             SELECT pr.portfolio_id 
-            FROM portfolio_robots pr
-            WHERE pr.robot_id = ${robotId}
+            FROM portfolio_robots pr, portfolios p
+            WHERE p.id = pr.portfolio_id
+            and p.status = 'started'
+            and pr.robot_id = ${robotId}
             and pr.active = true;
             `
         );
