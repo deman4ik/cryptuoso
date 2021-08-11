@@ -24,11 +24,7 @@ const worker = {
                    json_build_object('minTradeAmount', m.min_trade_amount,
                                      'feeRate', m.fee_rate) as context
             FROM portfolios p, 
-                 (SELECT mk.exchange, 
-	                     max(mk.min_amount_currency) as min_trade_amount, 
-	                     max(mk.fee_rate) as fee_rate 
-	              FROM v_markets mk
-                  GROUP BY mk.exchange) m
+            mv_exchange_info m
             WHERE p.exchange = m.exchange
               AND p.id = ${job.portfolioId}; 
         `);
@@ -112,11 +108,7 @@ const worker = {
                    json_build_object('minTradeAmount', m.min_trade_amount,
                                      'feeRate', m.fee_rate) as context
             FROM user_portfolios p, user_portfolio_settings ups,
-                 (SELECT mk.exchange, 
-	                     max(mk.min_amount_currency) as min_trade_amount, 
-	                     max(mk.fee_rate) as fee_rate 
-	              FROM v_markets mk
-                  GROUP BY mk.exchange) m
+            mv_exchange_info m
             WHERE p.exchange = m.exchange
               AND p.id = ups.user_portfolio_id
               AND (ups.active_from is null OR ups.active_from = ((SELECT max(s.active_from) AS max
@@ -137,7 +129,7 @@ const worker = {
             portfolio.settings.excludeAssets &&
             Array.isArray(portfolio.settings.excludeAssets) &&
             portfolio.settings.excludeAssets.length
-                ? sql`AND r.asset IN (${sql.join(portfolio.settings.excludeAssets, sql`, `)})`
+                ? sql`AND r.asset NOT IN (${sql.join(portfolio.settings.excludeAssets, sql`, `)})`
                 : sql``;
 
         const userPortfolioBuilder = new PortfolioBuilder<UserPortfolioState>(portfolio, subject);

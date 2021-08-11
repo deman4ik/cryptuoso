@@ -11,6 +11,7 @@ const portfolio: PortfolioState = {
     code: "testCode",
     exchange: "binance_futures",
     available: 5,
+    status: "stopped",
     settings: {
         options: {
             diversification: true,

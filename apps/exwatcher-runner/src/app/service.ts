@@ -221,6 +221,7 @@ export default class ExwatcherRunnerService extends HTTPService {
                 });
                 throw new Error(`Failed to update ${errors.length} markets of ${markets.length}`);
             }
+            await this.db.pg.query(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY mv_exchange_info;`);
             this.log.info(`Updated ${markets.length} markets!`);
         } catch (error) {
             this.log.error("Failed to update markets", error);
