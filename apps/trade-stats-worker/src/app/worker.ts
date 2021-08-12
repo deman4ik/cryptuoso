@@ -137,7 +137,7 @@ class StatsCalcWorker {
             const queryCommonPart = sql`
                 ${querySelectPart}
                 ${queryFromAndConditionPart}
-                ORDER BY p.exit_date;`;
+                ORDER BY p.exit_date`;
 
             const positionsCount = await this.db.pg.oneFirst<number>(sql`
                         SELECT COUNT(1)
@@ -250,7 +250,7 @@ class StatsCalcWorker {
             const queryCommonPart = sql`
             ${querySelectPart}
             ${queryFromAndConditionPart}
-            ORDER BY exit_date
+            ORDER BY p.exit_date
         `;
 
             const positionsCount = await this.db.pg.oneFirst<number>(sql`
