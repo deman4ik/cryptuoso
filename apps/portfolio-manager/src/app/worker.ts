@@ -72,13 +72,36 @@ const worker = {
 
         await pg.transaction(async (t) => {
             await t.query(sql`
-            UPDATE portfolios SET full_stats = ${JSON.stringify(
-                result.portfolio.fullStats
-            )}, period_stats = ${JSON.stringify(result.portfolio.periodStats)},
+            UPDATE portfolios SET full_stats = ${JSON.stringify(result.portfolio.fullStats)}
             settings = ${JSON.stringify(result.portfolio.settings)},
             status = 'started'
             WHERE id = ${result.portfolio.id}
             `);
+
+            await t.query(sql`DELETE FROM portfolio_period_stats WHERE portfolio_id = ${result.portfolio.id}`);
+
+            await t.query(sql`
+            INSERT INTO portfolio_period_stats
+            (portfolio_id,
+            period,
+            year,
+            quarter,
+            month,
+            date_from,
+            date_to,
+            stats )
+            SELECT * FROM
+        ${sql.unnest(
+            this.db.util.prepareUnnest(
+                result.portfolio.periodStats.map((s) => ({
+                    ...s,
+                    portfolioId: result.portfolio.id,
+                    stats: JSON.stringify(s.stats)
+                })),
+                ["portfolioId", "period", "year", "quarter", "month", "dateFrom", "dateTo", "stats"]
+            ),
+            ["uuid", "varchar", "int8", "int8", "int8", "timestamp", "timestamp", "jsonb"]
+        )}`);
 
             await t.query(sql`
                 DELETE FROM  portfolio_robots 

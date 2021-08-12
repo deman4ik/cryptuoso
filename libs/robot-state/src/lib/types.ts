@@ -13,7 +13,7 @@ import {
 } from "@cryptuoso/market";
 import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 import { IndicatorState } from "@cryptuoso/robot-indicators";
-import { FullStats, PeriodStats } from "@cryptuoso/trade-stats";
+import { BaseStats, FullStats, PeriodStats } from "@cryptuoso/trade-stats";
 
 export const enum RobotStatus {
     starting = "starting",
@@ -84,9 +84,9 @@ export interface RobotState {
     stoppedAt?: string;
     backtest?: boolean;
     fullStats?: FullStats;
-    periodStats?: PeriodStats[];
+    periodStats?: PeriodStats<BaseStats>[];
     emulatedFullStats?: FullStats;
-    emulatedPeriodStats?: PeriodStats[];
+    emulatedPeriodStats?: PeriodStats<BaseStats>[];
 }
 
 export const enum RobotJobType {

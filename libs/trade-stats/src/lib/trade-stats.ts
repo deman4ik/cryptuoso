@@ -246,7 +246,12 @@ export class TradeStatsCalc implements TradeStats {
             emulateNextPosition: nvl(fullStats?.emulateNextPosition, false),
             marginNextPosition: nvl(fullStats?.marginNextPosition, 1),
             zScore: nvl(fullStats?.zScore),
-            maxLeverage: nvl(fullStats?.maxLeverage)
+            maxLeverage: nvl(fullStats?.maxLeverage),
+            periodStats: nvl(fullStats?.periodStats, {
+                year: {},
+                quarter: {},
+                month: {}
+            })
         };
         if (!stats.firstPosition) stats.firstPosition = positions[0];
         if (this.hasBalance && stats.initialBalance === null) {
@@ -515,14 +520,50 @@ export class TradeStatsCalc implements TradeStats {
 
     private calcFullStats(
         positions: BasePosition[],
-
         prevStats: FullStats,
         periodStats: TradeStats["periodStats"]
     ): FullStats {
         const stats = { ...prevStats, ...this.calcStats(positions, prevStats) };
-        const years = Object.values(periodStats.year);
-        const quarters = Object.values(periodStats.quarter);
-        const months = Object.values(periodStats.month);
+
+        for (const [key, value] of Object.entries(periodStats.year)) {
+            stats.periodStats.year[key] = {
+                ...value,
+                stats: {
+                    tradesCount: value.stats.tradesCount,
+                    percentNetProfit: value.stats.percentNetProfit,
+                    percentGrossProfit: value.stats.percentGrossProfit,
+                    percentGrossLoss: value.stats.percentGrossLoss
+                }
+            };
+        }
+
+        for (const [key, value] of Object.entries(periodStats.quarter)) {
+            stats.periodStats.quarter[key] = {
+                ...value,
+                stats: {
+                    tradesCount: value.stats.tradesCount,
+                    percentNetProfit: value.stats.percentNetProfit,
+                    percentGrossProfit: value.stats.percentGrossProfit,
+                    percentGrossLoss: value.stats.percentGrossLoss
+                }
+            };
+        }
+
+        for (const [key, value] of Object.entries(periodStats.month)) {
+            stats.periodStats.month[key] = {
+                ...value,
+                stats: {
+                    tradesCount: value.stats.tradesCount,
+                    percentNetProfit: value.stats.percentNetProfit,
+                    percentGrossProfit: value.stats.percentGrossProfit,
+                    percentGrossLoss: value.stats.percentGrossLoss
+                }
+            };
+        }
+
+        const years = Object.values(stats.periodStats.year);
+        const quarters = Object.values(stats.periodStats.quarter);
+        const months = Object.values(stats.periodStats.month);
         stats.avgTradesCountYears = average(...years.map(({ stats: { tradesCount } }) => tradesCount));
         stats.avgTradesCountQuarters = average(...quarters.map(({ stats: { tradesCount } }) => tradesCount));
         stats.avgTradesCountMonths = average(...months.map(({ stats: { tradesCount } }) => tradesCount));

@@ -151,7 +151,255 @@ export const robotStatsResult: TradeStats = {
         emulateNextPosition: false,
         marginNextPosition: 1,
         zScore: null,
-        maxLeverage: null
+        maxLeverage: null,
+        periodStats: {
+            year: {
+                "2019": {
+                    period: "year",
+                    year: 2019,
+                    dateFrom: "2019-01-01T00:00:00.000Z",
+                    dateTo: "2019-12-31T23:59:59.999Z",
+                    stats: { tradesCount: 1, percentNetProfit: -0.07, percentGrossProfit: 0, percentGrossLoss: -0.07 }
+                },
+                "2020": {
+                    period: "year",
+                    year: 2020,
+                    dateFrom: "2020-01-01T00:00:00.000Z",
+                    dateTo: "2020-12-31T23:59:59.999Z",
+                    stats: {
+                        tradesCount: 21,
+                        percentNetProfit: 7.84,
+                        percentGrossProfit: 11.13,
+                        percentGrossLoss: -3.29
+                    }
+                },
+                "2021": {
+                    period: "year",
+                    year: 2021,
+                    dateFrom: "2021-01-01T00:00:00.000Z",
+                    dateTo: "2021-12-31T23:59:59.999Z",
+                    stats: {
+                        tradesCount: 7,
+                        percentNetProfit: 26.14,
+                        percentGrossProfit: 35.79,
+                        percentGrossLoss: -9.65
+                    }
+                }
+            },
+            quarter: {
+                "2019.4": {
+                    period: "quarter",
+                    year: 2019,
+                    quarter: 4,
+                    dateFrom: "2019-10-01T00:00:00.000Z",
+                    dateTo: "2019-12-31T23:59:59.999Z",
+                    stats: { tradesCount: 1, percentNetProfit: -0.07, percentGrossProfit: 0, percentGrossLoss: -0.07 }
+                },
+                "2020.1": {
+                    period: "quarter",
+                    year: 2020,
+                    quarter: 1,
+                    dateFrom: "2020-01-01T00:00:00.000Z",
+                    dateTo: "2020-03-31T23:59:59.999Z",
+                    stats: {
+                        tradesCount: 6,
+                        percentNetProfit: -0.24,
+                        percentGrossProfit: 1.64,
+                        percentGrossLoss: -1.89
+                    }
+                },
+                "2020.2": {
+                    period: "quarter",
+                    year: 2020,
+                    quarter: 2,
+                    dateFrom: "2020-04-01T00:00:00.000Z",
+                    dateTo: "2020-06-30T23:59:59.999Z",
+                    stats: { tradesCount: 6, percentNetProfit: 1.54, percentGrossProfit: 2.23, percentGrossLoss: -0.69 }
+                },
+                "2020.3": {
+                    period: "quarter",
+                    year: 2020,
+                    quarter: 3,
+                    dateFrom: "2020-07-01T00:00:00.000Z",
+                    dateTo: "2020-09-30T23:59:59.999Z",
+                    stats: {
+                        tradesCount: 5,
+                        percentNetProfit: -0.18,
+                        percentGrossProfit: 0.29,
+                        percentGrossLoss: -0.47
+                    }
+                },
+                "2020.4": {
+                    period: "quarter",
+                    year: 2020,
+                    quarter: 4,
+                    dateFrom: "2020-10-01T00:00:00.000Z",
+                    dateTo: "2020-12-31T23:59:59.999Z",
+                    stats: { tradesCount: 4, percentNetProfit: 6.66, percentGrossProfit: 6.89, percentGrossLoss: -0.23 }
+                },
+                "2021.1": {
+                    period: "quarter",
+                    year: 2021,
+                    quarter: 1,
+                    dateFrom: "2021-01-01T00:00:00.000Z",
+                    dateTo: "2021-03-31T23:59:59.999Z",
+                    stats: {
+                        tradesCount: 7,
+                        percentNetProfit: 26.14,
+                        percentGrossProfit: 35.79,
+                        percentGrossLoss: -9.65
+                    }
+                }
+            },
+            month: {
+                "2019.11": {
+                    period: "month",
+                    year: 2019,
+                    month: 11,
+                    dateFrom: "2019-11-01T00:00:00.000Z",
+                    dateTo: "2019-11-30T23:59:59.999Z",
+                    stats: { tradesCount: 1, percentNetProfit: -0.07, percentGrossProfit: 0, percentGrossLoss: -0.07 }
+                },
+                "2019.12": {
+                    period: "month",
+                    year: 2019,
+                    month: 12,
+                    dateFrom: "2019-12-01T00:00:00.000Z",
+                    dateTo: "2019-12-31T23:59:59.999Z",
+                    stats: { tradesCount: 0, percentNetProfit: 0, percentGrossProfit: null, percentGrossLoss: null }
+                },
+                "2020.1": {
+                    period: "month",
+                    year: 2020,
+                    month: 1,
+                    dateFrom: "2020-01-01T00:00:00.000Z",
+                    dateTo: "2020-01-31T23:59:59.999Z",
+                    stats: { tradesCount: 2, percentNetProfit: 0.14, percentGrossProfit: 0.56, percentGrossLoss: -0.42 }
+                },
+                "2020.2": {
+                    period: "month",
+                    year: 2020,
+                    month: 2,
+                    dateFrom: "2020-02-01T00:00:00.000Z",
+                    dateTo: "2020-02-29T23:59:59.999Z",
+                    stats: {
+                        tradesCount: 4,
+                        percentNetProfit: -0.38,
+                        percentGrossProfit: 1.08,
+                        percentGrossLoss: -1.46
+                    }
+                },
+                "2020.3": {
+                    period: "month",
+                    year: 2020,
+                    month: 3,
+                    dateFrom: "2020-03-01T00:00:00.000Z",
+                    dateTo: "2020-03-31T23:59:59.999Z",
+                    stats: { tradesCount: 0, percentNetProfit: 0, percentGrossProfit: null, percentGrossLoss: null }
+                },
+                "2020.4": {
+                    period: "month",
+                    year: 2020,
+                    month: 4,
+                    dateFrom: "2020-04-01T00:00:00.000Z",
+                    dateTo: "2020-04-30T23:59:59.999Z",
+                    stats: { tradesCount: 1, percentNetProfit: -0.31, percentGrossProfit: 0, percentGrossLoss: -0.31 }
+                },
+                "2020.5": {
+                    period: "month",
+                    year: 2020,
+                    month: 5,
+                    dateFrom: "2020-05-01T00:00:00.000Z",
+                    dateTo: "2020-05-31T23:59:59.999Z",
+                    stats: { tradesCount: 3, percentNetProfit: 1.56, percentGrossProfit: 1.81, percentGrossLoss: -0.26 }
+                },
+                "2020.6": {
+                    period: "month",
+                    year: 2020,
+                    month: 6,
+                    dateFrom: "2020-06-01T00:00:00.000Z",
+                    dateTo: "2020-06-30T23:59:59.999Z",
+                    stats: { tradesCount: 2, percentNetProfit: 0.29, percentGrossProfit: 0.42, percentGrossLoss: -0.12 }
+                },
+                "2020.7": {
+                    period: "month",
+                    year: 2020,
+                    month: 7,
+                    dateFrom: "2020-07-01T00:00:00.000Z",
+                    dateTo: "2020-07-31T23:59:59.999Z",
+                    stats: { tradesCount: 0, percentNetProfit: 0, percentGrossProfit: null, percentGrossLoss: null }
+                },
+                "2020.8": {
+                    period: "month",
+                    year: 2020,
+                    month: 8,
+                    dateFrom: "2020-08-01T00:00:00.000Z",
+                    dateTo: "2020-08-31T23:59:59.999Z",
+                    stats: { tradesCount: 4, percentNetProfit: 0.03, percentGrossProfit: 0.29, percentGrossLoss: -0.26 }
+                },
+                "2020.9": {
+                    period: "month",
+                    year: 2020,
+                    month: 9,
+                    dateFrom: "2020-09-01T00:00:00.000Z",
+                    dateTo: "2020-09-30T23:59:59.999Z",
+                    stats: { tradesCount: 1, percentNetProfit: -0.22, percentGrossProfit: 0, percentGrossLoss: -0.22 }
+                },
+                "2020.10": {
+                    period: "month",
+                    year: 2020,
+                    month: 10,
+                    dateFrom: "2020-10-01T00:00:00.000Z",
+                    dateTo: "2020-10-31T23:59:59.999Z",
+                    stats: { tradesCount: 1, percentNetProfit: -0.23, percentGrossProfit: 0, percentGrossLoss: -0.23 }
+                },
+                "2020.11": {
+                    period: "month",
+                    year: 2020,
+                    month: 11,
+                    dateFrom: "2020-11-01T00:00:00.000Z",
+                    dateTo: "2020-11-30T23:59:59.999Z",
+                    stats: { tradesCount: 2, percentNetProfit: 5.88, percentGrossProfit: 5.88, percentGrossLoss: 0 }
+                },
+                "2020.12": {
+                    period: "month",
+                    year: 2020,
+                    month: 12,
+                    dateFrom: "2020-12-01T00:00:00.000Z",
+                    dateTo: "2020-12-31T23:59:59.999Z",
+                    stats: { tradesCount: 1, percentNetProfit: 0.97, percentGrossProfit: 0.97, percentGrossLoss: 0 }
+                },
+                "2021.1": {
+                    period: "month",
+                    year: 2021,
+                    month: 1,
+                    dateFrom: "2021-01-01T00:00:00.000Z",
+                    dateTo: "2021-01-31T23:59:59.999Z",
+                    stats: {
+                        tradesCount: 3,
+                        percentNetProfit: 6.86,
+                        percentGrossProfit: 14.47,
+                        percentGrossLoss: -7.61
+                    }
+                },
+                "2021.2": {
+                    period: "month",
+                    year: 2021,
+                    month: 2,
+                    dateFrom: "2021-02-01T00:00:00.000Z",
+                    dateTo: "2021-02-28T23:59:59.999Z",
+                    stats: { tradesCount: 1, percentNetProfit: 13.17, percentGrossProfit: 13.17, percentGrossLoss: 0 }
+                },
+                "2021.3": {
+                    period: "month",
+                    year: 2021,
+                    month: 3,
+                    dateFrom: "2021-03-01T00:00:00.000Z",
+                    dateTo: "2021-03-31T23:59:59.999Z",
+                    stats: { tradesCount: 3, percentNetProfit: 4.31, percentGrossProfit: 6, percentGrossLoss: -1.69 }
+                }
+            }
+        }
     },
     periodStats: {
         year: {
@@ -185,7 +433,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: 0,
                     recoveryFactor: -1,
                     payoffRatio: 0,
-
                     lastUpdatedAt: "2019-11-08T00:00:00.000Z",
                     firstPosition: {
                         id: "0d6b54a9-bd1b-496b-a3f2-82c30a1b6744",
@@ -243,7 +490,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: 3.38,
                     recoveryFactor: 3.98,
                     payoffRatio: 3.08,
-
                     lastUpdatedAt: "2020-12-08T08:00:00.000Z",
                     firstPosition: {
                         id: "d8055978-5abe-4c18-8a06-599288656b3d",
@@ -301,7 +547,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: 3.71,
                     recoveryFactor: 2.09,
                     payoffRatio: 2.78,
-
                     lastUpdatedAt: "2021-03-21T08:00:48.197Z",
                     firstPosition: {
                         id: "7ceeaa63-a4f7-47c0-b7a2-17c5b5fc827c",
@@ -362,7 +607,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: 0,
                     recoveryFactor: -1,
                     payoffRatio: 0,
-
                     lastUpdatedAt: "2019-11-08T00:00:00.000Z",
                     firstPosition: {
                         id: "0d6b54a9-bd1b-496b-a3f2-82c30a1b6744",
@@ -421,7 +665,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: 0.87,
                     recoveryFactor: -0.16,
                     payoffRatio: 0.87,
-
                     lastUpdatedAt: "2020-02-26T16:00:00.000Z",
                     firstPosition: {
                         id: "d8055978-5abe-4c18-8a06-599288656b3d",
@@ -480,7 +723,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: 3.23,
                     recoveryFactor: 2.21,
                     payoffRatio: 3.23,
-
                     lastUpdatedAt: "2020-06-11T16:00:00.000Z",
                     firstPosition: {
                         id: "99fd0f95-06bb-46cc-a70c-9e842d5c668c",
@@ -539,7 +781,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: 0.61,
                     recoveryFactor: -0.28,
                     payoffRatio: 0.92,
-
                     lastUpdatedAt: "2020-09-02T16:00:00.000Z",
                     firstPosition: {
                         id: "86c9dca6-e689-4e82-a5cd-0414b6fb82d8",
@@ -598,7 +839,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: 30.01,
                     recoveryFactor: 17.88,
                     payoffRatio: 10,
-
                     lastUpdatedAt: "2020-12-08T08:00:00.000Z",
                     firstPosition: {
                         id: "b4d4992c-ce53-40f4-8b80-3d8306191e76",
@@ -657,7 +897,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: 3.71,
                     recoveryFactor: 2.09,
                     payoffRatio: 2.78,
-
                     lastUpdatedAt: "2021-03-21T08:00:48.197Z",
                     firstPosition: {
                         id: "7ceeaa63-a4f7-47c0-b7a2-17c5b5fc827c",
@@ -718,7 +957,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: 0,
                     recoveryFactor: -1,
                     payoffRatio: 0,
-
                     lastUpdatedAt: "2019-11-08T00:00:00.000Z",
                     firstPosition: {
                         id: "0d6b54a9-bd1b-496b-a3f2-82c30a1b6744",
@@ -777,7 +1015,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: null,
                     recoveryFactor: null,
                     payoffRatio: null,
-
                     lastUpdatedAt: null,
                     firstPosition: null,
                     lastPosition: null
@@ -814,7 +1051,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: 1.33,
                     recoveryFactor: 0.28,
                     payoffRatio: 1.33,
-
                     lastUpdatedAt: "2020-01-25T08:00:00.000Z",
                     firstPosition: {
                         id: "d8055978-5abe-4c18-8a06-599288656b3d",
@@ -873,7 +1109,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: 0.74,
                     recoveryFactor: -0.26,
                     payoffRatio: 0.74,
-
                     lastUpdatedAt: "2020-02-26T16:00:00.000Z",
                     firstPosition: {
                         id: "9f82c162-2390-4470-a38d-6f99c96e55c2",
@@ -932,7 +1167,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: null,
                     recoveryFactor: null,
                     payoffRatio: null,
-
                     lastUpdatedAt: null,
                     firstPosition: null,
                     lastPosition: null
@@ -969,7 +1203,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: 0,
                     recoveryFactor: -0.61,
                     payoffRatio: 0,
-
                     lastUpdatedAt: "2020-04-22T08:00:00.000Z",
                     firstPosition: {
                         id: "99fd0f95-06bb-46cc-a70c-9e842d5c668c",
@@ -1028,7 +1261,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: 7.03,
                     recoveryFactor: 2.22,
                     payoffRatio: 3.51,
-
                     lastUpdatedAt: "2020-05-24T08:00:00.000Z",
                     firstPosition: {
                         id: "a30c8811-e341-477f-a770-67b2671e66f4",
@@ -1087,7 +1319,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: 3.38,
                     recoveryFactor: 1.07,
                     payoffRatio: 3.38,
-
                     lastUpdatedAt: "2020-06-11T16:00:00.000Z",
                     firstPosition: {
                         id: "d48c4695-6bb3-475a-b71b-5fc5f251c3a9",
@@ -1146,7 +1377,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: null,
                     recoveryFactor: null,
                     payoffRatio: null,
-
                     lastUpdatedAt: null,
                     firstPosition: null,
                     lastPosition: null
@@ -1183,7 +1413,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: 1.12,
                     recoveryFactor: 0.05,
                     payoffRatio: 1.12,
-
                     lastUpdatedAt: "2020-08-24T00:00:00.000Z",
                     firstPosition: {
                         id: "86c9dca6-e689-4e82-a5cd-0414b6fb82d8",
@@ -1242,7 +1471,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: 0,
                     recoveryFactor: -0.54,
                     payoffRatio: 0,
-
                     lastUpdatedAt: "2020-09-02T16:00:00.000Z",
                     firstPosition: {
                         id: "6487b486-791b-48b8-89ac-8aeedb57d2be",
@@ -1301,7 +1529,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: 0,
                     recoveryFactor: -0.62,
                     payoffRatio: 0,
-
                     lastUpdatedAt: "2020-10-17T00:00:00.000Z",
                     firstPosition: {
                         id: "b4d4992c-ce53-40f4-8b80-3d8306191e76",
@@ -1360,7 +1587,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: 0,
                     recoveryFactor: 31.31,
                     payoffRatio: 0,
-
                     lastUpdatedAt: "2020-11-26T08:00:00.000Z",
                     firstPosition: {
                         id: "77fae3f1-ac6e-434e-8a18-54fc0ad25e87",
@@ -1419,7 +1645,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: 0,
                     recoveryFactor: 16.36,
                     payoffRatio: 0,
-
                     lastUpdatedAt: "2020-12-08T08:00:00.000Z",
                     firstPosition: {
                         id: "3ea6b8ba-ffc2-43c4-9b70-41eac8987ed7",
@@ -1478,7 +1703,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: 1.9,
                     recoveryFactor: 0.82,
                     payoffRatio: 3.8,
-
                     lastUpdatedAt: "2021-01-22T00:00:00.000Z",
                     firstPosition: {
                         id: "7ceeaa63-a4f7-47c0-b7a2-17c5b5fc827c",
@@ -1537,7 +1761,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: 0,
                     recoveryFactor: 2.88,
                     payoffRatio: 0,
-
                     lastUpdatedAt: "2021-02-23T08:00:00.000Z",
                     firstPosition: {
                         id: "cdda0417-fbe2-42cf-96f2-e9aacb573203",
@@ -1596,7 +1819,6 @@ export const robotStatsResult: TradeStats = {
                     profitFactor: 3.55,
                     recoveryFactor: 1.71,
                     payoffRatio: 1.78,
-
                     lastUpdatedAt: "2021-03-21T08:00:48.197Z",
                     firstPosition: {
                         id: "3972c70b-78e1-4e6a-8a14-b75a23927e5e",
@@ -1778,7 +2000,275 @@ export const portfolioStatsResult: TradeStats = {
         emulateNextPosition: false,
         marginNextPosition: 1,
         zScore: null,
-        maxLeverage: -4.712090991491719e-8
+        maxLeverage: -4.712090991491719e-8,
+        periodStats: {
+            year: {
+                "2019": {
+                    period: "year",
+                    year: 2019,
+                    dateFrom: "2019-01-01T00:00:00.000Z",
+                    dateTo: "2019-12-31T23:59:59.999Z",
+                    stats: { tradesCount: 1, percentNetProfit: -0.76, percentGrossProfit: 0, percentGrossLoss: -0.76 }
+                },
+                "2020": {
+                    period: "year",
+                    year: 2020,
+                    dateFrom: "2020-01-01T00:00:00.000Z",
+                    dateTo: "2020-12-31T23:59:59.999Z",
+                    stats: {
+                        tradesCount: 21,
+                        percentNetProfit: 82.47,
+                        percentGrossProfit: 119.97,
+                        percentGrossLoss: -37.5
+                    }
+                },
+                "2021": {
+                    period: "year",
+                    year: 2021,
+                    dateFrom: "2021-01-01T00:00:00.000Z",
+                    dateTo: "2021-12-31T23:59:59.999Z",
+                    stats: {
+                        tradesCount: 7,
+                        percentNetProfit: 130.62,
+                        percentGrossProfit: 178.69,
+                        percentGrossLoss: -48.07
+                    }
+                }
+            },
+            quarter: {
+                "2019.4": {
+                    period: "quarter",
+                    year: 2019,
+                    quarter: 4,
+                    dateFrom: "2019-10-01T00:00:00.000Z",
+                    dateTo: "2019-12-31T23:59:59.999Z",
+                    stats: { tradesCount: 1, percentNetProfit: -0.76, percentGrossProfit: 0, percentGrossLoss: -0.76 }
+                },
+                "2020.1": {
+                    period: "quarter",
+                    year: 2020,
+                    quarter: 1,
+                    dateFrom: "2020-01-01T00:00:00.000Z",
+                    dateTo: "2020-03-31T23:59:59.999Z",
+                    stats: {
+                        tradesCount: 6,
+                        percentNetProfit: -1.77,
+                        percentGrossProfit: 19.57,
+                        percentGrossLoss: -21.34
+                    }
+                },
+                "2020.2": {
+                    period: "quarter",
+                    year: 2020,
+                    quarter: 2,
+                    dateFrom: "2020-04-01T00:00:00.000Z",
+                    dateTo: "2020-06-30T23:59:59.999Z",
+                    stats: {
+                        tradesCount: 6,
+                        percentNetProfit: 20.5,
+                        percentGrossProfit: 29.56,
+                        percentGrossLoss: -9.06
+                    }
+                },
+                "2020.3": {
+                    period: "quarter",
+                    year: 2020,
+                    quarter: 3,
+                    dateFrom: "2020-07-01T00:00:00.000Z",
+                    dateTo: "2020-09-30T23:59:59.999Z",
+                    stats: {
+                        tradesCount: 5,
+                        percentNetProfit: -1.53,
+                        percentGrossProfit: 2.63,
+                        percentGrossLoss: -4.16
+                    }
+                },
+                "2020.4": {
+                    period: "quarter",
+                    year: 2020,
+                    quarter: 4,
+                    dateFrom: "2020-10-01T00:00:00.000Z",
+                    dateTo: "2020-12-31T23:59:59.999Z",
+                    stats: {
+                        tradesCount: 4,
+                        percentNetProfit: 56.55,
+                        percentGrossProfit: 58.56,
+                        percentGrossLoss: -2.01
+                    }
+                },
+                "2021.1": {
+                    period: "quarter",
+                    year: 2021,
+                    quarter: 1,
+                    dateFrom: "2021-01-01T00:00:00.000Z",
+                    dateTo: "2021-03-31T23:59:59.999Z",
+                    stats: {
+                        tradesCount: 7,
+                        percentNetProfit: 130.62,
+                        percentGrossProfit: 178.69,
+                        percentGrossLoss: -48.07
+                    }
+                }
+            },
+            month: {
+                "2019.11": {
+                    period: "month",
+                    year: 2019,
+                    month: 11,
+                    dateFrom: "2019-11-01T00:00:00.000Z",
+                    dateTo: "2019-11-30T23:59:59.999Z",
+                    stats: { tradesCount: 1, percentNetProfit: -0.76, percentGrossProfit: 0, percentGrossLoss: -0.76 }
+                },
+                "2019.12": {
+                    period: "month",
+                    year: 2019,
+                    month: 12,
+                    dateFrom: "2019-12-01T00:00:00.000Z",
+                    dateTo: "2019-12-31T23:59:59.999Z",
+                    stats: { tradesCount: 0, percentNetProfit: 0, percentGrossProfit: null, percentGrossLoss: null }
+                },
+                "2020.1": {
+                    period: "month",
+                    year: 2020,
+                    month: 1,
+                    dateFrom: "2020-01-01T00:00:00.000Z",
+                    dateTo: "2020-01-31T23:59:59.999Z",
+                    stats: { tradesCount: 2, percentNetProfit: 1.8, percentGrossProfit: 6.98, percentGrossLoss: -5.18 }
+                },
+                "2020.2": {
+                    period: "month",
+                    year: 2020,
+                    month: 2,
+                    dateFrom: "2020-02-01T00:00:00.000Z",
+                    dateTo: "2020-02-29T23:59:59.999Z",
+                    stats: {
+                        tradesCount: 4,
+                        percentNetProfit: -3.51,
+                        percentGrossProfit: 12.37,
+                        percentGrossLoss: -15.88
+                    }
+                },
+                "2020.3": {
+                    period: "month",
+                    year: 2020,
+                    month: 3,
+                    dateFrom: "2020-03-01T00:00:00.000Z",
+                    dateTo: "2020-03-31T23:59:59.999Z",
+                    stats: { tradesCount: 0, percentNetProfit: 0, percentGrossProfit: null, percentGrossLoss: null }
+                },
+                "2020.4": {
+                    period: "month",
+                    year: 2020,
+                    month: 4,
+                    dateFrom: "2020-04-01T00:00:00.000Z",
+                    dateTo: "2020-04-30T23:59:59.999Z",
+                    stats: { tradesCount: 1, percentNetProfit: -4.25, percentGrossProfit: 0, percentGrossLoss: -4.25 }
+                },
+                "2020.5": {
+                    period: "month",
+                    year: 2020,
+                    month: 5,
+                    dateFrom: "2020-05-01T00:00:00.000Z",
+                    dateTo: "2020-05-31T23:59:59.999Z",
+                    stats: {
+                        tradesCount: 3,
+                        percentNetProfit: 21.93,
+                        percentGrossProfit: 25.31,
+                        percentGrossLoss: -3.38
+                    }
+                },
+                "2020.6": {
+                    period: "month",
+                    year: 2020,
+                    month: 6,
+                    dateFrom: "2020-06-01T00:00:00.000Z",
+                    dateTo: "2020-06-30T23:59:59.999Z",
+                    stats: { tradesCount: 2, percentNetProfit: 3.22, percentGrossProfit: 4.56, percentGrossLoss: -1.34 }
+                },
+                "2020.7": {
+                    period: "month",
+                    year: 2020,
+                    month: 7,
+                    dateFrom: "2020-07-01T00:00:00.000Z",
+                    dateTo: "2020-07-31T23:59:59.999Z",
+                    stats: { tradesCount: 0, percentNetProfit: 0, percentGrossProfit: null, percentGrossLoss: null }
+                },
+                "2020.8": {
+                    period: "month",
+                    year: 2020,
+                    month: 8,
+                    dateFrom: "2020-08-01T00:00:00.000Z",
+                    dateTo: "2020-08-31T23:59:59.999Z",
+                    stats: { tradesCount: 4, percentNetProfit: 0.37, percentGrossProfit: 2.63, percentGrossLoss: -2.26 }
+                },
+                "2020.9": {
+                    period: "month",
+                    year: 2020,
+                    month: 9,
+                    dateFrom: "2020-09-01T00:00:00.000Z",
+                    dateTo: "2020-09-30T23:59:59.999Z",
+                    stats: { tradesCount: 1, percentNetProfit: -1.89, percentGrossProfit: 0, percentGrossLoss: -1.89 }
+                },
+                "2020.10": {
+                    period: "month",
+                    year: 2020,
+                    month: 10,
+                    dateFrom: "2020-10-01T00:00:00.000Z",
+                    dateTo: "2020-10-31T23:59:59.999Z",
+                    stats: { tradesCount: 1, percentNetProfit: -2.01, percentGrossProfit: 0, percentGrossLoss: -2.01 }
+                },
+                "2020.11": {
+                    period: "month",
+                    year: 2020,
+                    month: 11,
+                    dateFrom: "2020-11-01T00:00:00.000Z",
+                    dateTo: "2020-11-30T23:59:59.999Z",
+                    stats: { tradesCount: 2, percentNetProfit: 51.1, percentGrossProfit: 51.1, percentGrossLoss: 0 }
+                },
+                "2020.12": {
+                    period: "month",
+                    year: 2020,
+                    month: 12,
+                    dateFrom: "2020-12-01T00:00:00.000Z",
+                    dateTo: "2020-12-31T23:59:59.999Z",
+                    stats: { tradesCount: 1, percentNetProfit: 5.73, percentGrossProfit: 5.73, percentGrossLoss: 0 }
+                },
+                "2021.1": {
+                    period: "month",
+                    year: 2021,
+                    month: 1,
+                    dateFrom: "2021-01-01T00:00:00.000Z",
+                    dateTo: "2021-01-31T23:59:59.999Z",
+                    stats: {
+                        tradesCount: 3,
+                        percentNetProfit: 44.11,
+                        percentGrossProfit: 82.98,
+                        percentGrossLoss: -38.87
+                    }
+                },
+                "2021.2": {
+                    period: "month",
+                    year: 2021,
+                    month: 2,
+                    dateFrom: "2021-02-01T00:00:00.000Z",
+                    dateTo: "2021-02-28T23:59:59.999Z",
+                    stats: { tradesCount: 1, percentNetProfit: 43.96, percentGrossProfit: 43.96, percentGrossLoss: 0 }
+                },
+                "2021.3": {
+                    period: "month",
+                    year: 2021,
+                    month: 3,
+                    dateFrom: "2021-03-01T00:00:00.000Z",
+                    dateTo: "2021-03-31T23:59:59.999Z",
+                    stats: {
+                        tradesCount: 3,
+                        percentNetProfit: 11.16,
+                        percentGrossProfit: 15.6,
+                        percentGrossLoss: -4.44
+                    }
+                }
+            }
+        }
     },
     periodStats: {
         year: {
@@ -1812,7 +2302,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: 0,
                     recoveryFactor: -1,
                     payoffRatio: 0,
-
                     lastUpdatedAt: "2019-11-08T00:00:00.000Z",
                     firstPosition: {
                         id: "0d6b54a9-bd1b-496b-a3f2-82c30a1b6744",
@@ -1872,7 +2361,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: 3.2,
                     recoveryFactor: 4.05,
                     payoffRatio: 2.91,
-
                     lastUpdatedAt: "2020-12-08T08:00:00.000Z",
                     firstPosition: {
                         id: "d8055978-5abe-4c18-8a06-599288656b3d",
@@ -1932,7 +2420,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: 3.72,
                     recoveryFactor: 3.36,
                     payoffRatio: 2.79,
-
                     lastUpdatedAt: "2021-03-21T08:00:48.197Z",
                     firstPosition: {
                         id: "7ceeaa63-a4f7-47c0-b7a2-17c5b5fc827c",
@@ -1999,7 +2486,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: 0,
                     recoveryFactor: -1,
                     payoffRatio: 0,
-
                     lastUpdatedAt: "2019-11-08T00:00:00.000Z",
                     firstPosition: {
                         id: "0d6b54a9-bd1b-496b-a3f2-82c30a1b6744",
@@ -2060,7 +2546,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: 0.92,
                     recoveryFactor: -0.11,
                     payoffRatio: 0.92,
-
                     lastUpdatedAt: "2020-02-26T16:00:00.000Z",
                     firstPosition: {
                         id: "d8055978-5abe-4c18-8a06-599288656b3d",
@@ -2121,7 +2606,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: 3.26,
                     recoveryFactor: 4.82,
                     payoffRatio: 3.26,
-
                     lastUpdatedAt: "2020-06-11T16:00:00.000Z",
                     firstPosition: {
                         id: "99fd0f95-06bb-46cc-a70c-9e842d5c668c",
@@ -2182,7 +2666,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: 0.63,
                     recoveryFactor: -0.37,
                     payoffRatio: 0.95,
-
                     lastUpdatedAt: "2020-09-02T16:00:00.000Z",
                     firstPosition: {
                         id: "86c9dca6-e689-4e82-a5cd-0414b6fb82d8",
@@ -2247,7 +2730,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: 29.14,
                     recoveryFactor: 28.14,
                     payoffRatio: 9.71,
-
                     lastUpdatedAt: "2020-12-08T08:00:00.000Z",
                     firstPosition: {
                         id: "b4d4992c-ce53-40f4-8b80-3d8306191e76",
@@ -2308,7 +2790,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: 3.72,
                     recoveryFactor: 3.36,
                     payoffRatio: 2.79,
-
                     lastUpdatedAt: "2021-03-21T08:00:48.197Z",
                     firstPosition: {
                         id: "7ceeaa63-a4f7-47c0-b7a2-17c5b5fc827c",
@@ -2375,7 +2856,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: 0,
                     recoveryFactor: -1,
                     payoffRatio: 0,
-
                     lastUpdatedAt: "2019-11-08T00:00:00.000Z",
                     firstPosition: {
                         id: "0d6b54a9-bd1b-496b-a3f2-82c30a1b6744",
@@ -2436,7 +2916,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: null,
                     recoveryFactor: null,
                     payoffRatio: null,
-
                     lastUpdatedAt: null,
                     firstPosition: null,
                     lastPosition: null
@@ -2473,7 +2952,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: 1.35,
                     recoveryFactor: 0.35,
                     payoffRatio: 1.35,
-
                     lastUpdatedAt: "2020-01-25T08:00:00.000Z",
                     firstPosition: {
                         id: "d8055978-5abe-4c18-8a06-599288656b3d",
@@ -2534,7 +3012,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: 0.78,
                     recoveryFactor: -0.22,
                     payoffRatio: 0.78,
-
                     lastUpdatedAt: "2020-02-26T16:00:00.000Z",
                     firstPosition: {
                         id: "9f82c162-2390-4470-a38d-6f99c96e55c2",
@@ -2595,7 +3072,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: null,
                     recoveryFactor: null,
                     payoffRatio: null,
-
                     lastUpdatedAt: null,
                     firstPosition: null,
                     lastPosition: null
@@ -2632,7 +3108,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: 0,
                     recoveryFactor: -1,
                     payoffRatio: 0,
-
                     lastUpdatedAt: "2020-04-22T08:00:00.000Z",
                     firstPosition: {
                         id: "99fd0f95-06bb-46cc-a70c-9e842d5c668c",
@@ -2693,7 +3168,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: 7.48,
                     recoveryFactor: 6.48,
                     payoffRatio: 3.74,
-
                     lastUpdatedAt: "2020-05-24T08:00:00.000Z",
                     firstPosition: {
                         id: "a30c8811-e341-477f-a770-67b2671e66f4",
@@ -2754,7 +3228,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: 3.39,
                     recoveryFactor: 2.39,
                     payoffRatio: 3.39,
-
                     lastUpdatedAt: "2020-06-11T16:00:00.000Z",
                     firstPosition: {
                         id: "d48c4695-6bb3-475a-b71b-5fc5f251c3a9",
@@ -2815,7 +3288,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: null,
                     recoveryFactor: null,
                     payoffRatio: null,
-
                     lastUpdatedAt: null,
                     firstPosition: null,
                     lastPosition: null
@@ -2852,7 +3324,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: 1.16,
                     recoveryFactor: 0.16,
                     payoffRatio: 1.16,
-
                     lastUpdatedAt: "2020-08-24T00:00:00.000Z",
                     firstPosition: {
                         id: "86c9dca6-e689-4e82-a5cd-0414b6fb82d8",
@@ -2913,7 +3384,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: 0,
                     recoveryFactor: -1,
                     payoffRatio: 0,
-
                     lastUpdatedAt: "2020-09-02T16:00:00.000Z",
                     firstPosition: {
                         id: "6487b486-791b-48b8-89ac-8aeedb57d2be",
@@ -2982,7 +3452,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: 0,
                     recoveryFactor: -1,
                     payoffRatio: 0,
-
                     lastUpdatedAt: "2020-10-17T00:00:00.000Z",
                     firstPosition: {
                         id: "b4d4992c-ce53-40f4-8b80-3d8306191e76",
@@ -3043,7 +3512,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: 0,
                     recoveryFactor: 0,
                     payoffRatio: 0,
-
                     lastUpdatedAt: "2020-11-26T08:00:00.000Z",
                     firstPosition: {
                         id: "77fae3f1-ac6e-434e-8a18-54fc0ad25e87",
@@ -3104,7 +3572,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: 0,
                     recoveryFactor: 0,
                     payoffRatio: 0,
-
                     lastUpdatedAt: "2020-12-08T08:00:00.000Z",
                     firstPosition: {
                         id: "3ea6b8ba-ffc2-43c4-9b70-41eac8987ed7",
@@ -3165,7 +3632,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: 2.14,
                     recoveryFactor: 1.14,
                     payoffRatio: 4.27,
-
                     lastUpdatedAt: "2021-01-22T00:00:00.000Z",
                     firstPosition: {
                         id: "7ceeaa63-a4f7-47c0-b7a2-17c5b5fc827c",
@@ -3230,7 +3696,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: 0,
                     recoveryFactor: 0,
                     payoffRatio: 0,
-
                     lastUpdatedAt: "2021-02-23T08:00:00.000Z",
                     firstPosition: {
                         id: "cdda0417-fbe2-42cf-96f2-e9aacb573203",
@@ -3299,7 +3764,6 @@ export const portfolioStatsResult: TradeStats = {
                     profitFactor: 3.51,
                     recoveryFactor: 2.51,
                     payoffRatio: 1.76,
-
                     lastUpdatedAt: "2021-03-21T08:00:48.197Z",
                     firstPosition: {
                         id: "3972c70b-78e1-4e6a-8a14-b75a23927e5e",

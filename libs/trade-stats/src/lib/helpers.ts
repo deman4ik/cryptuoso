@@ -1,6 +1,6 @@
 import dayjs, { UnitType } from "@cryptuoso/dayjs";
 import { durationUnit } from "@cryptuoso/helpers";
-import { PeriodStats, StatsPeriod, TradeStats } from "./types";
+import { BaseStats, PeriodStats, StatsPeriod, TradeStats } from "./types";
 
 export function createDatesPeriod(
     dateFrom: string,
@@ -40,7 +40,7 @@ export function createDatesPeriod(
     return list;
 }
 
-export function periodStatsFromArray(arr: PeriodStats[]) {
+export function periodStatsFromArray(arr: PeriodStats<BaseStats>[] = []) {
     const periodStats: TradeStats["periodStats"] = {
         year: {},
         quarter: {},

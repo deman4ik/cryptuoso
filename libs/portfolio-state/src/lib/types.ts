@@ -1,4 +1,4 @@
-import { FullStats, PeriodStats } from "@cryptuoso/trade-stats";
+import { BaseStats, FullStats, PeriodStats } from "@cryptuoso/trade-stats";
 
 export interface PortfolioOptions {
     diversification: boolean;
@@ -31,7 +31,7 @@ export interface PortfolioDB {
     status: "started" | "stopped";
     settings: PortfolioSettings;
     fullStats?: FullStats;
-    periodStats?: PeriodStats[];
+    periodStats?: PeriodStats<BaseStats>[];
     base: boolean;
 }
 
@@ -80,7 +80,7 @@ export interface UserPortfolioDB {
     type: "signals" | "trading";
     status: "starting" | "started" | "stopping" | "stopped" | "paused";
     fullStats?: FullStats;
-    periodStats?: PeriodStats[];
+    periodStats?: PeriodStats<BaseStats>[];
 }
 
 export interface UserPortfolioState extends UserPortfolioDB {

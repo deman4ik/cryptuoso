@@ -35,6 +35,13 @@ export interface BaseStats {
     lastPosition: BasePosition | null;
 }
 
+export interface BasePeriodStats {
+    tradesCount: BaseStats["tradesCount"];
+    percentNetProfit: BaseStats["percentNetProfit"];
+    percentGrossProfit: BaseStats["percentGrossProfit"];
+    percentGrossLoss: BaseStats["percentGrossLoss"];
+}
+
 export interface Stats extends BaseStats {
     initialBalance: number | null;
     currentBalance: number | null;
@@ -106,28 +113,33 @@ export interface FullStats extends Stats {
     marginNextPosition: number | null;
     zScore: number | null;
     maxLeverage: number | null;
+    periodStats: {
+        year: GenericObject<PeriodStats<BasePeriodStats>>;
+        quarter: GenericObject<PeriodStats<BasePeriodStats>>;
+        month: GenericObject<PeriodStats<BasePeriodStats>>;
+    };
 }
 
-export interface PeriodStats {
+export interface PeriodStats<T> {
     period: StatsPeriod;
     year: number;
     quarter?: number | null;
     month?: number | null;
     dateFrom: string;
     dateTo: string;
-    stats: BaseStats;
+    stats: T;
 }
 
 export interface TradeStatsDB {
     fullStats: FullStats;
-    periodStats: PeriodStats[];
+    periodStats: PeriodStats<BaseStats>[];
 }
 export interface TradeStats {
     fullStats: FullStats;
     periodStats: {
-        year: GenericObject<PeriodStats>;
-        quarter: GenericObject<PeriodStats>;
-        month: GenericObject<PeriodStats>;
+        year: GenericObject<PeriodStats<BaseStats>>;
+        quarter: GenericObject<PeriodStats<BaseStats>>;
+        month: GenericObject<PeriodStats<BaseStats>>;
     };
 }
 

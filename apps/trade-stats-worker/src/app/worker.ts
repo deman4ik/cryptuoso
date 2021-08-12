@@ -14,7 +14,8 @@ import {
     TradeStatsDB,
     periodStatsFromArray,
     periodStatsToArray,
-    FullStats
+    FullStats,
+    BaseStats
 } from "@cryptuoso/trade-stats";
 import logger, { Logger } from "@cryptuoso/logger";
 import { sql, pg, pgUtil, makeChunksGenerator } from "@cryptuoso/postgres";
@@ -92,9 +93,9 @@ class StatsCalcWorker {
             if (!recalc) {
                 const prevStats = await this.db.pg.one<{
                     fullStats: FullStats;
-                    periodStats: PeriodStats[];
+                    periodStats: PeriodStats<BaseStats>[];
                     emulatedFullStats: FullStats;
-                    emulatedPeriodStats: PeriodStats[];
+                    emulatedPeriodStats: PeriodStats<BaseStats>[];
                 }>(sql`
             SELECT r.full_stats, r.period_stats, r.emulated_full_stats, r.emulated_period_stats
             FROM robots r
@@ -197,8 +198,11 @@ class StatsCalcWorker {
                 }
             };
 
-            const portfolio = await this.db.pg.maybeOne<TradeStatsDB & { settings: PortfolioSettings }>(sql`
-            SELECT r.full_stats, r.period_stats, r.settings
+            const portfolio = await this.db.pg.maybeOne<{
+                fullStats: TradeStats["fullStats"];
+                settings: PortfolioSettings;
+            }>(sql`
+            SELECT r.full_stats, r.settings
             FROM portfolios r
             WHERE r.id = ${portfolioId};
         `);
@@ -206,11 +210,24 @@ class StatsCalcWorker {
 
             if (!recalc) {
                 if (!portfolio.fullStats) recalc = true;
-                else
+                else {
+                    let periodStats;
+                    if (portfolio.fullStats && portfolio.fullStats?.lastPosition) {
+                        periodStats = await this.db.pg.any<PeriodStats<BaseStats>>(sql`
+                        SELECT period, year, quarter, month, date_from, date_to, stats
+                        FROM portfolio_period_stats
+                        WHERE portfolio_id = ${portfolioId}
+                        AND date_from <= ${portfolio.fullStats.lastPosition.exitDate}
+                        AND date_to >= ${portfolio.fullStats.lastPosition.exitDate};
+                    `);
+                    }
                     initialStats = {
                         fullStats: portfolio.fullStats,
-                        periodStats: periodStatsFromArray(portfolio.periodStats)
+                        periodStats: periodStatsFromArray(
+                            periodStats && Array.isArray(periodStats) ? [...periodStats] : []
+                        )
                     };
+                }
             }
 
             let calcFrom;
@@ -257,12 +274,40 @@ class StatsCalcWorker {
                 initialStats
             );
 
-            await this.db.pg.query(sql`
-            UPDATE portfolios 
-            SET full_stats = ${JSON.stringify(newStats.fullStats)},
-            period_stats = ${JSON.stringify(periodStatsToArray(newStats.periodStats))}
-            WHERE id = ${portfolioId};
-            `);
+            await this.db.pg.transaction(async (t) => {
+                await t.query(sql`
+                UPDATE portfolios
+                SET full_stats = ${JSON.stringify(newStats.fullStats)}
+                WHERE id = ${portfolioId};`);
+
+                if (recalc) await t.query(sql`DELETE FROM portfolio_period_stats WHERE portfolio_id = ${portfolioId}`);
+
+                await t.query(sql`
+                    INSERT INTO portfolio_period_stats
+                    (portfolio_id,
+                    period,
+                    year,
+                    quarter,
+                    month,
+                    date_from,
+                    date_to,
+                    stats )
+                    SELECT * FROM
+                ${sql.unnest(
+                    this.db.util.prepareUnnest(
+                        periodStatsToArray(newStats.periodStats).map((s) => ({
+                            ...s,
+                            portfolioId,
+                            stats: JSON.stringify(s.stats)
+                        })),
+                        ["portfolioId", "period", "year", "quarter", "month", "dateFrom", "dateTo", "stats"]
+                    ),
+                    ["uuid", "varchar", "int8", "int8", "int8", "timestamp", "timestamp", "jsonb"]
+                )}
+                ON CONFLICT ON CONSTRAINT portfolio_period_stats_pkey
+                DO UPDATE SET stats = excluded.stats;
+                `);
+            });
         } catch (err) {
             this.log.error("Failed to calcPortfolio stats", err);
             this.log.debug(job);
@@ -366,8 +411,11 @@ class StatsCalcWorker {
                 }
             };
 
-            const userPortfolio = await this.db.pg.maybeOne<TradeStatsDB & { settings: PortfolioSettings }>(sql`
-            SELECT r.full_stats, r.period_stats, r.settings
+            const userPortfolio = await this.db.pg.maybeOne<{
+                fullStats: TradeStats["fullStats"];
+                settings: PortfolioSettings;
+            }>(sql`
+            SELECT r.full_stats,  r.settings
             FROM user_portfolios r
             WHERE r.id = ${userPortfolioId};
         `);
@@ -376,11 +424,24 @@ class StatsCalcWorker {
 
             if (!recalc) {
                 if (!userPortfolio.fullStats) recalc = true;
-                else
+                else {
+                    let periodStats;
+                    if (userPortfolio.fullStats && userPortfolio.fullStats?.lastPosition) {
+                        periodStats = await this.db.pg.any<PeriodStats<BaseStats>>(sql`
+                        SELECT period, year, quarter, month, date_from, date_to, stats
+                        FROM user_portfolio_period_stats
+                        WHERE user_portfolio_id = ${userPortfolioId}
+                        AND date_from <= ${userPortfolio.fullStats.lastPosition.exitDate}
+                        AND date_to >= ${userPortfolio.fullStats.lastPosition.exitDate};
+                    `);
+                    }
                     initialStats = {
                         fullStats: userPortfolio.fullStats,
-                        periodStats: periodStatsFromArray(userPortfolio.periodStats)
+                        periodStats: periodStatsFromArray(
+                            periodStats && Array.isArray(periodStats) ? [...periodStats] : []
+                        )
                     };
+                }
             }
 
             let calcFrom;
@@ -427,12 +488,43 @@ class StatsCalcWorker {
                 initialStats
             );
 
-            await this.db.pg.query(sql`
-            UPDATE user_portfolios 
-            SET full_stats = ${JSON.stringify(newStats.fullStats)},
-            period_stats = ${JSON.stringify(periodStatsToArray(newStats.periodStats))}
-            WHERE id = ${userPortfolioId};
-            `);
+            await this.db.pg.transaction(async (t) => {
+                await t.query(sql`
+                UPDATE user_portfolios
+                SET full_stats = ${JSON.stringify(newStats.fullStats)}
+                WHERE id = ${userPortfolioId};`);
+
+                if (recalc)
+                    await t.query(
+                        sql`DELETE FROM user_portfolio_period_stats WHERE user_portfolio_id = ${userPortfolioId}`
+                    );
+
+                await t.query(sql`
+                INSERT INTO user_portfolio_period_stats
+                (portfolio_id,
+                    period,
+                    year,
+                    quarter,
+                    month,
+                    date_from,
+                    date_to,
+                    stats )
+                SELECT * FROM
+                ${sql.unnest(
+                    this.db.util.prepareUnnest(
+                        periodStatsToArray(newStats.periodStats).map((s) => ({
+                            ...s,
+                            userPortfolioId,
+                            stats: JSON.stringify(s.stats)
+                        })),
+                        ["portfolioId", "period", "year", "quarter", "month", "dateFrom", "dateTo", "stats"]
+                    ),
+                    ["uuid", "varchar", "int8", "int8", "int8", "timestamp", "timestamp", "jsonb"]
+                )}
+                ON CONFLICT ON CONSTRAINT user_portfolio_period_stats_pkey
+                DO UPDATE SET stats = excluded.stats;
+                `);
+            });
         } catch (err) {
             this.log.error("Failed to calcUserPorfolio stats", err);
             this.log.debug(job);
