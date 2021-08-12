@@ -96,6 +96,8 @@ const worker = {
                 result.portfolio.periodStats.map((s) => ({
                     ...s,
                     portfolioId: result.portfolio.id,
+                    quarter: s.quarter || undefined,
+                    month: s.month || undefined,
                     stats: JSON.stringify(s.stats)
                 })),
                 ["portfolioId", "period", "year", "quarter", "month", "dateFrom", "dateTo", "stats"]

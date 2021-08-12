@@ -21,6 +21,7 @@ import logger, { Logger } from "@cryptuoso/logger";
 import { sql, pg, pgUtil, makeChunksGenerator } from "@cryptuoso/postgres";
 import { PortfolioSettings } from "@cryptuoso/portfolio-state";
 import { equals } from "@cryptuoso/helpers";
+import dayjs from "@cryptuoso/dayjs";
 
 class StatsCalcWorker {
     #log: Logger;
@@ -280,9 +281,11 @@ class StatsCalcWorker {
                 SET full_stats = ${JSON.stringify(newStats.fullStats)}
                 WHERE id = ${portfolioId};`);
 
-                if (recalc) await t.query(sql`DELETE FROM portfolio_period_stats WHERE portfolio_id = ${portfolioId}`);
+                const periodStatsArray = periodStatsToArray(newStats.periodStats);
+                if (recalc) {
+                    await t.query(sql`DELETE FROM portfolio_period_stats WHERE portfolio_id = ${portfolioId}`);
 
-                await t.query(sql`
+                    await t.query(sql`
                     INSERT INTO portfolio_period_stats
                     (portfolio_id,
                     period,
@@ -295,18 +298,43 @@ class StatsCalcWorker {
                     SELECT * FROM
                 ${sql.unnest(
                     this.db.util.prepareUnnest(
-                        periodStatsToArray(newStats.periodStats).map((s) => ({
+                        periodStatsArray.map((s) => ({
                             ...s,
                             portfolioId,
+                            quarter: s.quarter || undefined,
+                            month: s.month || undefined,
                             stats: JSON.stringify(s.stats)
                         })),
                         ["portfolioId", "period", "year", "quarter", "month", "dateFrom", "dateTo", "stats"]
                     ),
                     ["uuid", "varchar", "int8", "int8", "int8", "timestamp", "timestamp", "jsonb"]
-                )}
-                ON CONFLICT ON CONSTRAINT portfolio_period_stats_pkey
-                DO UPDATE SET stats = excluded.stats;
+                )};
                 `);
+                } else {
+                    for (const s of periodStatsArray) {
+                        await t.query(sql`
+                    INSERT INTO portfolio_period_stats
+                    (portfolio_id,
+                    period,
+                    year,
+                    quarter,
+                    month,
+                    date_from,
+                    date_to,
+                    stats )
+                    VALUES (${portfolioId},
+                    ${s.period},
+                    ${s.year},
+                    ${s.quarter || null},
+                    ${s.month || null},
+                    ${s.dateFrom},
+                    ${s.dateTo},
+                    ${JSON.stringify(s.stats)} )
+                    ON CONFLICT ON CONSTRAINT portfolio_period_stats_pkey
+                DO UPDATE SET stats = excluded.stats;
+                        `);
+                    }
+                }
             });
         } catch (err) {
             this.log.error("Failed to calcPortfolio stats", err);
@@ -494,14 +522,15 @@ class StatsCalcWorker {
                 SET full_stats = ${JSON.stringify(newStats.fullStats)}
                 WHERE id = ${userPortfolioId};`);
 
-                if (recalc)
+                const periodStatsArray = periodStatsToArray(newStats.periodStats);
+                if (recalc) {
                     await t.query(
                         sql`DELETE FROM user_portfolio_period_stats WHERE user_portfolio_id = ${userPortfolioId}`
                     );
 
-                await t.query(sql`
+                    await t.query(sql`
                 INSERT INTO user_portfolio_period_stats
-                (portfolio_id,
+                (user_portfolio_id,
                     period,
                     year,
                     quarter,
@@ -512,18 +541,44 @@ class StatsCalcWorker {
                 SELECT * FROM
                 ${sql.unnest(
                     this.db.util.prepareUnnest(
-                        periodStatsToArray(newStats.periodStats).map((s) => ({
+                        periodStatsArray.map((s) => ({
                             ...s,
                             userPortfolioId,
+                            quarter: s.quarter || undefined,
+                            month: s.month || undefined,
                             stats: JSON.stringify(s.stats)
                         })),
-                        ["portfolioId", "period", "year", "quarter", "month", "dateFrom", "dateTo", "stats"]
+                        ["userPortfolioId", "period", "year", "quarter", "month", "dateFrom", "dateTo", "stats"]
                     ),
                     ["uuid", "varchar", "int8", "int8", "int8", "timestamp", "timestamp", "jsonb"]
                 )}
-                ON CONFLICT ON CONSTRAINT user_portfolio_period_stats_pkey
-                DO UPDATE SET stats = excluded.stats;
+
                 `);
+                } else {
+                    for (const s of periodStatsArray) {
+                        await t.query(sql`
+                    INSERT INTO user_portfolio_period_stats
+                    (user_portfolio_id,
+                    period,
+                    year,
+                    quarter,
+                    month,
+                    date_from,
+                    date_to,
+                    stats )
+                    VALUES (${userPortfolioId},
+                    ${s.period},
+                    ${s.year},
+                    ${s.quarter || null},
+                    ${s.month || null},
+                    ${s.dateFrom},
+                    ${s.dateTo},
+                    ${JSON.stringify(s.stats)} )
+                    ON CONFLICT ON CONSTRAINT user_portfolio_period_stats_pkey
+                DO UPDATE SET stats = excluded.stats;
+                        `);
+                    }
+                }
             });
         } catch (err) {
             this.log.error("Failed to calcUserPorfolio stats", err);
