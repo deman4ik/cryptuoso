@@ -12,6 +12,7 @@ import { ImporterWorkerEvents } from "@cryptuoso/importer-events";
 import { RobotWorkerEvents } from "@cryptuoso/robot-events";
 import { StatsCalcWorkerEvents } from "@cryptuoso/stats-calc-events";
 import { UserRobotWorkerEvents } from "@cryptuoso/user-robot-events";
+import { TradeStatsWorkerEvents } from "@cryptuoso/trade-stats-events";
 import { eventsManagementConfig } from "./config";
 
 interface StoredDeadLetter {
@@ -60,10 +61,6 @@ export default class EventsManager extends HTTPService {
                 passFullEvent: true,
                 handler: this.#errorHandler.bind(this)
             },
-            [BacktesterWorkerEvents.FAILED]: {
-                passFullEvent: true,
-                handler: this.#errorHandler.bind(this)
-            },
             [ConnectorWorkerEvents.ORDER_ERROR]: {
                 passFullEvent: true,
                 handler: this.#errorHandler.bind(this)
@@ -84,15 +81,15 @@ export default class EventsManager extends HTTPService {
                 passFullEvent: true,
                 handler: this.#errorHandler.bind(this)
             },
-            [StatsCalcWorkerEvents.ERROR]: {
-                passFullEvent: true,
-                handler: this.#errorHandler.bind(this)
-            },
             [UserRobotWorkerEvents.ERROR]: {
                 passFullEvent: true,
                 handler: this.#errorHandler.bind(this)
             },
             [BaseServiceEvents.ERROR]: {
+                passFullEvent: true,
+                handler: this.#errorHandler.bind(this)
+            },
+            [TradeStatsWorkerEvents.ERROR]: {
                 passFullEvent: true,
                 handler: this.#errorHandler.bind(this)
             }
