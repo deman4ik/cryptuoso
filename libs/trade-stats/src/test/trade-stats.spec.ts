@@ -1,8 +1,8 @@
 import { TradeStatsCalc } from "../lib/trade-stats";
 import { positions } from "./data/positions";
 import { robotStatsResult, portfolioStatsResult } from "./data/results";
-import util from "util";
-import fs from "fs";
+//import util from "util";
+//import fs from "fs";
 import dayjs from "@cryptuoso/dayjs";
 
 describe("Test 'trade-stats'", () => {
@@ -13,8 +13,8 @@ describe("Test 'trade-stats'", () => {
                 initialBalance: 100000
             });
             const stats = await tradeStatsCalculator.calculate();
-            //const data = JSON.stringify(stats);
-            //fs.writeFileSync("testResults/robotStatsResults.json", data);
+            //   const data = JSON.stringify(stats);
+            //  fs.writeFileSync("testResults/robotStatsResults.json", data);
             expect(stats.fullStats).toEqual(robotStatsResult.fullStats);
             expect(stats.periodStats).toEqual(robotStatsResult.periodStats);
         });
@@ -27,15 +27,15 @@ describe("Test 'trade-stats'", () => {
                 }
             );
             const stats = await tradeStatsCalculator.calculate();
-            //  const data = JSON.stringify(stats);
-            //fs.writeFileSync("testResults/portfolioStatsResults.json", data);
+            // const data = JSON.stringify(stats);
+            //   fs.writeFileSync("testResults/portfolioStatsResults.json", data);
             expect(stats.fullStats).toEqual(portfolioStatsResult.fullStats);
             expect(stats.periodStats).toEqual(portfolioStatsResult.periodStats);
         });
     });
 
     describe("Test calc with with previous statistics", () => {
-        it("Should  calculate statistics", async () => {
+        it("Should calculate statistics", async () => {
             const prevTradeStatsCalculator = new TradeStatsCalc(
                 positions.filter(
                     ({ exitDate }) => dayjs.utc(exitDate).valueOf() < dayjs.utc("2021-03-16T00:00:58.425").valueOf()
@@ -46,8 +46,6 @@ describe("Test 'trade-stats'", () => {
                 }
             );
             const prevStats = await prevTradeStatsCalculator.calculate();
-
-            //  console.log(prevStats.fullStats);
 
             const tradeStatsCalculator = new TradeStatsCalc(
                 positions.filter(
@@ -65,18 +63,9 @@ describe("Test 'trade-stats'", () => {
                 job: { robotId: "test", type: "robot", recalc: true, round: false },
                 initialBalance: 1000
             });
-            const statsAll = tradeStatsCalculatorAll.calculate();
+            const statsAll = await tradeStatsCalculatorAll.calculate();
 
             expect(stats).toEqual(statsAll);
-            // const { netProfitsSMA, netProfitSMA, netProfit, emulateNextPosition } = statsAll.fullStats;
-
-            //  console.log(stats.fullStats);
-            // expect(stats.fullStats).toEqual(result.fullStats);
-            // console.log(util.inspect(stats.periodStats.month, false, null, true));
-            //  const data = JSON.stringify(stats);
-            //  fs.writeFileSync("stats.json", data);
-
-            // fs.writeFileSync("positions.json", JSON.stringify(positions));
         });
     });
 });

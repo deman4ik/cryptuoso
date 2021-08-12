@@ -5,7 +5,37 @@ export type StatsPeriod = "month" | "quarter" | "year";
 
 export type PerformanceVals = { x: number; y: number }[];
 
-export interface Stats {
+export interface BaseStats {
+    initialBalance: number | null;
+    currentBalance: number | null;
+    tradesCount: number;
+    tradesWinning: number;
+    tradesLosing: number;
+    winRate: number;
+    lossRate: number;
+    netProfit: number;
+    avgNetProfit: number | null;
+    percentNetProfit: number | null;
+    localMax: number;
+    grossProfit: number;
+    grossLoss: number;
+    avgGrossProfit: number | null;
+    avgGrossLoss: number | null;
+    percentGrossProfit: number | null;
+    percentGrossLoss: number | null;
+    maxDrawdown: number;
+    percentMaxDrawdown: number | null;
+    percentMaxDrawdownDate: string | null;
+    maxDrawdownDate: string | null;
+    profitFactor: number | null;
+    recoveryFactor: number | null;
+    payoffRatio: number | null;
+    lastUpdatedAt: string | null;
+    firstPosition: BasePosition | null;
+    lastPosition: BasePosition | null;
+}
+
+export interface Stats extends BaseStats {
     initialBalance: number | null;
     currentBalance: number | null;
     tradesCount: number;
@@ -14,18 +44,18 @@ export interface Stats {
     winRate: number;
     lossRate: number;
     sumBarsHeld: number | null;
-    avgBarsHeld: number | null; //TODO: delete portfolio
+    avgBarsHeld: number | null;
     sumBarsHeldWinning: number | null;
     avgBarsHeldWinning: number | null;
     sumBarsHeldLosing: number | null;
     avgBarsHeldLosing: number | null;
     netProfit: number;
     avgNetProfit: number | null;
-    //positionsProfitPercents: number[];
+    // positionsProfitPercents: number[];
     percentNetProfit: number | null;
     // sumPercentNetProfit: number | null;
-    //  avgPercentNetProfit: number | null;
-    //sumPercentNetProfitSqDiff: number | null;
+    // avgPercentNetProfit: number | null;
+    // sumPercentNetProfitSqDiff: number | null;
     netProfitsSMA: number[];
     netProfitSMA: number | null;
     stdDevPercentNetProfit: number | null;
@@ -85,7 +115,7 @@ export interface PeriodStats {
     month?: number | null;
     dateFrom: string;
     dateTo: string;
-    stats: Stats;
+    stats: BaseStats;
 }
 
 export interface TradeStatsDB {
