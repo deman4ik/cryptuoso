@@ -93,7 +93,7 @@ const worker = {
             stats )
             SELECT * FROM
         ${sql.unnest(
-            this.db.util.prepareUnnest(
+            pgUtil.prepareUnnest(
                 result.portfolio.periodStats.map((s) => ({
                     ...s,
                     portfolioId: result.portfolio.id,
