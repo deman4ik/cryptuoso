@@ -72,7 +72,7 @@ const worker = {
 
         await pg.transaction(async (t) => {
             await t.query(sql`
-            UPDATE portfolios SET full_stats = ${JSON.stringify(result.portfolio.fullStats)}
+            UPDATE portfolios SET full_stats = ${JSON.stringify(result.portfolio.fullStats)},
             settings = ${JSON.stringify(result.portfolio.settings)},
             variables = ${JSON.stringify(result.portfolio.variables)}
             status = 'started'

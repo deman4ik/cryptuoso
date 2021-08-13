@@ -10,7 +10,7 @@ import { ConnectorWorkerEvents } from "@cryptuoso/connector-events";
 import { ExwatcherEvents } from "@cryptuoso/exwatcher-events";
 import { ImporterWorkerEvents } from "@cryptuoso/importer-events";
 import { RobotWorkerEvents } from "@cryptuoso/robot-events";
-import { StatsCalcWorkerEvents } from "@cryptuoso/stats-calc-events";
+import { PortfolioManagerOutEvents } from "@cryptuoso/portfolio-events";
 import { UserRobotWorkerEvents } from "@cryptuoso/user-robot-events";
 import { TradeStatsWorkerEvents } from "@cryptuoso/trade-stats-events";
 import { eventsManagementConfig } from "./config";
@@ -90,6 +90,14 @@ export default class EventsManager extends HTTPService {
                 handler: this.#errorHandler.bind(this)
             },
             [TradeStatsWorkerEvents.ERROR]: {
+                passFullEvent: true,
+                handler: this.#errorHandler.bind(this)
+            },
+            [PortfolioManagerOutEvents.PORTFOLIO_BUILD_ERROR]: {
+                passFullEvent: true,
+                handler: this.#errorHandler.bind(this)
+            },
+            [PortfolioManagerOutEvents.USER_PORTFOLIO_BUILD_ERROR]: {
                 passFullEvent: true,
                 handler: this.#errorHandler.bind(this)
             }
