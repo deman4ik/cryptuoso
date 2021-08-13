@@ -74,6 +74,7 @@ const worker = {
             await t.query(sql`
             UPDATE portfolios SET full_stats = ${JSON.stringify(result.portfolio.fullStats)}
             settings = ${JSON.stringify(result.portfolio.settings)},
+            variables = ${JSON.stringify(result.portfolio.variables)}
             status = 'started'
             WHERE id = ${result.portfolio.id}
             `);

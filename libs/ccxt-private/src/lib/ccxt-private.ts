@@ -858,26 +858,39 @@ export class PrivateConnector {
 
             if (!orders || !Array.isArray(orders) || orders.length === 0) return [];
 
-            return orders.map((order) => {
-                const { id, side, type, datetime, status, price, average, amount: volume, remaining, filled } = order;
-                return {
-                    exchange: this.exchange,
-                    asset,
-                    currency,
-                    direction: <OrderDirection>side,
-                    type: <OrderType>type,
-                    exId: id,
-                    exTimestamp: datetime && dayjs.utc(datetime).toISOString(),
-                    exLastTradeAt: this.getCloseOrderDate(<string>this.exchange, order),
-                    status: <OrderStatus>status,
-                    price: (average && +average) || (price && +price) || null,
-                    volume: volume && +volume,
-                    remaining: remaining && +remaining,
-                    executed: filled,
-                    lastCheckedAt: dayjs.utc().toISOString(),
-                    info: order
-                };
-            });
+            return orders
+                .filter((o) => o.status !== "canceled")
+                .map((order) => {
+                    const {
+                        id,
+                        side,
+                        type,
+                        datetime,
+                        status,
+                        price,
+                        average,
+                        amount: volume,
+                        remaining,
+                        filled
+                    } = order;
+                    return {
+                        exchange: this.exchange,
+                        asset,
+                        currency,
+                        direction: <OrderDirection>side,
+                        type: <OrderType>type,
+                        exId: id,
+                        exTimestamp: datetime && dayjs.utc(datetime).toISOString(),
+                        exLastTradeAt: this.getCloseOrderDate(<string>this.exchange, order),
+                        status: <OrderStatus>status,
+                        price: (average && +average) || (price && +price) || null,
+                        volume: volume && +volume,
+                        remaining: remaining && +remaining,
+                        executed: filled,
+                        lastCheckedAt: dayjs.utc().toISOString(),
+                        info: order
+                    };
+                });
         } catch (e) {
             this.log.error(e);
             return [];

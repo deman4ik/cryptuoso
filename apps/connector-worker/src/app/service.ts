@@ -288,8 +288,8 @@ export default class ConnectorRunnerService extends BaseService {
                         if (orders && orders.length) {
                             const ids = orders.map((o) => o.exId);
                             const ordersExists = await this.db.pg.any<{ exId: string }>(sql`
-                        SELECT ex_id FROM user_orders 
-                        WHERE user_ex_acc_id = ${userExAccId} 
+                        SELECT ex_id FROM user_orders
+                        WHERE user_ex_acc_id = ${userExAccId}
                         AND ex_id in (${sql.join(ids, sql`, `)});
                         `);
                             const idsNotExists = ids.filter((exId) => !ordersExists.map((o) => o.exId).includes(exId));
