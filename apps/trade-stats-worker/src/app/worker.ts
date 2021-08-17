@@ -240,7 +240,7 @@ class StatsCalcWorker {
 
             const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
             const querySelectPart = sql`
-            SELECT p.id, p.direction, p.entry_date, p.entry_price, p.exit_date, p.exit_price, p.bars_held, p.meta, p.max_price
+            SELECT p.id, p.robot_id, p.direction, p.entry_date, p.entry_price, p.exit_date, p.exit_price, p.bars_held, p.meta, p.max_price
         `;
             const queryFromAndConditionPart = sql`
             FROM v_portfolio_robot_positions p
@@ -271,7 +271,7 @@ class StatsCalcWorker {
 
             const newStats: TradeStats = await this.calcStats(
                 positions,
-                { job, initialBalance: portfolio.settings.initialBalance },
+                { job: { ...job, savePositions: true }, initialBalance: portfolio.settings.initialBalance },
                 initialStats
             );
 
@@ -334,6 +334,48 @@ class StatsCalcWorker {
                 DO UPDATE SET stats = excluded.stats;
                         `);
                     }
+                }
+
+                if (newStats.positions && newStats.positions.length) {
+                    if (recalc) {
+                        await t.query(sql`
+                        DELETE FROM portfolio_positions
+                        WHERE portfolio_id = ${portfolioId};`);
+                    }
+                    await t.query(sql`
+                INSERT INTO portfolio_positions (portfolio_id, robot_id, position_id,
+                    volume, amount_in_currency, profit, prev_balance, current_balance
+                ) SELECT * FROM ${sql.unnest(
+                    pgUtil.prepareUnnest(
+                        newStats.positions.map((p) => ({
+                            positionId: p.id,
+                            robotId: p.robotId,
+                            portfolioId,
+                            volume: p.volume,
+                            amountInCurrency: p.amountInCurrency,
+                            profit: p.profit,
+                            prevBalance: p.meta.prevBalance,
+                            currentBalance: p.meta.currentBalance
+                        })),
+                        [
+                            "portfolioId",
+                            "robotId",
+                            "positionId",
+                            "volume",
+                            "amountInCurrency",
+                            "profit",
+                            "prevBalance",
+                            "currentBalance"
+                        ]
+                    ),
+                    ["uuid", "uuid", "uuid", "numeric", "numeric", "numeric", "numeric", "numeric"]
+                )}
+                ON CONFLICT ON CONSTRAINT portfolio_positions_pkey
+                DO UPDATE SET volume = excluded.volume,
+                profit = excluded.profit,
+                prev_balance = excluded.prev_balance,
+                current_balance = excluded.current_balance;
+            `);
                 }
             });
         } catch (err) {

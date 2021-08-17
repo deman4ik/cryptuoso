@@ -19,12 +19,11 @@ import { PrivateConnector } from "@cryptuoso/ccxt-private";
 import { Pool, spawn, Worker as ThreadsWorker } from "threads";
 import { Decrypt } from "./decryptWorker";
 import { groupBy, sortDesc } from "@cryptuoso/helpers";
-import { Order, OrderJobType, OrderStatus, UnknownUserOrder } from "@cryptuoso/market";
+import { Order, OrderJobType, OrderStatus } from "@cryptuoso/market";
 import { BaseError } from "@cryptuoso/errors";
 import { DatabaseTransactionConnectionType } from "slonik";
 import { v4 as uuid } from "uuid";
 import ccxt from "ccxt";
-import { json } from "body-parser";
 
 export type ConnectorRunnerServiceConfig = BaseServiceConfig;
 

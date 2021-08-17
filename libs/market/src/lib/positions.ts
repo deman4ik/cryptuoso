@@ -38,6 +38,7 @@ export interface BasePosition {
     exitOrderType?: OrderType;
     exitAction?: TradeAction;
     exitCandleTimestamp?: string;
+    amountInCurrency?: number;
     volume?: number;
     worstProfit?: number;
     maxPrice?: number;

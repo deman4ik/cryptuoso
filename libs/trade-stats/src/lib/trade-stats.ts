@@ -1,9 +1,10 @@
 import dayjs from "@cryptuoso/dayjs";
-import { average, chunkArray, divide, nvl, round, sortAsc, sum } from "@cryptuoso/helpers";
+import { average, calcPercentValue, chunkArray, divide, nvl, round, sortAsc, sortDesc, sum } from "@cryptuoso/helpers";
 import { BasePosition, calcPositionProfit } from "@cryptuoso/market";
 import { calcZScore, createDatesPeriod } from "./helpers";
 import { BaseStats, FullStats, PerformanceVals, Stats, StatsMeta, TradeStats, TradeStatsPortfolio } from "./types";
 import logger from "@cryptuoso/logger";
+//import fs from "fs";
 
 export class TradeStatsCalc implements TradeStats {
     fullStats: TradeStats["fullStats"];
@@ -21,25 +22,55 @@ export class TradeStatsCalc implements TradeStats {
             ...meta,
             job: {
                 ...meta.job,
-                round: meta.job.round === true || meta.job.round === false ? meta.job.round : true
+                round: meta.job.round === true || meta.job.round === false ? meta.job.round : true,
+                savePositions:
+                    meta.job.savePositions === true || meta.job.savePositions === false ? meta.job.savePositions : false
             }
         };
-        if (this.meta.job.type === "portfolio")
-            this.positions = this.preparePortfolioPositions(this.positions, prevStats?.fullStats);
+        let portfolioPositions: BasePosition[], maxLeverage: FullStats["maxLeverage"];
+        if (this.meta.job.type === "portfolio") {
+            ({ positions: portfolioPositions, maxLeverage } = this.preparePortfolioPositions(
+                this.positions,
+                prevStats?.fullStats
+            ));
+            this.positions = portfolioPositions;
+        }
+        // const data = JSON.stringify(this.positions);
+        //  fs.writeFileSync("testResults/allPositions.json", data);
+
         this.fullStats = this.initFullStats(this.positions, prevStats?.fullStats);
         this.periodStats = this.initPeriodStats(prevStats?.periodStats);
-
+        if (this.meta.job.recalc && maxLeverage) this.fullStats.maxLeverage = maxLeverage;
         this.prevFullStats = { ...this.fullStats };
         this.prevPeriodStats = { ...this.periodStats };
     }
 
-    private preparePortfolioPositions(allPositions: BasePosition[], fullStats: FullStats): BasePosition[] {
+    private preparePortfolioPositions(
+        allPositions: BasePosition[],
+        fullStats: FullStats
+    ): { positions: BasePosition[]; maxLeverage: FullStats["maxLeverage"] } {
+        const dates = [
+            ...allPositions.map((p) => ({
+                date: p.entryDate,
+                id: p.id,
+                side: "entry"
+            })),
+            ...allPositions.map((p) => ({
+                date: p.exitDate,
+                id: p.id,
+                side: "exit"
+            }))
+        ].sort((a, b) => sortAsc(a.date, b.date));
+        let availableFunds = this.meta.initialBalance;
+        let maxLeverage = 0;
         let netProfit = 0;
         let currentBalance = fullStats?.currentBalance ?? this.meta.initialBalance;
         let prevBalance = currentBalance;
         const { feeRate } = <TradeStatsPortfolio>this.meta.job;
-        const results: BasePosition[] = [];
-        for (const position of allPositions) {
+        const results: { [id: string]: BasePosition } = {};
+        for (const date of dates) {
+            const position = Object.freeze(allPositions.find(({ id }) => id === date.id));
+            const openPosition = results[position.id];
             const {
                 direction,
                 entryPrice,
@@ -47,31 +78,47 @@ export class TradeStatsCalc implements TradeStats {
                 maxPrice,
                 meta: { portfolioShare }
             } = position;
-
-            const amountInCurrency = (currentBalance * (this.meta.leverage || 1) * portfolioShare) / 100;
-            const volume = round(amountInCurrency / entryPrice, 6);
-            const profit = calcPositionProfit(direction, entryPrice, exitPrice, volume, feeRate);
-            let worstProfit = calcPositionProfit(direction, entryPrice, maxPrice, volume, feeRate);
-            if (worstProfit > 0) worstProfit = null;
-            netProfit = sum(netProfit, profit);
-            currentBalance = sum(this.meta.initialBalance, netProfit);
-            results.push({
+            const newPosition: BasePosition = {
                 ...position,
-                volume,
-                profit,
-                worstProfit,
-                meta: {
-                    ...position.meta,
-                    prevBalance,
-                    currentBalance
-                }
-            });
-            prevBalance = currentBalance;
+                ...openPosition
+            };
+            if (date.side === "entry") {
+                const leveragedBalance = prevBalance * (this.meta.leverage || 1);
+                newPosition.amountInCurrency = calcPercentValue(leveragedBalance, portfolioShare);
+                newPosition.volume = round(newPosition.amountInCurrency / entryPrice, 6);
+
+                if (this.meta.job.recalc) availableFunds = availableFunds - entryPrice * newPosition.volume;
+            }
+
+            if (date.side === "exit") {
+                newPosition.profit = calcPositionProfit(direction, entryPrice, exitPrice, newPosition.volume, feeRate);
+                newPosition.worstProfit = calcPositionProfit(
+                    direction,
+                    entryPrice,
+                    maxPrice,
+                    newPosition.volume,
+                    feeRate
+                );
+                if (newPosition.worstProfit > 0) newPosition.worstProfit = null;
+                netProfit = sum(netProfit, newPosition.profit);
+                currentBalance = sum(this.meta.initialBalance, netProfit);
+
+                newPosition.meta = { ...newPosition.meta, prevBalance, currentBalance };
+                prevBalance = currentBalance;
+
+                if (this.meta.job.recalc) availableFunds = availableFunds + exitPrice * newPosition.volume;
+            }
+
+            if (this.meta.job.recalc) {
+                const leverage = availableFunds / currentBalance;
+                if (leverage < maxLeverage) maxLeverage = leverage;
+            }
+            results[date.id] = newPosition;
         }
-        return results;
+        return { positions: Object.values(results), maxLeverage };
     }
 
-    private getMaxLeverage(allPositions: BasePosition[]) {
+    /*  private getMaxLeverage(allPositions: BasePosition[]) {
         const dates = [
             ...allPositions.map((p) => ({
                 date: p.entryDate,
@@ -91,7 +138,7 @@ export class TradeStatsCalc implements TradeStats {
 
         let availableFunds = this.meta.initialBalance;
         let maxLeverage = 0;
-        //const results = [];
+
         for (const { price, volume, balance, side } of dates) {
             if (side === "entry") {
                 availableFunds = availableFunds - price * volume;
@@ -101,27 +148,21 @@ export class TradeStatsCalc implements TradeStats {
 
             const leverage = availableFunds / balance;
             if (leverage < maxLeverage) maxLeverage = leverage;
-            /*   results.push({
-                date,
-                price,
-                volume,
-                balance,
-                availableFunds,
-                leverage
-            });*/
+
         }
 
         return maxLeverage;
-    }
+    }*/
 
     public async calculate(): Promise<TradeStats> {
         this.periodStats = this.calcPeriodStats(this.positions, this.prevPeriodStats);
         this.fullStats = this.calcFullStats(this.positions, this.prevFullStats, this.periodStats);
-        if (this.meta.job.type === "portfolio" && this.meta.job.recalc)
-            this.fullStats.maxLeverage = this.getMaxLeverage(this.positions);
+        /*if (this.meta.job.type === "portfolio" && this.meta.job.recalc)
+            this.fullStats.maxLeverage = this.getMaxLeverage(this.positions);*/
         return {
             fullStats: this.fullStats,
-            periodStats: this.periodStats
+            periodStats: this.periodStats,
+            positions: this.meta.job.savePositions ? this.positions : null
         };
     }
 
@@ -348,7 +389,7 @@ export class TradeStatsCalc implements TradeStats {
                 const percentProfit = (profit * 100) / stats.currentBalance;
                 stats.positionsProfitPercents.push(percentProfit);
                 stats.sumPercentNetProfit = sum(stats.sumPercentNetProfit, percentProfit);
-               
+
             } */
             stats.netProfit = sum(stats.netProfit, profit);
 

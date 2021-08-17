@@ -1,3 +1,4 @@
+import { BasePosition } from "@cryptuoso/market";
 import { BaseStats, FullStats, PeriodStats } from "@cryptuoso/trade-stats";
 
 export interface PortfolioOptions {
@@ -60,6 +61,7 @@ export interface PortfolioState extends PortfolioDB {
         minRobotsCount: number;
     };
     robots?: PortfolioRobot[];
+    positions?: BasePosition[];
 }
 
 export interface PortfolioBuilderJob {

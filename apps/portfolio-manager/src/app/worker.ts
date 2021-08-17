@@ -107,7 +107,7 @@ const worker = {
         )}`);
 
             await t.query(sql`
-                DELETE FROM  portfolio_robots 
+                DELETE FROM  portfolio_robots
                 WHERE portfolio_id = ${result.portfolio.id};`);
             await t.query(sql`
             INSERT INTO portfolio_robots 
@@ -121,6 +121,42 @@ const worker = {
                     ["uuid", "uuid", "bool", "numeric"]
                 )};
             `);
+
+            if (result.portfolio.positions && result.portfolio.positions.length) {
+                await t.query(sql`
+                DELETE FROM portfolio_positions
+                WHERE portfolio_id = ${result.portfolio.id};`);
+                await t.query(sql`
+                    INSERT INTO portfolio_positions (portfolio_id, robot_id, position_id,
+                        volume, amount_in_currency, profit, prev_balance, current_balance
+                    ) SELECT * FROM ${sql.unnest(
+                        pgUtil.prepareUnnest(
+                            result.portfolio.positions.map((p) => ({
+                                positionId: p.id,
+                                robotId: p.robotId,
+                                portfolioId: result.portfolio.id,
+                                volume: p.volume,
+                                amountInCurrency: p.amountInCurrency,
+                                profit: p.profit,
+                                prevBalance: p.meta.prevBalance,
+                                currentBalance: p.meta.currentBalance
+                            })),
+                            [
+                                "portfolioId",
+                                "robotId",
+                                "positionId",
+                                "volume",
+                                "amountInCurrency",
+                                "profit",
+                                "prevBalance",
+                                "currentBalance"
+                            ]
+                        ),
+                        ["uuid", "uuid", "uuid", "numeric", "numeric", "numeric", "numeric", "numeric"]
+                    )}
+
+                `);
+            }
         });
         logger.info(`#${portfolioBuilder.portfolio.id} portfolio build finished`);
     },
@@ -231,7 +267,7 @@ const worker = {
                 active, 
                 active_from)
                  VALUES (
-                  ${JSON.stringify(result.portfolio.settings)}, 
+                  ${JSON.stringify(result.portfolio.settings)},
                  ${JSON.stringify(result.portfolio.robots)},
                 ${true}, 
                 ${dayjs.utc().toISOString()}

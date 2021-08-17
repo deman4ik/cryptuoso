@@ -141,6 +141,7 @@ export interface TradeStats {
         quarter: GenericObject<PeriodStats<BaseStats>>;
         month: GenericObject<PeriodStats<BaseStats>>;
     };
+    positions?: BasePosition[];
 }
 
 export type TradeStatsType =
@@ -160,6 +161,7 @@ interface BaseTradeStatsJob {
     type: TradeStatsType;
     recalc: boolean;
     round?: boolean;
+    savePositions?: boolean;
 }
 
 export interface TradeStatsRobot extends BaseTradeStatsJob {

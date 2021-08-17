@@ -237,7 +237,8 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
                     type: "portfolio",
                     portfolioId: this.portfolio.id,
                     recalc: true,
-                    feeRate: this.portfolio.context.feeRate
+                    feeRate: this.portfolio.context.feeRate,
+                    savePositions: true
                 },
                 initialBalance: this.portfolio.settings.initialBalance,
                 leverage: this.portfolio.settings.leverage
@@ -417,7 +418,8 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
                         active: true,
                         share: r.share,
                         priority: Object.keys(prevPortfolio.robots).length - index // сортировка от лучших к худшим по порядку
-                    }))
+                    })),
+                    positions: prevPortfolio.tradeStats.positions
                 },
                 steps
             };
