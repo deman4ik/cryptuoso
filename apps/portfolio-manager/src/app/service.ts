@@ -513,6 +513,9 @@ export default class PortfolioManagerService extends HTTPService {
     }
 
     async buildPortfolio({ portfolioId }: PortfolioManagerBuildPortfolio) {
+        await this.db.pg.one<{ id: PortfolioDB["id"] }>(sql`
+        SELECT id FROM portfolios where id = ${portfolioId};
+        `);
         await this.addJob<PortfolioBuilderJob>(
             "portfolioBuilder",
             "build",
@@ -526,9 +529,10 @@ export default class PortfolioManagerService extends HTTPService {
     }
 
     async buildPortfolios({ exchange }: PotrfolioManagerBuildPortfolios) {
-        const portfolios = await this.db.pg.many<{ id: PortfolioDB["id"] }>(sql`
+        const portfolios = await this.db.pg.any<{ id: PortfolioDB["id"] }>(sql`
         SELECT id FROM portfolios where exchange = ${exchange} and status = 'stopped';
         `);
+        if (!portfolios || !Array.isArray(portfolios) || !portfolios.length) return "No stopped portfolios";
         for (const { id } of portfolios) {
             await this.addJob<PortfolioBuilderJob>(
                 "portfolioBuilder",
@@ -544,6 +548,9 @@ export default class PortfolioManagerService extends HTTPService {
     }
 
     async buildUserPortfolio({ userPortfolioId }: PortfolioManagerBuildUserPortfolio) {
+        await this.db.pg.one<{ id: UserPortfolioDB["id"] }>(sql`
+        SELECT id FROM user_portfolios where id = ${userPortfolioId};
+        `);
         await this.addJob<UserPortfolioBuilderJob>(
             "portfolioBuilder",
             "build",
@@ -557,9 +564,11 @@ export default class PortfolioManagerService extends HTTPService {
     }
 
     async buildUserPortfolios() {
-        const userPortfolios = await this.db.pg.many<{ id: UserPortfolioDB["id"] }>(sql`
+        const userPortfolios = await this.db.pg.any<{ id: UserPortfolioDB["id"] }>(sql`
         SELECT id FROM user_portfolios where status = ${"active"};
         `);
+        if (!userPortfolios || !Array.isArray(userPortfolios) || !userPortfolios.length)
+            return "No active user portfolios";
         for (const { id } of userPortfolios) {
             await this.addJob<UserPortfolioBuilderJob>(
                 "portfolioBuilder",

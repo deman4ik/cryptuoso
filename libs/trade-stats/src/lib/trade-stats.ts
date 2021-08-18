@@ -40,7 +40,8 @@ export class TradeStatsCalc implements TradeStats {
 
         this.fullStats = this.initFullStats(this.positions, prevStats?.fullStats);
         this.periodStats = this.initPeriodStats(prevStats?.periodStats);
-        if (this.meta.job.recalc && maxLeverage) this.fullStats.maxLeverage = maxLeverage;
+        if (this.meta.job.recalc && this.meta.job.type === "portfolio" && maxLeverage)
+            this.fullStats.maxLeverage = maxLeverage;
         this.prevFullStats = { ...this.fullStats };
         this.prevPeriodStats = { ...this.periodStats };
     }
@@ -51,14 +52,14 @@ export class TradeStatsCalc implements TradeStats {
     ): { positions: BasePosition[]; maxLeverage: FullStats["maxLeverage"] } {
         const dates = [
             ...allPositions.map((p) => ({
-                date: p.entryDate,
-                id: p.id,
-                side: "entry"
+                date: dayjs.utc(p.entryDate).valueOf(),
+                side: "entry",
+                position: p
             })),
             ...allPositions.map((p) => ({
-                date: p.exitDate,
-                id: p.id,
-                side: "exit"
+                date: dayjs.utc(p.exitDate).valueOf(),
+                side: "exit",
+                position: p
             }))
         ].sort((a, b) => sortAsc(a.date, b.date));
         let availableFunds = this.meta.initialBalance;
@@ -68,21 +69,21 @@ export class TradeStatsCalc implements TradeStats {
         let prevBalance = currentBalance;
         const { feeRate } = <TradeStatsPortfolio>this.meta.job;
         const results: { [id: string]: BasePosition } = {};
-        for (const date of dates) {
-            const position = Object.freeze(allPositions.find(({ id }) => id === date.id));
+        for (const { position, side } of dates) {
             const openPosition = results[position.id];
+
+            const newPosition: BasePosition = {
+                ...position,
+                ...openPosition
+            };
             const {
                 direction,
                 entryPrice,
                 exitPrice,
                 maxPrice,
                 meta: { portfolioShare }
-            } = position;
-            const newPosition: BasePosition = {
-                ...position,
-                ...openPosition
-            };
-            if (date.side === "entry") {
+            } = newPosition;
+            if (side === "entry") {
                 const leveragedBalance = prevBalance * (this.meta.leverage || 1);
                 newPosition.amountInCurrency = calcPercentValue(leveragedBalance, portfolioShare);
                 newPosition.volume = round(newPosition.amountInCurrency / entryPrice, 6);
@@ -90,7 +91,7 @@ export class TradeStatsCalc implements TradeStats {
                 if (this.meta.job.recalc) availableFunds = availableFunds - entryPrice * newPosition.volume;
             }
 
-            if (date.side === "exit") {
+            if (side === "exit") {
                 newPosition.profit = calcPositionProfit(direction, entryPrice, exitPrice, newPosition.volume, feeRate);
                 newPosition.worstProfit = calcPositionProfit(
                     direction,
@@ -113,7 +114,7 @@ export class TradeStatsCalc implements TradeStats {
                 const leverage = availableFunds / currentBalance;
                 if (leverage < maxLeverage) maxLeverage = leverage;
             }
-            results[date.id] = newPosition;
+            results[position.id] = newPosition;
         }
         return { positions: Object.values(results), maxLeverage };
     }

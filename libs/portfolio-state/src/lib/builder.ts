@@ -238,7 +238,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
                     portfolioId: this.portfolio.id,
                     recalc: true,
                     feeRate: this.portfolio.context.feeRate,
-                    savePositions: true
+                    savePositions: false
                 },
                 initialBalance: this.portfolio.settings.initialBalance,
                 leverage: this.portfolio.settings.leverage
