@@ -3,8 +3,7 @@ import { Subject } from "threads/observable";
 import { PortfolioOptions, PortfolioRobot, PortfolioState, UserPortfolioState } from "./types";
 import { BasePosition } from "@cryptuoso/market";
 import { periodStatsToArray, TradeStats, TradeStatsCalc } from "@cryptuoso/trade-stats";
-import { getPercentagePos, percentBetween, round, sum, uniqueElementsBy } from "@cryptuoso/helpers";
-import Statistics from "statistics.js";
+import { percentBetween, round, sum, uniqueElementsBy } from "@cryptuoso/helpers";
 import { getPortfolioBalance, getPortfolioRobotsCount, getPortfolioMinBalance } from "./helpers";
 
 interface PortoflioRobotState extends PortfolioRobot {
@@ -23,7 +22,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
     #subject: Subject<number>;
     portfolio: T;
     optionWeights: { [Weight in keyof PortfolioOptions]: number } = {
-        diversification: 1.1,
+        //diversification: 1.1,
         profit: 1.1,
         risk: 1.1,
         moneyManagement: 1,
@@ -160,26 +159,26 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
 
     async sortRobots(robots: { [key: string]: PortoflioRobotState }) {
         this.log.debug(`Portfolio #${this.portfolio.id} - Sorting ${Object.keys(robots).length} robots`);
-        const { diversification, profit, risk, moneyManagement, winRate, efficiency } = this.portfolio.settings.options;
+        const { profit, risk, moneyManagement, winRate, efficiency } = this.portfolio.settings.options;
         return Object.values(robots)
             .sort(({ stats: { fullStats: a } }, { stats: { fullStats: b } }) => {
-                if (profit && !diversification && !risk && !moneyManagement && !winRate && !efficiency) {
+                if (profit && !risk && !moneyManagement && !winRate && !efficiency) {
                     if (a.netProfit > b.netProfit) return -1;
                     if (a.netProfit < b.netProfit) return 1;
                 }
-                if (risk && !diversification && !profit && !moneyManagement && !winRate && !efficiency) {
+                if (risk && !profit && !moneyManagement && !winRate && !efficiency) {
                     if (a.maxDrawdown > b.maxDrawdown) return 1;
                     if (a.maxDrawdown < b.maxDrawdown) return -1;
                 }
-                if (moneyManagement && !diversification && !profit && !risk && !winRate && !efficiency) {
+                if (moneyManagement && !profit && !risk && !winRate && !efficiency) {
                     if (a.payoffRatio > b.payoffRatio) return -1;
                     if (a.payoffRatio < b.payoffRatio) return 1;
                 }
-                if (winRate && !diversification && !profit && !risk && !moneyManagement && !efficiency) {
+                if (winRate && !profit && !risk && !moneyManagement && !efficiency) {
                     if (a.winRate > b.winRate) return -1;
                     if (a.winRate < b.winRate) return 1;
                 }
-                if (efficiency && !diversification && !profit && !moneyManagement && !winRate && !risk) {
+                if (efficiency && !profit && !moneyManagement && !winRate && !risk) {
                     if (a.sharpeRatio > b.sharpeRatio) return -1;
                     if (a.sharpeRatio < b.sharpeRatio) return 1;
                 }
@@ -211,8 +210,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
         }
 
         const minShare = Math.min(...Object.values(robots).map((r) => r.share));
-        this.portfolio.variables.minBalance =
-            round((this.portfolio.context.minTradeAmount * 100) / minShare / 100) * 100;
+        this.portfolio.variables.minBalance = round(this.portfolio.context.minTradeAmount * minShare);
 
         for (const [key, robot] of Object.entries(robots)) {
             robots[key].positions = robot.positions.map((pos) => {
@@ -238,7 +236,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
                     portfolioId: this.portfolio.id,
                     recalc: true,
                     feeRate: this.portfolio.context.feeRate,
-                    savePositions: false
+                    savePositions: true
                 },
                 initialBalance: this.portfolio.settings.initialBalance,
                 leverage: this.portfolio.settings.leverage
@@ -261,7 +259,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
 
     async comparePortfolios(prevPortfolio: PortfolioCalculated, currentPortfolio: PortfolioCalculated) {
         this.log.debug(`Portfolio #${this.portfolio.id} - Comparing portfolios `);
-        const { diversification, profit, risk, moneyManagement, winRate, efficiency } = this.portfolio.settings.options;
+        const { profit, risk, moneyManagement, winRate, efficiency } = this.portfolio.settings.options;
         const comparison: {
             [Comparison in keyof PortfolioOptions]?: {
                 prev: number;
@@ -270,7 +268,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
             };
         } = {};
         let skip = false;
-        if (diversification) {
+        /* if (diversification) {
             const prevMonthsNetProfit = Object.values(prevPortfolio.tradeStats.periodStats.month).map(
                 (s) => s.stats.percentNetProfit
             );
@@ -296,7 +294,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
                 current: currentPortfolio.correlationPercent,
                 diff: diff * this.optionWeights.diversification
             };
-        }
+        } */
 
         if (profit) {
             const prevNetProfit = prevPortfolio.tradeStats.fullStats.avgPercentNetProfitQuarters;

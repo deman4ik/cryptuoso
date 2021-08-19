@@ -156,10 +156,10 @@ export default class StatisticCalcRunnerService extends HTTPService {
     }
 
     async handleStatsCalcPortfolioEvent(params: TradeStatsRunnerPortfolio) {
-        const { recalc, portfolioId } = params;
+        const { recalc, portfolioId, savePositions } = params;
 
         this.log.info(`New ${TradeStatsRunnerEvents.PORTFOLIO} event - ${portfolioId}`);
-        await this.queueJob({ type: "portfolio", recalc, portfolioId });
+        await this.queueJob({ type: "portfolio", recalc, portfolioId, savePositions });
     }
 
     async handleStatsCalcUserRobotEvent(params: TradeStatsRunnerUserRobot) {
@@ -215,7 +215,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
     }
 
     async handleRecalcAllPorfoliosEvent(params: TradeStatsRunnerRecalcAllPortfolios) {
-        const { exchange } = params;
+        const { exchange, savePositions } = params;
 
         const conditionExchange = !exchange ? this.db.sql`` : this.db.sql`WHERE p.exchange=${exchange}`;
 
@@ -227,7 +227,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
             `
         );
         for (const { portfolioId } of portfolios) {
-            await this.queueJob({ type: "portfolio", recalc: true, portfolioId });
+            await this.queueJob({ type: "portfolio", recalc: true, portfolioId, savePositions });
         }
     }
 

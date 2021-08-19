@@ -2,7 +2,7 @@ import { BasePosition } from "@cryptuoso/market";
 import { BaseStats, FullStats, PeriodStats } from "@cryptuoso/trade-stats";
 
 export interface PortfolioOptions {
-    diversification: boolean;
+    // diversification: boolean;
     profit: boolean;
     risk: boolean;
     moneyManagement: boolean;

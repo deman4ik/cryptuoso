@@ -196,7 +196,7 @@ const worker = {
 
         const userPortfolioBuilder = new PortfolioBuilder<UserPortfolioState>(portfolio, subject);
         const maxRobotsCount = userPortfolioBuilder.maxRobotsCount;
-        const { risk, profit, winRate, efficiency, diversification, moneyManagement } = portfolio.settings.options;
+        const { risk, profit, winRate, efficiency, moneyManagement } = portfolio.settings.options;
         const portfolioRobots = await pg.any<{
             robotId: string;
         }>(sql`SELECT pr.robot_id FROM portfolio_robots pr, v_portfolios p, robots r
@@ -207,7 +207,6 @@ const worker = {
         AND p.option_profit = ${profit}
         AND p.option_win_rate = ${winRate}
         AND p.option_efficiency = ${efficiency}
-        AND p.option_diversification = ${diversification}
         AND p.option_money_management = ${moneyManagement}
         ${includeAssetsCondition}
         ${excludeAssetsCondition}

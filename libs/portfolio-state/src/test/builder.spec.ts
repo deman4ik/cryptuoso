@@ -14,7 +14,7 @@ const portfolio: PortfolioState = {
     status: "stopped",
     settings: {
         options: {
-            diversification: true,
+            //diversification: true,
             profit: true,
             risk: true,
             moneyManagement: true,

@@ -37,6 +37,11 @@ export const TradeStatsRunnerSchema = {
             optional: true,
             default: false
         },
+        savePositions: {
+            type: "boolean",
+            optional: true,
+            default: false
+        },
         portfolioId: {
             type: "uuid"
         }
@@ -88,6 +93,11 @@ export const TradeStatsRunnerSchema = {
             type: "string",
             optional: true,
             default: null as string
+        },
+        savePositions: {
+            type: "boolean",
+            optional: true,
+            default: false
         }
     },
     [TradeStatsRunnerEvents.RECALC_ALL_USER_ROBOTS]: {
@@ -129,6 +139,7 @@ export interface TradeStatsRunnerRobot {
 export interface TradeStatsRunnerPortfolio {
     recalc?: boolean;
     portfolioId: string;
+    savePositions?: boolean;
 }
 
 export type TradeStatsRunnerPortfolioRobot = TradeStatsRunnerRobot;
@@ -150,6 +161,7 @@ export interface TradeStatsRunnerRecalcAllRobots {
 
 export interface TradeStatsRunnerRecalcAllPortfolios {
     exchange?: string;
+    savePositions?: boolean;
 }
 
 export interface TradeStatsRunnerRecalcAllUserRobots {

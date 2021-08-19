@@ -53,8 +53,8 @@ export default class PortfolioManagerService extends HTTPService {
                             optional: true,
                             default: 100000
                         },
-                        leverage: { type: "number", optional: true, integer: true, default: 3 },
-                        minRobotsCount: { type: "number", optional: true, integer: true },
+                        leverage: { type: "number", optional: true, integer: true, default: 5 },
+                        minRobotsCount: { type: "number", optional: true, integer: true, default: 20 },
                         maxRobotsCount: { type: "number", optional: true, integer: true }
                     },
                     roles: [UserRoles.admin, UserRoles.manager],
@@ -88,7 +88,6 @@ export default class PortfolioManagerService extends HTTPService {
                         options: {
                             type: "object",
                             props: {
-                                diversification: "boolean",
                                 profit: "boolean",
                                 risk: "boolean",
                                 moneyManagement: "boolean",
@@ -113,7 +112,6 @@ export default class PortfolioManagerService extends HTTPService {
                         options: {
                             type: "object",
                             props: {
-                                diversification: "boolean",
                                 profit: "boolean",
                                 risk: "boolean",
                                 moneyManagement: "boolean",
@@ -158,7 +156,7 @@ export default class PortfolioManagerService extends HTTPService {
 
     generateOptions() {
         const values = {
-            diversification: [true, false],
+            //diversification: [true, false],
             profit: [true, false],
             risk: [true, false],
             moneyManagement: [true, false],
