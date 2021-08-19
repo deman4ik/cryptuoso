@@ -210,7 +210,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
         }
 
         const minShare = Math.min(...Object.values(robots).map((r) => r.share));
-        this.portfolio.variables.minBalance = round(this.portfolio.context.minTradeAmount * minShare);
+        this.portfolio.variables.minBalance = round(this.portfolio.context.minTradeAmount * (100 / minShare));
 
         for (const [key, robot] of Object.entries(robots)) {
             robots[key].positions = robot.positions.map((pos) => {
