@@ -1,11 +1,13 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import { ConnectorRunnerEvents, ConnectorRunnerSchema } from "@cryptuoso/connector-events";
-import { ConnectorJob, ConnectorJobType, ConnectorRunnerJobType, Queues } from "@cryptuoso/connector-state";
+import { ConnectorJob, ConnectorJobType, ConnectorRunnerJobType, Priority, Queues } from "@cryptuoso/connector-state";
 import { sql } from "slonik";
 import { User, UserExchangeAccStatus, UserRoles } from "@cryptuoso/user-state";
 import { Job } from "bullmq";
 import dayjs from "dayjs";
+import { v4 as uuid } from "uuid";
 import { ActionsHandlerError } from "@cryptuoso/errors";
+import { OrderJobType } from "@cryptuoso/market";
 export type ConnectorRunnerServiceConfig = HTTPServiceConfig;
 
 export default class ConnectorRunnerService extends HTTPService {
@@ -51,6 +53,15 @@ export default class ConnectorRunnerService extends HTTPService {
             jobId: ConnectorRunnerJobType.idleOrderJobs,
             repeat: {
                 cron: "*/15 * * * * *"
+            },
+            removeOnComplete: 1,
+            removeOnFail: 10
+        });
+
+        await this.addJob(Queues.connectorRunner, ConnectorRunnerJobType.idleOpenOrders, null, {
+            jobId: ConnectorRunnerJobType.idleOpenOrders,
+            repeat: {
+                every: 1000 * 120
             },
             removeOnComplete: 1,
             removeOnFail: 10
@@ -114,6 +125,9 @@ export default class ConnectorRunnerService extends HTTPService {
             case ConnectorRunnerJobType.idleOrderJobs:
                 await this.checkIdleOrderJobs();
                 break;
+            case ConnectorRunnerJobType.idleOpenOrders:
+                await this.checkIdleOpenOrders();
+                break;
             case ConnectorRunnerJobType.checkBalance:
                 await this.checkBalances();
                 break;
@@ -144,6 +158,31 @@ export default class ConnectorRunnerService extends HTTPService {
                 } catch (e) {
                     this.log.error(e);
                 }
+            }
+        }
+    }
+
+    async checkIdleOpenOrders() {
+        const userOrders = await this.db.pg.any<{ id: string; userExAccId: string }>(sql`
+        SELECT uo.id, uo.user_ex_acc_id
+      FROM user_orders uo,
+           user_exchange_accs a
+      WHERE uo.user_ex_acc_id = a.id
+      AND a.status = 'enabled'
+      AND uo.status = 'open'
+      AND NOT EXISTS (select j.id from connector_jobs j where j.user_ex_acc_id = uo.user_ex_acc_id and j.order_id = uo.id);
+        `);
+
+        if (userOrders && Array.isArray(userOrders) && userOrders.length) {
+            for (const { id: orderId, userExAccId } of userOrders) {
+                await this.addConnectorJob({
+                    id: uuid(),
+                    type: OrderJobType.check,
+                    userExAccId,
+                    orderId,
+                    nextJobAt: dayjs.utc().toISOString(),
+                    priority: Priority.medium
+                });
             }
         }
     }

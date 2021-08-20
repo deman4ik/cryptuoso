@@ -533,6 +533,7 @@ export default class ConnectorRunnerService extends BaseService {
                 }
 
                 ({ order, nextJob } = await this.connectors[userExAccId].createOrder(order));
+                return { order, nextJob };
             } else if (orderJobType === OrderJobType.recreate) {
                 this.log.info(`UserExAcc #${userExAccId} recreating order ${order.positionId}/${order.id}`);
                 const response = await this.connectors[userExAccId].checkOrder(order);
@@ -547,6 +548,7 @@ export default class ConnectorRunnerService extends BaseService {
                             await this.#saveOrder(t, response.order);
                         });
                         ({ order, nextJob } = await this.connectors[userExAccId].checkOrder(orderExists));
+                        return { order, nextJob };
                     } else {
                         const newOrder: Order = {
                             id: uuid(),
@@ -583,6 +585,7 @@ export default class ConnectorRunnerService extends BaseService {
                     order = response.order;
                     nextJob = response.nextJob;
                 }
+                return { order, nextJob };
             } else if (orderJobType === OrderJobType.cancel) {
                 this.log.info(`UserExAcc #${userExAccId} canceling order ${order.positionId}/${order.id}`);
                 if (!order.exId) {
@@ -599,6 +602,7 @@ export default class ConnectorRunnerService extends BaseService {
                     return { order: { ...order, nextJob: null }, nextJob: null };
                 }
                 ({ order, nextJob } = await this.connectors[userExAccId].cancelOrder(order));
+                return { order, nextJob };
             } else if (orderJobType === OrderJobType.check) {
                 this.log.info(`UserExAcc #${userExAccId} checking order ${order.positionId}/${order.id}`);
                 if (!order.exId) {
@@ -612,8 +616,12 @@ export default class ConnectorRunnerService extends BaseService {
                         nextJob: null
                     };
                 }
-                if (order.status === OrderStatus.closed || order.status === OrderStatus.canceled)
-                    return { order, nextJob: null };
+                if (order.status === OrderStatus.closed || order.status === OrderStatus.canceled) {
+                    const orderExists = await this.#getOrderByPrevId(order.id);
+                    if (orderExists) order = { ...orderExists };
+                    else return { order, nextJob: null };
+                }
+
                 ({ order, nextJob } = await this.connectors[userExAccId].checkOrder(order));
 
                 if (
@@ -626,10 +634,10 @@ export default class ConnectorRunnerService extends BaseService {
                     );
                     ({ order, nextJob } = await this.connectors[userExAccId].cancelOrder(order));
                 }
+                return { order, nextJob };
             } else {
                 throw new BaseError("Wrong connector job type", { order });
             }
-            return { order, nextJob };
         } catch (e) {
             this.log.error(e, order);
             throw e;

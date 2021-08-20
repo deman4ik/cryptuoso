@@ -27,6 +27,7 @@ export const enum ConnectorJobType {
 
 export const enum ConnectorRunnerJobType {
     idleOrderJobs = "idleOrderJobs",
+    idleOpenOrders = "idleOpenOrders",
     checkBalance = "checkBalance",
     checkUnknownOrders = "checkUnknownOrders"
 }
