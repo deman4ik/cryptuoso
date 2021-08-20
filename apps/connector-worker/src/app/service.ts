@@ -206,7 +206,7 @@ export default class ConnectorRunnerService extends BaseService {
         INSERT INTO connector_jobs (id, user_ex_acc_id, order_id, next_job_at, priority, type, data )
         VALUES (${nextJob.id}, ${nextJob.userExAccId}, 
         ${nextJob.orderId}, ${nextJob.nextJobAt || null}, 
-        ${nextJob.priority}, ${nextJob.type}, 
+        ${nextJob.priority || 3}, ${nextJob.type}, 
         ${JSON.stringify(nextJob.data) || null});
         `);
         } catch (error) {
@@ -546,6 +546,7 @@ export default class ConnectorRunnerService extends BaseService {
                         );
                         await this.db.pg.transaction(async (t) => {
                             await this.#saveOrder(t, response.order);
+                            await this.#deleteJobs(t, response.order.id);
                         });
                         ({ order, nextJob } = await this.connectors[userExAccId].checkOrder(orderExists));
                         return { order, nextJob };
@@ -580,12 +581,13 @@ export default class ConnectorRunnerService extends BaseService {
                             await this.#createOrder(t, newOrder);
                         });
                         ({ order, nextJob } = await this.connectors[userExAccId].createOrder(newOrder));
+                        return { order, nextJob };
                     }
                 } else {
                     order = response.order;
                     nextJob = response.nextJob;
+                    return { order, nextJob };
                 }
-                return { order, nextJob };
             } else if (orderJobType === OrderJobType.cancel) {
                 this.log.info(`UserExAcc #${userExAccId} canceling order ${order.positionId}/${order.id}`);
                 if (!order.exId) {
@@ -618,8 +620,12 @@ export default class ConnectorRunnerService extends BaseService {
                 }
                 if (order.status === OrderStatus.closed || order.status === OrderStatus.canceled) {
                     const orderExists = await this.#getOrderByPrevId(order.id);
-                    if (orderExists) order = { ...orderExists };
-                    else return { order, nextJob: null };
+                    if (orderExists) {
+                        await this.db.pg.transaction(async (t) => {
+                            await this.#deleteJobs(t, order.id);
+                        });
+                        order = { ...orderExists };
+                    } else return { order, nextJob: null };
                 }
 
                 ({ order, nextJob } = await this.connectors[userExAccId].checkOrder(order));
