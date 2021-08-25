@@ -202,10 +202,12 @@ class StatsCalcWorker {
             const portfolio = await this.db.pg.maybeOne<{
                 fullStats: TradeStats["fullStats"];
                 settings: PortfolioSettings;
+                feeRate: number;
             }>(sql`
-            SELECT r.full_stats, r.settings
-            FROM portfolios r
-            WHERE r.id = ${portfolioId};
+            SELECT r.full_stats, r.settings, m.fee_rate
+            FROM portfolios r, mv_exchange_info m
+            WHERE r.exchange = m.exchange
+            AND r.id = ${portfolioId};
         `);
             if (!portfolio) throw new Error(`The portfolio doesn't exists (portfolioId: ${portfolioId})`);
 
@@ -271,7 +273,10 @@ class StatsCalcWorker {
 
             const newStats: TradeStats = await this.calcStats(
                 positions,
-                { job: { ...job, savePositions: true }, initialBalance: portfolio.settings.initialBalance },
+                {
+                    job: { ...job, savePositions: true, feeRate: portfolio.settings.feeRate || portfolio.feeRate },
+                    initialBalance: portfolio.settings.initialBalance
+                },
                 initialStats
             );
 

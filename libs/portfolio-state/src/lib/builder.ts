@@ -209,8 +209,8 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
             robots[key].share = round(robot.stats.fullStats.amountProportion * propСoefficient, 2);
         }
 
-        const minShare = Math.min(...Object.values(robots).map((r) => r.share));
-        this.portfolio.variables.minBalance = round(this.portfolio.context.minTradeAmount * (100 / minShare));
+        //const minShare = Math.min(...Object.values(robots).map((r) => r.share));
+        // this.portfolio.variables.minBalance = round(this.portfolio.context.minTradeAmount * (100 / minShare));
 
         for (const [key, robot] of Object.entries(robots)) {
             robots[key].positions = robot.positions.map((pos) => {
@@ -235,7 +235,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
                     type: "portfolio",
                     portfolioId: this.portfolio.id,
                     recalc: true,
-                    feeRate: this.portfolio.context.feeRate,
+                    feeRate: this.portfolio.settings.feeRate || this.portfolio.context.feeRate,
                     savePositions: true
                 },
                 initialBalance: this.portfolio.settings.initialBalance,

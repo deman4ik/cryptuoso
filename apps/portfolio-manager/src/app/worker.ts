@@ -40,7 +40,12 @@ const worker = {
             portfolio.settings.excludeAssets.length
                 ? sql`AND r.asset NOT IN (${sql.join(portfolio.settings.excludeAssets, sql`, `)})`
                 : sql``;
-
+        const dateFromCondition = portfolio.settings.dateFrom
+            ? sql`AND p.entry_date >= ${portfolio.settings.dateFrom}`
+            : sql``;
+        const dateToCondition = portfolio.settings.dateTo
+            ? sql`AND p.entry_date <= ${portfolio.settings.dateTo}`
+            : sql``;
         const positions: BasePosition[] = await DataStream.from(
             makeChunksGenerator(
                 pg,
@@ -56,6 +61,8 @@ const worker = {
           AND p.status = 'closed'
           ${includeAssetsCondition}
           ${excludeAssetsCondition}
+          ${dateFromCondition}
+          ${dateToCondition}
           ORDER BY p.exit_date
         `,
                 1000

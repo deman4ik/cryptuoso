@@ -17,10 +17,13 @@ export interface PortfolioSettings {
     tradingAmountCurrency?: number;
     initialBalance: number;
     leverage: number;
+    feeRate?: number;
     maxRobotsCount?: number;
     minRobotsCount?: number;
     includeAssets?: string[];
     excludeAssets?: string[];
+    dateFrom?: string;
+    dateTo?: string;
 }
 
 export interface PortfolioDB {

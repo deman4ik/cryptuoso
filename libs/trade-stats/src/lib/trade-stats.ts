@@ -89,6 +89,7 @@ export class TradeStatsCalc implements TradeStats {
                 newPosition.volume = round(newPosition.amountInCurrency / entryPrice, 6);
 
                 if (this.meta.job.recalc) availableFunds = availableFunds - entryPrice * newPosition.volume;
+                newPosition.meta = { ...newPosition.meta, prevBalance };
             }
 
             if (side === "exit") {
@@ -104,7 +105,7 @@ export class TradeStatsCalc implements TradeStats {
                 netProfit = sum(netProfit, newPosition.profit);
                 currentBalance = sum(this.meta.initialBalance, netProfit);
 
-                newPosition.meta = { ...newPosition.meta, prevBalance, currentBalance };
+                newPosition.meta = { ...newPosition.meta, currentBalance };
                 prevBalance = currentBalance;
 
                 if (this.meta.job.recalc) availableFunds = availableFunds + exitPrice * newPosition.volume;
