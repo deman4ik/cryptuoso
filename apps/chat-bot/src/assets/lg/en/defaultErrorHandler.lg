@@ -1,4 +1,5 @@
 # UnknownError
  - ```The bot encountered an error please try later or contact support@cryptuoso.com
-      Error: ${error}
+      - Error: 
+      - ${error}
       ```

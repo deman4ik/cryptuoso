@@ -1527,6 +1527,27 @@
                 }
             }
         },
+        "quickchart": {
+            "root": "libs/quickchart",
+            "sourceRoot": "libs/quickchart/src",
+            "projectType": "library",
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["libs/quickchart/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/libs/quickchart"],
+                    "options": {
+                        "jestConfig": "libs/quickchart/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            }
+        },
         "robot-events": {
             "root": "libs/robot-events",
             "sourceRoot": "libs/robot-events/src",

@@ -1,16 +1,24 @@
 import { GraphQLClient as Client, gql } from "graphql-request";
 import logger from "@cryptuoso/logger";
 import { GenericObject } from "@cryptuoso/helpers";
-import { StatePropertyAccessor, TurnContext } from "botbuilder";
+import { StatePropertyAccessor, TurnContext, UserState } from "botbuilder";
 import { ChatUser } from "../types";
 import { Auth } from "@cryptuoso/auth-utils";
 export { gql };
 
 export class GraphQLClient {
     #client: Client;
-    #refreshToken: Auth["refreshTokenChatBot"];
-    constructor({ refreshToken }: { refreshToken: Auth["refreshTokenChatBot"] }) {
-        this.#refreshToken = refreshToken;
+    #refreshTokenFunction: Auth["refreshTokenChatBot"];
+    #user: StatePropertyAccessor<ChatUser>;
+    constructor({
+        refreshTokenFunction,
+        userState
+    }: {
+        refreshTokenFunction: Auth["refreshTokenChatBot"];
+        userState: UserState;
+    }) {
+        this.#refreshTokenFunction = refreshTokenFunction;
+        this.#user = userState.createProperty<ChatUser>("user");
         this.#client = new Client(`https://${process.env.HASURA_URL}`);
     }
 
@@ -18,13 +26,8 @@ export class GraphQLClient {
         return this.#client;
     }
 
-    async request<T = any, V = GenericObject<any>>(
-        query: any,
-        variables: V,
-        userAccessor: StatePropertyAccessor<ChatUser>,
-        context: TurnContext
-    ) {
-        const user = await userAccessor.get(context);
+    async request<T = any, V = GenericObject<any>>(context: TurnContext, query: any, variables: V = null) {
+        const user = await this.#user.get(context);
         try {
             logger.debug("GraphQLClient.request vars", variables);
 
@@ -36,8 +39,8 @@ export class GraphQLClient {
         } catch (err) {
             if (err.message.includes("JWT")) {
                 logger.info(`Retrying to get refresh token for ${user?.telegramId}`);
-                const { user: existedUser, accessToken } = await this.#refreshToken(user);
-                await userAccessor.set(context, { ...existedUser, accessToken });
+                const { user: existedUser, accessToken } = await this.#refreshTokenFunction(user);
+                await this.#user.set(context, { ...existedUser, accessToken });
                 return this.#client.request<T, V>(query, variables, {
                     authorization: `Bearer ${accessToken}`
                 });

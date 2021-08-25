@@ -37,17 +37,20 @@ export class Bot extends ActivityHandler {
         super();
         if (!conversationState) throw new Error("[Bot]: Missing parameter. conversationState is required");
         if (!userState) throw new Error("[Bot]: Missing parameter. userState is required");
-        this.authUtils = new Auth();
-        this.gqlClient = new GraphQLClient({
-            refreshToken: this.authUtils.refreshTokenChatBot.bind(this.authUtils)
-        });
         this.conversationState = conversationState as ConversationState;
         this.userState = userState;
-        this.mainDialog = new MainDialog(this.userState);
         this.dialogState = this.conversationState.createProperty("DialogState");
         this.userAccessor = this.userState.createProperty<ChatUser>("user");
+        this.authUtils = new Auth();
+        this.gqlClient = new GraphQLClient({
+            refreshTokenFunction: this.authUtils.refreshTokenChatBot.bind(this.authUtils),
+            userState: this.userState
+        });
+
+        this.mainDialog = new MainDialog(this.userState, this.gqlClient);
+
         this.onMessage(async (context, next) => {
-            //   logger.debug("Running dialog with Message Activity.");
+            logger.debug("onMessage", context.activity);
 
             //  logger.debug(context);
             await this.auth(context);
@@ -60,6 +63,7 @@ export class Bot extends ActivityHandler {
         });
 
         this.onMembersAdded(async (context, next) => {
+            logger.debug("onMembersAdded");
             for (const idx in context.activity.membersAdded) {
                 if (context.activity.membersAdded[idx].id !== context.activity.recipient.id) {
                     await this.auth(context);
@@ -69,7 +73,7 @@ export class Bot extends ActivityHandler {
             await next();
         });
         this.onDialog(async (context, next) => {
-            // logger.debug("onDialog");
+            logger.debug("onDialog");
             // Save any state changes. The load happened during the execution of the Dialog.
             await this.conversationState.saveChanges(context, false);
             await this.userState.saveChanges(context, false);
