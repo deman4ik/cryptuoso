@@ -48,13 +48,17 @@ export default class RobotWorkerService extends BaseService {
     }
 
     async onServiceStart(): Promise<void> {
+        this.log.debug("Creating pool");
         this.pool = Pool(() => spawn<Utils>(new ThreadsWorker("./utils")), {
             name: "utils",
             concurrency: 5
         });
+        this.log.debug("Loading strategy and indicators code");
         await this.loadCode();
+        this.log.debug("Creating queues");
         this.createQueue(Queues.robot);
         this.createQueue(Queues.alerts);
+        this.log.debug("Creating workers");
         this.createWorker(Queues.robot, this.processRobot);
         this.createWorker(Queues.alerts, this.processAlerts);
     }
