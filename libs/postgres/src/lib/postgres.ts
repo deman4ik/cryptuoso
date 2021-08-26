@@ -33,8 +33,8 @@ const typeParsers = [
 ];
 
 const config: ClientConfigurationInputType = {
-    connectionRetryLimit: 10,
-    connectionTimeout: "DISABLE_TIMEOUT",
+    connectionRetryLimit: 1000,
+    connectionTimeout: 60000,
     idleTimeout: 3000,
     maximumPoolSize: 10,
     interceptors,
