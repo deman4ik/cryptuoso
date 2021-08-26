@@ -34,6 +34,7 @@ import {
     PortfolioManagerUserPortfolioBuilded
 } from "@cryptuoso/portfolio-events";
 import { UserRobotStatus } from "@cryptuoso/user-robot-state";
+import { Timeframe } from "@cryptuoso/market";
 
 export type PortfolioManagerServiceConfig = HTTPServiceConfig;
 
@@ -85,6 +86,10 @@ export default class PortfolioManagerService extends HTTPService {
                         leverage: { type: "number", optional: true, integer: true, default: 3 },
                         minRobotsCount: { type: "number", optional: true, integer: true },
                         maxRobotsCount: { type: "number", optional: true, integer: true },
+                        includeTimeframes: { type: "array", enum: Timeframe.validArray, optional: true },
+                        excludeTimeframes: { type: "array", enum: Timeframe.validArray, optional: true },
+                        includeAssets: { type: "array", items: "string", optional: true },
+                        excludeAssets: { type: "array", items: "string", optional: true },
                         options: {
                             type: "object",
                             props: {
@@ -262,6 +267,10 @@ export default class PortfolioManagerService extends HTTPService {
             leverage,
             maxRobotsCount,
             minRobotsCount,
+            includeTimeframes,
+            excludeTimeframes,
+            includeAssets,
+            excludeAssets,
             options
         }: PortfolioSettings & {
             exchange: UserPortfolioDB["exchange"];
@@ -283,7 +292,7 @@ export default class PortfolioManagerService extends HTTPService {
         const oldUserRobots = await this.db.pg.oneFirst<number>(sql`
         SELECT COUNT(1)
         FROM user_robots
-        WHERE user_id = ${userId}
+        WHERE user_id = ${userId} 
         AND status != ${UserRobotStatus.stopped}
         `);
 
@@ -340,7 +349,11 @@ export default class PortfolioManagerService extends HTTPService {
             initialBalance,
             leverage,
             maxRobotsCount,
-            minRobotsCount
+            minRobotsCount,
+            includeAssets,
+            excludeAssets,
+            includeTimeframes,
+            excludeTimeframes
         };
         await this.db.pg.transaction(async (t) => {
             await t.query(sql`

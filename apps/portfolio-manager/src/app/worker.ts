@@ -40,6 +40,18 @@ const worker = {
             portfolio.settings.excludeAssets.length
                 ? sql`AND r.asset NOT IN (${sql.join(portfolio.settings.excludeAssets, sql`, `)})`
                 : sql``;
+        const includeTimeframesCondition =
+            portfolio.settings.includeTimeframes &&
+            Array.isArray(portfolio.settings.includeTimeframes) &&
+            portfolio.settings.includeTimeframes.length
+                ? sql`AND r.timeframe IN (${sql.join(portfolio.settings.includeTimeframes, sql`, `)})`
+                : sql``;
+        const excludeTimeframesCondition =
+            portfolio.settings.excludeTimeframes &&
+            Array.isArray(portfolio.settings.excludeTimeframes) &&
+            portfolio.settings.excludeTimeframes.length
+                ? sql`AND r.timeframe NOT IN (${sql.join(portfolio.settings.excludeTimeframes, sql`, `)})`
+                : sql``;
         const dateFromCondition = portfolio.settings.dateFrom
             ? sql`AND p.entry_date >= ${portfolio.settings.dateFrom}`
             : sql``;
@@ -61,6 +73,8 @@ const worker = {
           AND p.status = 'closed'
           ${includeAssetsCondition}
           ${excludeAssetsCondition}
+          ${includeTimeframesCondition}
+          ${excludeTimeframesCondition}
           ${dateFromCondition}
           ${dateToCondition}
           ORDER BY p.exit_date
@@ -200,7 +214,24 @@ const worker = {
             portfolio.settings.excludeAssets.length
                 ? sql`AND r.asset NOT IN (${sql.join(portfolio.settings.excludeAssets, sql`, `)})`
                 : sql``;
-
+        const includeTimeframesCondition =
+            portfolio.settings.includeTimeframes &&
+            Array.isArray(portfolio.settings.includeTimeframes) &&
+            portfolio.settings.includeTimeframes.length
+                ? sql`AND r.timeframe IN (${sql.join(portfolio.settings.includeTimeframes, sql`, `)})`
+                : sql``;
+        const excludeTimeframesCondition =
+            portfolio.settings.excludeTimeframes &&
+            Array.isArray(portfolio.settings.excludeTimeframes) &&
+            portfolio.settings.excludeTimeframes.length
+                ? sql`AND r.timeframe NOT IN (${sql.join(portfolio.settings.excludeTimeframes, sql`, `)})`
+                : sql``;
+        const dateFromCondition = portfolio.settings.dateFrom
+            ? sql`AND p.entry_date >= ${portfolio.settings.dateFrom}`
+            : sql``;
+        const dateToCondition = portfolio.settings.dateTo
+            ? sql`AND p.entry_date <= ${portfolio.settings.dateTo}`
+            : sql``;
         const userPortfolioBuilder = new PortfolioBuilder<UserPortfolioState>(portfolio, subject);
         const maxRobotsCount = userPortfolioBuilder.maxRobotsCount;
         const { risk, profit, winRate, efficiency, moneyManagement } = portfolio.settings.options;
@@ -217,17 +248,39 @@ const worker = {
         AND p.option_money_management = ${moneyManagement}
         ${includeAssetsCondition}
         ${excludeAssetsCondition}
+        ${includeTimeframesCondition}
+        ${excludeTimeframesCondition}
         ORDER BY pr.priority 
         LIMIT ${maxRobotsCount}`);
-
+        //AND p.base = true
         const hasPredefinedRobots = portfolioRobots && Array.isArray(portfolioRobots) && portfolioRobots.length;
         const portfolioRobotsCondition = hasPredefinedRobots
-            ? sql`r.id in (${sql.join(
+            ? sql`AND r.id in (${sql.join(
                   portfolioRobots.map((r) => r.robotId),
                   sql`, `
               )})`
             : sql``;
 
+        logger.debug(sql`
+            SELECT p.id, p.robot_id, p.direction, p.entry_date, p.entry_price,
+             p.exit_date, p.exit_price, p.volume,
+              p.worst_profit, p.max_price, p.profit, p.bars_held
+            FROM v_robot_positions p, robots r, users u 
+            WHERE p.robot_id = r.id 
+              AND r.exchange = ${portfolio.exchange}
+              AND u.id = ${portfolio.userId}
+              AND r.available >= u.access
+              AND p.emulated = 'false'
+              AND p.status = 'closed'
+              ${includeAssetsCondition}
+              ${excludeAssetsCondition}
+              ${includeTimeframesCondition}
+            ${excludeTimeframesCondition}
+            ${dateFromCondition}
+            ${dateToCondition}
+              ${portfolioRobotsCondition}
+              ORDER BY p.exit_date
+            `);
         const positions: BasePosition[] = await DataStream.from(
             makeChunksGenerator(
                 pg,
@@ -244,6 +297,10 @@ const worker = {
           AND p.status = 'closed'
           ${includeAssetsCondition}
           ${excludeAssetsCondition}
+          ${includeTimeframesCondition}
+        ${excludeTimeframesCondition}
+        ${dateFromCondition}
+        ${dateToCondition}
           ${portfolioRobotsCondition}
           ORDER BY p.exit_date
         `,
@@ -251,6 +308,7 @@ const worker = {
             )
         ).reduce(async (accum: BasePosition[], chunk: BasePosition[]) => [...accum, ...chunk], []);
 
+        logger.debug(positions.length);
         userPortfolioBuilder.init(positions);
 
         logger.info(`#${job.userPortfolioId} user portfolio builder inited`);

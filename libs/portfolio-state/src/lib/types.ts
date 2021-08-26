@@ -20,6 +20,8 @@ export interface PortfolioSettings {
     feeRate?: number;
     maxRobotsCount?: number;
     minRobotsCount?: number;
+    includeTimeframes?: number[];
+    excludeTimeframes?: number[];
     includeAssets?: string[];
     excludeAssets?: string[];
     dateFrom?: string;

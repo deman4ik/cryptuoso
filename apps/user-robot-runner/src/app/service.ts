@@ -138,7 +138,7 @@ export default class UserRobotRunnerService extends HTTPService {
         this.createQueue(Queues.userRobot);
 
         this.createQueue(Queues.userRobotRunner);
-        this.createWorker(Queues.userRobotRunner, this.process);
+        //  this.createWorker(Queues.userRobotRunner, this.process);
         await this.addJob(Queues.userRobotRunner, UserRobotRunnerJobType.idleUserRobotJobs, null, {
             jobId: UserRobotRunnerJobType.idleUserRobotJobs,
             repeat: {
@@ -556,8 +556,7 @@ export default class UserRobotRunnerService extends HTTPService {
            FROM user_portfolios p
            LEFT JOIN v_user_portfolio_settings ups
                  ON  ups.user_portfolio_id = p.id
-           WHERE p.exchange = m.exchange
-             AND p.id = ${id}; 
+           WHERE p.id = ${id}; 
        `);
 
         if (!userPortfolio)
