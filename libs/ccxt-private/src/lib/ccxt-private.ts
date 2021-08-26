@@ -80,7 +80,7 @@ export class PrivateConnector {
     getOrderParams(id: string, params: GenericObject<any>, type: OrderType) {
         if (this.exchange === "kraken") {
             return {
-                leverage: 3, // TODO: check leverage from portfolio and somehow from tier?
+                leverage: 2, // TODO: check leverage from portfolio and somehow from tier?
                 trading_agreement: "agree"
             };
         }
