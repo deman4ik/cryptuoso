@@ -490,8 +490,8 @@ class StatsCalcWorker {
                 fullStats: TradeStats["fullStats"];
                 settings: PortfolioSettings;
             }>(sql`
-            SELECT r.full_stats,  r.settings
-            FROM user_portfolios r
+            SELECT r.full_stats,  r.user_portfolio_settings as settings
+            FROM v_user_portfolios r
             WHERE r.id = ${userPortfolioId};
         `);
             if (!userPortfolio)
