@@ -659,11 +659,11 @@ export class Auth {
             WHERE id = ${userId};
         `);
 
-        await this.#mailUtil.subscribeToList({
+        /*  await this.#mailUtil.subscribeToList({
             list: "cpz-beta@mg.cryptuoso.com",
             email: user.email,
             name: user.name
-        });
+        });*/
 
         await this.#mailUtil.send({
             to: user.email,
