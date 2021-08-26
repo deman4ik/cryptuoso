@@ -526,6 +526,7 @@ export default class UserRobotRunnerService extends HTTPService {
                             ...r,
                             userPortfolioId: userPortfolio.id,
                             userId: userPortfolio.userId,
+                            userExAccId: userPortfolio.userExAccId || undefined,
                             status: "started",
                             settings: JSON.stringify({
                                 active: r.active,
