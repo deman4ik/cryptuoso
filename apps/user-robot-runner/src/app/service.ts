@@ -656,8 +656,7 @@ export default class UserRobotRunnerService extends HTTPService {
            FROM user_portfolios p
            LEFT JOIN v_user_portfolio_settings ups
                  ON  ups.user_portfolio_id = p.id
-           WHERE p.exchange = m.exchange
-             AND p.id = ${id}; 
+           WHERE p.id = ${id}; 
        `);
 
         if (!userPortfolio)
