@@ -308,13 +308,15 @@ const worker = {
             if (portfolio.userPortfolioSettingsActiveFrom) {
                 await t.query(sql`
                 INSERT INTO user_portfolio_settings 
-                (user_portfolio_settings, 
+                (user_portfolio_id,
+                user_portfolio_settings,
                 robots, 
                 active, 
                 active_from)
                  VALUES (
-                  ${JSON.stringify(result.portfolio.settings)},
-                 ${JSON.stringify(result.portfolio.robots)},
+                ${job.userPortfolioId},
+                ${JSON.stringify(result.portfolio.settings)},
+                ${JSON.stringify(result.portfolio.robots)},
                 ${true}, 
                 ${dayjs.utc().toISOString()}
             );`);
