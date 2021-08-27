@@ -82,7 +82,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
             portfolioBalance,
             minTradeAmount,
             this.portfolio.settings.minRobotsCount
-        );
+        ); //TODO: leverage
         let maxRobotsCount = getPortfolioRobotsCount(portfolioBalance, minTradeAmount);
         if (this.portfolio.settings.maxRobotsCount) {
             maxRobotsCount = this.portfolio.settings.maxRobotsCount || maxRobotsCount;

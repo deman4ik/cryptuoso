@@ -323,13 +323,13 @@ export default class PortfolioManagerService extends HTTPService {
             initialBalance = userExAcc.balance;
         } else throw new Error("Unknown user portfolio type");
 
-        /*   const portfolioBalance = getPortfolioBalance(
+        const portfolioBalance = getPortfolioBalance(
             initialBalance,
             tradingAmountType,
             balancePercent,
             tradingAmountCurrency
         );
-        getPortfolioMinBalance(portfolioBalance, minTradeAmount, minRobotsCount); */
+        getPortfolioMinBalance(portfolioBalance, minTradeAmount, minRobotsCount); //TODO: leverage
 
         const userPortfolio: UserPortfolioDB = {
             id: uuid(),
@@ -452,7 +452,7 @@ export default class PortfolioManagerService extends HTTPService {
                 portfolioBalance,
                 userPortfolio.context.minTradeAmount,
                 nvl(minRobotsCount, userPortfolio.settings.minRobotsCount)
-            );
+            ); //TODO: leverage
         }
         const userPortfolioSettings: PortfolioSettings = {
             ...userPortfolio.settings,

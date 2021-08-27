@@ -138,7 +138,7 @@ export default class UserRobotRunnerService extends HTTPService {
         this.createQueue(Queues.userRobot);
 
         this.createQueue(Queues.userRobotRunner);
-        //  this.createWorker(Queues.userRobotRunner, this.process);
+        this.createWorker(Queues.userRobotRunner, this.process);
         await this.addJob(Queues.userRobotRunner, UserRobotRunnerJobType.idleUserRobotJobs, null, {
             jobId: UserRobotRunnerJobType.idleUserRobotJobs,
             repeat: {
