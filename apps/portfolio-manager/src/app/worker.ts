@@ -240,6 +240,8 @@ const worker = {
         }>(sql`SELECT pr.robot_id FROM portfolio_robots pr, v_portfolios p, robots r
         WHERE pr.portfolio_id = p.id 
         AND pr.robot_id = r.id
+        AND p.exchange = ${portfolio.exchange}
+        AND p.base = true
         AND p.status = 'started'
         AND p.option_risk = ${risk}
         AND p.option_profit = ${profit}
@@ -252,7 +254,7 @@ const worker = {
         ${excludeTimeframesCondition}
         ORDER BY pr.priority 
         LIMIT ${maxRobotsCount}`);
-        //AND p.base = true
+
         const hasPredefinedRobots = portfolioRobots && Array.isArray(portfolioRobots) && portfolioRobots.length;
         const portfolioRobotsCondition = hasPredefinedRobots
             ? sql`AND r.id in (${sql.join(
@@ -260,27 +262,6 @@ const worker = {
                   sql`, `
               )})`
             : sql``;
-
-        logger.debug(sql`
-            SELECT p.id, p.robot_id, p.direction, p.entry_date, p.entry_price,
-             p.exit_date, p.exit_price, p.volume,
-              p.worst_profit, p.max_price, p.profit, p.bars_held
-            FROM v_robot_positions p, robots r, users u 
-            WHERE p.robot_id = r.id 
-              AND r.exchange = ${portfolio.exchange}
-              AND u.id = ${portfolio.userId}
-              AND r.available >= u.access
-              AND p.emulated = 'false'
-              AND p.status = 'closed'
-              ${includeAssetsCondition}
-              ${excludeAssetsCondition}
-              ${includeTimeframesCondition}
-            ${excludeTimeframesCondition}
-            ${dateFromCondition}
-            ${dateToCondition}
-              ${portfolioRobotsCondition}
-              ORDER BY p.exit_date
-            `);
         const positions: BasePosition[] = await DataStream.from(
             makeChunksGenerator(
                 pg,
@@ -309,6 +290,7 @@ const worker = {
         ).reduce(async (accum: BasePosition[], chunk: BasePosition[]) => [...accum, ...chunk], []);
 
         logger.debug(positions.length);
+        if (!positions.length) throw new Error("No robots found for portfolio settings");
         userPortfolioBuilder.init(positions);
 
         logger.info(`#${job.userPortfolioId} user portfolio builder inited`);
