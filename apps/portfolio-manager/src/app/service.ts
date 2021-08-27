@@ -302,10 +302,9 @@ export default class PortfolioManagerService extends HTTPService {
         }
 
         const { minTradeAmount } = await this.db.pg.one<{ minTradeAmount: PortfolioContext["minTradeAmount"] }>(sql`
-        SELECT max(m.min_amount_currency) as min_trade_amount
-        FROM v_markets m
-        WHERE m.exchange = ${exchange}
-        GROUP BY m.exchange;
+        SELECT m.min_trade_amount
+        FROM mv_exchange_info m
+        WHERE m.exchange = ${exchange};
         `);
 
         let initialBalance;
@@ -324,13 +323,13 @@ export default class PortfolioManagerService extends HTTPService {
             initialBalance = userExAcc.balance;
         } else throw new Error("Unknown user portfolio type");
 
-        const portfolioBalance = getPortfolioBalance(
+        /*   const portfolioBalance = getPortfolioBalance(
             initialBalance,
             tradingAmountType,
             balancePercent,
             tradingAmountCurrency
         );
-        getPortfolioMinBalance(portfolioBalance, minTradeAmount, minRobotsCount);
+        getPortfolioMinBalance(portfolioBalance, minTradeAmount, minRobotsCount); */
 
         const userPortfolio: UserPortfolioDB = {
             id: uuid(),
