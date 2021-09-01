@@ -964,7 +964,7 @@ export default class UserRobotRunnerService extends HTTPService {
                 await this.db.pg.query(sql`
                 UPDATE user_portfolios
                 SET status = ${event.status},
-                stopped_at = ${event.timestamp}
+                stopped_at = ${event.status === "stopped" ? event.timestamp : null}
                 WHERE id = ${event.userPortfolioId};
                 `);
 

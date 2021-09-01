@@ -207,6 +207,9 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
 
         for (const [key, robot] of Object.entries(robots)) {
             robots[key].share = round(robot.stats.fullStats.amountProportion * propСoefficient, 2);
+            if (this.portfolio.settings.robotsShare && this.portfolio.settings.robotsShare[key]) {
+                robots[key].share = this.portfolio.settings.robotsShare[key];
+            }
         }
 
         //const minShare = Math.min(...Object.values(robots).map((r) => r.share));

@@ -28,6 +28,18 @@ const worker = {
             WHERE p.exchange = m.exchange
               AND p.id = ${job.portfolioId}; 
         `);
+        const includeRobotsCondition =
+            portfolio.settings.includeRobots &&
+            Array.isArray(portfolio.settings.includeRobots) &&
+            portfolio.settings.includeRobots.length
+                ? sql`AND r.id IN (${sql.join(portfolio.settings.includeRobots, sql`, `)})`
+                : sql``;
+        const excludeRobotsCondition =
+            portfolio.settings.excludeRobots &&
+            Array.isArray(portfolio.settings.excludeRobots) &&
+            portfolio.settings.excludeRobots.length
+                ? sql`AND r.id NOT IN (${sql.join(portfolio.settings.excludeRobots, sql`, `)})`
+                : sql``;
         const includeAssetsCondition =
             portfolio.settings.includeAssets &&
             Array.isArray(portfolio.settings.includeAssets) &&
@@ -71,6 +83,8 @@ const worker = {
           AND r.available >= ${portfolio.available}
           AND p.emulated = 'false'
           AND p.status = 'closed'
+          ${includeRobotsCondition}
+          ${excludeRobotsCondition}
           ${includeAssetsCondition}
           ${excludeAssetsCondition}
           ${includeTimeframesCondition}
@@ -132,14 +146,14 @@ const worker = {
                 WHERE portfolio_id = ${result.portfolio.id};`);
             await t.query(sql`
             INSERT INTO portfolio_robots 
-            (portfolio_id, robot_id, active, share)
+            (portfolio_id, robot_id, active, share, priority)
             SELECT *
                 FROM ${sql.unnest(
                     pgUtil.prepareUnnest(
                         result.portfolio.robots.map((r) => ({ ...r, portfolioId: result.portfolio.id })),
-                        ["portfolioId", "robotId", "active", "share"]
+                        ["portfolioId", "robotId", "active", "share", "priority"]
                     ),
-                    ["uuid", "uuid", "bool", "numeric"]
+                    ["uuid", "uuid", "bool", "numeric", "int8"]
                 )};
             `);
 
@@ -202,6 +216,18 @@ const worker = {
                   )
               AND p.id = ${job.userPortfolioId}; 
         `);
+        const includeRobotsCondition =
+            portfolio.settings.includeRobots &&
+            Array.isArray(portfolio.settings.includeRobots) &&
+            portfolio.settings.includeRobots.length
+                ? sql`AND r.id IN (${sql.join(portfolio.settings.includeRobots, sql`, `)})`
+                : sql``;
+        const excludeRobotsCondition =
+            portfolio.settings.excludeRobots &&
+            Array.isArray(portfolio.settings.excludeRobots) &&
+            portfolio.settings.excludeRobots.length
+                ? sql`AND r.id NOT IN (${sql.join(portfolio.settings.excludeRobots, sql`, `)})`
+                : sql``;
         const includeAssetsCondition =
             portfolio.settings.includeAssets &&
             Array.isArray(portfolio.settings.includeAssets) &&
@@ -248,6 +274,8 @@ const worker = {
         AND p.option_win_rate = ${winRate}
         AND p.option_efficiency = ${efficiency}
         AND p.option_money_management = ${moneyManagement}
+        ${includeRobotsCondition}
+        ${excludeRobotsCondition}
         ${includeAssetsCondition}
         ${excludeAssetsCondition}
         ${includeTimeframesCondition}
@@ -276,12 +304,14 @@ const worker = {
           AND r.available >= u.access
           AND p.emulated = 'false'
           AND p.status = 'closed'
+          ${includeRobotsCondition}
+          ${excludeRobotsCondition}
           ${includeAssetsCondition}
           ${excludeAssetsCondition}
           ${includeTimeframesCondition}
-        ${excludeTimeframesCondition}
-        ${dateFromCondition}
-        ${dateToCondition}
+          ${excludeTimeframesCondition}
+          ${dateFromCondition}
+          ${dateToCondition}
           ${portfolioRobotsCondition}
           ORDER BY p.exit_date
         `,

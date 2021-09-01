@@ -24,6 +24,11 @@ export interface PortfolioSettings {
     excludeTimeframes?: number[];
     includeAssets?: string[];
     excludeAssets?: string[];
+    includeRobots?: string[];
+    excludeRobots?: string[];
+    robotsShare?: {
+        [key: string]: number;
+    };
     dateFrom?: string;
     dateTo?: string;
 }
