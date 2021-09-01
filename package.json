@@ -133,7 +133,6 @@
         "node-cron": "^3.0.0",
         "node-fetch": "^2.6.1",
         "pg-native": "^3.0.0",
-        "quickchart-js": "^1.4.0",
         "redlock": "^4.2.0",
         "require-from-string": "^2.0.2",
         "restana": "^4.9.1",

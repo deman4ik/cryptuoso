@@ -42,7 +42,6 @@
             "@cryptuoso/portfolio-events": ["libs/portfolio-events/src/index.ts"],
             "@cryptuoso/portfolio-state": ["libs/portfolio-state/src/index.ts"],
             "@cryptuoso/postgres": ["libs/postgres/src/index.ts"],
-            "@cryptuoso/quickchart": ["libs/quickchart/src/index.ts"],
             "@cryptuoso/robot-events": ["libs/robot-events/src/index.ts"],
             "@cryptuoso/robot-indicators": ["libs/robot-indicators/src/index.ts"],
             "@cryptuoso/robot-settings": ["libs/robot-settings/src/index.ts"],

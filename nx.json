@@ -142,9 +142,6 @@
         "postgres": {
             "tags": []
         },
-        "quickchart": {
-            "tags": []
-        },
         "robot-events": {
             "tags": []
         },
