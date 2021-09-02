@@ -2,6 +2,7 @@ import logger from "@cryptuoso/logger";
 import {
     ActionTypes,
     ActivityFactory,
+    CardFactory,
     MessageFactory,
     StatePropertyAccessor,
     TurnContext,
@@ -25,6 +26,8 @@ import {
 import { MultiLanguageLG } from "botbuilder-lg";
 import { gql, GraphQLClient } from "../data/graphql-client";
 import { ChatUser } from "../types";
+import PortfolioCard from "./portfolioCard.json";
+import * as ACData from "adaptivecards-templating";
 
 export const PUBLIC_PORTFOLIOS_DIALOG = "PublicPortfolios";
 const EXCHANGE_CHOICE_PROMPT = "EXCHANGE_CHOICE_PROMPT";
@@ -121,7 +124,18 @@ export class PublicPortfoliosDialog extends ComponentDialog {
     private async portfolioStep(stepContext: WaterfallStepContext) {
         logger.debug(stepContext.options);
         logger.debug(stepContext.values);
-        return await stepContext.context.sendActivity("Ok portfolio time");
+
+        const data = {
+            $root: {
+                exchange: "kraken"
+                //equityChart: chart
+            }
+        };
+        const template = new ACData.Template(PortfolioCard);
+        const templatePayload = template.expand(data);
+
+        const card = await CardFactory.adaptiveCard(templatePayload);
+        await stepContext.context.sendActivity({ attachments: [card] });
     }
 
     private async chooseOptionsStep(stepContext: WaterfallStepContext) {

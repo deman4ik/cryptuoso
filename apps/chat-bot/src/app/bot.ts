@@ -12,6 +12,7 @@ import {
 } from "botbuilder";
 import { Dialog, DialogState } from "botbuilder-dialogs";
 import { CardsSampleDialog } from "./dialogs/cardsSampleDialog";
+
 import logger from "@cryptuoso/logger";
 import { Auth } from "@cryptuoso/auth-utils";
 import { gql, GraphQLClient } from "./data/graphql-client";
@@ -19,6 +20,8 @@ import { UserProfileSampleDialog } from "./dialogs/userProfileSampleDialog";
 import { MainDialog } from "./dialogs/mainDialog";
 import { ChatUser } from "./types";
 import { pg, sql } from "@cryptuoso/postgres";
+import { getEquityChartUrl } from "@cryptuoso/quickchart";
+
 export class Bot extends ActivityHandler {
     private authUtils: Auth;
     private gqlClient: GraphQLClient;
@@ -58,6 +61,7 @@ export class Bot extends ActivityHandler {
             //  if (context.activity.text === "card") await (this.mainDialog as MainDialog).run(context, this.dialogState);
             // else if (context.activity.text === "profile")
             await this.mainDialog.run(context, this.dialogState);
+
             //else context.sendActivity("Use card or profile");
             await next();
         });
