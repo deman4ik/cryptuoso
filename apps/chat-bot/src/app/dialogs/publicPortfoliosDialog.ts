@@ -28,20 +28,21 @@ import { gql, GraphQLClient } from "../data/graphql-client";
 import { ChatUser } from "../types";
 import PortfolioCard from "./portfolioCard.json";
 import * as ACData from "adaptivecards-templating";
+import { PortfolioOptionDialog, PORTFOLIO_OPTION_DIALOG } from "./portfolioOptionDialog";
+import { ChooseExchangeDialog, CHOOSE_EXCHANGE_DIALOG } from "./chooseExchangeDialog";
+import { PerformanceVals } from "@cryptuoso/trade-stats";
+import { getEquityChartUrl } from "@cryptuoso/quickchart";
+import { PortfolioSettings } from "@cryptuoso/portfolio-state";
 
 export const PUBLIC_PORTFOLIOS_DIALOG = "PublicPortfolios";
-const EXCHANGE_CHOICE_PROMPT = "EXCHANGE_CHOICE_PROMPT";
-const OPTIONS_CHOICE_PROMPT = "OPTIONS_CHOICE_PROMPT";
-const PORTFOLIO_OPTION_WATERFALL_DIALOG = "PORTFOLIO_OPTION_WATERFALL_DIALOG";
-const PORTFOLIO_EXCHANGE_WATERFALL_DIALOG = "PORTFOLIO_EXCHANGE_WATERFALL_DIALOG";
-const PUBLIC_PORTFOLIOS_WATERFALL_DIALOG = "PUBLIC_PORTFOLIOS_WATERFALL_DIALOG";
+const PORTFOLIO_ACTION_PROMPT = "PORTFOLIO_ACTION_PROMPT";
+const PORTFOLIO_WATERFALL_DIALOG = "PORTFOLIO_WATERFALL_DIALOG";
 
 export class PublicPortfoliosDialog extends ComponentDialog {
     private user: StatePropertyAccessor<ChatUser>;
     private userProps: StatePropertyAccessor<{ exchange: string }>;
     lg: MultiLanguageLG;
     gqlClient: GraphQLClient;
-    options: string[];
 
     constructor(userState: UserState, gqlClient: GraphQLClient) {
         super(PUBLIC_PORTFOLIOS_DIALOG);
@@ -52,25 +53,20 @@ export class PublicPortfoliosDialog extends ComponentDialog {
         filesPerLocale.set("", `${__dirname}/assets/lg/en/portfolio.lg`);
         filesPerLocale.set("ru", `${__dirname}/assets/lg/ru/portfolio.lg`);
         this.lg = new MultiLanguageLG(undefined, filesPerLocale);
-        this.options = ["profit", "risk", "moneyManagement", "winRate", "efficiency"];
 
-        this.addDialog(new ChoicePrompt(EXCHANGE_CHOICE_PROMPT));
-        this.addDialog(new ChoicePrompt(OPTIONS_CHOICE_PROMPT));
+        this.addDialog(new ChoicePrompt(PORTFOLIO_ACTION_PROMPT));
+        this.addDialog(new PortfolioOptionDialog(this.lg));
+        this.addDialog(new ChooseExchangeDialog(this.userProps, this.gqlClient, this.lg));
         this.addDialog(
-            new WaterfallDialog(PORTFOLIO_OPTION_WATERFALL_DIALOG, [
-                this.chooseOptionsStep.bind(this),
-                this.chooseOptionsLoopStep.bind(this)
-            ])
-        );
-        this.addDialog(
-            new WaterfallDialog(PORTFOLIO_EXCHANGE_WATERFALL_DIALOG, [
+            new WaterfallDialog(PORTFOLIO_WATERFALL_DIALOG, [
                 this.exchangeStep.bind(this),
-                this.optionsStep.bind(this)
+                this.optionsStep.bind(this),
+                this.portfolioStep.bind(this),
+                this.portfolioActionsStep.bind(this)
             ])
         );
-        this.addDialog(new WaterfallDialog(PUBLIC_PORTFOLIOS_WATERFALL_DIALOG, [this.portfolioStep.bind(this)]));
 
-        this.initialDialogId = PORTFOLIO_EXCHANGE_WATERFALL_DIALOG;
+        this.initialDialogId = PORTFOLIO_WATERFALL_DIALOG;
     }
 
     public async run(turnContext: TurnContext, accessor: StatePropertyAccessor) {
@@ -79,110 +75,141 @@ export class PublicPortfoliosDialog extends ComponentDialog {
 
         const dialogContext = await dialogSet.createContext(turnContext);
         const results = await dialogContext.continueDialog();
-        if (results.status === DialogTurnStatus.empty) {
+        if (results?.status === DialogTurnStatus.empty) {
             await dialogContext.beginDialog(this.id);
         }
     }
 
     private async exchangeStep(stepContext: WaterfallStepContext) {
-        const props = await this.userProps.get(stepContext.context);
-        if (props && props?.exchange) return await stepContext.continueDialog();
-        const { exchanges } = await this.gqlClient.request<{ exchanges: { code: string; name: string }[] }>(
-            stepContext.context,
-            gql`
-                query {
-                    exchanges {
-                        code
-                        name
-                    }
-                }
-            `
-        );
-        return await stepContext.prompt(EXCHANGE_CHOICE_PROMPT, {
-            choices: ChoiceFactory.toChoices(
-                exchanges.map(({ code, name }) => ({
-                    value: code,
-                    action: {
-                        type: ActionTypes.ImBack,
-                        title: name,
-                        value: code
-                    },
-                    synonyms: [name]
-                }))
-            ),
-            prompt: ActivityFactory.fromObject(this.lg.generate("ChooseExchange")),
-            retryPrompt: ActivityFactory.fromObject(this.lg.generate("RetryPrompt"))
-            //  style: ListStyle.heroCard
-        });
+        return await stepContext.beginDialog(CHOOSE_EXCHANGE_DIALOG, { saveExchange: false });
     }
 
     private async optionsStep(stepContext: WaterfallStepContext) {
         await this.userProps.set(stepContext.context, { exchange: stepContext.result });
-        return await stepContext.replaceDialog(PORTFOLIO_OPTION_WATERFALL_DIALOG);
+        return await stepContext.beginDialog(PORTFOLIO_OPTION_DIALOG);
     }
 
     private async portfolioStep(stepContext: WaterfallStepContext) {
-        logger.debug(stepContext.options);
-        logger.debug(stepContext.values);
-
-        const data = {
-            $root: {
-                exchange: "kraken"
-                //equityChart: chart
-            }
+        //await stepContext.context.sendActivity("ok");
+        //
+        const props = await this.userProps.get(stepContext.context);
+        const options: { [key: string]: boolean } = {
+            profit: false,
+            risk: false,
+            moneyManagement: false,
+            winRate: false,
+            efficiency: false
         };
-        const template = new ACData.Template(PortfolioCard);
-        const templatePayload = template.expand(data);
 
-        const card = await CardFactory.adaptiveCard(templatePayload);
-        await stepContext.context.sendActivity({ attachments: [card] });
-    }
+        for (const option of stepContext.result as string[]) {
+            options[option] = true;
+        }
+        const params = {
+            exchange: props.exchange,
+            ...options
+        };
+        const { portfolios } = await this.gqlClient.request<{
+            portfolios: {
+                exchange: string;
+                stats: {
+                    netProfit: number;
+                    percentNetProfit: number;
+                    winRate: number;
+                    maxDrawdown: number;
+                    maxDrawdownDate: string;
+                    payoffRatio: number;
+                    sharpeRatio: number;
+                    recoveyFactor: number;
+                    avgTradesCount: number;
+                    equityAvg: PerformanceVals;
+                    firstPosition: {
+                        entryDate: string;
+                    };
+                };
+                limits: {
+                    minBalance: number;
+                };
+                settings: PortfolioSettings;
+            }[];
+        }>(
+            stepContext.context,
+            gql`
+                query publicPortfolios(
+                    $exchange: String!
+                    $risk: Boolean!
+                    $profit: Boolean!
+                    $winRate: Boolean!
+                    $efficiency: Boolean!
+                    $moneyManagement: Boolean!
+                ) {
+                    portfolios: v_portfolios(
+                        where: {
+                            exchange: { _eq: $exchange }
+                            option_risk: { _eq: $risk }
+                            option_profit: { _eq: $profit }
+                            option_win_rate: { _eq: $winRate }
+                            option_efficiency: { _eq: $efficiency }
+                            option_money_management: { _eq: $moneyManagement }
+                            status: { _eq: "started" }
+                            base: { _eq: true }
+                        }
+                        limit: 1
+                    ) {
+                        exchange
+                        stats {
+                            netProfit: net_profit
+                            percentNetProfit: percent_net_profit
+                            winRate: win_rate
+                            maxDrawdown: max_drawdown
+                            maxDrawdownDate: max_drawdown_date
+                            payoffRatio: payoff_ratio
+                            sharpeRatio: sharpe_ratio
+                            recoveyFactor: recovery_factor
+                            avgTradesCount: avg_trades_count_years
+                            equityAvg: equity_avg
+                            firstPosition: first_position
+                        }
+                        limits
+                        settings
+                    }
+                }
+            `,
+            params
+        );
+        const [portfolio] = portfolios;
 
-    private async chooseOptionsStep(stepContext: WaterfallStepContext) {
-        const list = Array.isArray(stepContext.options) ? stepContext.options : [];
-        (stepContext as any).values["optionsSelected"] = list;
-
-        const choicesList = list.length ? [...this.options.filter((s) => !list.includes(s)), "done"] : this.options;
-
-        const choices = choicesList.map<Choice>((c) => ({
-            value: c,
-            action: {
-                type: ActionTypes.ImBack,
-                title: this.lg.generate(c),
-                value: c
+        const choices = [
+            {
+                value: "subscribe",
+                action: {
+                    type: ActionTypes.ImBack,
+                    title: this.lg.generate("Subscribe"),
+                    value: "subscribe"
+                }
             }
-        }));
-        return await stepContext.prompt(OPTIONS_CHOICE_PROMPT, {
-            choices,
-            prompt: list.length
-                ? ActivityFactory.fromObject(
-                      this.lg.generate("ChooseOptionsMore", {
-                          options: list.map((o) => this.lg.generate(o)).join(", ")
-                      })
-                  )
-                : ActivityFactory.fromObject(this.lg.generate("ChooseOptionsFirst")),
-            retryPrompt: ActivityFactory.fromObject(this.lg.generate("RetryPrompt"))
-            //   style: ListStyle.heroCard
+        ];
+
+        const card = CardFactory.heroCard(
+            this.lg.generate("PortfolioInfo", {
+                exchange: portfolio.exchange,
+                options: Object.entries(portfolio.settings.options)
+                    .filter(([, value]) => !!value)
+                    .map(([key]) => this.lg.generate(key))
+                    .join(", ")
+            }),
+            CardFactory.images([await getEquityChartUrl(portfolio.stats.equityAvg)]),
+            CardFactory.actions(choices.map((c) => c.action))
+        );
+        await stepContext.context.sendActivity({ attachments: [card] });
+        return await stepContext.prompt(PORTFOLIO_ACTION_PROMPT, {
+            choices
         });
     }
 
-    async chooseOptionsLoopStep(stepContext: WaterfallStepContext) {
-        // Retrieve their selection list, the choice they made, and whether they chose to finish.
-        const list = (stepContext as any).values["optionsSelected"];
-        const choice = stepContext.result;
-        const done = choice.value === "done";
-
-        if (!done) {
-            // If they chose a company, add it to the list.
-            list.push(choice.value);
-        }
-
-        if (done || list.length === Object.keys(this.options).length) {
-            // If they're done, exit and return their list.
-            return await stepContext.replaceDialog(PUBLIC_PORTFOLIOS_WATERFALL_DIALOG, list);
-        } else {
-            // Otherwise, repeat this dialog, passing in the list from this iteration.
-            return await stepContext.replaceDialog(PORTFOLIO_OPTION_WATERFALL_DIALOG, list);
-        }
+    private async portfolioActionsStep(stepContext: WaterfallStepContext) {
+        logger.debug(stepContext.options);
+        logger.debug(stepContext.values);
+        logger.debug(stepContext.result);
+        return await stepContext.endDialog();
     }
 }

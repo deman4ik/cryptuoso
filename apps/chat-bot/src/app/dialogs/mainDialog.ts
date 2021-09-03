@@ -55,7 +55,7 @@ export class MainDialog extends ComponentDialog {
 
         const dialogContext = await dialogSet.createContext(turnContext);
         const results = await dialogContext.continueDialog();
-        if (results.status === DialogTurnStatus.empty) {
+        if (results?.status === DialogTurnStatus.empty) {
             await dialogContext.beginDialog(this.id);
         }
     }

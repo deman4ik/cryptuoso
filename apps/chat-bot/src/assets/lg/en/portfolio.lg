@@ -1,3 +1,5 @@
+> !# @lineBreakStyle = markdown
+
 # ChooseExchange
 - Choose available exchange
 
@@ -26,8 +28,17 @@
 - Choose available option
 
 # ChooseOptionsMore
-- ```You choosed ${options}
-     - You can choose more options or press ${done()}```
+- ```You choosed:
+${options}
+You can choose more options or press ${done()}```
 
 # CapitalizeFirstLetter (arg) 
 - ${concat(toUpper(substring(arg, 0, 1)), substring(arg, 1))}
+
+# PortfolioInfo 
+- ``` ${CapitalizeFirstLetter(exchange)} Portfolio
+${options}
+ ```
+ 
+# Subscribe
+ - Subscribe
