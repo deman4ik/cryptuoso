@@ -18,7 +18,7 @@ import { User, UserExchangeAccountInfo, UserRoles } from "@cryptuoso/user-state"
 import { v4 as uuid } from "uuid";
 import combinate from "combinate";
 import { sql } from "@cryptuoso/postgres";
-import { capitalize, equals, nvl } from "@cryptuoso/helpers";
+import { capitalize, equals, formatExchange, nvl } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
 import { ActionsHandlerError, BaseError } from "@cryptuoso/errors";
 import {
@@ -52,11 +52,12 @@ export default class PortfolioManagerService extends HTTPService {
                         initialBalance: {
                             type: "number",
                             optional: true,
-                            default: 100000
+                            default: 10000
                         },
-                        leverage: { type: "number", optional: true, integer: true, default: 5 },
+                        leverage: { type: "number", optional: true, integer: true, default: 2 },
                         minRobotsCount: { type: "number", optional: true, integer: true, default: 20 },
-                        maxRobotsCount: { type: "number", optional: true, integer: true }
+                        maxRobotsCount: { type: "number", optional: true, integer: true },
+                        dateFrom: { type: "string" }
                     },
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.initPortfolios.bind(this))
@@ -196,7 +197,8 @@ export default class PortfolioManagerService extends HTTPService {
         initialBalance,
         leverage,
         maxRobotsCount,
-        minRobotsCount
+        minRobotsCount,
+        dateFrom
     }: {
         exchange: string;
         tradingAmountType: PortfolioSettings["tradingAmountType"];
@@ -204,8 +206,9 @@ export default class PortfolioManagerService extends HTTPService {
         tradingAmountCurrency: PortfolioSettings["tradingAmountCurrency"];
         initialBalance: PortfolioSettings["initialBalance"];
         leverage: PortfolioSettings["leverage"];
-        maxRobotsCount?: PortfolioSettings["leverage"];
-        minRobotsCount?: PortfolioSettings["leverage"];
+        maxRobotsCount?: PortfolioSettings["maxRobotsCount"];
+        minRobotsCount?: PortfolioSettings["minRobotsCount"];
+        dateFrom?: PortfolioSettings["dateFrom"];
     }) {
         const allOptions = this.generateOptions();
         const { minTradeAmount } = await this.db.pg.one<{ minTradeAmount: PortfolioContext["minTradeAmount"] }>(sql`
@@ -223,7 +226,7 @@ export default class PortfolioManagerService extends HTTPService {
         const allPortfolios: PortfolioDB[] = allOptions.map<PortfolioDB>((options) => ({
             id: uuid(),
             code: `${exchange}:${this.generateCode(options)}`,
-            name: `${exchange} ${this.generateName(options)}`,
+            name: `${formatExchange(exchange)} ${this.generateName(options)}`,
             exchange,
             available: 5,
             status: "stopped",
@@ -236,7 +239,8 @@ export default class PortfolioManagerService extends HTTPService {
                 initialBalance,
                 leverage,
                 maxRobotsCount,
-                minRobotsCount
+                minRobotsCount,
+                dateFrom
             }
         }));
         await this.db.pg.query(sql`

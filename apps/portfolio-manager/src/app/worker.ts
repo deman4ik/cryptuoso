@@ -192,6 +192,8 @@ const worker = {
 
                 `);
             }
+
+            await t.query(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY mv_portfolio_limits;`);
         });
         logger.info(`#${portfolioBuilder.portfolio.id} portfolio build finished`);
     },
