@@ -345,9 +345,13 @@ export class TradeStatsCalc implements TradeStats {
     private calcStats(allPositions: BasePosition[], prevStats: Stats): Stats {
         const stats = { ...prevStats };
 
-        const positions = allPositions.filter(({ exitDate }) =>
-            stats.lastPosition ? dayjs.utc(exitDate).valueOf() > dayjs.utc(stats.lastPosition.exitDate).valueOf() : true
-        );
+        const positions = allPositions
+            .filter(({ exitDate }) =>
+                stats.lastPosition
+                    ? dayjs.utc(exitDate).valueOf() > dayjs.utc(stats.lastPosition.exitDate).valueOf()
+                    : true
+            )
+            .sort((a, b) => sortAsc(dayjs.utc(a.exitDate).valueOf(), dayjs.utc(b.exitDate).valueOf()));
 
         if (!positions.length) return stats;
 
@@ -433,6 +437,7 @@ export class TradeStatsCalc implements TradeStats {
         const winningPositions = positions.filter(({ profit }) => profit > 0);
         const lossingPositions = positions.filter(({ profit }) => profit <= 0);
 
+        stats.equity = stats.equity.sort((a, b) => sortAsc(a.x, b.x));
         stats.equityAvg = this.calculateEquityAvg(stats.equity);
         stats.tradesCount = stats.tradesCount + positions.length;
         stats.tradesWinning = stats.tradesWinning + winningPositions.length;
