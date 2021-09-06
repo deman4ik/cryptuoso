@@ -48,7 +48,7 @@ export default class ExwatcherRunnerService extends HTTPService {
                     exchange: "string",
                     asset: "string",
                     currency: "string",
-                    available: { type: "number", integer: true }
+                    available: { type: "number", integer: true, optional: true }
                 },
                 roles: [UserRoles.admin, UserRoles.manager],
                 handler: this.addMarket
@@ -279,7 +279,7 @@ export default class ExwatcherRunnerService extends HTTPService {
         res: any
     ) {
         try {
-            const { exchange, asset, currency } = req.body.input;
+            const { exchange, asset, currency, available } = req.body.input;
 
             const assetExists = await this.db.pg.maybeOne(sql`
             SELECT code from assets where code = ${asset};
@@ -300,7 +300,7 @@ export default class ExwatcherRunnerService extends HTTPService {
             AND asset = ${asset}
             and currency = ${currency};
             `);
-            if (!marketExists) await this.updateMarket({ ...req.body.input, available: 0 });
+            if (!marketExists) await this.updateMarket({ ...req.body.input, available: available || 0 });
             res.send({ result: "OK" });
             res.end();
         } catch (error) {

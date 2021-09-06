@@ -240,7 +240,8 @@ export default class PortfolioManagerService extends HTTPService {
                 leverage,
                 maxRobotsCount,
                 minRobotsCount,
-                dateFrom
+                dateFrom,
+                excludeTimeframes: [1, 5, 15]
             }
         }));
         await this.db.pg.query(sql`

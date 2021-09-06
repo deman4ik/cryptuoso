@@ -29,12 +29,12 @@ export default class BacktesterRunnerService extends HTTPService {
                 backtesterStart: {
                     inputSchema: BacktesterRunnerSchema[BacktesterRunnerEvents.START],
                     roles: ["manager", "admin"],
-                    handler: this.startHTTPHandler
+                    handler: this.HTTPHandler.bind(this, this.start.bind(this))
                 },
                 backtesterStop: {
                     inputSchema: BacktesterRunnerSchema[BacktesterRunnerEvents.STOP],
                     roles: ["manger", "admin"],
-                    handler: this.stopHTTPHandler
+                    handler: this.HTTPHandler.bind(this, this.stop.bind(this))
                 }
             });
             this.events.subscribe({
@@ -58,19 +58,6 @@ export default class BacktesterRunnerService extends HTTPService {
             maxStalledCount: 1,
             stalledInterval: 120000
         });
-    }
-
-    async startHTTPHandler(
-        req: {
-            body: {
-                input: BacktesterRunnerStart;
-            };
-        },
-        res: any
-    ) {
-        const result = await this.start(req.body.input);
-        res.send(result);
-        res.end();
     }
 
     #checkJobStatus = async (id: string) => {
@@ -304,19 +291,6 @@ export default class BacktesterRunnerService extends HTTPService {
             });
             throw error;
         }
-    }
-
-    async stopHTTPHandler(
-        req: {
-            body: {
-                input: BacktesterRunnerStop;
-            };
-        },
-        res: any
-    ) {
-        const result = await this.stop(req.body.input);
-        res.send(result);
-        res.end();
     }
 
     async stop({ id }: BacktesterRunnerStop) {
