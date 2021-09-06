@@ -90,13 +90,15 @@ export class ChooseExchangeDialog extends ComponentDialog {
                 },
                 synonyms: [name, code]
             })),
-            retryPrompt: ActivityFactory.fromObject(this.lg.generate("RetryPrompt"))
+            retryPrompt: ActivityFactory.fromObject(this.lg.generate("RetryPrompt")),
+            style: ListStyle.none
         });
     }
 
     private async confirmStep(stepContext: WaterfallStepContext<{ saveExchange: boolean }>) {
         if (stepContext.options?.saveExchange)
             await this.userProps.set(stepContext.context, { exchange: stepContext.result.value });
+        await stepContext.context.deleteActivity(stepContext.context.activity.id);
         return await stepContext.endDialog(stepContext.result.value);
     }
 }

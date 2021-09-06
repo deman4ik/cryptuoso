@@ -71,7 +71,8 @@ export class PortfolioOptionDialog extends ComponentDialog {
         await stepContext.context.sendActivity({ attachments: [card] });
         return await stepContext.prompt(OPTIONS_CHOICE_PROMPT, {
             choices,
-            retryPrompt: ActivityFactory.fromObject(this.lg.generate("RetryPrompt"))
+            retryPrompt: ActivityFactory.fromObject(this.lg.generate("RetryPrompt")),
+            style: ListStyle.none
         });
     }
 
