@@ -30,17 +30,17 @@ export default class RobotRunnerService extends HTTPService {
                 robotCreate: {
                     inputSchema: RobotRunnerSchema[RobotRunnerEvents.CREATE],
                     roles: [UserRoles.admin, UserRoles.manager],
-                    handler: this.createHTTPHandler
+                    handler: this.HTTPHandler.bind(this, this.create.bind(this))
                 },
                 robotStart: {
                     inputSchema: RobotRunnerSchema[RobotRunnerEvents.START],
                     roles: [UserRoles.admin, UserRoles.manager],
-                    handler: this.startHTTPHandler
+                    handler: this.HTTPHandler.bind(this, this.start.bind(this))
                 },
                 robotStop: {
                     inputSchema: RobotRunnerSchema[RobotRunnerEvents.STOP],
                     roles: [UserRoles.admin, UserRoles.manager],
-                    handler: this.stopHTTPHandler
+                    handler: this.HTTPHandler.bind(this, this.stop.bind(this))
                 }
             });
 
@@ -141,19 +141,6 @@ export default class RobotRunnerService extends HTTPService {
          error = null;
         `);
         if (status === RobotStatus.started) await this.queueRobotJob(robotId);
-    }
-
-    async createHTTPHandler(
-        req: {
-            body: {
-                input: RobotRunnerCreate;
-            };
-        },
-        res: any
-    ) {
-        const result = await this.create(req.body.input);
-        res.send(result);
-        res.end();
     }
 
     async create({ entities }: RobotRunnerCreate): Promise<{ result: string }> {
@@ -262,19 +249,6 @@ export default class RobotRunnerService extends HTTPService {
         return { result: `Created ${importedCount} of ${entities.length} robots` };
     }
 
-    async startHTTPHandler(
-        req: {
-            body: {
-                input: RobotRunnerStart;
-            };
-        },
-        res: any
-    ) {
-        const result = await this.start(req.body.input);
-        res.send(result);
-        res.end();
-    }
-
     async start({ robotId, dateFrom }: RobotRunnerStart): Promise<{ result: string }> {
         const { status, exchange, asset, currency, timeframe, strategySettings } = await this.db.pg.one<{
             status: RobotStatus;
@@ -364,19 +338,6 @@ export default class RobotRunnerService extends HTTPService {
         });
 
         return { result: RobotStatus.starting };
-    }
-
-    async stopHTTPHandler(
-        req: {
-            body: {
-                input: RobotRunnerStart;
-            };
-        },
-        res: any
-    ) {
-        const result = await this.stop(req.body.input);
-        res.send(result);
-        res.end();
     }
 
     async stop({ robotId }: RobotRunnerStop): Promise<{ result: string }> {

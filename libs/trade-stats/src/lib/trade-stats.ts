@@ -40,8 +40,7 @@ export class TradeStatsCalc implements TradeStats {
 
         this.fullStats = this.initFullStats(this.positions, prevStats?.fullStats);
         this.periodStats = this.initPeriodStats(prevStats?.periodStats);
-        if (this.meta.job.recalc && this.meta.job.type === "portfolio" && maxLeverage)
-            this.fullStats.maxLeverage = maxLeverage;
+        if (this.meta.job.recalc && this.meta.job.type === "portfolio") this.fullStats.maxLeverage = maxLeverage;
         this.prevFullStats = { ...this.fullStats };
         this.prevPeriodStats = { ...this.periodStats };
     }
@@ -117,50 +116,18 @@ export class TradeStatsCalc implements TradeStats {
             }
             results[position.id] = newPosition;
         }
-        return { positions: Object.values(results), maxLeverage };
+        return {
+            positions: Object.values(results).sort((a, b) =>
+                sortAsc(dayjs.utc(a.exitDate).valueOf(), dayjs.utc(b.exitDate).valueOf())
+            ),
+            maxLeverage
+        };
     }
-
-    /*  private getMaxLeverage(allPositions: BasePosition[]) {
-        const dates = [
-            ...allPositions.map((p) => ({
-                date: p.entryDate,
-                price: p.entryPrice,
-                volume: p.volume,
-                balance: p.meta.prevBalance,
-                side: "entry"
-            })),
-            ...allPositions.map((p) => ({
-                date: p.exitDate,
-                price: p.exitPrice,
-                volume: p.volume,
-                balance: p.meta.currentBalance,
-                side: "exit"
-            }))
-        ].sort((a, b) => sortAsc(a.date, b.date));
-
-        let availableFunds = this.meta.initialBalance;
-        let maxLeverage = 0;
-
-        for (const { price, volume, balance, side } of dates) {
-            if (side === "entry") {
-                availableFunds = availableFunds - price * volume;
-            } else {
-                availableFunds = availableFunds + price * volume;
-            }
-
-            const leverage = availableFunds / balance;
-            if (leverage < maxLeverage) maxLeverage = leverage;
-
-        }
-
-        return maxLeverage;
-    }*/
 
     public async calculate(): Promise<TradeStats> {
         this.periodStats = this.calcPeriodStats(this.positions, this.prevPeriodStats);
         this.fullStats = this.calcFullStats(this.positions, this.prevFullStats, this.periodStats);
-        /*if (this.meta.job.type === "portfolio" && this.meta.job.recalc)
-            this.fullStats.maxLeverage = this.getMaxLeverage(this.positions);*/
+
         return {
             fullStats: this.fullStats,
             periodStats: this.periodStats,
@@ -345,13 +312,9 @@ export class TradeStatsCalc implements TradeStats {
     private calcStats(allPositions: BasePosition[], prevStats: Stats): Stats {
         const stats = { ...prevStats };
 
-        const positions = allPositions
-            .filter(({ exitDate }) =>
-                stats.lastPosition
-                    ? dayjs.utc(exitDate).valueOf() > dayjs.utc(stats.lastPosition.exitDate).valueOf()
-                    : true
-            )
-            .sort((a, b) => sortAsc(dayjs.utc(a.exitDate).valueOf(), dayjs.utc(b.exitDate).valueOf()));
+        const positions = allPositions.filter(({ exitDate }) =>
+            stats.lastPosition ? dayjs.utc(exitDate).valueOf() > dayjs.utc(stats.lastPosition.exitDate).valueOf() : true
+        );
 
         if (!positions.length) return stats;
 

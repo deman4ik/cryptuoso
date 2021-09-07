@@ -314,8 +314,8 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
         }
 
         if (risk) {
-            const prevMaxDrawdown = prevPortfolio.tradeStats.fullStats.maxDrawdown;
-            const currentMaxDrawdown = currentPortfolio.tradeStats.fullStats.maxDrawdown;
+            const prevMaxDrawdown = prevPortfolio.tradeStats.fullStats.percentMaxDrawdown;
+            const currentMaxDrawdown = currentPortfolio.tradeStats.fullStats.percentMaxDrawdown;
 
             const diff = percentBetween(prevMaxDrawdown, currentMaxDrawdown);
             comparison.risk = {
