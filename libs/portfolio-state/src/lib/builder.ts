@@ -142,19 +142,6 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
         for (const { robotId, stats } of results) {
             this.robots[robotId].stats = stats;
         }
-
-        /*  for (const { robotId, positions } of Object.values(this.robots)) {
-            const tradeStatsCalc = new TradeStatsCalc(
-                positions,
-                {
-                    job: { type: "robot", robotId, recalc: true },
-                    initialBalance: this.portfolio.settings.initialBalance
-                },
-                null
-            );
-
-            this.robots[robotId].stats = tradeStatsCalc.calculate();
-        } */
     }
 
     async sortRobots(robots: { [key: string]: PortoflioRobotState }) {
@@ -162,29 +149,26 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
         const { profit, risk, moneyManagement, winRate, efficiency } = this.portfolio.settings.options;
         return Object.values(robots)
             .sort(({ stats: { fullStats: a } }, { stats: { fullStats: b } }) => {
-                if (profit && !risk && !moneyManagement && !winRate && !efficiency) {
-                    if (a.netProfit > b.netProfit) return -1;
-                    if (a.netProfit < b.netProfit) return 1;
+                let value = 0;
+
+                if (profit) {
+                    value +=
+                        percentBetween(a.avgPercentNetProfitQuarters, b.avgPercentNetProfitQuarters) *
+                        this.optionWeights.profit;
                 }
-                if (risk && !profit && !moneyManagement && !winRate && !efficiency) {
-                    if (a.percentMaxDrawdown > b.percentMaxDrawdown) return 1;
-                    if (a.percentMaxDrawdown < b.percentMaxDrawdown) return -1;
+                if (risk) {
+                    value += -percentBetween(a.percentMaxDrawdown, b.percentMaxDrawdown) * this.optionWeights.risk;
                 }
-                if (moneyManagement && !profit && !risk && !winRate && !efficiency) {
-                    if (a.payoffRatio > b.payoffRatio) return -1;
-                    if (a.payoffRatio < b.payoffRatio) return 1;
+                if (moneyManagement) {
+                    value += percentBetween(a.payoffRatio, b.payoffRatio) * this.optionWeights.moneyManagement;
                 }
-                if (winRate && !profit && !risk && !moneyManagement && !efficiency) {
-                    if (a.winRate > b.winRate) return -1;
-                    if (a.winRate < b.winRate) return 1;
+                if (winRate) {
+                    value += percentBetween(a.winRate, b.winRate) * this.optionWeights.winRate;
                 }
-                if (efficiency && !profit && !moneyManagement && !winRate && !risk) {
-                    if (a.sharpeRatio > b.sharpeRatio) return -1;
-                    if (a.sharpeRatio < b.sharpeRatio) return 1;
+                if (efficiency) {
+                    value += percentBetween(a.sharpeRatio, b.sharpeRatio) * this.optionWeights.efficiency;
                 }
-                if (a.recoveryFactor > b.recoveryFactor) return -1;
-                if (a.recoveryFactor < b.recoveryFactor) return 1;
-                return 0;
+                return value;
             })
             .map(({ robotId }) => robotId)
             .reverse();
@@ -385,7 +369,6 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
             let currentRobot = 0;
             for (const robotId of robotsList) {
                 currentRobot += 1;
-                console.log(robotId);
                 const list = currentRobotsList.filter((r) => r !== robotId);
                 if (list.length < this.portfolio.variables.minRobotsCount) break;
                 currentPortfolio = await this.calcPortfolio(list);
