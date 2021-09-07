@@ -167,8 +167,8 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
                     if (a.netProfit < b.netProfit) return 1;
                 }
                 if (risk && !profit && !moneyManagement && !winRate && !efficiency) {
-                    if (a.maxDrawdown > b.maxDrawdown) return 1;
-                    if (a.maxDrawdown < b.maxDrawdown) return -1;
+                    if (a.percentMaxDrawdown > b.percentMaxDrawdown) return 1;
+                    if (a.percentMaxDrawdown < b.percentMaxDrawdown) return -1;
                 }
                 if (moneyManagement && !profit && !risk && !winRate && !efficiency) {
                     if (a.payoffRatio > b.payoffRatio) return -1;
