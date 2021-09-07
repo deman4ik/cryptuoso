@@ -547,7 +547,7 @@ export default class PortfolioManagerService extends HTTPService {
         const portfolios = await this.db.pg.any<{ id: PortfolioDB["id"] }>(sql`
         SELECT id FROM portfolios where exchange = ${exchange} and status = 'stopped';
         `);
-        if (!portfolios || !Array.isArray(portfolios) || !portfolios.length) return "No stopped portfolios";
+        if (!portfolios || !Array.isArray(portfolios) || !portfolios.length) return { result: "No stopped portfolios" };
         for (const { id } of portfolios) {
             await this.addJob<PortfolioBuilderJob>(
                 "portfolioBuilder",
