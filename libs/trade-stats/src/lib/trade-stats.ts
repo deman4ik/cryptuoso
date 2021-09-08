@@ -62,7 +62,7 @@ export class TradeStatsCalc implements TradeStats {
             }))
         ].sort((a, b) => sortAsc(a.date, b.date));
         let availableFunds = this.meta.initialBalance;
-        let maxLeverage = 0;
+        let maxLeverage = this.meta.job.recalc ? 0 : fullStats.maxLeverage;
         let netProfit = this.meta.job.recalc ? 0 : fullStats.netProfit;
         let currentBalance = fullStats?.currentBalance ?? this.meta.initialBalance;
         let prevBalance = currentBalance;
