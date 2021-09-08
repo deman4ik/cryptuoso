@@ -110,7 +110,7 @@ export class TradeStatsCalc implements TradeStats {
                 prevBalance = currentBalance;
 
                 if (this.meta.job.recalc)
-                    availableFunds = availableFunds + entryPrice * newPosition.volume + newPosition.profit;
+                    availableFunds = availableFunds + exitPrice * newPosition.volume + newPosition.profit;
             }
 
             if (this.meta.job.recalc) {
