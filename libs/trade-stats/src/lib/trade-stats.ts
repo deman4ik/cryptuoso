@@ -62,7 +62,7 @@ export class TradeStatsCalc implements TradeStats {
             }))
         ].sort((a, b) => sortAsc(a.date, b.date));
         let availableFunds = this.meta.initialBalance;
-        let maxLeverage = this.meta.job.recalc ? 0 : fullStats?.maxLeverage;
+        let maxLeverage = this.meta.job.recalc ? Infinity : fullStats?.maxLeverage;
         let netProfit = this.meta.job.recalc ? 0 : fullStats?.netProfit;
         let currentBalance = this.meta.job.recalc ? this.meta.initialBalance : fullStats?.currentBalance;
         let prevBalance = currentBalance;
@@ -112,6 +112,7 @@ export class TradeStatsCalc implements TradeStats {
 
             if (this.meta.job.recalc) {
                 const leverage = availableFunds / currentBalance;
+                logger.debug(`${leverage} / ${maxLeverage}`);
                 if (leverage < maxLeverage) maxLeverage = leverage;
             }
             results[position.id] = newPosition;
