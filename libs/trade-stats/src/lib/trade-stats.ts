@@ -87,7 +87,9 @@ export class TradeStatsCalc implements TradeStats {
                 newPosition.amountInCurrency = calcPercentValue(leveragedBalance, portfolioShare);
                 newPosition.volume = round(newPosition.amountInCurrency / entryPrice, 6);
 
-                if (this.meta.job.recalc) availableFunds = availableFunds - entryPrice * newPosition.volume;
+                if (this.meta.job.recalc) {
+                    availableFunds = availableFunds - entryPrice * newPosition.volume;
+                }
                 newPosition.meta = { ...newPosition.meta, prevBalance };
             }
 
@@ -107,12 +109,14 @@ export class TradeStatsCalc implements TradeStats {
                 newPosition.meta = { ...newPosition.meta, currentBalance };
                 prevBalance = currentBalance;
 
-                if (this.meta.job.recalc) availableFunds = availableFunds + exitPrice * newPosition.volume;
+                if (this.meta.job.recalc)
+                    availableFunds = availableFunds + entryPrice * newPosition.volume + newPosition.profit;
             }
 
             if (this.meta.job.recalc) {
                 const leverage = availableFunds / currentBalance;
-                logger.debug(`${leverage} / ${maxLeverage}`);
+                if (leverage <= -1)
+                    logger.debug(`${availableFunds} / ${currentBalance} / ${leverage} / ${maxLeverage}`);
                 if (leverage < maxLeverage) maxLeverage = leverage;
             }
             results[position.id] = newPosition;
