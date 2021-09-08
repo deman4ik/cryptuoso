@@ -81,8 +81,10 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
         const minBalance = getPortfolioMinBalance(
             portfolioBalance,
             minTradeAmount,
-            this.portfolio.settings.minRobotsCount
-        ); //TODO: leverage
+            this.portfolio.settings.minRobotsCount,
+            this.portfolio.settings.leverage,
+            !!this.portfolio.settings.maxRobotsCount
+        );
         let maxRobotsCount = getPortfolioRobotsCount(portfolioBalance, minTradeAmount);
         if (this.portfolio.settings.maxRobotsCount) {
             maxRobotsCount = this.portfolio.settings.maxRobotsCount || maxRobotsCount;
@@ -370,7 +372,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
             for (const robotId of robotsList) {
                 currentRobot += 1;
                 const list = currentRobotsList.filter((r) => r !== robotId);
-                if (list.length < this.portfolio.variables.minRobotsCount) break;
+                if (list.length < this.minRobotsCount) break;
                 currentPortfolio = await this.calcPortfolio(list);
 
                 const result = await this.comparePortfolios(prevPortfolio, currentPortfolio);
@@ -381,11 +383,11 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
                 steps.push(result);
                 this.progress(round((currentRobot / robotsList.length) * 100));
             }
-            if (currentRobotsList.length > this.portfolio.variables.maxRobotsCount) {
+            if (this.maxRobotsCount && currentRobotsList.length > this.maxRobotsCount) {
                 this.log.debug(
-                    `Portfolio #${this.portfolio.id} - Portfolio builded to much ${currentRobotsList.length} robots max is ${this.portfolio.variables.maxRobotsCount}`
+                    `Portfolio #${this.portfolio.id} - Portfolio builded to much ${currentRobotsList.length} robots max is ${this.maxRobotsCount}`
                 );
-                const list = currentRobotsList.slice(-this.portfolio.variables.maxRobotsCount);
+                const list = currentRobotsList.slice(-this.maxRobotsCount);
                 currentPortfolio = await this.calcPortfolio(list);
                 prevPortfolio = Object.freeze({ ...currentPortfolio });
                 currentRobotsList = [...list];

@@ -84,8 +84,8 @@ export default class PortfolioManagerService extends HTTPService {
                             type: "number",
                             optional: true
                         },
-                        leverage: { type: "number", optional: true, integer: true, default: 3 },
-                        minRobotsCount: { type: "number", optional: true, integer: true },
+                        leverage: { type: "number", optional: true, integer: true, default: 2 },
+                        minRobotsCount: { type: "number", optional: true, integer: true, default: 20 },
                         maxRobotsCount: { type: "number", optional: true, integer: true },
                         includeTimeframes: { type: "array", enum: Timeframe.validArray, optional: true },
                         excludeTimeframes: { type: "array", enum: Timeframe.validArray, optional: true },
@@ -100,7 +100,8 @@ export default class PortfolioManagerService extends HTTPService {
                                 winRate: "boolean",
                                 efficiency: "boolean"
                             }
-                        }
+                        },
+                        custom: { type: "boolean", optional: true, default: false }
                     },
                     auth: true,
                     roles: [UserRoles.admin, UserRoles.manager, UserRoles.user, UserRoles.vip],
@@ -115,6 +116,8 @@ export default class PortfolioManagerService extends HTTPService {
                         leverage: { type: "number", optional: true, integer: true },
                         minRobotsCount: { type: "number", optional: true, integer: true },
                         maxRobotsCount: { type: "number", optional: true, integer: true },
+                        includeAssets: { type: "array", items: "string", optional: true },
+                        excludeAssets: { type: "array", items: "string", optional: true },
                         options: {
                             type: "object",
                             props: {
@@ -125,7 +128,8 @@ export default class PortfolioManagerService extends HTTPService {
                                 efficiency: "boolean"
                             },
                             optional: true
-                        }
+                        },
+                        custom: { type: "boolean", optional: true }
                     },
                     auth: true,
                     roles: [UserRoles.admin, UserRoles.manager, UserRoles.user, UserRoles.vip],
@@ -222,7 +226,7 @@ export default class PortfolioManagerService extends HTTPService {
             balancePercent,
             tradingAmountCurrency
         );
-        getPortfolioMinBalance(portfolioBalance, minTradeAmount, minRobotsCount);
+        getPortfolioMinBalance(portfolioBalance, minTradeAmount, minRobotsCount, leverage);
         const allPortfolios: PortfolioDB[] = allOptions.map<PortfolioDB>((options) => ({
             id: uuid(),
             code: `${exchange}:${this.generateCode(options)}`,
@@ -276,12 +280,14 @@ export default class PortfolioManagerService extends HTTPService {
             excludeTimeframes,
             includeAssets,
             excludeAssets,
-            options
+            options,
+            custom
         }: PortfolioSettings & {
             exchange: UserPortfolioDB["exchange"];
             type: UserPortfolioDB["type"];
             userExAccId?: UserPortfolioDB["userExAccId"];
             initialBalance?: PortfolioSettings["initialBalance"];
+            custom: boolean;
         },
         user: User
     ) {
@@ -334,7 +340,28 @@ export default class PortfolioManagerService extends HTTPService {
             balancePercent,
             tradingAmountCurrency
         );
-        getPortfolioMinBalance(portfolioBalance, minTradeAmount, minRobotsCount); //TODO: leverage
+
+        if (!custom) {
+            const portfolio = await this.db.pg.one<{
+                limits: {
+                    minBalance: number;
+                    recommendedBalance: number;
+                };
+            }>(sql`
+        SELECT limits from v_portfolios p where 
+        AND p.exchange = ${exchange}
+        AND p.base = true
+        AND p.status = 'started'
+        AND p.option_risk = ${options.risk}
+        AND p.option_profit = ${options.profit}
+        AND p.option_win_rate = ${options.winRate}
+        AND p.option_efficiency = ${options.efficiency}
+        AND p.option_money_management = ${options.moneyManagement};
+        `);
+
+            if (portfolioBalance < portfolio.limits.minBalance) throw new Error("Portfolio balance is insufficient");
+            if (portfolioBalance < portfolio.limits.recommendedBalance) maxRobotsCount = 20;
+        }
 
         const userPortfolio: UserPortfolioDB = {
             id: uuid(),
@@ -352,13 +379,18 @@ export default class PortfolioManagerService extends HTTPService {
             tradingAmountCurrency,
             initialBalance,
             leverage,
-            maxRobotsCount,
             minRobotsCount,
-            includeAssets,
-            excludeAssets,
-            includeTimeframes,
-            excludeTimeframes
+            maxRobotsCount,
+            custom
         };
+
+        if (custom) {
+            userPortfolioSettings.includeAssets = includeAssets;
+            userPortfolioSettings.excludeAssets = excludeAssets;
+            userPortfolioSettings.includeTimeframes = includeTimeframes;
+            userPortfolioSettings.excludeTimeframes = excludeTimeframes;
+        }
+
         await this.db.pg.transaction(async (t) => {
             await t.query(sql`
         insert into user_portfolios
@@ -391,7 +423,12 @@ export default class PortfolioManagerService extends HTTPService {
             leverage,
             maxRobotsCount,
             minRobotsCount,
-            options
+            includeTimeframes,
+            excludeTimeframes,
+            includeAssets,
+            excludeAssets,
+            options,
+            custom
         }: {
             userPortfolioId: UserPortfolioDB["id"];
             tradingAmountType?: PortfolioSettings["tradingAmountType"];
@@ -400,7 +437,12 @@ export default class PortfolioManagerService extends HTTPService {
             leverage?: PortfolioSettings["leverage"];
             maxRobotsCount?: PortfolioSettings["maxRobotsCount"];
             minRobotsCount?: PortfolioSettings["minRobotsCount"];
+            includeTimeframes?: PortfolioSettings["includeTimeframes"];
+            excludeTimeframes?: PortfolioSettings["excludeTimeframes"];
+            includeAssets?: PortfolioSettings["includeAssets"];
+            excludeAssets?: PortfolioSettings["excludeAssets"];
             options?: PortfolioSettings["options"];
+            custom?: PortfolioSettings["custom"];
         },
         user: User
     ) {
@@ -434,6 +476,7 @@ export default class PortfolioManagerService extends HTTPService {
                 403
             );
 
+        const newOptions = { ...options, ...userPortfolio.settings.options };
         if (tradingAmountType) {
             let initialBalance = userPortfolio.settings.initialBalance;
             if (userPortfolio.type === "trading") {
@@ -453,22 +496,41 @@ export default class PortfolioManagerService extends HTTPService {
                 balancePercent,
                 tradingAmountCurrency
             );
-            getPortfolioMinBalance(
-                portfolioBalance,
-                userPortfolio.context.minTradeAmount,
-                nvl(minRobotsCount, userPortfolio.settings.minRobotsCount)
-            ); //TODO: leverage
+            if (!custom && !userPortfolio.settings.custom) {
+                const portfolio = await this.db.pg.one<{
+                    minBalance: number;
+                }>(sql`
+            SELECT min_balance from v_portfolios p where 
+            AND p.exchange = ${userPortfolio.exchange}
+            AND p.base = true
+            AND p.status = 'started'
+            AND p.option_risk = ${newOptions.risk}
+            AND p.option_profit = ${newOptions.profit}
+            AND p.option_win_rate = ${newOptions.winRate}
+            AND p.option_efficiency = ${newOptions.efficiency}
+            AND p.option_money_management = ${newOptions.moneyManagement};
+            `);
+
+                if (portfolioBalance < portfolio.minBalance) throw new Error("Portfolio balance is insufficient");
+            }
         }
         const userPortfolioSettings: PortfolioSettings = {
             ...userPortfolio.settings,
-            options: nvl(options, userPortfolio.settings.options),
+            options: newOptions,
             tradingAmountType: nvl(tradingAmountType, userPortfolio.settings.tradingAmountType),
             balancePercent: nvl(balancePercent, userPortfolio.settings.balancePercent),
-            tradingAmountCurrency: nvl(tradingAmountCurrency, userPortfolio.settings.tradingAmountCurrency),
-            leverage: nvl(leverage, userPortfolio.settings.leverage),
-            maxRobotsCount: nvl(maxRobotsCount, userPortfolio.settings.maxRobotsCount),
-            minRobotsCount: nvl(minRobotsCount, userPortfolio.settings.minRobotsCount)
+            tradingAmountCurrency: nvl(tradingAmountCurrency, userPortfolio.settings.tradingAmountCurrency)
         };
+
+        if (custom) {
+            userPortfolioSettings.leverage = leverage ?? userPortfolioSettings.leverage;
+            userPortfolioSettings.maxRobotsCount = maxRobotsCount ?? userPortfolioSettings.maxRobotsCount;
+            userPortfolioSettings.minRobotsCount = minRobotsCount ?? userPortfolioSettings.minRobotsCount;
+            userPortfolioSettings.includeAssets = includeAssets ?? userPortfolioSettings.includeAssets;
+            userPortfolioSettings.excludeAssets = excludeAssets ?? userPortfolioSettings.excludeAssets;
+            userPortfolioSettings.includeTimeframes = includeTimeframes ?? userPortfolioSettings.includeTimeframes;
+            userPortfolioSettings.excludeTimeframes = excludeTimeframes ?? userPortfolioSettings.excludeTimeframes;
+        }
 
         if (!equals(userPortfolioSettings, userPortfolio.settings)) {
             this.db.pg.query(sql`

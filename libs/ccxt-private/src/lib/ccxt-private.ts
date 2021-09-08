@@ -396,7 +396,28 @@ export class PrivateConnector {
                 totalUSD: balances.info.totalWalletBalance || 0,
                 updatedAt: dayjs.utc().toISOString()
             };
-        } else if (exchange === "kraken" || exchange === "bitfinex") {
+        } else if (exchange === "kraken") {
+            let USD = balances.total["USD"] || 0;
+
+            let priceBTC;
+            for (const [c, v] of Object.entries(balances.total as { [key: string]: number }).filter(
+                ([c, v]) => ["BTC", "ETH", "USDC", "AUD", "GBP", "CAD", "EUR", "JPY", "CHF"].includes(c) && v
+            )) {
+                if (connector.markets[`${c}/USD`]) {
+                    const { price } = await this.getCurrentPrice(connector, c, "USD");
+                    USD += price * v;
+                } else if (connector.markets[`BTC/${c}`]) {
+                    const { price } = await this.getCurrentPrice(connector, "BTC", c);
+                    if (!priceBTC) ({ price: priceBTC } = await this.getCurrentPrice(connector, "BTC", "USD"));
+                    USD += (priceBTC / price) * v;
+                }
+            }
+            return {
+                info: balances,
+                totalUSD: USD || 0,
+                updatedAt: dayjs.utc().toISOString()
+            };
+        } else if (exchange === "bitfinex") {
             let USD = balances.total["USD"] || 0;
 
             let priceBTC;

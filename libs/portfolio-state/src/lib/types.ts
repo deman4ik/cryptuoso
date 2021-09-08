@@ -26,6 +26,7 @@ export interface PortfolioSettings {
     excludeAssets?: string[];
     includeRobots?: string[];
     excludeRobots?: string[];
+    custom?: boolean;
     robotsShare?: {
         [key: string]: number;
     };
@@ -91,6 +92,9 @@ export interface UserPortfolioDB {
     exchange: string;
     type: "signals" | "trading";
     status: "starting" | "started" | "stopping" | "stopped" | "paused";
+    startedAt?: string;
+    stoppedAt?: string;
+    message?: string;
     fullStats?: FullStats;
     periodStats?: PeriodStats<BaseStats>[];
 }

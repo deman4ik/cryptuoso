@@ -25,9 +25,11 @@ export function getPortfolioMinBalance(
     portfolioBalance: number,
     minTradeAmount: number,
     minRobotsCount = nvl(process.env.MIN_PORTFOLIO_ROBOTS, 5),
-    leverage = 2
+    leverage = 2,
+    throwError = true
 ) {
     const minBalance = round((minTradeAmount * minRobotsCount) / leverage);
-    if (portfolioBalance < minBalance) throw new Error("Portfolio balance is insufficient");
+    if (portfolioBalance < minBalance && throwError)
+        throw new Error(`Portfolio balance is insufficient. Mininum Balance: ${minBalance}$`);
     return minBalance;
 }
