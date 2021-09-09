@@ -349,7 +349,7 @@ export default class PortfolioManagerService extends HTTPService {
                 };
             }>(sql`
         SELECT limits from v_portfolios p where 
-        AND p.exchange = ${exchange}
+         p.exchange = ${exchange}
         AND p.base = true
         AND p.status = 'started'
         AND p.option_risk = ${options.risk}
