@@ -539,7 +539,7 @@ export default class UserRobotRunnerService extends HTTPService {
                     ["uuid", "uuid", "uuid", "uuid", "varchar", "jsonb"]
                 )}
                 ON CONFLICT ON CONSTRAINT user_robots_user_portfolio_id_robot_id_key
-                DO UPDATE SET settings = excluded.settings;
+                DO UPDATE SET settings = excluded.settings, status = excluded.status;
             `);
             });
             this.log.info(`Added ${userPortfolio.robots.length} robots to User Portfolio #${userPortfolioId}`);

@@ -149,31 +149,40 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
     async sortRobots(robots: { [key: string]: PortoflioRobotState }) {
         this.log.debug(`Portfolio #${this.portfolio.id} - Sorting ${Object.keys(robots).length} robots`);
         const { profit, risk, moneyManagement, winRate, efficiency } = this.portfolio.settings.options;
-        return Object.values(robots)
-            .sort(({ stats: { fullStats: a } }, { stats: { fullStats: b } }) => {
-                let value = 0;
+        return (
+            Object.values(robots)
+                /* .filter(
+                ({
+                    stats: {
+                        fullStats: { recoveryFactor }
+                    }
+                }) => recoveryFactor > 2
+            )*/
+                .sort(({ stats: { fullStats: a } }, { stats: { fullStats: b } }) => {
+                    let value = 0;
 
-                if (profit) {
-                    value +=
-                        percentBetween(a.avgPercentNetProfitQuarters, b.avgPercentNetProfitQuarters) *
-                        this.optionWeights.profit;
-                }
-                if (risk) {
-                    value += -percentBetween(a.percentMaxDrawdown, b.percentMaxDrawdown) * this.optionWeights.risk;
-                }
-                if (moneyManagement) {
-                    value += percentBetween(a.payoffRatio, b.payoffRatio) * this.optionWeights.moneyManagement;
-                }
-                if (winRate) {
-                    value += percentBetween(a.winRate, b.winRate) * this.optionWeights.winRate;
-                }
-                if (efficiency) {
-                    value += percentBetween(a.sharpeRatio, b.sharpeRatio) * this.optionWeights.efficiency;
-                }
-                return value;
-            })
-            .map(({ robotId }) => robotId)
-            .reverse();
+                    if (profit) {
+                        value +=
+                            percentBetween(a.avgPercentNetProfitQuarters, b.avgPercentNetProfitQuarters) *
+                            this.optionWeights.profit;
+                    }
+                    if (risk) {
+                        value += -percentBetween(a.percentMaxDrawdown, b.percentMaxDrawdown) * this.optionWeights.risk;
+                    }
+                    if (moneyManagement) {
+                        value += percentBetween(a.payoffRatio, b.payoffRatio) * this.optionWeights.moneyManagement;
+                    }
+                    if (winRate) {
+                        value += percentBetween(a.winRate, b.winRate) * this.optionWeights.winRate;
+                    }
+                    if (efficiency) {
+                        value += percentBetween(a.sharpeRatio, b.sharpeRatio) * this.optionWeights.efficiency;
+                    }
+                    return value;
+                })
+                .map(({ robotId }) => robotId)
+                .reverse()
+        );
     }
 
     async calcAmounts(robotIds: string[]): Promise<
@@ -196,6 +205,8 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
             if (this.portfolio.settings.robotsShare && this.portfolio.settings.robotsShare[key]) {
                 robots[key].share = this.portfolio.settings.robotsShare[key];
             }
+
+            if (robots[key].share < 0) robots[key].share = 0;
         }
 
         //const minShare = Math.min(...Object.values(robots).map((r) => r.share));
