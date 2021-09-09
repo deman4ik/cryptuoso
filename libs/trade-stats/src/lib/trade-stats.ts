@@ -115,8 +115,6 @@ export class TradeStatsCalc implements TradeStats {
 
             if (this.meta.job.recalc) {
                 const leverage = availableFunds / currentBalance;
-                if (leverage <= -1)
-                    logger.debug(`${availableFunds} / ${currentBalance} / ${leverage} / ${maxLeverage}`);
                 if (leverage < maxLeverage) maxLeverage = leverage;
             }
             results[position.id] = newPosition;
