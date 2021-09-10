@@ -12,7 +12,8 @@ import {
     PortfolioSettings,
     UserPortfolioDB,
     UserPortfolioBuilderJob,
-    UserPortfolioState
+    UserPortfolioState,
+    calcUserLeverage
 } from "@cryptuoso/portfolio-state";
 import { User, UserExchangeAccountInfo, UserRoles } from "@cryptuoso/user-state";
 import { v4 as uuid } from "uuid";
@@ -342,14 +343,20 @@ export default class PortfolioManagerService extends HTTPService {
         );
 
         if (!custom) {
-            const portfolio = await this.db.pg.one<{
+            const {
+                limits: { recommendedBalance },
+                defaultLeverage,
+                maxLeverage
+            } = await this.db.pg.one<{
                 limits: {
-                    minBalance: number;
                     recommendedBalance: number;
                 };
+                defaultLeverage: number;
+                maxLeverage: number;
             }>(sql`
-        SELECT limits from v_portfolios p where 
-         p.exchange = ${exchange}
+        SELECT p.limits, e.default_leverage, e.max_leverage from v_portfolios p, exchanges e where 
+        e.exchange = ${exchange}
+        AND p.exchange = ${exchange} 
         AND p.base = true
         AND p.status = 'started'
         AND p.option_risk = ${options.risk}
@@ -359,8 +366,7 @@ export default class PortfolioManagerService extends HTTPService {
         AND p.option_money_management = ${options.moneyManagement};
         `);
 
-            if (portfolioBalance < portfolio.limits.minBalance) throw new Error("Portfolio balance is insufficient");
-            if (portfolioBalance < portfolio.limits.recommendedBalance) maxRobotsCount = 20;
+            leverage = calcUserLeverage(recommendedBalance, defaultLeverage, maxLeverage, portfolioBalance);
         }
 
         const userPortfolio: UserPortfolioDB = {
@@ -497,21 +503,30 @@ export default class PortfolioManagerService extends HTTPService {
                 tradingAmountCurrency
             );
             if (!custom && !userPortfolio.settings.custom) {
-                const portfolio = await this.db.pg.one<{
-                    minBalance: number;
+                const {
+                    limits: { recommendedBalance },
+                    defaultLeverage,
+                    maxLeverage
+                } = await this.db.pg.one<{
+                    limits: {
+                        recommendedBalance: number;
+                    };
+                    defaultLeverage: number;
+                    maxLeverage: number;
                 }>(sql`
-            SELECT min_balance from v_portfolios p where 
-            AND p.exchange = ${userPortfolio.exchange}
+            SELECT p.limits, e.default_leverage, e.max_leverage from v_portfolios p, exchanges e where 
+            e.exchange = ${userPortfolio.exchange}
+            AND p.exchange = ${userPortfolio.exchange} 
             AND p.base = true
             AND p.status = 'started'
-            AND p.option_risk = ${newOptions.risk}
-            AND p.option_profit = ${newOptions.profit}
-            AND p.option_win_rate = ${newOptions.winRate}
-            AND p.option_efficiency = ${newOptions.efficiency}
-            AND p.option_money_management = ${newOptions.moneyManagement};
+            AND p.option_risk = ${options.risk}
+            AND p.option_profit = ${options.profit}
+            AND p.option_win_rate = ${options.winRate}
+            AND p.option_efficiency = ${options.efficiency}
+            AND p.option_money_management = ${options.moneyManagement};
             `);
 
-                if (portfolioBalance < portfolio.minBalance) throw new Error("Portfolio balance is insufficient");
+                leverage = calcUserLeverage(recommendedBalance, defaultLeverage, maxLeverage, portfolioBalance);
             }
         }
         const userPortfolioSettings: PortfolioSettings = {

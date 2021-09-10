@@ -33,3 +33,39 @@ export function getPortfolioMinBalance(
         throw new Error(`Portfolio balance is insufficient. Mininum Balance: ${minBalance}$`);
     return minBalance;
 }
+
+export function calcUserLeverage(
+    recommendedBalance: number,
+    defaultLeverage: number,
+    maxLeverage: number,
+    userBalance: number
+) {
+    const minBalance = recommendedBalance / maxLeverage;
+
+    if (userBalance < minBalance) throw new Error("Portfolio balance is insufficient");
+    else if (userBalance >= recommendedBalance) return defaultLeverage;
+    else {
+        const levelLeverage = 100 / defaultLeverage / 100;
+        const leverageLevels = [...Array(defaultLeverage).keys()].reverse().map((k) => {
+            if (k + 1 === defaultLeverage)
+                return {
+                    leverage: defaultLeverage,
+                    limit: recommendedBalance
+                };
+            if (k === 0)
+                return {
+                    leverage: 1,
+                    limit: minBalance
+                };
+            return {
+                leverage: k + 1,
+                limit: recommendedBalance * levelLeverage * k + 1
+            };
+        });
+
+        const { leverage } = leverageLevels.find(({ limit }) => {
+            return limit < userBalance;
+        });
+        return leverage;
+    }
+}
