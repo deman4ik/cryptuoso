@@ -64,22 +64,6 @@ export class MailUtil {
             throw e;
         }
     };
-
-    /*Подписка на рассылку*/
-    subscribeToList = async ({ list, email: address, name }: SubscribeProps) => {
-        try {
-            await this.client.createMember(list, {
-                subscribed: true,
-                address,
-                name
-            });
-            return true;
-        } catch (e) {
-            if (e.message.includes("Address already exists")) return;
-            logger.error(e);
-            throw e;
-        }
-    };
 }
 
 const mailUtil: MailUtil = new MailUtil();
