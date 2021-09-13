@@ -1,7 +1,6 @@
 import { createPool, sql, ClientConfigurationInputType, createTypeParserPreset } from "slonik";
 import { createFieldNameTransformationInterceptor } from "slonik-interceptor-field-name-transformation";
 import { createQueryLoggingInterceptor } from "slonik-interceptor-query-logging";
-import { native as pgClient } from "pg";
 import dayjs from "@cryptuoso/dayjs";
 import { prepareUnnest } from "./helpers";
 
@@ -34,7 +33,6 @@ const typeParsers = [
 ];
 
 const config: ClientConfigurationInputType = {
-    pgClient,
     connectionRetryLimit: 1000,
     connectionTimeout: 60000,
     idleTimeout: 3000,
