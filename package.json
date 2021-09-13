@@ -113,7 +113,7 @@
         "botbuilder-dialogs": "^4.14.1",
         "botbuilder-lg": "^4.14.1",
         "bullmq": "^1.46.5",
-        "ccxt": "^1.56.32",
+        "ccxt": "^1.56.33",
         "ccxt.pro": "git+ssh://git@github.com/deman4ik/ccxt.pro.git",
         "chart.js": "^2.7.3",
         "cloudevents": "^4.0.3",
