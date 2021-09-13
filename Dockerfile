@@ -2,10 +2,10 @@ FROM cryptuoso-build:latest as build
 
 ARG SERVICE_NAME
 
-RUN npm run build:"$SERVICE_NAME" && npm prune --production && npm cache clean --force
+RUN npm run build:"$SERVICE_NAME" && npm prune --production
 
 FROM node:14-alpine as runtime
-RUN apk add --no-cache libpq
+RUN apk add libpq
 RUN mkdir -p /usr/src/app
 COPY --from=build ["/usr/src/app/node_modules","/usr/src/app/node_modules"]
 COPY --from=build ["/usr/src/app/dist","/usr/src/app/dist"]
