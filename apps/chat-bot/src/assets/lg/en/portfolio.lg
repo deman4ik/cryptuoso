@@ -10,19 +10,19 @@
 - ✅ Done 
 
 # profit
-- Profit
+- **Profit**
 
 # risk
-- Risk
+- **Risk**
 
 # moneyManagement
-- Money Management
+- **Money Management**
 
 # winRate
-- Win Rate
+- **Win Rate**
 
 # efficiency
-- Efficiency
+- **Efficiency**
 
 # ChooseOptionsFirst 
 - Choose available option
@@ -36,9 +36,26 @@ You can choose more options or press ${done()}```
 - ${concat(toUpper(substring(arg, 0, 1)), substring(arg, 1))}
 
 # PortfolioInfo 
-- ``` ${CapitalizeFirstLetter(exchange)} Portfolio
+- ``` ${exchange} Portfolio
+${options}
+ ```
+ 
+# MyPortfolioInfo 
+- ``` <strong>My ${exchange} Portfolio</strong>
 ${options}
  ```
  
 # Subscribe
  - Subscribe
+
+# Start
+ - Start
+
+# Stop
+ - Stop
+
+# Edit
+ - Edit
+
+# Delete
+ - Delete

@@ -32,20 +32,21 @@ import { PortfolioOptionDialog, PORTFOLIO_OPTION_DIALOG } from "./portfolioOptio
 import { ChooseExchangeDialog, CHOOSE_EXCHANGE_DIALOG } from "./chooseExchangeDialog";
 import { PerformanceVals } from "@cryptuoso/trade-stats";
 import { getEquityChartUrl } from "@cryptuoso/quickchart";
-import { PortfolioSettings } from "@cryptuoso/portfolio-state";
+import { PortfolioSettings, UserPortfolioState } from "@cryptuoso/portfolio-state";
+import { formatExchange } from "@cryptuoso/helpers";
 
-export const PUBLIC_PORTFOLIOS_DIALOG = "PublicPortfolios";
-const PORTFOLIO_ACTION_PROMPT = "PORTFOLIO_ACTION_PROMPT";
-const PORTFOLIO_WATERFALL_DIALOG = "PORTFOLIO_WATERFALL_DIALOG";
+export const USER_PORTFOLIO_DIALOG = "MyPortfolio";
+const USER_PORTFOLIO_ACTION_PROMPT = "USER_PORTFOLIO_ACTION_PROMPT";
+const USER_PORTFOLIO_WATERFALL_DIALOG = "USER_PORTFOLIO_WATERFALL_DIALOG";
 
-export class PublicPortfoliosDialog extends ComponentDialog {
+export class UserPortfolioDialog extends ComponentDialog {
     private user: StatePropertyAccessor<ChatUser>;
     private userProps: StatePropertyAccessor<{ exchange: string }>;
     lg: MultiLanguageLG;
     gqlClient: GraphQLClient;
 
     constructor(userState: UserState, gqlClient: GraphQLClient) {
-        super(PUBLIC_PORTFOLIOS_DIALOG);
+        super(USER_PORTFOLIO_DIALOG);
         this.gqlClient = gqlClient;
         this.user = userState.createProperty<ChatUser>("user");
         this.userProps = userState.createProperty("props");
@@ -54,19 +55,15 @@ export class PublicPortfoliosDialog extends ComponentDialog {
         filesPerLocale.set("ru", `${__dirname}/assets/lg/ru/portfolio.lg`);
         this.lg = new MultiLanguageLG(undefined, filesPerLocale);
 
-        this.addDialog(new ChoicePrompt(PORTFOLIO_ACTION_PROMPT));
-        this.addDialog(new PortfolioOptionDialog(this.lg));
-        this.addDialog(new ChooseExchangeDialog(this.userProps, this.gqlClient, this.lg));
+        this.addDialog(new ChoicePrompt(USER_PORTFOLIO_ACTION_PROMPT));
         this.addDialog(
-            new WaterfallDialog(PORTFOLIO_WATERFALL_DIALOG, [
-                this.exchangeStep.bind(this),
-                this.optionsStep.bind(this),
-                this.portfolioStep.bind(this),
-                this.portfolioActionsStep.bind(this)
+            new WaterfallDialog(USER_PORTFOLIO_WATERFALL_DIALOG, [
+                this.userPortfolioStep.bind(this),
+                this.userPortfolioActionsStep.bind(this)
             ])
         );
 
-        this.initialDialogId = PORTFOLIO_WATERFALL_DIALOG;
+        this.initialDialogId = USER_PORTFOLIO_WATERFALL_DIALOG;
     }
 
     public async run(turnContext: TurnContext, accessor: StatePropertyAccessor) {
@@ -80,37 +77,17 @@ export class PublicPortfoliosDialog extends ComponentDialog {
         }
     }
 
-    private async exchangeStep(stepContext: WaterfallStepContext) {
-        return await stepContext.beginDialog(CHOOSE_EXCHANGE_DIALOG, { saveExchange: false });
-    }
-
-    private async optionsStep(stepContext: WaterfallStepContext) {
-        await this.userProps.set(stepContext.context, { exchange: stepContext.result });
-        return await stepContext.beginDialog(PORTFOLIO_OPTION_DIALOG);
-    }
-
-    private async portfolioStep(stepContext: WaterfallStepContext) {
-        //await stepContext.context.sendActivity("ok");
-        //
-        const props = await this.userProps.get(stepContext.context);
-        const options: { [key: string]: boolean } = {
-            profit: false,
-            risk: false,
-            moneyManagement: false,
-            winRate: false,
-            efficiency: false
-        };
-
-        for (const option of stepContext.result as string[]) {
-            options[option] = true;
-        }
-        const params = {
-            exchange: props.exchange,
-            ...options
-        };
-        const { portfolios } = await this.gqlClient.request<{
-            portfolios: {
-                exchange: string;
+    private async userPortfolioStep(stepContext: WaterfallStepContext) {
+        const user = await this.user.get(stepContext.context);
+        const { myPortfolio } = await this.gqlClient.request<{
+            myPortfolio: {
+                exchange: UserPortfolioState["exchange"];
+                type: UserPortfolioState["type"];
+                status: UserPortfolioState["status"];
+                startedAt: UserPortfolioState["startedAt"];
+                stoppedAt: UserPortfolioState["stoppedAt"];
+                message: UserPortfolioState["message"];
+                settings: PortfolioSettings;
                 stats: {
                     netProfit: number;
                     percentNetProfit: number;
@@ -130,33 +107,19 @@ export class PublicPortfoliosDialog extends ComponentDialog {
                     minBalance: number;
                     recommendedBalance: number;
                 };
-                settings: PortfolioSettings;
             }[];
         }>(
             stepContext.context,
             gql`
-                query publicPortfolios(
-                    $exchange: String!
-                    $risk: Boolean!
-                    $profit: Boolean!
-                    $winRate: Boolean!
-                    $efficiency: Boolean!
-                    $moneyManagement: Boolean!
-                ) {
-                    portfolios: v_portfolios(
-                        where: {
-                            exchange: { _eq: $exchange }
-                            option_risk: { _eq: $risk }
-                            option_profit: { _eq: $profit }
-                            option_win_rate: { _eq: $winRate }
-                            option_efficiency: { _eq: $efficiency }
-                            option_money_management: { _eq: $moneyManagement }
-                            status: { _eq: "started" }
-                            base: { _eq: true }
-                        }
-                        limit: 1
-                    ) {
+                query myPortfolio($userId: uuid!) {
+                    myPortfolio: v_user_portfolios(where: { user_id: { _eq: $userId } }) {
                         exchange
+                        type
+                        status
+                        startedAt: started_at
+                        stoppedAt: stopped_at
+                        message
+                        settings: user_portfolio_settings
                         stats {
                             netProfit: net_profit
                             percentNetProfit: percent_net_profit
@@ -170,46 +133,79 @@ export class PublicPortfoliosDialog extends ComponentDialog {
                             equityAvg: equity_avg
                             firstPosition: first_position
                         }
-                        limits
-                        settings
                     }
                 }
             `,
-            params
+            {
+                userId: user.id
+            }
         );
-        const [portfolio] = portfolios;
+        const [portfolio] = myPortfolio;
 
         const choices = [
             {
-                value: "subscribe",
+                value: "start",
                 action: {
                     type: ActionTypes.ImBack,
-                    title: this.lg.generate("Subscribe"),
-                    value: "subscribe"
+                    title: this.lg.generate("Start"),
+                    value: "start"
+                }
+            },
+            {
+                value: "stop",
+                action: {
+                    type: ActionTypes.ImBack,
+                    title: this.lg.generate("Stop"),
+                    value: "stop"
+                }
+            },
+            {
+                value: "Edit",
+                action: {
+                    type: ActionTypes.ImBack,
+                    title: this.lg.generate("Edit"),
+                    value: "edit"
+                }
+            },
+            {
+                value: "delete",
+                action: {
+                    type: ActionTypes.ImBack,
+                    title: this.lg.generate("Delete"),
+                    value: "delete"
                 }
             }
         ];
 
         const card = CardFactory.heroCard(
-            this.lg.generate("PortfolioInfo", {
-                exchange: portfolio.exchange,
+            this.lg.generate("MyPortfolioInfo", {
+                exchange: formatExchange(portfolio.exchange),
                 options: Object.entries(portfolio.settings.options)
                     .filter(([, value]) => !!value)
                     .map(([key]) => this.lg.generate(key))
                     .join(", ")
             }),
             CardFactory.images([await getEquityChartUrl(portfolio.stats.equityAvg)]),
-            CardFactory.actions(choices.map((c) => c.action))
+            CardFactory.actions(choices.map((c) => c.action)),
+            {
+                text: this.lg.generate("MyPortfolioInfo", {
+                    exchange: formatExchange(portfolio.exchange),
+                    options: Object.entries(portfolio.settings.options)
+                        .filter(([, value]) => !!value)
+                        .map(([key]) => this.lg.generate(key))
+                        .join(", ")
+                })
+            }
         );
         await stepContext.context.sendActivity({ attachments: [card] });
-        return await stepContext.prompt(PORTFOLIO_ACTION_PROMPT, {
+        return await stepContext.prompt(USER_PORTFOLIO_ACTION_PROMPT, {
             choices,
 
             style: ListStyle.none
         });
     }
 
-    private async portfolioActionsStep(stepContext: WaterfallStepContext) {
+    private async userPortfolioActionsStep(stepContext: WaterfallStepContext) {
         logger.debug(stepContext.options);
         logger.debug(stepContext.values);
         logger.debug(stepContext.result);

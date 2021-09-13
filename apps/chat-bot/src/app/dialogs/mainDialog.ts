@@ -19,6 +19,7 @@ import { MultiLanguageLG } from "botbuilder-lg";
 import { GraphQLClient } from "../data/graphql-client";
 import { ChatUser } from "../types";
 import { PublicPortfoliosDialog, PUBLIC_PORTFOLIOS_DIALOG } from "./publicPortfoliosDialog";
+import { UserPortfolioDialog, USER_PORTFOLIO_DIALOG } from "./userPortfolioDialog";
 
 export const MAIN_DIALOG = "MAIN_DIALOG";
 const MAIN_MENU_WATERFALL_DIALOG = "MAIN_MENU_WATERFALL_DIALOG";
@@ -37,6 +38,7 @@ export class MainDialog extends ComponentDialog {
         filesPerLocale.set("ru", `${__dirname}/assets/lg/ru/mainMenu.lg`);
         this.lg = new MultiLanguageLG(undefined, filesPerLocale);
         this.addDialog(new PublicPortfoliosDialog(userState, this.gqlClient));
+        this.addDialog(new UserPortfolioDialog(userState, this.gqlClient));
         this.addDialog(new ChoicePrompt(MENU_PROMPT));
         this.addDialog(
             new WaterfallDialog(MAIN_MENU_WATERFALL_DIALOG, [
@@ -70,6 +72,15 @@ export class MainDialog extends ComponentDialog {
                     value: "PublicPortfolios"
                 },
                 synonyms: ["portfolios", "Portfolios", "Public Portfolios", "public portfolios"]
+            },
+            {
+                value: "MyPortfolio",
+                action: {
+                    type: ActionTypes.ImBack,
+                    title: this.lg.generate("MyPortfolio"),
+                    value: "MyPortfolio"
+                },
+                synonyms: ["portfolio", "Portfolio", "My Portfolio", "my portfolio"]
             }
         ];
         return await stepContext.prompt(
@@ -89,6 +100,8 @@ export class MainDialog extends ComponentDialog {
         switch (choice) {
             case "PublicPortfolios":
                 return await stepContext.beginDialog(PUBLIC_PORTFOLIOS_DIALOG);
+            case "MyPortfolio":
+                return await stepContext.beginDialog(USER_PORTFOLIO_DIALOG);
             default:
                 return await stepContext.replaceDialog(MAIN_DIALOG);
         }
