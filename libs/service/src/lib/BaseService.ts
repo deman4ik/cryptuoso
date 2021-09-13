@@ -17,7 +17,7 @@ import RedLock from "redlock";
 import logger, { Logger } from "@cryptuoso/logger";
 import { sql, pg, pgUtil } from "@cryptuoso/postgres";
 import { Events, EventsConfig } from "@cryptuoso/events";
-import { sleep } from "@cryptuoso/helpers";
+import { GenericObject, sleep } from "@cryptuoso/helpers";
 import cron from "node-cron";
 
 export interface BaseServiceConfig {
@@ -368,8 +368,8 @@ export class BaseService {
         this.log.error(`Queue ${name} job #${jobId} - stalled`);
     };
 
-    #jobProgressLogger = (name: string, jobId: string, data: string) => {
-        this.log.debug(`Queue ${name} job #${jobId} - progress - ${data}`);
+    #jobProgressLogger = (name: string, jobId: string, data: number | GenericObject<any>) => {
+        this.log.debug(`Queue ${name} job #${jobId} - progress - ${JSON.stringify(data)}`);
     };
 
     #addJob = async <T>(queueName: string, jobName: string, data: T, opts?: JobsOptions): Promise<Job<any, any>> => {
