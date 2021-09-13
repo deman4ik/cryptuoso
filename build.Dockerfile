@@ -1,6 +1,6 @@
 FROM node:14-alpine as build
 
-RUN apk add --no-cache python postgresql-dev build-base git openssh-client
+RUN apk add --no-cache python build-base git openssh-client
 
 ARG GITHUB_SSH_KEY
 RUN \
