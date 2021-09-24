@@ -309,15 +309,8 @@ export default class PortfolioManagerService extends HTTPService {
         `);
 
         if (oldUserRobots > 0) {
-            this.log.warn("You already have started robots");
-            //throw new Error("You already have started robots");
+            throw new Error("You still have started robots");
         }
-
-        const { minTradeAmount } = await this.db.pg.one<{ minTradeAmount: PortfolioContext["minTradeAmount"] }>(sql`
-        SELECT m.min_trade_amount
-        FROM mv_exchange_info m
-        WHERE m.exchange = ${exchange};
-        `);
 
         let initialBalance;
         if (type === "signals") {
@@ -358,7 +351,7 @@ export default class PortfolioManagerService extends HTTPService {
         e.exchange = ${exchange}
         AND p.exchange = ${exchange} 
         AND p.base = true
-        AND p.status = 'started'
+        AND p.status = 'stopped'
         AND p.option_risk = ${options.risk}
         AND p.option_profit = ${options.profit}
         AND p.option_win_rate = ${options.winRate}
@@ -375,7 +368,7 @@ export default class PortfolioManagerService extends HTTPService {
             userId,
             userExAccId,
             exchange,
-            status: "stopped"
+            status: "started"
         };
 
         const userPortfolioSettings: PortfolioSettings = {

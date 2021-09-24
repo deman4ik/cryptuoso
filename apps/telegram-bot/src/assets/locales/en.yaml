@@ -1,0 +1,431 @@
+welcome: >
+    Welcome ${username} to <b>Cryptuoso Trading Bot!</b>\n\n
+    You can start <b>Manual</b> or fully <b>Automated</b> trading with our robots in <b>Trading</b> section.\n\n
+    By starting this bot you confirm that you have read and accept our <a href='https://cryptuoso.com/info/terms-of-use'>terms of use</a>.\n\n
+    ⚠️ Use trading robots at your own risk!
+keyboards:
+    backKeyboard:
+        back: ◀️ Back
+        menu: 🏠 Main Menu
+    startKeybord:
+        start: 🚀 Start
+        info: ❓ Info
+    mainKeyboard:
+        trading: 📈 Trading
+        settings: ⚙️ Settings
+        support: ❓ Support
+        subscription: 💰 Subscription
+    confirm:
+        yes: Yes
+        no: No
+dialogs:
+    start:
+        enter: >
+            Greetings ${username}!\n\n
+            By starting this bot you confirm that you have read and accept our <a href='https://cryptuoso.com/info/terms-of-use'>terms of use</a>.
+        regOrLog: Would you like to <b>create new</b> Cryptuoso Account or to <b>log in</b> to your account with email?
+        registration: 🆕  Create new account
+        login: ✉️  Log in with email
+    registration:
+        enter: 🚀 Creating your Cryptuoso account...\n✉️ Do you want to add your <b>email</b>?
+        enterEmail: ✉️ Please enter your <b>email</b> address here:\n
+        wrongEmail: ❌  You entered <b>wrong</b> email address (${error}).\nPlease try again
+        enterCode: <b>Secret code</b> was sent to your ${email} email address.\nPlease enter <b>secret code</b> here:\n
+        wrongCode: ❌  You entered <b>wrong</b> secret code (${error}).\nPlease try again
+        accExists: >
+            ❌  Cryptuoso account <b>${email}</b> already exists.\n
+            Do you want to <b>register new</b> Cryptuoso account or <b>log in</b> with your email?
+        accLinked: >
+            ❌  Cryptuoso account <b>${email}</b> already linked to another Telegram account.\n
+            Do you want to <b>register new</b> Cryptuoso account without email or enter <b>another email</b>?
+        woEmail: Register new Cryptuoso account without email
+        login: Login with ${email}
+        anotherEmail: I'll try another email
+        success: ✅  Your Cryptuoso account is created!
+    login:
+        enter: >
+            🔐  Logging in your Cryptuoso account...
+
+
+            ✉️ Please enter your <b>email</b> here:
+        accNotExists: >
+            ❌  Cryptuoso account with <b>${email}</b> does not exists.\n
+            Do you want to <b>register new</b> Cryptuoso account or enter <b>another email</b>?
+        register: Register new Cryptuoso account
+        success: ✅ You successfully logged in!\nYour Telegram account added to your <b>${email}</b> Cryptuoso account
+    userSub:
+        checkout: 🧾 Checkout,
+        history: 🗄 Payment history,
+        changePlan: 🕐 Change plan,
+        startTrial: ⏳ Start trial,
+        cancel: ❌ Cancel subscription,
+        info: >
+            <b>Current subscription:</b>\n
+            ${name} ${option}\n\n
+            <b>Description:</b>\n
+            <i>${description}</i>\n\n
+            <b>Status:</b> ${status}\n
+            ${expires}\n
+            ${lastPayment}
+        lastPayment: >
+            <b>Last payment:</b>\n
+            <b>Charge Code:</b> ${code}\n
+            <b>Status:</b> ${status}\n
+            <b>Price:</b> ${price}$\n
+            <b>Period:</b> ${period}
+    createUserSub:
+        info: >
+            <b>Choose your subscription plan:</b>\n\n
+            <b>${name}</b>\n\n
+            <b>Description:</b> <i>${description}</i>\n\n
+            <b>Options:</b>\n\n
+            ${options}
+        trial: /- <b>Start Trial</b>
+        option: <b>${name}</b>${highlight} - <b>${priceTotal}$</b>${discount}${subscribed}
+        failed: ❌ Failed to create subscription - ${error}
+        success: ✅ Subscription created
+    checkoutUserSub:
+        info: >
+            <b>Checkout</b>\n\n
+            <b>Charge:</b> ${code}\n\n
+            <b>Subscription:</b> ${subscriptionName} ${subscriptionOption}\n
+            <b>Period:</b> ${subscriptionFrom} - ${subscriptionTo}\n\n
+            <b>Price:</b> ${price}$\n\n
+            <b>Status:</b> ${status}\n
+            <b>Last checked:</b> ${updated}\n
+            <b>Expires:</b> ${expires}\n\n
+            <b><a href='${url}'>BUY WITH CRYPTO</a></b>\n
+            <i>⬆️  Please follow the link to process your payment. ⬆️</i>\n\n
+            <i>⏳ The payment processing and validation on the blockchain may take up to 60 minutes.\n
+            <b>When your payment will be resolved your subscription will be ✳️ activated.</b>\n
+            <a href='https://commerce.coinbase.com/faq#customers'>How it works?</a></i>
+        check: 🔄 Check payment status
+    paymentHistory:
+        info: <b>Payments History:</b>\n\n
+        none: <b>No payments yet</b>
+        charge: >
+            <b>Charge:</b> ${code}\n
+            <b>Price:</b> ${price}$\n
+            <b>Status:</b> ${status}\n
+            <b>Created:</b> ${created}\n
+            <b>Expires:</b> ${expires}\n
+            <b>Subscription:</b> ${subscription}\n
+            <b>Period:</b> ${subscriptionPeriod}\n\n
+    cancelUserSub:
+        confirm: >
+            ⚠️ Are you sure you want to cancel your <b>#${name}</b> subscription?\n\n
+            Trading will be <b>stopped</b>! If there are any <b>open positions</b> they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!
+        failed: ❌ Failed to cancel ${name} subscription - ${error}
+        success: ⛔ Trading are stopping now...
+    trading:
+        portfolio: >
+            ${options}\n\n
+            <b>Status:</b> ${status}\n
+            <b>Current exchange balance:</b> ${currentBalance} $\n\n
+            <b>Closed trades:</b> ${tradesCount}\n
+            <b>Net Profit/Loss:</b> ${netProfit}\n\n
+            <b>Open trades:</b> ${openTradeCount}\n
+            <b>Unrealized Profit/Loss:</b> ${unrealizedProfit}\n
+        title: 📈 My ${formatExchange(exchange)} portfolio\n\n
+        info: ℹ️ Info
+        start: 🟢 Start
+        stop: ⛔ Stop
+        edit: ⚙️ Edit
+        editOptions: ⚙️ Change Portfolio Options
+        editAmount: ⚙️ Change Trading Amount
+        delete: ❌ Delete
+        stats: 📊 Performance
+        openPos: 📬 Open trades
+        closedPos: 📪 Closed trades
+        confirmStart: >
+            ✳️ Starting your trading portfolio\n\n
+            Are you sure you want to start trading now?\n\n
+            ${warning}
+        confirmStop: >
+            ✴️ Stopping your trading portfolio\n\n
+            Are you sure you want to stop trading now?\n\n
+            ${warning}
+        confirmDelete: >
+            ❌ Deleting your trading portfolio
+
+
+            Are you sure you want to delete you portfolio?
+
+
+            You will lost all your trading history!
+        confirmEdit: >
+            ⚙️ Changing your portfolio settings
+
+
+            You can change trading amount any time.
+
+
+            You can change portfolio options while it is ⛔ Stopped or once in a month while it is 🟢 Started
+        starting: >
+            ✳️ Starting your trading portfolio
+
+
+            ⏳ Please wait...
+        stopping: >
+            ✴️ Stopping your trading portfolio
+
+
+            ⏳ Please wait...
+        deleted: >
+            ❌ Your trading portfolio is deleted 
+
+
+            You can now create new portfolio in 📈  Trading section
+
+    listPortfolios:
+        chooseExchange: >
+            💼 Selecting optimal trading portfolio
+
+
+            Choose one of available exchanges:
+        wrongExchange: ❌ Wrong exchange or exchange is unavailable
+        chooseOptions: >
+            💼 Selecting optimal trading portfolio
+
+
+            Please choose available options:
+        chooseMoreOptions: >
+            💼 Selecting optimal trading portfolio \n\n
+            You choosed: \n\n
+            <b>${options}</b> \n\n
+            You can choose more options or press ✅ <b>Done</b>
+        portfolio: >
+            💼 ${formatExchange(exchange)} portfolio\n\n
+            ${options}\n\n
+            <b>First trade:</b> ${formatDate(stats.firstPosition.entryDate)}\n
+            <b>Average trades per year:</b> ${round(stats.avgTradesCount)}\n\n
+            <b>Starting balance:</b> ${round(settings.initialBalance)} $\n
+            <b>Current balance:</b> ${round(stats.currentBalance)} $ (+${round(stats.percentNetProfit)}%)\n\n
+            <b>Recommended trading balance:</b> ${round(limits.recommendedBalance)} $\n
+            <b>Minimum trading balance:</b> ${round(limits.minBalance)} $\n\n
+            <b>Performance:</b>\n
+            <b>Total Net Profit:</b> ${round(stats.netProfit)} $\n
+            <b>Max Drawdown:</b> ${round(stats.maxDrawdown)} $\n
+            <b>Payoff Ratio:</b> ${stats.payoffRatio} \n
+            <b>Recovery Factor:</b> ${stats.recoveyFactor} \n
+            <b>Sharpe Ratio:</b> ${stats.sharpeRatio} \n
+        subscribe: ✅  Subscribe
+        back: ◀️ Choose another options
+    editPortfolio:
+        insufficient: >
+            ❌ You current exchange balance (${currentBalance} $) is <b>insufficient</b>.\n
+            Minimum required balance is ${minBalance} $.\n\n
+            Please replenish your balance on ${formatExchange(exchange)} exchange and try again.
+        type: >
+            📈 Configuring your trading portfolio
+
+
+            Choose the way you want to trade:
+                
+            <b>Automated</b> - Fully automated trading on your exchange account
+
+            <b>Manual</b> - Receive trading signals and trade by yourself
+        automated: Automated
+        manual: Manual
+        initBalance: >
+            📈 Configuring your trading portfolio
+
+
+            Please enter desired trading amount in $
+        invalidInput: >
+            ❌ Your input is invalid.
+
+
+            Please try again.
+        insufficientInitBalance: >
+            ❌ Balance you entered is <b>insufficient</b>.\n\n
+            Minimum required balance is ${minBalance} $.\n\n
+            Please try again.
+        amountType: >
+            📈 Configuring your trading portfolio\n\n
+            Your trading balance is <b>${balance} $</b>\n\n
+            Choose trading amount option:
+        fullBalance: Use all current balance
+        balancePercent: Set % of the balance
+        currencyFixed: Set fixed amount in $
+        amountTypePercent: >
+            📈 Configuring your trading portfolio
+
+
+            Please choose or type percent of your trading balance
+        amountTypeCurrency: >
+            📈 Configuring your trading portfolio
+
+
+            Please type your trading amount in $
+        invalidPercent: >
+            ❌ Your input is invalid.
+
+
+            Percent must be between 1 and 100
+
+
+            Please try again.
+        invalidFixedAmount: >
+            ❌ Your trading amount can't be more than your current balance  
+
+
+             Please try again.
+        insufficientFixedAmount: >
+            ❌ Your trading amount is <b>insufficient</b>.\n
+            Minimum required trading amount is ${minBalance} $.\n\n
+            Please try again.
+        failed: >
+            ❌ Failed to create portfolio.\n\n
+            <b>${error}</b>\n\n
+            Please try again! Or contact <b>❓ Support</b>
+        created: >
+            📈 Your ${formatExchange(exchange)} portfolio is created!\n\n
+            ${options}\n\n
+            Your initial balance is ${initialBalance} $\n
+            Your trading amount is ${amount} ${amountType}\n\n
+            Are you sure you want to start trading now?\n\n
+            ${warning}
+        ofBalance: \% of the balance
+        fixedCurrency: $ fixed
+        start: 🟢 Start
+        editOptions: ⚙️ Change Portfolio Options
+        editAmount: ⚙️ Change Trading Amount
+        chooseOptions: >
+            📈 Configuring your trading portfolio
+
+
+            Please choose available options:
+        chooseMoreOptions: >
+            📈 Configuring your trading portfolio\n\n
+            You choosed: \n\n
+            <b>${options}</b> \n\n
+            You can choose more options or press ✅ <b>Done</b>
+    addExchangeAcc:
+        chooseExchange: >
+            🔑 Adding New Exchange Account
+
+
+            Choose one of available exchanges:
+        enterAPIKey: >
+            🔑 Adding New Exchange Account\n\n
+            Enter your ${formatExchange(exchange)} <b>API Key</b>
+        enterAPISecret: >
+            🔑 Adding New Exchange Account\n\n
+            Enter your ${formatExchange(exchange)} <b>API Key Secret (Private Key)</b>
+        enterAPIPass: >
+            🔑 Adding New Exchange Account\n\n
+            Enter your ${formatExchange(exchange)} <b>API Password</b>
+        check: >
+            🔑 Adding New Exchange Account\n\n
+            🌀 Checking your ${formatExchange(exchange)} API Key...\n\n
+            ⏳ Please wait...
+        success: 🔑 New ${formatExchange(exchange)} Account succesfully added!
+        failed: >
+            ❌ Failed to add new ${formatExchange(exchange)} Account.\n\n
+            <b>${error}</b>\n\n
+            Please try again!\n\n
+            You can learn how to configure keys in our <a href='https://cryptuoso.com/info/docs/exchange-accounts'>docs</a>
+
+options:
+    profit: Profit
+    risk: Risk
+    moneyManagement: Money Management
+    winRate: Win Rate
+    efficiency: Efficiency
+    done: ✅ Done
+menu: Please use Menu in Telegram keyboard section ↘️
+defaultHandler: 🚧 Hey, please choose a section with the Telegram keyboard before typing anything
+unknownError: Unknown error
+failed: >
+    ❌ Failed to process your request. Please try again later!\n\n
+    ${error}
+status:
+    pending: ⏳ Pending
+    queued: 🌀 Queued
+    starting: ✳️ Starting
+    stopping: ✴️ Stopping
+    started: 🟢 Started
+    stopped: ⛔ Stopped
+    paused: 📛 Paused
+    finished: 🏁 Finished
+    failed: ❌ Failed
+    resumed: ♻️ Resumed
+userSubStatus:
+    active: ✳️ Active
+    trial: ✴️ Trial
+    expired: ⛔ Expired
+    pending: ⏳ Pending
+    canceled: ❌ Canceled
+    expiring: ⏳ Expiring
+paymentStatus:
+    NEW: 🌀 NEW
+    PENDING: ✴️ PENDING
+    COMPLETED: 🟢 COMPLETED
+    UNRESOLVED: ⛔ UNRESOLVED
+    RESOLVED: ✅ RESOLVED
+    EXPIRED: ⏳ EXPIRED
+    CANCELED: ❌ CANCELED
+orderType:
+    market: Market 〽️
+    limit: Limit ✴️
+    stop: Stop ⛔
+userExAcc:
+    error: ❌ Your API Key 🔐 ${name} is invalid!\n\n ${error}\n\nPlease update your API Key information in settings.
+tradeAction:
+    long: BUY ⬆️ (Long ✳️)
+    short: SELL ⬇️ (Short 🔴)
+    closeLong: SELL ⬇️ (Close Long ✳️)
+    closeShort: BUY ⬆️ (Close Short 🔴)
+warning: It is a realtime automated trading mode using your exchange account and you use it at your own risk!
+warningStop: If there are any <b>open positions</b> they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!
+notifications:
+    status: 💼 Portfolio is ${status} now!\n\n${message}"
+    newTrade: 🤖✅ New  Trade!
+    newSignal: 🚨 New Signal
+positions:
+    none: You have no positions yet...
+    positionsOpen: <b>📬 Open positions:</b> ${openPositions}\n
+    positionsClosed: <b>📪 Latest Closed positions:</b> ${closedPositions}\n
+    positionOpenNotif: >
+        \n\n-------\n
+        <b>Trade Opened</b>\n\n
+        <b>Entry:</b> ${entryAction}\n
+        <b>Entry Date:</b> ${formatDate(entryDate)}\n
+        <b>Entry Price:</b> ${entryPrice} $
+        <b>Amount:</b> ${volume} ${asset}
+    positionOpen: >
+        \n\n-------\n
+        <b>Trade Opened</b>\n\n
+        <b>Entry:</b> ${entryAction}\n
+        <b>Entry Date:</b> ${formatDate(entryDate)}\n
+        <b>Entry Price:</b> ${entryPrice} $\n
+        <b>Amount:</b> ${volume} ${asset}\n
+        <b>Unrealized Profit:</b> ${profit} $
+    positionClosed: >
+        \n\n-------\n
+        <b>Trade Closed</b>\n\n
+        <b>Entry:</b> ${entryAction}\n
+        <b>Entry Date:</b> ${formatDate(entryDate)}\n
+        <b>Entry Price:</b> ${entryPrice} $\n\n
+        <b>Exit:</b> ${exitAction}\n
+        <b>Exit Date:</b> ${exitDate}\n
+        <b>Exit Price:</b> ${exitPrice} $\n\n
+        <b>Amount:</b> ${volume} ${asset}\n\n
+        <b>Bars Held:</b> ${barsHeld}\n
+        <b>Profit:</b> ${profit} $
+performance:
+    none: Not enough data to calculate Performance yet..
+    stats: >
+        <b>First trade:</b> ${formatDate(firstPosition.entryDate)}\n
+        <b>Last trade:</b> ${formatDate(lastPosition.exitDate)}\n
+        <b>Average trades per year:</b> ${round(avgTradesCount)}\n\n
+        <b>Current portfolio balance:</b> ${round(currentBalance,2)} $ (${plus(round(percentNetProfit))}%)\n\n
+        <b>Total Net Profit:</b> ${plus(round(netProfit,2))} $\n
+        <b>Max Drawdown:</b> ${round(maxDrawdown,2)} $\n
+        <b>Max Drawdown Date:</b> ${formatDate(maxDrawdownDate)} \n
+        <b>Payoff Ratio:</b> ${payoffRatio} \n
+        <b>Recovery Factor:</b> ${recoveyFactor} \n
+        <b>Sharpe Ratio:</b> ${sharpeRatio || "Not available"}
+lastInfoUpdatedAt: >
+    \nInfo updated: ${formatDateSec(lastInfoUpdatedAt)}\n

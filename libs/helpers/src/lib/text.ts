@@ -38,3 +38,5 @@ export const fromCamelCase = (str: string, separator = "_") =>
         .replace(/([a-z\d])([A-Z])/g, "$1" + separator + "$2")
         .replace(/([A-Z]+)([A-Z][a-z\d]+)/g, "$1" + separator + "$2")
         .toLowerCase();
+
+export const generateRandomString = (length = 6) => Math.random().toString(20).substr(2, length);

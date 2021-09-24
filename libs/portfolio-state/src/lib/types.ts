@@ -1,5 +1,5 @@
-import { BasePosition } from "@cryptuoso/market";
-import { BaseStats, FullStats, PeriodStats } from "@cryptuoso/trade-stats";
+import { BasePosition, PositionDirection, TradeAction } from "@cryptuoso/market";
+import { BaseStats, FullStats, PerformanceVals, PeriodStats } from "@cryptuoso/trade-stats";
 
 export interface PortfolioOptions {
     // diversification: boolean;
@@ -75,6 +75,32 @@ export interface PortfolioState extends PortfolioDB {
     positions?: BasePosition[];
 }
 
+export interface PortfolioInfo {
+    code: string;
+    exchange: string;
+    stats: {
+        currentBalance: number;
+        netProfit: number;
+        percentNetProfit: number;
+        winRate: number;
+        maxDrawdown: number;
+        maxDrawdownDate: string;
+        payoffRatio: number;
+        sharpeRatio: number;
+        recoveyFactor: number;
+        avgTradesCount: number;
+        equityAvg: PerformanceVals;
+        firstPosition: {
+            entryDate: string;
+        };
+    };
+    limits: {
+        minBalance: number;
+        recommendedBalance: number;
+    };
+    settings: PortfolioSettings;
+}
+
 export interface PortfolioBuilderJob {
     portfolioId: string;
     type: "portfolio";
@@ -111,4 +137,38 @@ export interface UserPortfolioState extends UserPortfolioDB {
         minRobotsCount: number;
     };
     robots?: PortfolioRobotDB[];
+}
+
+export interface OpenPosition {
+    id: string;
+    direction: PositionDirection;
+    entryAction: TradeAction;
+    entryPrice: number;
+    entryDate: string;
+    volume: number;
+    profit: number;
+}
+
+export interface ClosedPosition extends OpenPosition {
+    exitAction: TradeAction;
+    exitPrice: number;
+    exitDate: string;
+    barsHeld: number;
+}
+
+export interface UserPortfolioInfo {
+    id: UserPortfolioDB["id"];
+    userExAccId?: UserPortfolioDB["userExAccId"];
+    exchange: UserPortfolioDB["exchange"];
+    type: UserPortfolioDB["type"];
+    status: UserPortfolioDB["status"];
+    startedAt?: UserPortfolioDB["startedAt"];
+    stoppedAt?: UserPortfolioDB["stoppedAt"];
+    settings: PortfolioSettings;
+    stats?: FullStats;
+    unrealizedProfit?: number;
+    openTradesCount?: number;
+    lastInfoUpdatedAt?: string;
+    openPositions: OpenPosition[];
+    closedPositions: ClosedPosition[];
 }

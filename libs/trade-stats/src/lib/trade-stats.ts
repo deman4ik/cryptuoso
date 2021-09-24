@@ -139,7 +139,7 @@ export class TradeStatsCalc implements TradeStats {
     }
 
     private get hasBalance() {
-        return ["robot", "userRobot", "portfolio"].includes(this.meta.job.type);
+        return ["robot", "userRobot", "portfolio", "userPortfolio"].includes(this.meta.job.type);
     }
 
     private roundStats(stats: BaseStats | Stats | FullStats) {

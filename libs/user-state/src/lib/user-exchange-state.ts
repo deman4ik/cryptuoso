@@ -39,7 +39,7 @@ export interface UserExchangeAccount {
 export interface UserExchangeAccountInfo {
     id: string;
     exchange: string;
-    name: string;
+    name?: string;
     status: UserExchangeAccStatus;
     balance?: number;
 }

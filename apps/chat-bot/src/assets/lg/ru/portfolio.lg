@@ -1,8 +1,0 @@
-# ChooseExchange
-- Choose available exchange
-
-# RetryPrompt
-- Please choose an option from the list
-
-# CapitalizeFirstLetter (arg) 
-- ${concat(toUpper(substring(arg, 0, 1)), substring(arg, 1))}
