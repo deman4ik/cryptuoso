@@ -49,9 +49,6 @@
         "ccxt-public": {
             "tags": []
         },
-        "chat-bot": {
-            "tags": []
-        },
         "connector-events": {
             "tags": []
         },

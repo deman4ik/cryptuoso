@@ -12,3 +12,5 @@ export function robotExchangeName(exchange: string, delim = " "): string {
     if (formated.length === 1) return formated[0];
     return `${formated[0]}${delim}${formated[1].substring(0, 3)}`;
 }
+
+export const plusNum = (value: number) => (value > 0 ? `+${value}` : value);

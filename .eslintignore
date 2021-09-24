@@ -48,3 +48,5 @@ migrations.json
 /testResults
 
 jest.config.js
+
+/apps/telegram-bot/src/app/legacy

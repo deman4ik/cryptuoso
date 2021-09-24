@@ -713,19 +713,7 @@ export default class UserRobotRunnerService extends HTTPService {
         WHERE id = ${id};
         `);
 
-        if (status === "stopped") {
-            await this.events.emit<UserPortfolioStatus>({
-                type: UserRobotWorkerEvents.STOPPED_PORTFOLIO,
-                data: {
-                    userPortfolioId: id,
-                    timestamp: stoppedAt,
-                    status,
-                    message: message || null
-                }
-            });
-        }
-
-        return UserRobotStatus.stopping;
+        return status;
     }
 
     async handleUserPortfolioBuilded({ userPortfolioId }: PortfolioManagerUserPortfolioBuilded) {

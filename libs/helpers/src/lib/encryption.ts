@@ -16,5 +16,5 @@ export const createKey = (userId: string, pwd: string) => {
         userKeys[3]
     ].join("");
 
-    return (crypto as any).scryptSync(pass, "salt", 32);
+    return crypto.scryptSync(pass, "salt", 32);
 };
