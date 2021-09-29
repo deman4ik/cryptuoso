@@ -323,7 +323,8 @@ export default class UserRobotRunnerService extends BaseService {
                         userRobotId,
                         timestamp: dayjs.utc().toISOString(),
                         status: UserRobotStatus.paused,
-                        message: userRobot.message
+                        message: userRobot.message,
+                        userPortfolioId: userRobotState.userPortfolioId
                     }
                 };
                 eventsToSend.push(pausedEvent);
@@ -342,7 +343,8 @@ export default class UserRobotRunnerService extends BaseService {
                         userRobotId,
                         timestamp: userRobot.stoppedAt,
                         status: UserRobotStatus.stopped,
-                        message: userRobot.message
+                        message: userRobot.message,
+                        userPortfolioId: userRobotState.userPortfolioId
                     }
                 };
                 eventsToSend.push(stoppedEvent);
@@ -381,7 +383,8 @@ export default class UserRobotRunnerService extends BaseService {
                         const tradeStatsEvent: NewEvent<TradeStatsRunnerUserRobot> = {
                             type: TradeStatsRunnerEvents.USER_ROBOT,
                             data: {
-                                userRobotId: userRobot.id
+                                userRobotId: userRobot.id,
+                                userPortfolioId: userRobotState.userPortfolioId
                             }
                         };
                         eventsToSend.push(tradeStatsEvent);

@@ -1,3 +1,5 @@
+import { Auth } from "@cryptuoso/auth-utils";
+import { Subscription, SubscriptionOption, UserPayment, UserSub } from "@cryptuoso/billing";
 import { GenericObject } from "@cryptuoso/helpers";
 import { UserPortfolioInfo } from "@cryptuoso/portfolio-state";
 import { User, UserExchangeAccountInfo } from "@cryptuoso/user-state";
@@ -15,6 +17,7 @@ export interface SessionData extends DialogSession {
     exchanges?: { code: string; name: string }[];
     userExAcc?: UserExchangeAccountInfo;
     portfolio?: UserPortfolioInfo;
+    userSub?: IUserSub;
 }
 export interface ContextExt extends Context {
     readonly i18n: I18nContext;
@@ -22,6 +25,10 @@ export interface ContextExt extends Context {
     gql: GraphQLClient;
     catalog: {
         options: string[];
+    };
+    authUtils: Auth;
+    utils: {
+        [key: string]: any;
     };
 }
 
@@ -60,6 +67,64 @@ export interface DialogSession {
         current: DialogState;
         move: DialogMove;
     };
+}
+
+export interface IUserSub {
+    id: UserSub["id"];
+    userId: UserSub["userId"];
+    status: UserSub["status"];
+    trial_started: UserSub["trialStarted"];
+    trial_ended: UserSub["trialEnded"];
+    active_from: UserSub["activeFrom"];
+    active_to: UserSub["activeTo"];
+    subscription: {
+        id: Subscription["id"];
+        name: Subscription["name"];
+        description: Subscription["description"];
+    };
+    subscriptionOption: {
+        code: SubscriptionOption["code"];
+        name: SubscriptionOption["name"];
+    };
+    userPayments?: IUserPayment[];
+}
+
+export interface IUserPayment {
+    id: UserPayment["id"];
+    code: UserPayment["code"];
+    url: UserPayment["url"];
+    status: UserPayment["status"];
+    price: UserPayment["price"];
+    created_at: UserPayment["createdAt"];
+    expires_at: UserPayment["expiresAt"];
+    subscription_from: UserPayment["subscriptionFrom"];
+    subscription_to: UserPayment["subscriptionTo"];
+    userSub?: {
+        subscriptionOption: {
+            name: SubscriptionOption["name"];
+        };
+        subscription: {
+            name: Subscription["name"];
+        };
+    };
+}
+
+export interface ISubscription {
+    id: Subscription["id"];
+    name: Subscription["name"];
+    description: Subscription["description"];
+    options: {
+        code: SubscriptionOption["code"];
+        name: SubscriptionOption["name"];
+        sort_order: SubscriptionOption["sortOrder"];
+        unit: SubscriptionOption["unit"];
+        amount: SubscriptionOption["amount"];
+        price_month: SubscriptionOption["priceMonth"];
+        price_total: SubscriptionOption["priceTotal"];
+        discount?: SubscriptionOption["discount"];
+        free_months?: SubscriptionOption["freeMonths"];
+        highlight: SubscriptionOption["highlight"];
+    }[];
 }
 
 export type BotContext = ContextExt & DialogMethods & ParseModeContext;

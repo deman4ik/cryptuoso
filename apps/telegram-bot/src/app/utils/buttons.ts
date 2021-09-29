@@ -70,7 +70,7 @@ export const getPortfolioActions = (ctx: BotContext) =>
 export const getConfirmButtons = (ctx: BotContext) =>
     new InlineKeyboard()
         .add({
-            text: ctx.i18n.t("keyboards.keyboards.yes"),
+            text: ctx.i18n.t("keyboards.confirm.yes"),
             callback_data: JSON.stringify({
                 d: ctx.session.dialog.current?.id || null,
                 a: ctx.session.dialog.move?.action || null,
@@ -79,7 +79,7 @@ export const getConfirmButtons = (ctx: BotContext) =>
         })
         .row()
         .add({
-            text: ctx.i18n.t("keyboards.keyboards.no"),
+            text: ctx.i18n.t("keyboards.confirm.no"),
             callback_data: JSON.stringify({
                 d: ctx.session.dialog.current?.id || null,
                 a: ctx.session.dialog.move?.action || null,

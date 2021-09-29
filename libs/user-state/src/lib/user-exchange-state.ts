@@ -41,5 +41,6 @@ export interface UserExchangeAccountInfo {
     exchange: string;
     name?: string;
     status: UserExchangeAccStatus;
+    error?: string;
     balance?: number;
 }

@@ -49,6 +49,7 @@ export interface Order {
     userRobotId: string;
     positionId?: string;
     userPositionId: string;
+    userPortfolioId?: string;
     prevOrderId?: string;
     exchange: string;
     asset: string;

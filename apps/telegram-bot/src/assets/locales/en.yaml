@@ -12,9 +12,8 @@ keyboards:
         info: ❓ Info
     mainKeyboard:
         trading: 📈 Trading
-        settings: ⚙️ Settings
+        account: 👤 Account
         support: ❓ Support
-        subscription: 💰 Subscription
     confirm:
         yes: Yes
         no: No
@@ -53,6 +52,27 @@ dialogs:
             Do you want to <b>register new</b> Cryptuoso account or enter <b>another email</b>?
         register: Register new Cryptuoso account
         success: ✅ You successfully logged in!\nYour Telegram account added to your <b>${email}</b> Cryptuoso account
+    account:
+        title: <b>👤 Account info</b>
+        email: \n<b>📨 Email:</b> ${email}\n\n
+        notSet: Not set
+        setEmail: 📨 Set Email
+        changeEmail: 📨 Change Email
+        notifOn: Notifications is ON 🔔
+        notifOff: Notifications is OFF 🔕
+    exchangeAccount:
+        info: >
+            <b>🔑 ${formatExchange(exchange)} Account</b>\n
+            <b>Status:</b> ${status}\n
+            ${error}
+            <b>Balance:</b> ${balance} $\n\n
+        notSet: <b>🔑 Exchange Account not linked yet</b>
+        add: 🔑 Link Exchange Account
+        edit: 🔑 Rebind Exchange Account
+        none: 🔑 You hasn't any linked Exchange Accounts
+        check: ✅ Check Exchange Account
+        delete: ❌ Delete Exchange Account
+        error: Error ocurred ${error} - Please make sure you have correct API keys permissions and enough balance to trade
     userSub:
         checkout: 🧾 Checkout,
         history: 🗄 Payment history,
@@ -60,7 +80,7 @@ dialogs:
         startTrial: ⏳ Start trial,
         cancel: ❌ Cancel subscription,
         info: >
-            <b>Current subscription:</b>\n
+            <b>Cryptuoso subscription:</b>\n
             ${name} ${option}\n\n
             <b>Description:</b>\n
             <i>${description}</i>\n\n
@@ -73,6 +93,14 @@ dialogs:
             <b>Status:</b> ${status}\n
             <b>Price:</b> ${price}$\n
             <b>Period:</b> ${period}
+        expires: Expires ${expireTo}
+        freeSub:
+            name: FREE PLAN
+            description: >
+                Manual trading\n
+                Trading signals from our robots\n\n
+                Unlimited signals\n
+                Community Chat Support
     createUserSub:
         info: >
             <b>Choose your subscription plan:</b>\n\n
@@ -125,8 +153,10 @@ dialogs:
             <b>Closed trades:</b> ${tradesCount}\n
             <b>Net Profit/Loss:</b> ${netProfit}\n\n
             <b>Open trades:</b> ${openTradeCount}\n
-            <b>Unrealized Profit/Loss:</b> ${unrealizedProfit}\n
+            <b>Unrealized Profit/Loss:</b> ${unrealizedProfit}
         title: 📈 My ${formatExchange(exchange)} portfolio\n\n
+        infoTitle: 📈 My ${formatExchange(exchange)} portfolio ℹ️ Info\n\n
+        statsTitle: 📈 My ${formatExchange(exchange)} portfolio 📊 Performance\n\n
         info: ℹ️ Info
         start: 🟢 Start
         stop: ⛔ Stop
@@ -301,32 +331,55 @@ dialogs:
             You choosed: \n\n
             <b>${options}</b> \n\n
             You can choose more options or press ✅ <b>Done</b>
-    addExchangeAcc:
+    editExchangeAcc:
         chooseExchange: >
-            🔑 Adding New Exchange Account
+            🔑 Linking Exchange Account
 
 
             Choose one of available exchanges:
         enterAPIKey: >
-            🔑 Adding New Exchange Account\n\n
+            🔑 Linking Exchange Account\n\n
             Enter your ${formatExchange(exchange)} <b>API Key</b>
         enterAPISecret: >
-            🔑 Adding New Exchange Account\n\n
+            🔑 Linking Exchange Account\n\n
             Enter your ${formatExchange(exchange)} <b>API Key Secret (Private Key)</b>
         enterAPIPass: >
-            🔑 Adding New Exchange Account\n\n
+            🔑 Linking Exchange Account\n\n
             Enter your ${formatExchange(exchange)} <b>API Password</b>
         check: >
-            🔑 Adding New Exchange Account\n\n
+            🔑 Linking Exchange Account\n\n
             🌀 Checking your ${formatExchange(exchange)} API Key...\n\n
             ⏳ Please wait...
         success: 🔑 New ${formatExchange(exchange)} Account succesfully added!
         failed: >
-            ❌ Failed to add new ${formatExchange(exchange)} Account.\n\n
+            ❌ Failed to link ${formatExchange(exchange)} Account.\n\n
             <b>${error}</b>\n\n
             Please try again!\n\n
             You can learn how to configure keys in our <a href='https://cryptuoso.com/info/docs/exchange-accounts'>docs</a>
+    support:
+        info1: >
+            ❓ Support
 
+
+            📃 You can learn all about Cryptuoso Automated Trading, how to use and configure trading portfolios and exchange accounts in our <a href='https://cryptuoso.com/info/docs/'>Documentation site</a>.
+        info1alt: >
+            📃 You can learn all about Cryptuoso Automated Trading, how to create new account, how to use and configure trading portfolios and exchange accounts in our <a href='https://cryptuoso.com/info/docs/'>Documentation site</a>.
+        info2: ❓ Having common questions with signals or robots? Ask it in our <a href='https://t.me/joinchat/AAAAAEzaWVAzgkDmgOKYHA'>Telegram Community</a> and we will help you.\n\n,
+        info3: ❗️ Have a personal problem regarding connecting an exchange or billing? You can reach us at <a href='mailto:support@cruptuoso.com'>support@cruptuoso.com</a>.
+        info4: >
+            Also you can <b>type and send your message right now ⬇️ to this bot</b>
+
+
+            (works only while you in Support section),
+        success: >
+            ✅ Your support request have been received.
+
+
+            If you have any additional information regarding your issue you can use <b>❓ Support</b> section again!
+        reply: >
+            ❓ New Message from <b>Support Team</b>:\n\n
+            ${message}\n\n
+            You can reply to us in <b>❓ Support</b> section.
 options:
     profit: Profit
     risk: Risk
@@ -351,6 +404,9 @@ status:
     finished: 🏁 Finished
     failed: ❌ Failed
     resumed: ♻️ Resumed
+    buildError: ❌ Error
+    error: ❌ Error
+    builded: ✅ Builded
 userSubStatus:
     active: ✳️ Active
     trial: ✴️ Trial
@@ -371,7 +427,16 @@ orderType:
     limit: Limit ✴️
     stop: Stop ⛔
 userExAcc:
-    error: ❌ Your API Key 🔐 ${name} is invalid!\n\n ${error}\n\nPlease update your API Key information in settings.
+    error: >
+        ❌ Your API Key 🔐 ${name} is invalid!\n\n
+        ${error}\n\n
+        Please update your API Key information in your 👤 Account.
+userPortfolio:
+    buildError: >
+        ❌ Failed to build your portfolio!\n\n
+        ${error}\n\n 
+        Please change your portfolio settings and try to 🟢 Start portfolio again.\n\n
+        If you have any questions please contact ❓ Support
 tradeAction:
     long: BUY ⬆️ (Long ✳️)
     short: SELL ⬇️ (Short 🔴)
@@ -379,8 +444,9 @@ tradeAction:
     closeShort: BUY ⬆️ (Close Short 🔴)
 warning: It is a realtime automated trading mode using your exchange account and you use it at your own risk!
 warningStop: If there are any <b>open positions</b> they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!
+notAvailable: Not available
 notifications:
-    status: 💼 Portfolio is ${status} now!\n\n${message}"
+    status: 💼 Portfolio is ${status} now!\n\n${message}
     newTrade: 🤖✅ New  Trade!
     newSignal: 🚨 New Signal
 positions:
@@ -426,6 +492,6 @@ performance:
         <b>Max Drawdown Date:</b> ${formatDate(maxDrawdownDate)} \n
         <b>Payoff Ratio:</b> ${payoffRatio} \n
         <b>Recovery Factor:</b> ${recoveyFactor} \n
-        <b>Sharpe Ratio:</b> ${sharpeRatio || "Not available"}
+        <b>Sharpe Ratio:</b> ${sharpeRatio}
 lastInfoUpdatedAt: >
-    \nInfo updated: ${formatDateSec(lastInfoUpdatedAt)}\n
+    \n\nInfo updated: ${formatDateSec(lastInfoUpdatedAt)}\n

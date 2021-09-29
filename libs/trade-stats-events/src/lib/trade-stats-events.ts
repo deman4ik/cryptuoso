@@ -147,6 +147,7 @@ export type TradeStatsRunnerPortfolioRobot = TradeStatsRunnerRobot;
 export interface TradeStatsRunnerUserRobot {
     recalc?: boolean;
     userRobotId: string;
+    userPortfolioId: string;
 }
 
 export interface TradeStatsRunnerUserPortfolio {

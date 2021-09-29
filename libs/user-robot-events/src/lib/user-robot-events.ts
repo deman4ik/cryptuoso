@@ -24,11 +24,13 @@ export const USER_ROBOT_WORKER_TOPIC = "out-user-robot-worker";
 
 export const enum UserRobotWorkerEvents {
     STARTED = "out-user-robot-worker.started",
+    STARTING = "out-user-robot-worker.starting",
     STOPPED = "out-user-robot-worker.stopped",
     PAUSED = "out-user-robot-worker.paused",
     ERROR = "out-user-robot-worker.error",
     STARTED_PORTFOLIO = "out-user-robot-worker.started-portfolio",
-    STOPPED_PORTFOLIO = "out-user-robot-worker.stopped-portfolio"
+    STOPPED_PORTFOLIO = "out-user-robot-worker.stopped-portfolio",
+    ERROR_PORTFOLIO = "out-user-robot-worker.error-portfolio"
 }
 
 export const USER_TRADE_TOPIC = "user-trade";
@@ -110,8 +112,16 @@ export const StatusSchema = {
     status: { type: "enum", values: [UserRobotStatus.started, UserRobotStatus.stopped, UserRobotStatus.paused] }
 };
 
+export const PortfolioStatusSchema = {
+    userPortfolioId: "uuid",
+    timestamp: { type: "string", pattern: ISO_DATE_REGEX },
+    message: { type: "string", optional: true },
+    status: { type: "string" }
+};
+
 export const UserRobotWorkerSchema = {
     [UserRobotWorkerEvents.STARTED]: StatusSchema,
+    [UserRobotWorkerEvents.STARTING]: StatusSchema,
     [UserRobotWorkerEvents.STOPPED]: StatusSchema,
     [UserRobotWorkerEvents.PAUSED]: StatusSchema,
     [UserRobotWorkerEvents.ERROR]: {
@@ -119,7 +129,10 @@ export const UserRobotWorkerSchema = {
         timestamp: { type: "string", pattern: ISO_DATE_REGEX },
         error: "string",
         job: { type: "object", optional: true }
-    }
+    },
+    [UserRobotWorkerEvents.STARTED_PORTFOLIO]: PortfolioStatusSchema,
+    [UserRobotWorkerEvents.STOPPED_PORTFOLIO]: PortfolioStatusSchema,
+    [UserRobotWorkerEvents.ERROR_PORTFOLIO]: PortfolioStatusSchema
 };
 
 export const UserTradeSchema = {

@@ -262,17 +262,15 @@ export default class UserSubService extends HTTPService {
 
             for (const sub of trialSubscriptions) {
                 this.log.info(`Trial Subscription #${sub.id} for user #${sub.userId} is expiring`);
-                const userStats = await this.db.pg.maybeOne<{ id: string }>(sql`
+                const userPortfolio = await this.db.pg.maybeOne<{ id: string }>(sql`
                     SELECT id 
-                      FROM v_user_aggr_stats
+                      FROM user_portfolios
                     WHERE user_id = ${sub.userId}
-                      AND type = 'userRobot'
-                      AND exchange = '-'
-                      AND asset = '-'
-                      AND net_profit > ${sub.subscriptionLimits?.trialNetProfit || 15};
+                      AND type = 'trading'
+                      AND (full_stats->'netProfit')::numeric > ${sub.subscriptionLimits?.trialNetProfit || 15};
                     `);
 
-                if (userStats) {
+                if (userPortfolio) {
                     const trialEnded = dayjs
                         .utc()
                         .startOf("day")

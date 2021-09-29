@@ -174,6 +174,7 @@ export interface UserTradeEvent extends UserRobotEventData {
     currency: string;
     userRobotId: string;
     userPositionId: string;
+    userPortfolioId?: string;
     userId: string;
     status: UserPositionStatus;
     entryAction?: TradeAction;

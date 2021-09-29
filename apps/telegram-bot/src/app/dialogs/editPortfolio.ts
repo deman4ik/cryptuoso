@@ -1,11 +1,12 @@
 import { round } from "@cryptuoso/helpers";
 import { UserExchangeAccountInfo } from "@cryptuoso/user-state";
 import { InlineKeyboard } from "grammy";
-import { BotContext } from "../types";
+import { BotContext, IUserSub } from "../types";
 import { getOptionsButtons } from "../utils/buttons";
 import { Router } from "../utils/dialogsRouter";
 import { gql } from "../utils/graphql-client";
-import { addExchangeAccActions } from "./addExchangeAcc";
+import { createUserSubActions } from "./createUserSub";
+import { editExchangeAccActions } from "./editExchangeAcc";
 import { tradingActions } from "./trading";
 
 export enum editPortfolioActions {
@@ -218,8 +219,11 @@ const chooseAmountType = async (ctx: BotContext) => {
     const { data } = ctx.session.dialog.current;
     if (!ctx.session.dialog.current.data.type) ctx.session.dialog.current.data.type = data.payload;
 
-    if (!ctx.session.userExAcc || ctx.session.dialog.current.data.reload) {
-        const { myUserExAcc } = await ctx.gql.request<{ myUserExAcc: UserExchangeAccountInfo[] }>(
+    if (!ctx.session.userSub || !ctx.session.userExAcc || data.reload) {
+        const { myUserExAcc, myUserSub } = await ctx.gql.request<{
+            myUserExAcc: UserExchangeAccountInfo[];
+            myUserSub: IUserSub[];
+        }>(
             ctx,
             gql`
                 query user_ex_acc($userId: uuid!) {
@@ -234,15 +238,54 @@ const chooseAmountType = async (ctx: BotContext) => {
                         status
                         balance: total_balance_usd
                     }
+                    myUserSubs: user_subs(
+                        where: { user_id: { _eq: $userId }, status: { _nin: ["canceled", "expired"] } }
+                        order_by: { created_at: desc_nulls_last }
+                        limit: 1
+                    ) {
+                        id
+                        user_id
+                        status
+                        trial_started
+                        trial_ended
+                        active_from
+                        active_to
+                        subscription {
+                            id
+                            name
+                            description
+                        }
+                        subscriptionOption {
+                            code
+                            name
+                        }
+                        userPayments: user_payments(order_by: { created_at: desc_nulls_last }, limit: 1) {
+                            id
+                            code
+                            url
+                            status
+                            price
+                            created_at
+                            expires_at
+                            subscription_from
+                            subscription_to
+                        }
+                    }
                 }
             `,
             {
                 userId: ctx.session.user.id
             }
         );
+
+        if (!myUserSub || !Array.isArray(myUserSub) || !myUserSub.length) {
+            ctx.dialog.enter(createUserSubActions.enter);
+            return;
+        }
+
         if (!myUserExAcc || !Array.isArray(myUserExAcc) || !myUserExAcc.length) {
-            ctx.dialog.enter(addExchangeAccActions.handler, {
-                exchange: ctx.session.dialog.current.data.exchange,
+            ctx.dialog.enter(editExchangeAccActions.handler, {
+                exchange: data.exchange,
                 scene: "key",
                 expectInput: true
             });

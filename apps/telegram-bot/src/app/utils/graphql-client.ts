@@ -26,11 +26,11 @@ export class GraphQLClient {
             const response = await this.#client.request<T, V>(query, variables, {
                 authorization: `Bearer ${ctx.session?.user?.accessToken}`
             });
-            logger.debug("GraphQLClient.request response", response);
+            //logger.debug("GraphQLClient.request response", response);
             return response;
         } catch (err) {
             if (err.message.includes("JWT")) {
-                logger.info(`Retrying to get refresh token for ${ctx.session?.user?.telegramId}`);
+                //logger.info(`Retrying to get refresh token for ${ctx.session?.user?.telegramId}`);
                 const { user, accessToken } = await this.#refreshToken({ telegramId: ctx.session?.user?.telegramId });
                 ctx.session.user = { ...user, accessToken };
                 return this.#client.request<T, V>(query, variables, {

@@ -3,9 +3,9 @@ import { BotContext } from "../types";
 import { getExchangeButtons } from "../utils/buttons";
 import { Router } from "../utils/dialogsRouter";
 
-export enum addExchangeAccActions {
-    enter = "addExAcc:enter",
-    handler = "addExAcc:handler"
+export enum editExchangeAccActions {
+    enter = "editExAcc:enter",
+    handler = "editExAcc:handler"
 }
 const router: Router = new Map();
 
@@ -26,8 +26,8 @@ const chooseExchange = async (ctx: BotContext) => {
     }
     ctx.session.dialog.current.data.edit = true;
     ctx.session.dialog.current.data.scene = "exchange";
-    ctx.dialog.next(addExchangeAccActions.handler);
-    const { message_id } = await ctx.reply(ctx.i18n.t("dialogs.addExchangeAcc.chooseExchange"), {
+    ctx.dialog.next(editExchangeAccActions.handler);
+    const { message_id } = await ctx.reply(ctx.i18n.t("dialogs.editExchangeAcc.chooseExchange"), {
         reply_markup: getExchangeButtons(ctx)
     });
     ctx.session.dialog.current.data.prev_message_id = message_id;
@@ -45,7 +45,7 @@ const handler = async (ctx: BotContext) => {
         if (ctx.session.dialog.current.data.prev_message_id)
             await ctx.api.deleteMessage(ctx.chat.id, ctx.session.dialog.current.data.prev_message_id);
         await ctx.reply(
-            ctx.i18n.t("dialogs.addExchangeAcc.enterAPIKey", {
+            ctx.i18n.t("dialogs.editExchangeAcc.enterAPIKey", {
                 exchange: ctx.session.dialog.current.data.exchange
             })
         );
@@ -54,8 +54,9 @@ const handler = async (ctx: BotContext) => {
         ctx.session.dialog.current.data.key = data.payload;
         if (ctx.session.dialog.current.data.exchange === "kucoin") ctx.session.dialog.current.data.scene = "pass";
         else ctx.session.dialog.current.data.scene = "check";
+        ctx.session.dialog.current.data.expectInput = true;
         await ctx.reply(
-            ctx.i18n.t("dialogs.addExchangeAcc.enterAPISecret", {
+            ctx.i18n.t("dialogs.editExchangeAcc.enterAPISecret", {
                 exchange: ctx.session.dialog.current.data.exchange
             })
         );
@@ -63,8 +64,9 @@ const handler = async (ctx: BotContext) => {
     } else if (data.scene === "pass") {
         ctx.session.dialog.current.data.secret = data.payload;
         ctx.session.dialog.current.data.scene = "check";
+        ctx.session.dialog.current.data.expectInput = true;
         await ctx.reply(
-            ctx.i18n.t("dialogs.addExchangeAcc.enterAPIPass", {
+            ctx.i18n.t("dialogs.editExchangeAcc.enterAPIPass", {
                 exchange: ctx.session.dialog.current.data.exchange
             })
         );
@@ -73,7 +75,7 @@ const handler = async (ctx: BotContext) => {
         if (ctx.session.dialog.current.data.exchange === "kucoin") ctx.session.dialog.current.data.pass = data.payload;
         else ctx.session.dialog.current.data.secret = data.payload;
         await ctx.reply(
-            ctx.i18n.t("dialogs.addExchangeAcc.check", {
+            ctx.i18n.t("dialogs.editExchangeAcc.check", {
                 exchange: ctx.session.dialog.current.data.exchange
             })
         );
@@ -105,7 +107,7 @@ const handler = async (ctx: BotContext) => {
 
         if (error) {
             await ctx.reply(
-                ctx.i18n.t("dialogs.addExchangeAcc.failed", {
+                ctx.i18n.t("dialogs.editExchangeAcc.failed", {
                     exchange: ctx.session.dialog.current.data.exchange,
                     error
                 })
@@ -114,20 +116,20 @@ const handler = async (ctx: BotContext) => {
             ctx.session.dialog.current.data.secret = null;
             ctx.session.dialog.current.data.pass = null;
             ctx.session.dialog.current.data.scene = "exchange";
-            ctx.dialog.jump(addExchangeAccActions.handler);
+            ctx.dialog.jump(editExchangeAccActions.handler);
         }
 
         if (result) {
-            await ctx.reply(ctx.i18n.t("dialogs.addExchangeAcc.success", { exchange: exchange }));
+            await ctx.reply(ctx.i18n.t("dialogs.editExchangeAcc.success", { exchange: exchange }));
             ctx.dialog.return({ userExAccId: result });
         }
     }
 };
 
-router.set(addExchangeAccActions.enter, chooseExchange);
-router.set(addExchangeAccActions.handler, handler);
+router.set(editExchangeAccActions.enter, chooseExchange);
+router.set(editExchangeAccActions.handler, handler);
 
-export const addExchangeAcc = {
-    name: "addExchangeAcc",
+export const editExchangeAcc = {
+    name: "editExchangeAcc",
     router
 };

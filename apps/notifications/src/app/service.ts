@@ -1,6 +1,7 @@
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
 import { SignalEvents, Signal, SignalSchema } from "@cryptuoso/robot-events";
 import {
+    UserPortfolioStatus,
     UserRobotWorkerError,
     UserRobotWorkerEvents,
     UserRobotWorkerSchema,
@@ -28,6 +29,13 @@ import {
 } from "@cryptuoso/user-sub-events";
 import dayjs from "@cryptuoso/dayjs";
 import mailUtil from "@cryptuoso/mail";
+import { UserPortfolioDB } from "@cryptuoso/portfolio-state";
+import {
+    PortfolioManagerOutEvents,
+    PortfolioManagerOutSchema,
+    PortfolioManagerUserPortfolioBuilded,
+    PortfolioManagerUserPortfolioBuildError
+} from "@cryptuoso/portfolio-events";
 
 export type NotificationsServiceConfig = BaseServiceConfig;
 //TODO: enum for notification types
@@ -38,26 +46,6 @@ export default class NotificationsService extends BaseService {
         this.#mailUtil = mailUtil;
         try {
             this.events.subscribe({
-                [SignalEvents.ALERT]: {
-                    schema: SignalSchema[SignalEvents.ALERT],
-                    handler: this.handleSignal.bind(this)
-                },
-                [SignalEvents.TRADE]: {
-                    schema: SignalSchema[SignalEvents.TRADE],
-                    handler: this.handleSignal.bind(this)
-                },
-                [UserRobotWorkerEvents.STARTED]: {
-                    schema: UserRobotWorkerSchema[UserRobotWorkerEvents.STARTED],
-                    handler: this.handleUserRobotStatus.bind(this)
-                },
-                [UserRobotWorkerEvents.STOPPED]: {
-                    schema: UserRobotWorkerSchema[UserRobotWorkerEvents.STOPPED],
-                    handler: this.handleUserRobotStatus.bind(this)
-                },
-                [UserRobotWorkerEvents.PAUSED]: {
-                    schema: UserRobotWorkerSchema[UserRobotWorkerEvents.PAUSED],
-                    handler: this.handleUserRobotStatus.bind(this)
-                },
                 [UserRobotWorkerEvents.ERROR]: {
                     schema: UserRobotWorkerSchema[UserRobotWorkerEvents.ERROR],
                     handler: this.handleUserRobotError.bind(this)
@@ -85,6 +73,26 @@ export default class NotificationsService extends BaseService {
                 [UserSubOutEvents.USER_SUB_STATUS]: {
                     schema: UserSubOutSchema[UserSubOutEvents.USER_SUB_STATUS],
                     handler: this.handleUserSubStatus.bind(this)
+                },
+                [PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED]: {
+                    schema: PortfolioManagerOutSchema[PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED],
+                    handler: this.handleUserPortfolioBuilded.bind(this)
+                },
+                [PortfolioManagerOutEvents.USER_PORTFOLIO_BUILD_ERROR]: {
+                    schema: PortfolioManagerOutSchema[PortfolioManagerOutEvents.USER_PORTFOLIO_BUILD_ERROR],
+                    handler: this.handleUserPortfolioBuildError.bind(this)
+                },
+                [UserRobotWorkerEvents.STARTED_PORTFOLIO]: {
+                    schema: UserRobotWorkerSchema[UserRobotWorkerEvents.STARTED_PORTFOLIO],
+                    handler: this.handleUserPortfolioStatus.bind(this)
+                },
+                [UserRobotWorkerEvents.STOPPED_PORTFOLIO]: {
+                    schema: UserRobotWorkerSchema[UserRobotWorkerEvents.STOPPED_PORTFOLIO],
+                    handler: this.handleUserPortfolioStatus.bind(this)
+                },
+                [UserRobotWorkerEvents.ERROR_PORTFOLIO]: {
+                    schema: UserRobotWorkerSchema[UserRobotWorkerEvents.ERROR_PORTFOLIO],
+                    handler: this.handleUserPortfolioStatus.bind(this)
                 }
             });
         } catch (err) {
@@ -116,6 +124,8 @@ export default class NotificationsService extends BaseService {
 
     #getUserRobotInfo = async (userRobotId: string) =>
         this.db.pg.one<{
+            userPortfolioId: string;
+            userPortfolioType: UserPortfolioDB["type"];
             userRobotId: string;
             robotId: string;
             robotCode: string;
@@ -125,7 +135,10 @@ export default class NotificationsService extends BaseService {
             email?: number;
             userSettings: UserSettings;
         }>(sql`
-    SELECT ur.id as user_robot_id,
+    SELECT 
+    up.id as user_portfolio_id,
+    up.type as user_portfolio_type,
+    ur.id as user_robot_id,
      r.id as robot_id,
      r.code as robot_code,
      ur.status as user_robot_status,
@@ -133,145 +146,12 @@ export default class NotificationsService extends BaseService {
      u.telegram_id,
      u.email,
      u.settings as user_settings
-     FROM user_robots ur, robots r, users u
+     FROM user_robots ur, robots r, users u, user_portfolios up
     WHERE ur.robot_id = r.id
     AND ur.user_id = u.id
+    AND up.id = ur.user_portfolio_id
     AND ur.id = ${userRobotId};
     `);
-
-    async handleSignal(event: Signal) {
-        try {
-            this.log.info(`Handling #${event.id} - ${event.type} - ${event.action} event`);
-            const { robotId } = event;
-
-            const { code: robotCode } = await this.db.pg.one<{ code: string }>(this.db.sql`
-            SELECT code
-            FROM robots
-            WHERE id = ${robotId};
-        `);
-
-            const subscriptions = await this.db.pg.any<{
-                telegramId?: number;
-                email?: string;
-                settings: UserSettings;
-                userId: string;
-                subscribedAt: string;
-            }>(this.db.sql`
-            SELECT u.telegram_id,
-                u.email,
-                u.settings,
-                s.user_id,
-                s.subscribed_at
-            FROM user_signals s, users u
-            WHERE s.user_id = u.id
-            AND s.robot_id = ${robotId}
-        `);
-
-            if (!subscriptions?.length) return;
-
-            const usersSignalPositions = await this.db.pg.any<{
-                userId: string;
-                volume: number;
-                profit: number;
-                entryAction: TradeAction;
-                entryPrice: number;
-                entryDate: string;
-                exitAction: TradeAction;
-                exitPrice: number;
-                exitDate: string;
-                barsHeld: number;
-            }>(sql`
-                SELECT user_id, volume, profit, entry_action, entry_price, entry_date, 
-                exit_action, exit_price, exit_date,
-                bars_held
-                FROM v_user_signal_positions
-                WHERE id = ${event.positionId}
-                    AND robot_id = ${event.robotId}
-                    AND user_id IN (
-                        ${sql.join(
-                            subscriptions.map((sub) => sub.userId),
-                            sql`, `
-                        )}
-                        );
-            `);
-            this.log.info(
-                `Signal #${event.id} - ${event.type} - ${event.action} event - ${usersSignalPositions?.length}`
-            );
-            if (!usersSignalPositions?.length) return;
-
-            const notifications = usersSignalPositions.map((usp) => {
-                const { telegramId, email, settings } = subscriptions.find(({ userId }) => userId === usp.userId);
-
-                const data: GenericObject<any> = { ...event, robotCode, volume: usp.volume };
-
-                if (event.type === SignalType.trade) {
-                    data.entryAction = usp.entryAction;
-                    data.entryPrice = usp.entryPrice;
-                    data.entryDate = usp.entryDate;
-
-                    if (event.action === TradeAction.closeLong || event.action === TradeAction.closeShort) {
-                        data.exitAction = usp.exitAction;
-                        data.exitPrice = usp.exitPrice;
-                        data.exitDate = usp.exitDate;
-                        data.profit = usp.profit;
-                        data.barsHeld = usp.barsHeld;
-                    }
-                }
-
-                return {
-                    userId: usp.userId,
-                    timestamp: event.timestamp,
-                    type: event.type === SignalType.alert ? SignalEvents.ALERT : SignalEvents.TRADE,
-                    data,
-                    robotId: event.robotId,
-                    sendTelegram: (telegramId && settings.notifications.signals.telegram) || false,
-                    sendEmail: (email && settings.notifications.signals.email) || false
-                };
-            });
-
-            await this.#saveNotifications(notifications);
-        } catch (err) {
-            this.log.error("Failed to handleSignal", err, event);
-            throw err;
-        }
-    }
-
-    async handleUserRobotStatus(event: UserRobotWorkerStatus) {
-        try {
-            this.log.info(`Handling user robot status event`, event);
-            const { userRobotId, status, message, timestamp } = event;
-
-            const {
-                robotCode,
-                telegramId,
-                email,
-                userId,
-                userSettings: {
-                    notifications: { trading }
-                }
-            } = await this.#getUserRobotInfo(userRobotId);
-
-            const notification: Notification<any> = {
-                userId,
-                timestamp,
-                type: `user-robot.${status}`,
-                data: {
-                    userRobotId,
-                    status,
-                    message,
-                    robotCode
-                },
-                userRobotId,
-                sendEmail: trading.email && email ? true : false,
-                sendTelegram: trading.telegram && telegramId ? true : false
-            };
-
-            await this.#saveNotifications([notification]);
-        } catch (err) {
-            this.log.error("Failed to handleUserRobotStatus", err, event);
-            throw err;
-        }
-    }
 
     async handleUserRobotError(event: UserRobotWorkerError) {
         try {
@@ -306,6 +186,8 @@ export default class NotificationsService extends BaseService {
             this.log.info(`Handling user robot trade event #${event.id}`);
             const { userRobotId, entryDate, exitDate } = event;
             const {
+                userPortfolioId,
+                userPortfolioType,
                 robotCode,
                 telegramId,
                 email,
@@ -318,8 +200,8 @@ export default class NotificationsService extends BaseService {
             const notification: Notification<any> = {
                 userId,
                 timestamp: exitDate || entryDate || dayjs.utc().toISOString(),
-                type: "user-robot.trade",
-                data: { ...event, robotCode },
+                type: "user.trade",
+                data: { ...event, robotCode, userPortfolioId, userPortfolioType },
                 userRobotId,
                 sendEmail: trading.email && email ? true : false,
                 sendTelegram: trading.telegram && telegramId ? true : false
@@ -523,5 +405,86 @@ export default class NotificationsService extends BaseService {
             this.log.error("Failed to handleUserSubStatus", err, event);
             throw err;
         }
+    }
+
+    async handleUserPortfolioBuilded(event: PortfolioManagerUserPortfolioBuilded) {
+        this.log.info(`Handling user portfolio builded event`, event);
+
+        const { userPortfolioId } = event;
+
+        const { userId, telegramId } = await this.db.pg.one<{
+            userId: string;
+            telegramId?: number;
+        }>(sql`
+        SELECT u.id as user_id, u.telegram_id
+        FROM user_portfolios up, users u 
+        WHERE up.id = ${userPortfolioId}
+        AND u.id = up.user_id;
+        `);
+
+        const notification: Notification<any> = {
+            userId,
+            timestamp: dayjs.utc().toISOString(),
+            type: "user_portfolio.builded",
+            data: { ...event },
+            sendEmail: false,
+            sendTelegram: !!telegramId
+        };
+
+        await this.#saveNotifications([notification]);
+    }
+
+    async handleUserPortfolioBuildError(event: PortfolioManagerUserPortfolioBuildError) {
+        this.log.info(`Handling user portfolio build error event`, event);
+
+        const { userPortfolioId } = event;
+
+        const { userId, telegramId } = await this.db.pg.one<{
+            userId: string;
+            telegramId?: number;
+        }>(sql`
+        SELECT u.id as user_id, u.telegram_id
+        FROM user_portfolios up, users u 
+        WHERE up.id = ${userPortfolioId}
+        AND u.id = up.user_id;
+        `);
+
+        const notification: Notification<any> = {
+            userId,
+            timestamp: dayjs.utc().toISOString(),
+            type: "user_portfolio.build_error",
+            data: { ...event },
+            sendEmail: false,
+            sendTelegram: !!telegramId
+        };
+
+        await this.#saveNotifications([notification]);
+    }
+
+    async handleUserPortfolioStatus(event: UserPortfolioStatus) {
+        this.log.info(`Handling user portfolio status event`, event);
+
+        const { userPortfolioId, timestamp } = event;
+
+        const { userId, telegramId } = await this.db.pg.one<{
+            userId: string;
+            telegramId?: number;
+        }>(sql`
+        SELECT u.id as user_id, u.telegram_id
+        FROM user_portfolios up, users u 
+        WHERE up.id = ${userPortfolioId}
+        AND u.id = up.user_id;
+        `);
+
+        const notification: Notification<any> = {
+            userId,
+            timestamp,
+            type: "user_portfolio.status",
+            data: { ...event },
+            sendEmail: false,
+            sendTelegram: !!telegramId
+        };
+
+        await this.#saveNotifications([notification]);
     }
 }

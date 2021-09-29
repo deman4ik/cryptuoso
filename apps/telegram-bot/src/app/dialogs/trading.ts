@@ -76,7 +76,7 @@ const getTradingButtons = (ctx: BotContext) => {
         });
     }
 
-    if (status === "stopped" || status === "paused") {
+    if (status !== "started" && status !== "starting") {
         buttons.push({
             text: ctx.i18n.t("dialogs.trading.start"),
             callback_data: JSON.stringify({
@@ -86,7 +86,7 @@ const getTradingButtons = (ctx: BotContext) => {
             })
         });
     }
-    if (status === "started" || status === "starting") {
+    if (status !== "stopped") {
         buttons.push({
             text: ctx.i18n.t("dialogs.trading.stop"),
             callback_data: JSON.stringify({
@@ -268,7 +268,7 @@ const onEnter = async (ctx: BotContext) => {
     const portfolio = ctx.session.portfolio;
     const userExAcc = ctx.session.userExAcc;
 
-    const text = `${ctx.i18n.t("dialogs.trading.title", { exchange: portfolio.exchange })}${ctx.i18n.t(
+    const text = `${ctx.i18n.t("dialogs.trading.infoTitle", { exchange: portfolio.exchange })}${ctx.i18n.t(
         "dialogs.trading.portfolio",
         {
             options: Object.entries(portfolio.settings.options)
@@ -359,7 +359,13 @@ const start = async (ctx: BotContext) => {
         return;
     }
     if (result) {
-        if (result === "starting") await ctx.reply(ctx.i18n.t("dialogs.editPortfolio.starting"));
+        if (result === "starting")
+            await ctx.reply(
+                ctx.i18n.t("notifications.status", {
+                    status: ctx.i18n.t("status.starting"),
+                    message: ""
+                })
+            );
         else if (result === "started")
             await ctx.reply(
                 ctx.i18n.t("notifications.status", {
@@ -367,6 +373,8 @@ const start = async (ctx: BotContext) => {
                     message: ""
                 })
             );
+        ctx.session.dialog.current.data.reload = true;
+        ctx.session.dialog.current.data.edit = false;
         ctx.dialog.jump(tradingActions.enter);
     }
 };
@@ -384,6 +392,8 @@ const confirmStop = async (ctx: BotContext) => {
 const stop = async (ctx: BotContext) => {
     const { data } = ctx.session.dialog.current;
     if (!data.payload) {
+        ctx.session.dialog.current.data.reload = true;
+        ctx.session.dialog.current.data.edit = false;
         ctx.dialog.jump(tradingActions.enter);
         return;
     }
@@ -420,7 +430,13 @@ const stop = async (ctx: BotContext) => {
         return;
     }
     if (result) {
-        if (result === "stopping") await ctx.reply(ctx.i18n.t("dialogs.editPortfolio.stopping"));
+        if (result === "stopping")
+            await ctx.reply(
+                ctx.i18n.t("notifications.status", {
+                    status: ctx.i18n.t("status.stopping"),
+                    message: ""
+                })
+            );
         else if (result === "stopped")
             await ctx.reply(
                 ctx.i18n.t("notifications.status", {
@@ -428,6 +444,8 @@ const stop = async (ctx: BotContext) => {
                     message: ""
                 })
             );
+        ctx.session.dialog.current.data.reload = true;
+        ctx.session.dialog.current.data.edit = false;
         ctx.dialog.jump(tradingActions.enter);
     }
 };
@@ -488,16 +506,19 @@ const stats = async (ctx: BotContext) => {
 
     if (!portfolio.stats) {
         await ctx.editMessageText(
-            `${ctx.i18n.t("dialogs.trading.title", { exchange: portfolio.exchange })}${ctx.i18n.t("performance.none")}`
+            `${ctx.i18n.t("dialogs.trading.statsTitle", { exchange: portfolio.exchange })}${ctx.i18n.t(
+                "performance.none"
+            )}`
         );
         await ctx.editMessageReplyMarkup({ reply_markup: getTradingButtons(ctx) });
         return;
     }
     logger.debug(portfolio.stats);
-    const text = `${ctx.i18n.t("dialogs.trading.title", { exchange: portfolio.exchange })}${ctx.i18n.t(
+    const text = `${ctx.i18n.t("dialogs.trading.statsTitle", { exchange: portfolio.exchange })}${ctx.i18n.t(
         "performance.stats",
         {
-            ...portfolio.stats
+            ...portfolio.stats,
+            sharpeRatio: portfolio.stats.sharpeRatio || ctx.i18n.t("notAvailable")
         }
     )}`;
 
@@ -536,7 +557,7 @@ const openPositions = async (ctx: BotContext) => {
     });
 
     const message = openPositionsText !== "" ? openPositionsText : ctx.i18n.t("positions.none");
-    const text = `${ctx.i18n.t("dialogs.trading.titile", { exchange: portfolio.exchange })}${message}${updatedAtText}`;
+    const text = `${ctx.i18n.t("dialogs.trading.title", { exchange: portfolio.exchange })}${message}${updatedAtText}`;
     if (!portfolio.stats) await ctx.editMessageText(text);
     else await ctx.editMessageCaption({ caption: text, parse_mode: "HTML" });
     await ctx.editMessageReplyMarkup({ reply_markup: getTradingButtons(ctx) });
@@ -568,7 +589,7 @@ const closedPositions = async (ctx: BotContext) => {
     });
 
     const message = closedPositionsText !== "" ? closedPositionsText : ctx.i18n.t("positions.none");
-    const text = `${ctx.i18n.t("dialogs.trading.titile", { exchange: portfolio.exchange })}${message}${updatedAtText}`;
+    const text = `${ctx.i18n.t("dialogs.trading.title", { exchange: portfolio.exchange })}${message}${updatedAtText}`;
     if (!portfolio.stats) await ctx.editMessageText(text);
     else await ctx.editMessageCaption({ caption: text, parse_mode: "HTML" });
     await ctx.editMessageReplyMarkup({ reply_markup: getTradingButtons(ctx) });

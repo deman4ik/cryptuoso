@@ -117,7 +117,7 @@ export interface UserPortfolioDB {
     userExAccId?: string;
     exchange: string;
     type: "signals" | "trading";
-    status: "starting" | "started" | "stopping" | "stopped" | "paused";
+    status: "starting" | "started" | "stopping" | "stopped" | "error" | "buildError";
     startedAt?: string;
     stoppedAt?: string;
     message?: string;

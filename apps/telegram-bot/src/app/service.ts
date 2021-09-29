@@ -16,8 +16,30 @@ import { DialogsRouter } from "./utils/dialogsRouter";
 import { tradingActions } from "./dialogs/trading";
 import dayjs from "@cryptuoso/dayjs";
 import { capitalize, formatExchange, plusNum, round } from "@cryptuoso/helpers";
+import { formatTgName, Notification, UserSettings } from "@cryptuoso/user-state";
+import { accountActions } from "./dialogs/account";
+import { supportActions } from "./dialogs/support";
+import { sql } from "@cryptuoso/postgres";
+import {
+    handleBroadcastMessage,
+    handleMessageSupportReply,
+    handleOrderError,
+    handlePaymentStatus,
+    handleUserExAccError,
+    handleUserRobotError,
+    handleUserTrade,
+    handleUserSubError,
+    handleUserSubStatus,
+    handleUserPortfolioBuilded,
+    handleUserPortfolioBuildError,
+    handleUserPortfolioStatus
+} from "./utils/notifications";
 
 export type TelegramBotServiceConfig = BaseServiceConfig;
+
+const enum JobTypes {
+    checkNotifications = "checkNotifications"
+}
 
 export default class TelegramBotService extends BaseService {
     bot: Bot;
@@ -71,6 +93,11 @@ export default class TelegramBotService extends BaseService {
             ctx.catalog = {
                 options: ["profit", "risk", "moneyManagement", "winRate", "efficiency"]
             };
+            ctx.utils = {
+                formatName: (ctx: BotContext) =>
+                    formatTgName(ctx.from.username, ctx.from.first_name, ctx.from.last_name)
+            };
+            ctx.authUtils = this.authUtils;
             await next();
         });
         this.bot.use(auth(this.authUtils));
@@ -83,9 +110,12 @@ export default class TelegramBotService extends BaseService {
         this.bot.on("callback_query:data", async (ctx: any, next: NextFunction) => {
             const data: { d: string; a: string; p?: string | number | boolean } = JSON.parse(ctx.callbackQuery.data);
 
-            logger.debug(data);
-            logger.debug(ctx.session.dialog.current);
             if (data && data.a && data.d) {
+                if (data.a === "back" && ctx.session.dialog.current && ctx.session.dialog.prev) {
+                    ctx.dialog.return();
+                    await next();
+                    return;
+                }
                 if (
                     ctx.session.dialog.current &&
                     getDialogName(data.a) === ctx.session.dialog.current.name &&
@@ -108,24 +138,16 @@ export default class TelegramBotService extends BaseService {
             ctx.dialog.enter(tradingActions.enter, { reload: true, edit: false });
             await next();
         });
-        this.bot.hears(this.i18n.t("en", "keyboards.mainKeyboard.settings"), async (ctx: any, next: NextFunction) => {
+        this.bot.hears(this.i18n.t("en", "keyboards.mainKeyboard.account"), async (ctx: any, next: NextFunction) => {
             ctx.session.dialog.current = null;
-            ctx.dialog.enter(tradingActions.enter); //TODO!
+            ctx.dialog.enter(accountActions.enter);
             await next();
         });
         this.bot.hears(this.i18n.t("en", "keyboards.mainKeyboard.support"), async (ctx: any, next: NextFunction) => {
             ctx.session.dialog.current = null;
-            ctx.dialog.enter(tradingActions.enter); //TODO!
+            ctx.dialog.enter(supportActions.enter);
             await next();
         });
-        this.bot.hears(
-            this.i18n.t("en", "keyboards.mainKeyboard.subscription"),
-            async (ctx: any, next: NextFunction) => {
-                ctx.session.dialog.current = null;
-                ctx.dialog.enter(tradingActions.enter); //TODO!
-                await next();
-            }
-        );
         this.bot.hears(this.i18n.t("en", "keyboards.backKeyboard.menu"), async (ctx: any, next: NextFunction) => {
             ctx.session.dialog.current = null;
             await this.mainMenu(ctx);
@@ -141,8 +163,7 @@ export default class TelegramBotService extends BaseService {
         });
         this.bot.hears(this.i18n.t("en", "keyboards.startKeybord.start"), this.startHandler.bind(this));
         this.bot.hears(this.i18n.t("en", "keyboards.startKeybord.info"), async (ctx: any, next: NextFunction) => {
-            //TODO!
-            ctx.session.dialog.current = null;
+            await ctx.reply(`${ctx.i18n.t("dialogs.support.info1alt")}${ctx.i18n.t("dialogs.support.info2")}`);
             await next();
         });
         this.bot.on("msg:text", async (ctx: any, next: NextFunction) => {
@@ -169,7 +190,154 @@ export default class TelegramBotService extends BaseService {
     }
 
     async onStarted() {
+        /* const queueKey = this.name;
+
+        this.createQueue(queueKey);
+
+        this.createWorker(queueKey, this.checkNotifications);
+
+        await this.addJob(queueKey, JobTypes.checkNotifications, null, {
+            repeat: {
+                //cron: "*/ //5 * * * * *"
+        /*      },
+            attempts: 10,
+            backoff: { type: "exponential", delay: 60000 },
+            removeOnComplete: 1,
+            removeOnFail: 10
+        }); */
+
         await this.bot.start();
+    }
+
+    async checkNotifications() {
+        try {
+            const notifications = await this.db.pg.any<Notification<any> & { telegramId: number }[]>(sql`
+            SELECT u.telegram_id, n.* FROM notifications n, users u
+            WHERE n.user_id = u.id 
+            AND n.send_telegram = true
+            AND u.status > 0
+            AND u.telegram_id is not null
+            ORDER BY timestamp; 
+            `);
+
+            for (const notification of notifications) {
+                try {
+                    let messageToSend;
+                    switch (notification.type) {
+                        case "user.trade":
+                            messageToSend = handleUserTrade.call(this, notification);
+                            break;
+                        case "user_portfolio.builded":
+                            messageToSend = handleUserPortfolioBuilded.call(this, notification);
+                            break;
+                        case "user_portfolio.build_error":
+                            messageToSend = handleUserPortfolioBuildError.call(this, notification);
+                            break;
+                        case "user_portfolio.status":
+                            messageToSend = handleUserPortfolioStatus.call(this, notification);
+                            break;
+                        case "user_ex_acc.error":
+                            messageToSend = handleUserExAccError.call(this, notification);
+                            break;
+                        case "user-robot.error":
+                            messageToSend = handleUserRobotError.call(this, notification);
+                            break;
+                        case "order.error":
+                            messageToSend = handleOrderError.call(this, notification);
+                            break;
+                        case "message.broadcast":
+                            messageToSend = handleBroadcastMessage.call(this, notification);
+                            break;
+                        case "message.support-reply":
+                            messageToSend = handleMessageSupportReply.call(this, notification);
+                            break;
+                        case "user_sub.error":
+                            messageToSend = handleUserSubError.call(this, notification);
+                            break;
+                        case "user_payment.status":
+                            messageToSend = handlePaymentStatus.call(this, notification);
+                            break;
+                        case "user_sub.status":
+                            messageToSend = handleUserSubStatus.call(this, notification);
+                            break;
+                        default:
+                            continue;
+                    }
+
+                    if (messageToSend) {
+                        const { success } = await this.sendMessage(messageToSend);
+                        if (success) {
+                            await this.db.pg.query(sql`
+                        UPDATE notifications 
+                        SET send_telegram = false 
+                        WHERE id = ${notification.id};`);
+                        }
+                    }
+                } catch (err) {
+                    this.log.error(`Failed to process notification`, err);
+                }
+            }
+        } catch (error) {
+            this.log.error(`Failed to check notifications`, error);
+        }
+    }
+
+    async sendMessage({ telegramId, message }: { telegramId: number; message: string }) {
+        try {
+            this.log.debug(`Sending ${message} to ${telegramId}`);
+            await this.bot.api.sendMessage(telegramId, message, {
+                parse_mode: "HTML"
+            });
+            return { success: true };
+        } catch (err) {
+            this.log.error(err);
+            return this.blockHandler(telegramId, err.response);
+        }
+    }
+
+    async blockHandler(telegramId: number, error: { ok: boolean; error_code: number; description: string }) {
+        try {
+            this.log.warn(`${telegramId}`, error);
+            if (error && error.ok === false && (error.error_code === 403 || error.error_code === 400)) {
+                const user = await this.db.pg.maybeOne<{ id: string; settings: UserSettings }>(sql`
+                                    SELECT id, settings
+                                    FROM users 
+                                    WHERE telegram_id = ${telegramId};`);
+
+                if (user) {
+                    const {
+                        id,
+                        settings: { notifications }
+                    } = user;
+                    const newSettings = {
+                        ...user.settings,
+                        notifications: {
+                            signals: {
+                                ...notifications.signals,
+                                telegram: false
+                            },
+                            trading: {
+                                ...notifications.trading,
+                                telegram: false
+                            },
+                            news: {
+                                ...notifications.news,
+                                telegram: false
+                            }
+                        }
+                    };
+                    await this.db.pg.query(sql`
+                        UPDATE users
+                        SET settings = ${JSON.stringify(newSettings)}
+                        WHERE id = ${id};`);
+                }
+                return { success: true };
+            }
+            return { success: false };
+        } catch (e) {
+            this.log.error(e);
+            return { success: false, error: e.message };
+        }
     }
 
     async startHandler(ctx: any, next: NextFunction) {
