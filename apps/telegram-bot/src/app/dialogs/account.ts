@@ -1,14 +1,18 @@
 import dayjs from "@cryptuoso/dayjs";
 import { gql } from "@cryptuoso/graphql-client";
 import { chunkArray } from "@cryptuoso/helpers";
+import logger from "@cryptuoso/logger";
 import { User, UserExchangeAccountInfo } from "@cryptuoso/user-state";
 import { InlineKeyboard } from "grammy";
 import { BotContext, IUserSub } from "../types";
 import { Router } from "../utils/dialogsRouter";
 import { getBackKeyboard } from "../utils/keyboard";
 import { editExchangeAccActions } from "./editExchangeAcc";
+import { checkoutUserSubActions } from "./checkoutUserSub";
+import { createUserSubActions } from "./createUserSub";
+import { paymentHistoryActions } from "./paymentHistory";
 
-export enum accountActions {
+export const enum accountActions {
     enter = "a:enter",
     notifications = "a:notif",
     checkExAcc = "a:checkEA",
@@ -106,17 +110,20 @@ const getAccountButtons = (ctx: BotContext) => {
         });
     }
 
-    const chunks = chunkArray(buttons, 2);
-
-    for (const chunk of chunks) {
-        keyboard = keyboard.row(...chunk);
+    for (const button of buttons) {
+        keyboard = keyboard.row(button);
     }
-
     return keyboard;
 };
 
 const getAccountInfo = async (ctx: BotContext) => {
-    if (!ctx.session.userExAcc || !ctx.session.userSub || ctx.session.dialog.current?.data?.reload) {
+    if (
+        !ctx.session.userExAcc ||
+        !ctx.session.userSub ||
+        !ctx.session.updatedAt ||
+        ctx.session.dialog.current?.data?.reload ||
+        dayjs.utc().diff(dayjs.utc(ctx.session.updatedAt), "second") < 5
+    ) {
         const { myUser, myUserExAcc, myUserSub } = await ctx.gql.request<{
             myUser: User[];
             myUserExAcc: UserExchangeAccountInfo[];
@@ -148,7 +155,7 @@ const getAccountInfo = async (ctx: BotContext) => {
                         error
                         balance: total_balance_usd
                     }
-                    myUserSubs: user_subs(
+                    myUserSub: user_subs(
                         where: { user_id: { _eq: $userId }, status: { _nin: ["canceled", "expired"] } }
                         order_by: { created_at: desc_nulls_last }
                         limit: 1
@@ -182,7 +189,10 @@ const getAccountInfo = async (ctx: BotContext) => {
                         }
                     }
                 }
-            `
+            `,
+            {
+                userId: ctx.session.user.id
+            }
         );
 
         if (myUser && Array.isArray(myUser) && myUser.length) {
@@ -197,6 +207,7 @@ const getAccountInfo = async (ctx: BotContext) => {
             const [userSub] = myUserSub;
             ctx.session.userSub = userSub;
         }
+        ctx.session.updatedAt = dayjs.utc().toISOString();
     }
 };
 
@@ -218,8 +229,8 @@ const accountInfo = async (ctx: BotContext) => {
     const exchangeAccText = userExAcc
         ? ctx.i18n.t("dialogs.exchangeAccount.info", {
               exchange: userExAcc.exchange,
-              status: userExAcc.status,
-              error: userExAcc.error,
+              status: ctx.i18n.t(userExAcc.status),
+              error: userExAcc.error || "",
               balance: userExAcc.balance
           })
         : ctx.i18n.t("dialogs.exchangeAccount.notSet");
@@ -239,7 +250,7 @@ const accountInfo = async (ctx: BotContext) => {
             status: ctx.i18n.t(`userSubStatus.${userSub.status}`),
             expires: expires,
             lastPayment: lastPayment
-                ? ctx.i18n.t("scenes.userSub.lastPayment", {
+                ? ctx.i18n.t("dialogs.userSub.lastPayment", {
                       code: lastPayment.code,
                       status: ctx.i18n.t(`paymentStatus.${lastPayment.status}`),
                       price: lastPayment.price,
@@ -253,7 +264,7 @@ const accountInfo = async (ctx: BotContext) => {
         currentSub = {
             name: ctx.i18n.t("dialogs.userSub.freeSub.name"),
             option: "",
-            description: ctx.i18n.t("dialogs.userSub.freeSub.description"),
+            description: ctx.i18n.t("dialogs.userSub.freeSub.description", { n: "" }),
             status: ctx.i18n.t(`userSubStatus.active`),
             expires: "",
             lastPayment: ""
@@ -262,16 +273,15 @@ const accountInfo = async (ctx: BotContext) => {
 
     const userSubText = ctx.i18n.t("dialogs.userSub.info", currentSub);
 
-    const text = `${accountInfoText}\n\n${exchangeAccText}\n\n${userSubText}`;
+    const text = `${accountInfoText}${exchangeAccText}\n\n${userSubText}${ctx.i18n.t("lastInfoUpdatedAt", {
+        lastInfoUpdatedAt: ctx.session.updatedAt
+    })}`;
 
     const buttons = getAccountButtons(ctx);
 
-    if (edit) {
-        await ctx.editMessageText(text);
-        await ctx.editMessageReplyMarkup({ reply_markup: buttons });
-    } else {
-        await ctx.reply(text, { reply_markup: buttons });
-    }
+    await ctx.dialog.edit();
+    await ctx.reply(text, { reply_markup: buttons });
+
     ctx.session.dialog.current.data.edit = true;
 };
 
@@ -282,7 +292,7 @@ const notifications = async (ctx: BotContext) => {
     if (data.payload === true) {
         params = { tradingTelegram: true };
     } else if (data.payload === false) {
-        params = { tradinTelegram: false };
+        params = { tradingTelegram: false };
     }
 
     if (params) {
@@ -340,12 +350,31 @@ const editExchangeAccount = async (ctx: BotContext) => {
     }
 };
 
+const checkout = async (ctx: BotContext) => {
+    ctx.dialog.enter(checkoutUserSubActions.enter, { edit: true });
+};
+
+const paymentHistory = async (ctx: BotContext) => {
+    ctx.dialog.enter(paymentHistoryActions.enter, {
+        edit: true,
+        backAction: accountActions.enter,
+        backData: { edit: true, reload: true }
+    });
+};
+
+const changePlan = async (ctx: BotContext) => {
+    ctx.dialog.enter(createUserSubActions.enter, { edit: true });
+};
+
 const router: Router = new Map();
 
 router.set(accountActions.enter, accountInfo);
 router.set(accountActions.notifications, notifications);
 router.set(accountActions.checkExAcc, checkExchangeAccount);
 router.set(accountActions.editExAcc, editExchangeAccount);
+router.set(accountActions.checkout, checkout);
+router.set(accountActions.paymentHistory, paymentHistory);
+router.set(accountActions.changePlan, changePlan);
 
 export const account = {
     name: "account",

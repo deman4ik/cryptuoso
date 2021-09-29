@@ -348,7 +348,7 @@ export default class PortfolioManagerService extends HTTPService {
                 maxLeverage: number;
             }>(sql`
         SELECT p.limits, e.default_leverage, e.max_leverage from v_portfolios p, exchanges e where 
-        e.exchange = ${exchange}
+        e.code = ${exchange}
         AND p.exchange = ${exchange} 
         AND p.base = true
         AND p.status = 'stopped'
@@ -508,7 +508,7 @@ export default class PortfolioManagerService extends HTTPService {
                     maxLeverage: number;
                 }>(sql`
             SELECT p.limits, e.default_leverage, e.max_leverage from v_portfolios p, exchanges e where 
-            e.exchange = ${userPortfolio.exchange}
+            e.code = ${userPortfolio.exchange}
             AND p.exchange = ${userPortfolio.exchange} 
             AND p.base = true
             AND p.status = 'started'

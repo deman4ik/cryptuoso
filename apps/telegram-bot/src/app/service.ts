@@ -34,6 +34,7 @@ import {
     handleUserPortfolioBuildError,
     handleUserPortfolioStatus
 } from "./utils/notifications";
+import { startActions } from "./dialogs/start";
 
 export type TelegramBotServiceConfig = BaseServiceConfig;
 
@@ -100,19 +101,29 @@ export default class TelegramBotService extends BaseService {
             ctx.authUtils = this.authUtils;
             await next();
         });
-        this.bot.use(auth(this.authUtils));
+
         const dialogsRouter = new DialogsRouter();
         for (const dialog of Object.values(dialogs)) {
             dialogsRouter.addDialog(dialog.router);
         }
         dialogsRouter.otherwise(this.defaultHandler);
+        dialogsRouter.menu(this.mainMenu);
         this.bot.use(dialogsRouter.init());
+        this.bot.use(auth);
         this.bot.on("callback_query:data", async (ctx: any, next: NextFunction) => {
             const data: { d: string; a: string; p?: string | number | boolean } = JSON.parse(ctx.callbackQuery.data);
 
             if (data && data.a && data.d) {
-                if (data.a === "back" && ctx.session.dialog.current && ctx.session.dialog.prev) {
-                    ctx.dialog.return();
+                if (data.a === "back" && ctx.session.dialog.current && ctx.session.dialog.current.prev) {
+                    if (ctx.session.dialog.current.data.backAction) {
+                        ctx.dialog.enter(ctx.session.dialog.current.data.backAction, {
+                            ...ctx.session.dialog.current.data.backData,
+                            skip: true
+                        });
+                        await next();
+                        return;
+                    }
+                    ctx.dialog.return({ edit: true });
                     await next();
                     return;
                 }
@@ -122,7 +133,7 @@ export default class TelegramBotService extends BaseService {
                     data.d === ctx.session.dialog.current.id
                 ) {
                     ctx.session.dialog.current.action = data.a;
-                    if (data.p) ctx.session.dialog.current.data.payload = data.p;
+                    if (data.p !== null && data.p !== undefined) ctx.session.dialog.current.data.payload = data.p;
                     await next();
                     return;
                 }
@@ -158,7 +169,7 @@ export default class TelegramBotService extends BaseService {
 
             if (!current.prev) {
                 await this.mainMenu(ctx);
-            } else ctx.session.dialog.current = current.prev;
+            } else ctx.dialog.return({ edit: false });
             await next();
         });
         this.bot.hears(this.i18n.t("en", "keyboards.startKeybord.start"), this.startHandler.bind(this));
@@ -184,7 +195,10 @@ export default class TelegramBotService extends BaseService {
             } else {
                 logger.error("Unknown error:", e);
             }
-            await ctx.reply(ctx.i18n.t("failed", { error: err.message ?? "" }));
+            ctx.dialog.reset();
+            await ctx.reply(ctx.i18n.t("failed", { error: err.message ?? "" }), {
+                reply_markup: ctx.session?.user ? getMainKeyboard(ctx) : getStartKeyboard(ctx)
+            });
         });
         this.addOnStartedHandler(this.onStarted);
     }
@@ -352,9 +366,7 @@ export default class TelegramBotService extends BaseService {
     async mainMenu(ctx: BotContext) {
         ctx.session.dialog.current = null;
         if (!ctx.session?.user) {
-            await ctx.reply(ctx.i18n.t("menu"), {
-                reply_markup: getStartKeyboard(ctx)
-            });
+            ctx.dialog.enter(startActions.enter);
         } else {
             await ctx.reply(ctx.i18n.t("menu"), { reply_markup: getMainKeyboard(ctx) });
         }

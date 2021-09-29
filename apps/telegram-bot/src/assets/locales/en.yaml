@@ -26,7 +26,11 @@ dialogs:
         registration: 🆕  Create new account
         login: ✉️  Log in with email
     registration:
-        enter: 🚀 Creating your Cryptuoso account...\n✉️ Do you want to add your <b>email</b>?
+        enter: >
+            🚀 Creating your Cryptuoso account...
+
+
+            ✉️ Do you want to add your <b>email</b>?
         enterEmail: ✉️ Please enter your <b>email</b> address here:\n
         wrongEmail: ❌  You entered <b>wrong</b> email address (${error}).\nPlease try again
         enterCode: <b>Secret code</b> was sent to your ${email} email address.\nPlease enter <b>secret code</b> here:\n
@@ -65,7 +69,7 @@ dialogs:
             <b>🔑 ${formatExchange(exchange)} Account</b>\n
             <b>Status:</b> ${status}\n
             ${error}
-            <b>Balance:</b> ${balance} $\n\n
+            <b>Balance:</b> ${round(balance,2)} $
         notSet: <b>🔑 Exchange Account not linked yet</b>
         add: 🔑 Link Exchange Account
         edit: 🔑 Rebind Exchange Account
@@ -74,11 +78,11 @@ dialogs:
         delete: ❌ Delete Exchange Account
         error: Error ocurred ${error} - Please make sure you have correct API keys permissions and enough balance to trade
     userSub:
-        checkout: 🧾 Checkout,
-        history: 🗄 Payment history,
-        changePlan: 🕐 Change plan,
-        startTrial: ⏳ Start trial,
-        cancel: ❌ Cancel subscription,
+        checkout: 🧾 Checkout
+        history: 🗄 Payment history
+        changePlan: 🕐 Change plan
+        startTrial: ⏳ Start trial
+        cancel: ❌ Cancel subscription
         info: >
             <b>Cryptuoso subscription:</b>\n
             ${name} ${option}\n\n
@@ -100,7 +104,7 @@ dialogs:
                 Manual trading\n
                 Trading signals from our robots\n\n
                 Unlimited signals\n
-                Community Chat Support
+                Community Chat Support${n}
     createUserSub:
         info: >
             <b>Choose your subscription plan:</b>\n\n
@@ -108,7 +112,7 @@ dialogs:
             <b>Description:</b> <i>${description}</i>\n\n
             <b>Options:</b>\n\n
             ${options}
-        trial: /- <b>Start Trial</b>
+        trial: (Start Trial)
         option: <b>${name}</b>${highlight} - <b>${priceTotal}$</b>${discount}${subscribed}
         failed: ❌ Failed to create subscription - ${error}
         success: ✅ Subscription created
@@ -129,7 +133,7 @@ dialogs:
             <a href='https://commerce.coinbase.com/faq#customers'>How it works?</a></i>
         check: 🔄 Check payment status
     paymentHistory:
-        info: <b>Payments History:</b>\n\n
+        info: <b>Payments History:</b>\n\n${history}
         none: <b>No payments yet</b>
         charge: >
             <b>Charge:</b> ${code}\n
@@ -364,13 +368,19 @@ dialogs:
             📃 You can learn all about Cryptuoso Automated Trading, how to use and configure trading portfolios and exchange accounts in our <a href='https://cryptuoso.com/info/docs/'>Documentation site</a>.
         info1alt: >
             📃 You can learn all about Cryptuoso Automated Trading, how to create new account, how to use and configure trading portfolios and exchange accounts in our <a href='https://cryptuoso.com/info/docs/'>Documentation site</a>.
-        info2: ❓ Having common questions with signals or robots? Ask it in our <a href='https://t.me/joinchat/AAAAAEzaWVAzgkDmgOKYHA'>Telegram Community</a> and we will help you.\n\n,
-        info3: ❗️ Have a personal problem regarding connecting an exchange or billing? You can reach us at <a href='mailto:support@cruptuoso.com'>support@cruptuoso.com</a>.
+        info2: >
+            ❓ Having common questions with signals or robots? 
+            Ask it in our <a href='https://t.me/joinchat/AAAAAEzaWVAzgkDmgOKYHA'>Telegram Community</a> and we will help you.
+
+        info3: >
+            ❗️ Have a personal problem regarding connecting an exchange or billing? 
+             You can reach us at <a href='mailto:support@cruptuoso.com'>support@cruptuoso.com</a>.
         info4: >
             Also you can <b>type and send your message right now ⬇️ to this bot</b>
 
 
-            (works only while you in Support section),
+            (works only while you in Support section)
+        combine: ${info1}\n\n${info2}\n\n${info3}\n\n${info4}
         success: >
             ✅ Your support request have been received.
 
@@ -422,6 +432,9 @@ paymentStatus:
     RESOLVED: ✅ RESOLVED
     EXPIRED: ⏳ EXPIRED
     CANCELED: ❌ CANCELED
+userExAccStatus:
+    enabled: ✅ Enabled
+    invalid: 📛 Invalid
 orderType:
     market: Market 〽️
     limit: Limit ✴️
@@ -467,7 +480,7 @@ positions:
         <b>Entry Date:</b> ${formatDate(entryDate)}\n
         <b>Entry Price:</b> ${entryPrice} $\n
         <b>Amount:</b> ${volume} ${asset}\n
-        <b>Unrealized Profit:</b> ${profit} $
+        <b>Unrealized Profit:</b> ${plus(round(profit,2))} $
     positionClosed: >
         \n\n-------\n
         <b>Trade Closed</b>\n\n
@@ -479,7 +492,7 @@ positions:
         <b>Exit Price:</b> ${exitPrice} $\n\n
         <b>Amount:</b> ${volume} ${asset}\n\n
         <b>Bars Held:</b> ${barsHeld}\n
-        <b>Profit:</b> ${profit} $
+        <b>Profit:</b> ${plus(round(profit,2))} $
 performance:
     none: Not enough data to calculate Performance yet..
     stats: >

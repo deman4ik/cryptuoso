@@ -1,4 +1,5 @@
 import { round } from "@cryptuoso/helpers";
+import logger from "@cryptuoso/logger";
 import { UserExchangeAccountInfo } from "@cryptuoso/user-state";
 import { InlineKeyboard } from "grammy";
 import { BotContext, IUserSub } from "../types";
@@ -9,7 +10,7 @@ import { createUserSubActions } from "./createUserSub";
 import { editExchangeAccActions } from "./editExchangeAcc";
 import { tradingActions } from "./trading";
 
-export enum editPortfolioActions {
+export const enum editPortfolioActions {
     enter = "ePf:enter",
     amountType = "ePf:amType",
     initBalance = "ePf:initBal",
@@ -183,8 +184,10 @@ const getCreatedButtons = (ctx: BotContext) => {
 const router: Router = new Map();
 
 const chooseType = async (ctx: BotContext) => {
-    ctx.session.dialog.current.data.edit = true;
+    await ctx.dialog.edit();
     await ctx.reply(ctx.i18n.t("dialogs.editPortfolio.type"), { reply_markup: getTypeButtons(ctx) });
+
+    ctx.session.dialog.current.data.edit = true;
 };
 
 const initBalance = async (ctx: BotContext) => {
@@ -238,7 +241,7 @@ const chooseAmountType = async (ctx: BotContext) => {
                         status
                         balance: total_balance_usd
                     }
-                    myUserSubs: user_subs(
+                    myUserSub: user_subs(
                         where: { user_id: { _eq: $userId }, status: { _nin: ["canceled", "expired"] } }
                         order_by: { created_at: desc_nulls_last }
                         limit: 1
@@ -286,7 +289,7 @@ const chooseAmountType = async (ctx: BotContext) => {
         if (!myUserExAcc || !Array.isArray(myUserExAcc) || !myUserExAcc.length) {
             ctx.dialog.enter(editExchangeAccActions.handler, {
                 exchange: data.exchange,
-                scene: "key",
+                scene: "exchange",
                 expectInput: true
             });
             return;
@@ -315,10 +318,8 @@ const chooseAmountType = async (ctx: BotContext) => {
     });
     const buttons = getAmountTypeButtons(ctx);
 
-    if (ctx.session.dialog.current.data.edit) {
-        await ctx.editMessageText(text);
-        await ctx.editMessageReplyMarkup({ reply_markup: buttons });
-    } else await ctx.reply(text, { reply_markup: buttons });
+    await ctx.dialog.edit();
+    await ctx.reply(text, { reply_markup: buttons });
     ctx.session.dialog.current.data.edit = true;
 };
 
@@ -337,15 +338,14 @@ const setAmount = async (ctx: BotContext) => {
 
         const text = ctx.i18n.t("dialogs.editPortfolio.amountTypePercent");
         const buttons = getPercentButtons(ctx);
-        if (ctx.session.dialog.current.data.edit) {
-            await ctx.editMessageText(text);
-            await ctx.editMessageReplyMarkup({ reply_markup: buttons });
-        } else {
-            await ctx.reply(text, { reply_markup: buttons });
-        }
+        ctx.session.dialog.current.data.expectInput = true;
+        ctx.dialog.next(editPortfolioActions.handleAmount);
+        await ctx.dialog.edit();
+        await ctx.reply(text, { reply_markup: buttons });
     } else if (amountType === "currencyFixed") {
         ctx.session.dialog.current.data.amountType = "currencyFixed";
-
+        ctx.session.dialog.current.data.expectInput = true;
+        ctx.dialog.next(editPortfolioActions.handleAmount);
         await ctx.reply(ctx.i18n.t("dialogs.editPortfolio.amountTypeCurrency"));
     }
     ctx.session.dialog.current.data.edit = false;
@@ -443,7 +443,7 @@ const finish = async (ctx: BotContext) => {
                 userExAccId,
                 options: ctx.catalog.options.reduce((prev, cur) => ({ ...prev, [cur]: options.includes(cur) }), {}),
                 type,
-                amountType,
+                tradingAmountType: amountType,
                 balancePercent,
                 tradingAmountCurrency,
                 initialBalance
@@ -488,16 +488,11 @@ const chooseOptions = async (ctx: BotContext) => {
     ctx.session.dialog.current.data.selectedOptions = [];
     ctx.dialog.next(editPortfolioActions.optionsChosen);
 
-    if (ctx.session.dialog.current.data.edit) {
-        await ctx.editMessageText(ctx.i18n.t("dialogs.editPortfolio.chooseOptions"));
-        await ctx.editMessageReplyMarkup({ reply_markup: getOptionsButtons(ctx) });
-    } else {
-        ctx.session.dialog.current.data.edit = true;
-        const { message_id } = await ctx.reply(ctx.i18n.t("dialogs.editPortfolio.chooseOptions"), {
-            reply_markup: getOptionsButtons(ctx)
-        });
-        ctx.session.dialog.current.data.prev_message_id = message_id;
-    }
+    await ctx.dialog.edit();
+    ctx.session.dialog.current.data.edit = true;
+    await ctx.reply(ctx.i18n.t("dialogs.editPortfolio.chooseOptions"), {
+        reply_markup: getOptionsButtons(ctx)
+    });
 };
 
 const optionsChosen = async (ctx: BotContext) => {
@@ -537,25 +532,16 @@ const optionsChosen = async (ctx: BotContext) => {
         ctx.dialog.enter(tradingActions.enter, { edit: false, reload: true });
     } else {
         ctx.dialog.next(editPortfolioActions.optionsChosen);
-        if (ctx.session.dialog.current.data.edit) {
-            await ctx.editMessageText(
-                ctx.i18n.t("dialogs.editPortfolio.chooseMoreOptions", {
-                    options: selected.map((o) => `✅ ${ctx.i18n.t(`options.${o}`)}`).join("\n ")
-                })
-            );
-            await ctx.editMessageReplyMarkup({ reply_markup: getOptionsButtons(ctx) });
-        } else {
-            ctx.session.dialog.current.data.edit = true;
-            const { message_id } = await ctx.reply(
-                ctx.i18n.t("dialogs.editPortfolio.chooseMoreOptions", {
-                    options: selected.map((o) => ctx.i18n.t(`options.${o}`)).join(" ")
-                }),
-                {
-                    reply_markup: getOptionsButtons(ctx)
-                }
-            );
-            ctx.session.dialog.current.data.prev_message_id = message_id;
-        }
+        await ctx.dialog.edit();
+        ctx.session.dialog.current.data.edit = true;
+        await ctx.reply(
+            ctx.i18n.t("dialogs.editPortfolio.chooseMoreOptions", {
+                options: selected.map((o) => ctx.i18n.t(`options.${o}`)).join(" ")
+            }),
+            {
+                reply_markup: getOptionsButtons(ctx)
+            }
+        );
     }
 };
 

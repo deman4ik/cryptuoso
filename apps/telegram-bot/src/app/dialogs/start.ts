@@ -5,7 +5,7 @@ import { Router } from "../utils/dialogsRouter";
 import { getBackKeyboard } from "../utils/keyboard";
 import { registrationActions } from "./registration";
 
-export enum startActions {
+export const enum startActions {
     enter = "start:enter",
     route = "start:route"
 }

@@ -22,7 +22,7 @@ import { editPortfolioActions } from "./editPortfolio";
 
 import { listPortfoliosActions } from "./listPortfolios";
 
-export enum tradingActions {
+export const enum tradingActions {
     enter = "tr:enter",
     confirmStart = "tr:cStart",
     start = "tr:start",
@@ -32,8 +32,8 @@ export enum tradingActions {
     delete = "tr:del",
     stats = "tr:stats",
     oPos = "tr:oPos",
-    cPos = "ts:cPos",
-    edit = "ts:edit"
+    cPos = "tr:cPos",
+    edit = "tr:edit"
 }
 
 const getTradingButtons = (ctx: BotContext) => {
@@ -198,6 +198,7 @@ const getTradingInfo = async (ctx: BotContext) => {
                         ) {
                             id
                             direction
+                            asset
                             entryAction: entry_action
                             entryPrice: entry_price
                             entryDate: entry_date
@@ -207,10 +208,11 @@ const getTradingInfo = async (ctx: BotContext) => {
                         closedPositions: positions(
                             where: { status: { _in: ["closed", "closedAuto"] } }
                             order_by: { exit_date: desc_nulls_last }
-                            limit: 10
+                            limit: 5
                         ) {
                             id
                             direction
+                            asset
                             entryAction: entry_action
                             entryPrice: entry_price
                             entryDate: entry_date
@@ -286,32 +288,21 @@ const onEnter = async (ctx: BotContext) => {
         }
     )}${ctx.i18n.t("lastInfoUpdatedAt", { lastInfoUpdatedAt: portfolio.lastInfoUpdatedAt })}`;
 
-    if (ctx.session.dialog.current.data.edit) {
-        if (portfolio.stats?.equityAvg) {
-            await ctx.editMessageMedia({
-                type: "photo",
-                media: getEquityChartUrl(portfolio.stats.equityAvg),
-                caption: text,
-                parse_mode: "HTML"
-            });
-        } else {
-            await ctx.editMessageText(text);
-        }
-        await ctx.editMessageReplyMarkup({ reply_markup: getTradingButtons(ctx) });
-    } else {
-        if (portfolio.stats?.equityAvg) {
-            await ctx.replyWithPhoto(getEquityChartUrl(portfolio.stats.equityAvg), {
-                caption: text,
-                parse_mode: "HTML",
-                reply_markup: getTradingButtons(ctx)
-            });
-        } else await ctx.reply(text, { reply_markup: getTradingButtons(ctx) });
-    }
+    await ctx.dialog.edit();
+    if (portfolio.stats?.equityAvg) {
+        await ctx.replyWithPhoto(getEquityChartUrl(portfolio.stats.equityAvg), {
+            caption: text,
+            parse_mode: "HTML",
+            reply_markup: getTradingButtons(ctx)
+        });
+    } else await ctx.reply(text, { reply_markup: getTradingButtons(ctx) });
+
     ctx.session.dialog.current.data.edit = true;
 };
 
 const confirmStart = async (ctx: BotContext) => {
     await ctx.dialog.next(tradingActions.start);
+    ctx.session.dialog.current.data.edit = false;
     await ctx.reply(
         ctx.i18n.t("dialogs.trading.confirmStart", {
             warning: ctx.session.portfolio.type === "trading" ? ctx.i18n.t("warning") : ""
@@ -381,6 +372,7 @@ const start = async (ctx: BotContext) => {
 
 const confirmStop = async (ctx: BotContext) => {
     await ctx.dialog.next(tradingActions.stop);
+    ctx.session.dialog.current.data.edit = false;
     await ctx.reply(
         ctx.i18n.t("dialogs.trading.confirmStop", {
             warning: ctx.session.portfolio.type === "trading" ? ctx.i18n.t("warningStop") : ""
@@ -452,6 +444,7 @@ const stop = async (ctx: BotContext) => {
 
 const confirmDelete = async (ctx: BotContext) => {
     await ctx.dialog.next(tradingActions.delete);
+    ctx.session.dialog.current.data.edit = false;
     await ctx.reply(ctx.i18n.t("dialogs.trading.confirmDelete"), { reply_markup: getConfirmButtons(ctx) });
 };
 
@@ -505,12 +498,14 @@ const stats = async (ctx: BotContext) => {
     const { portfolio } = ctx.session;
 
     if (!portfolio.stats) {
-        await ctx.editMessageText(
+        await ctx.dialog.edit();
+
+        await ctx.reply(
             `${ctx.i18n.t("dialogs.trading.statsTitle", { exchange: portfolio.exchange })}${ctx.i18n.t(
                 "performance.none"
-            )}`
+            )}`,
+            { reply_markup: getTradingButtons(ctx) }
         );
-        await ctx.editMessageReplyMarkup({ reply_markup: getTradingButtons(ctx) });
         return;
     }
     logger.debug(portfolio.stats);
@@ -522,13 +517,11 @@ const stats = async (ctx: BotContext) => {
         }
     )}`;
 
-    await ctx.editMessageMedia({
-        type: "photo",
-        media: getEquityChartUrl(portfolio.stats.equity),
+    await ctx.dialog.edit();
+    await ctx.replyWithPhoto(getEquityChartUrl(portfolio.stats.equity), {
         caption: text,
-        parse_mode: "HTML"
+        reply_markup: getTradingButtons(ctx)
     });
-    await ctx.editMessageReplyMarkup({ reply_markup: getTradingButtons(ctx) });
     ctx.session.dialog.current.data.edit = true;
 };
 
@@ -558,9 +551,9 @@ const openPositions = async (ctx: BotContext) => {
 
     const message = openPositionsText !== "" ? openPositionsText : ctx.i18n.t("positions.none");
     const text = `${ctx.i18n.t("dialogs.trading.title", { exchange: portfolio.exchange })}${message}${updatedAtText}`;
-    if (!portfolio.stats) await ctx.editMessageText(text);
-    else await ctx.editMessageCaption({ caption: text, parse_mode: "HTML" });
-    await ctx.editMessageReplyMarkup({ reply_markup: getTradingButtons(ctx) });
+    await ctx.dialog.edit();
+    await ctx.reply(text, { reply_markup: getTradingButtons(ctx) });
+    ctx.session.dialog.current.data.edit = true;
 };
 
 const closedPositions = async (ctx: BotContext) => {
@@ -570,14 +563,15 @@ const closedPositions = async (ctx: BotContext) => {
     const closedPositions = portfolio.closedPositions;
 
     let closedPositionsText = "";
+    logger.debug(closedPositions);
     if (closedPositions && Array.isArray(closedPositions) && closedPositions.length > 0) {
         closedPositions.forEach((pos: ClosedPosition) => {
-            const posText = ctx.i18n.t("positions.closedPositions", {
+            const posText = ctx.i18n.t("positions.positionClosed", {
                 ...pos,
                 entryAction: ctx.i18n.t(`tradeAction.${pos.entryAction}`),
                 exitAction: ctx.i18n.t(`tradeAction.${pos.exitAction}`)
             });
-            closedPositionsText = `${closedPositionsText}\n\n${posText}\n`;
+            closedPositionsText = `${closedPositionsText}${posText}\n`;
         });
         closedPositionsText = ctx.i18n.t("positions.positionsClosed", {
             closedPositions: closedPositionsText
@@ -590,9 +584,10 @@ const closedPositions = async (ctx: BotContext) => {
 
     const message = closedPositionsText !== "" ? closedPositionsText : ctx.i18n.t("positions.none");
     const text = `${ctx.i18n.t("dialogs.trading.title", { exchange: portfolio.exchange })}${message}${updatedAtText}`;
-    if (!portfolio.stats) await ctx.editMessageText(text);
-    else await ctx.editMessageCaption({ caption: text, parse_mode: "HTML" });
-    await ctx.editMessageReplyMarkup({ reply_markup: getTradingButtons(ctx) });
+
+    await ctx.dialog.edit();
+    await ctx.reply(text, { reply_markup: getTradingButtons(ctx) });
+    ctx.session.dialog.current.data.edit = true;
 };
 
 const edit = async (ctx: BotContext) => {
@@ -604,7 +599,7 @@ const edit = async (ctx: BotContext) => {
     }
 
     if (data.payload === "edit") {
-        await ctx.reply("dialogs.trading.confirmEdit", {
+        await ctx.reply(ctx.i18n.t("dialogs.trading.confirmEdit"), {
             reply_markup: new InlineKeyboard()
                 .add({
                     text: ctx.i18n.t("dialogs.trading.editOptions"),

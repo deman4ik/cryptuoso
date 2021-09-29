@@ -4,7 +4,7 @@ import { BotContext, ISubscription } from "../types";
 import { Router } from "../utils/dialogsRouter";
 import { gql } from "../utils/graphql-client";
 
-export enum createUserSubActions {
+export const enum createUserSubActions {
     enter = "crUSub:enter",
     option = "crUSub:option"
 }
@@ -39,8 +39,9 @@ const getCreateUserSubButtons = (ctx: BotContext) => {
 
     let keyboard = new InlineKeyboard();
 
-    keyboard = keyboard.row(...buttons);
-
+    for (const button of buttons) {
+        keyboard = keyboard.row(button);
+    }
     return keyboard;
 };
 

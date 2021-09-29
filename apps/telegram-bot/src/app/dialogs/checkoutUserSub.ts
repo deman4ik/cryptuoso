@@ -1,11 +1,12 @@
 import dayjs from "@cryptuoso/dayjs";
 import { gql } from "@cryptuoso/graphql-client";
+import logger from "@cryptuoso/logger";
 import { InlineKeyboard } from "grammy";
 import { BotContext, IUserPayment } from "../types";
 import { Router } from "../utils/dialogsRouter";
 import { accountActions } from "./account";
 
-const enum checkoutUserSubActions {
+export const enum checkoutUserSubActions {
     enter = "chUSub:enter",
     check = "chUSub:check"
 }
@@ -91,10 +92,10 @@ const enter = async (ctx: BotContext) => {
 };
 
 const check = async (ctx: BotContext) => {
-    const { userPayment } = ctx.session.dialog.current.data;
+    const { userPayment: oldUserPayment } = ctx.session.dialog.current.data;
     const { userSub } = ctx.session;
     const {
-        checkPayment
+        checkPayment: { userPayment }
     }: {
         checkPayment: {
             userPayment: IUserPayment;
@@ -118,11 +119,12 @@ const check = async (ctx: BotContext) => {
                 }
             }
         `,
-        { chargeId: userPayment.id, provider: "coinbase.commerce" }
+        { chargeId: oldUserPayment.id, provider: "coinbase.commerce" }
     );
     ctx.session.dialog.current.data.userPayment = userPayment;
 
-    await ctx.editMessageText(
+    await ctx.dialog.edit();
+    await ctx.reply(
         ctx.i18n.t("dialogs.checkoutUserSub.info", {
             subscriptionName: userSub.subscription.name,
             subscriptionOption: userSub.subscriptionOption.name,

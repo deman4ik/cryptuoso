@@ -1,17 +1,13 @@
 import { gql } from "@cryptuoso/graphql-client";
 import logger from "@cryptuoso/logger";
-import { PortfolioInfo, PortfolioSettings } from "@cryptuoso/portfolio-state";
-import { PerformanceVals } from "@cryptuoso/trade-stats";
-import { MessageX } from "@grammyjs/hydrate/out/data/message";
-import { Message, MsgWith } from "grammy/out/platform";
+import { PortfolioInfo } from "@cryptuoso/portfolio-state";
 import { BotContext } from "../types";
 import { getExchangeButtons, getOptionsButtons, getPortfolioActions } from "../utils/buttons";
 import { Router } from "../utils/dialogsRouter";
-import { getMainKeyboard, getBackKeyboard } from "../utils/keyboard";
 import { getEquityChartUrl } from "@cryptuoso/quickchart";
 import { editPortfolioActions } from "./editPortfolio";
 
-export enum listPortfoliosActions {
+export const enum listPortfoliosActions {
     enter = "lPfs:enter",
     options = "lPfs:opts",
     optionsChosen = "lPfs:optsCh",
@@ -38,10 +34,9 @@ const chooseExchange = async (ctx: BotContext) => {
 
     ctx.dialog.next(listPortfoliosActions.options);
     ctx.session.dialog.current.data.edit = true;
-    const { message_id } = await ctx.reply(ctx.i18n.t("dialogs.listPortfolios.chooseExchange"), {
+    await ctx.reply(ctx.i18n.t("dialogs.listPortfolios.chooseExchange"), {
         reply_markup: getExchangeButtons(ctx)
     });
-    ctx.session.dialog.current.data.prev_message_id = message_id;
 };
 
 const chooseOptions = async (ctx: BotContext) => {
@@ -58,16 +53,11 @@ const chooseOptions = async (ctx: BotContext) => {
     ctx.session.dialog.current.data.selectedOptions = [];
     ctx.dialog.next(listPortfoliosActions.optionsChosen);
 
-    if (ctx.session.dialog.current.data.edit) {
-        await ctx.editMessageText(ctx.i18n.t("dialogs.listPortfolios.chooseOptions"));
-        await ctx.editMessageReplyMarkup({ reply_markup: getOptionsButtons(ctx) });
-    } else {
-        ctx.session.dialog.current.data.edit = true;
-        const { message_id } = await ctx.reply(ctx.i18n.t("dialogs.listPortfolios.chooseOptions"), {
-            reply_markup: getOptionsButtons(ctx)
-        });
-        ctx.session.dialog.current.data.prev_message_id = message_id;
-    }
+    await ctx.dialog.edit();
+    ctx.session.dialog.current.data.edit = true;
+    await ctx.reply(ctx.i18n.t("dialogs.listPortfolios.chooseOptions"), {
+        reply_markup: getOptionsButtons(ctx)
+    });
 };
 
 const optionsChosen = async (ctx: BotContext) => {
@@ -79,25 +69,17 @@ const optionsChosen = async (ctx: BotContext) => {
         ctx.dialog.enter(listPortfoliosActions.show, { ...ctx.session.dialog.current.data });
     } else {
         ctx.dialog.next(listPortfoliosActions.optionsChosen);
-        if (ctx.session.dialog.current.data.edit) {
-            await ctx.editMessageText(
-                ctx.i18n.t("dialogs.listPortfolios.chooseMoreOptions", {
-                    options: selected.map((o) => `✅ ${ctx.i18n.t(`options.${o}`)}`).join("\n ")
-                })
-            );
-            await ctx.editMessageReplyMarkup({ reply_markup: getOptionsButtons(ctx) });
-        } else {
-            ctx.session.dialog.current.data.edit = true;
-            const { message_id } = await ctx.reply(
-                ctx.i18n.t("dialogs.listPortfolios.chooseMoreOptions", {
-                    options: selected.map((o) => ctx.i18n.t(`options.${o}`)).join(" ")
-                }),
-                {
-                    reply_markup: getOptionsButtons(ctx)
-                }
-            );
-            ctx.session.dialog.current.data.prev_message_id = message_id;
-        }
+        await ctx.dialog.edit();
+
+        ctx.session.dialog.current.data.edit = true;
+        await ctx.reply(
+            ctx.i18n.t("dialogs.listPortfolios.chooseMoreOptions", {
+                options: selected.map((o) => ctx.i18n.t(`options.${o}`)).join(" ")
+            }),
+            {
+                reply_markup: getOptionsButtons(ctx)
+            }
+        );
     }
 };
 
@@ -194,9 +176,7 @@ const showPortfolio = async (ctx: BotContext) => {
             .map(([o]) => `✅ ${ctx.i18n.t(`options.${o}`)}`)
             .join("\n ")
     });
-    if (ctx.session.dialog.current.data.prev_message_id) {
-        await ctx.api.deleteMessage(ctx.chat.id, ctx.session.dialog.current.data.prev_message_id);
-    }
+    await ctx.dialog.edit();
     ctx.dialog.next(listPortfoliosActions.actions);
     await ctx.replyWithPhoto(getEquityChartUrl(portfolio.stats.equityAvg), {
         caption: text,
@@ -208,16 +188,17 @@ const portfolioActions = async (ctx: BotContext) => {
     const action = ctx.session.dialog.current.data.payload as string;
 
     if (action === "subscribe") {
-        const { exchange, selectedOptions, portffolioCode, loadedPortfolios } = ctx.session.dialog.current.data as {
+        const { exchange, selectedOptions, portfolioCode, loadedPortfolios } = ctx.session.dialog.current.data as {
             exchange: string;
             selectedOptions: string[];
-            portffolioCode: string;
+            portfolioCode: string;
             loadedPortfolios: { [key: string]: PortfolioInfo };
         };
         ctx.dialog.enter(editPortfolioActions.enter, {
+            edit: true,
             exchange,
             selectedOptions,
-            minBalance: loadedPortfolios[portffolioCode].limits.minBalance
+            minBalance: loadedPortfolios[portfolioCode].limits.minBalance
         });
     } else if (action === "back") {
         ctx.dialog.enter(listPortfoliosActions.options, { ...ctx.session.dialog.current.data });

@@ -3,7 +3,7 @@ import { BotContext } from "../types";
 import { getExchangeButtons } from "../utils/buttons";
 import { Router } from "../utils/dialogsRouter";
 
-export enum editExchangeAccActions {
+export const enum editExchangeAccActions {
     enter = "editExAcc:enter",
     handler = "editExAcc:handler"
 }

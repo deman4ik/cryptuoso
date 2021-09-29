@@ -30,11 +30,12 @@ export class DialogsRouter {
                         id
                     };
                 },
-                jump: (action) => {
+                jump: (action, data) => {
                     logger.debug(`Jump ${action}`);
                     ctx.session.dialog.move = {
                         type: "jump",
-                        action
+                        action,
+                        data
                     };
                 },
                 next: (action) => {
@@ -55,6 +56,14 @@ export class DialogsRouter {
                     ctx.session.dialog.move = {
                         type: "reset"
                     };
+                },
+                edit: async () => {
+                    try {
+                        await ctx.deleteMessage();
+                    } catch (err) {
+                        logger.error(err);
+                        logger.debug(ctx.session.dialog.current);
+                    }
                 }
             };
             await next();
@@ -75,7 +84,7 @@ export class DialogsRouter {
             while (routing) {
                 routing = false;
 
-                if (ctx.session.dialog.current) {
+                if (ctx.session.dialog.current && !ctx.session.dialog.move?.data?.skip) {
                     const current = { ...ctx.session.dialog.current };
                     logger.debug(`Entering ${current.action}`, current);
                     if (!this.dialogHandlers.has(current.action)) {
@@ -102,7 +111,7 @@ export class DialogsRouter {
                                 id: move.id ?? generateRandomString(3),
                                 action: move.action,
                                 name: getDialogName(move.action),
-                                data: { ...move.data, edit: false },
+                                data: { ...move.data },
                                 prev
                             };
 
@@ -127,11 +136,12 @@ export class DialogsRouter {
                         }
                         case "jump": {
                             ctx.session.dialog.current.action = move.action;
-
+                            ctx.session.dialog.current.data = { ...ctx.session.dialog.current.data, ...move.data };
                             routing = true;
                             break;
                         }
                         case "return": {
+                            logger.debug(ctx.session.dialog);
                             const current = ctx.session.dialog.current;
 
                             if (!current.prev) {
@@ -145,7 +155,7 @@ export class DialogsRouter {
                                 id: generateRandomString(3),
                                 action: current.prev.action,
                                 name: getDialogName(current.prev.action),
-                                data: { ...current.prev.data, ...move.data, edit: false },
+                                data: { ...current.prev.data, ...move.data },
                                 prev
                             };
 

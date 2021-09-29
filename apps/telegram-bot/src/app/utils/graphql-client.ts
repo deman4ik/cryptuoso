@@ -26,7 +26,7 @@ export class GraphQLClient {
             const response = await this.#client.request<T, V>(query, variables, {
                 authorization: `Bearer ${ctx.session?.user?.accessToken}`
             });
-            //logger.debug("GraphQLClient.request response", response);
+            logger.debug("GraphQLClient.request response", response);
             return response;
         } catch (err) {
             if (err.message.includes("JWT")) {

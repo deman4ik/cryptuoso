@@ -7,7 +7,7 @@ import { Router } from "../utils/dialogsRouter";
 import { getMainKeyboard, getStartKeyboard } from "../utils/keyboard";
 import { loginActions } from "./login";
 
-export enum registrationActions {
+export const enum registrationActions {
     enter = "reg:enter",
     email = "reg:email",
     confirm = "reg:confirm",
@@ -41,11 +41,11 @@ const email = async (ctx: BotContext) => {
     ctx.session.dialog.current.data.emailRequired = true;
     ctx.session.dialog.current.data.expectInput = true;
     ctx.dialog.next(registrationActions.input);
-    await ctx.reply(ctx.i18n.t("dailogs.registration.enterEmail"));
+    await ctx.reply(ctx.i18n.t("dialogs.registration.enterEmail"));
 };
 
 const login = async (ctx: BotContext) => {
-    ctx.dialog.enter(loginActions.input, { email: ctx.session.dialog.current.data.email });
+    ctx.dialog.enter(loginActions.enter);
 };
 
 const confirm = async (ctx: BotContext) => {
@@ -164,7 +164,7 @@ const input = async (ctx: BotContext) => {
             ctx.dialog.next(registrationActions.input);
             return;
         }
-        await ctx.reply(ctx.i18n.t("scenes.registration.success"));
+        await ctx.reply(ctx.i18n.t("dialogs.registration.success"));
         await sleep(1000);
         await ctx.reply(
             ctx.i18n.t("welcome", {

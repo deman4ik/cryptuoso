@@ -158,7 +158,7 @@ export function handleMessageSupportReply(notification: Notification<any> & { te
     const LANG = "en";
     return {
         telegramId: notification.telegramId,
-        message: this.i18n.t(LANG, "scenes.support.reply", { message })
+        message: this.i18n.t(LANG, "dialogs.support.reply", { message })
     };
 }
 

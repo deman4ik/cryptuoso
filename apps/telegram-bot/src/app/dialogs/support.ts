@@ -4,20 +4,24 @@ import { Router } from "../utils/dialogsRouter";
 import { gql } from "../utils/graphql-client";
 import { getBackKeyboard } from "../utils/keyboard";
 
-export enum supportActions {
+export const enum supportActions {
     enter = "sup:enter",
     message = "sup:msg"
 }
 
 const enter = async (ctx: BotContext) => {
-    const message = `${ctx.i18n.t("scenes.support.info1")}${ctx.i18n.t("scenes.support.info2")}${ctx.i18n.t(
-        "scenes.support.info3"
-    )}${ctx.i18n.t("scenes.support.info4")}`;
     await ctx.reply(ctx.i18n.t("keyboards.mainKeyboard.support"), { reply_markup: getBackKeyboard(ctx) });
     await sleep(1000);
     ctx.session.dialog.current.data.expectInput = true;
     ctx.dialog.next(supportActions.message);
-    await ctx.reply(message);
+    await ctx.reply(
+        ctx.i18n.t("dialogs.support.combine", {
+            info1: ctx.i18n.t("dialogs.support.info1"),
+            info2: ctx.i18n.t("dialogs.support.info2"),
+            info3: ctx.i18n.t("dialogs.support.info3"),
+            info4: ctx.i18n.t("dialogs.support.info4")
+        })
+    );
 };
 
 const message = async (ctx: BotContext) => {
@@ -39,7 +43,7 @@ const message = async (ctx: BotContext) => {
         }
     );
 
-    if (result) await ctx.reply(ctx.i18n.t("scenes.support.success"));
+    if (result) await ctx.reply(ctx.i18n.t("dialogs.support.success"));
 
     ctx.dialog.reset();
 };

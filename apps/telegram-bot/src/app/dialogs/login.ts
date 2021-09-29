@@ -7,7 +7,7 @@ import { getMainKeyboard, getStartKeyboard } from "../utils/keyboard";
 import { Router } from "../utils/dialogsRouter";
 import { registrationActions } from "./registration";
 
-export enum loginActions {
+export const enum loginActions {
     enter = "login:enter",
     input = "login:input",
     registration = "login:reg",

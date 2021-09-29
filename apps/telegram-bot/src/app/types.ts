@@ -18,6 +18,7 @@ export interface SessionData extends DialogSession {
     userExAcc?: UserExchangeAccountInfo;
     portfolio?: UserPortfolioInfo;
     userSub?: IUserSub;
+    updatedAt?: string;
 }
 export interface ContextExt extends Context {
     readonly i18n: I18nContext;
@@ -35,10 +36,11 @@ export interface ContextExt extends Context {
 export interface DialogMethods {
     dialog: {
         enter: (action: string, data?: GenericObject<any>, id?: string) => void;
-        jump: (action: string) => void;
+        jump: (action: string, data?: GenericObject<any>) => void;
         next: (action: string) => void;
         return: (data?: GenericObject<any>) => void;
         reset: () => void;
+        edit: () => Promise<void>;
     };
 }
 
