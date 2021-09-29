@@ -351,7 +351,7 @@ export default class PortfolioManagerService extends HTTPService {
         e.code = ${exchange}
         AND p.exchange = ${exchange} 
         AND p.base = true
-        AND p.status = 'stopped'
+        AND p.status = 'started'
         AND p.option_risk = ${options.risk}
         AND p.option_profit = ${options.profit}
         AND p.option_win_rate = ${options.winRate}
