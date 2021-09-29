@@ -557,12 +557,12 @@ export default class PortfolioManagerService extends HTTPService {
     }
 
     async deleteUserPortfolio(
-        user: User,
         {
             userPortfolioId
         }: {
             userPortfolioId: UserPortfolioDB["id"];
-        }
+        },
+        user: User
     ) {
         const userPortfolio = await this.db.pg.one<{
             id: UserPortfolioDB["id"];
