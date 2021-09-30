@@ -453,7 +453,7 @@ export default class PortfolioManagerService extends HTTPService {
                   json_build_object('minTradeAmount', m.min_trade_amount,
                                     'feeRate', m.fee_rate,
                                     'currentBalance', ((ea.balances ->> 'totalUSD'::text))::numeric) as context
-           FROM user_portfolios p, user_portfolio_settings ups, user_exchange_accs ea
+           FROM user_portfolios p, user_portfolio_settings ups, user_exchange_accs ea,
                 (SELECT mk.exchange, 
                         max(mk.min_amount_currency) as min_trade_amount, 
                         max(mk.fee_rate) as fee_rate 
