@@ -265,6 +265,7 @@ const finish = async (ctx: BotContext) => {
 
     let error;
     let result;
+    await ctx.reply(ctx.i18n.t("dialogs.addPortfolio.progress"));
     try {
         ({
             createUserPortfolio: { result }

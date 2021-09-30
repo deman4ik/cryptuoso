@@ -463,7 +463,8 @@ export default class PortfolioManagerService extends HTTPService {
              AND ea.id = p.user_ex_acc_id
              AND ups.user_portfolio_id = p.id
              AND (ups.active = true OR ups.active_from is null)
-             AND p.id = ${userPortfolioId}; 
+             AND p.id = ${userPortfolioId}
+             ORDER BY ups.active_from DESC NULLS FIRST LIMIT 1; 
        `);
 
         if (userPortfolio.userId !== user.id)
@@ -539,13 +540,26 @@ export default class PortfolioManagerService extends HTTPService {
             userPortfolioSettings.excludeTimeframes = excludeTimeframes ?? userPortfolioSettings.excludeTimeframes;
         }
 
+        this.log.debug(userPortfolioSettings);
         if (!equals(userPortfolioSettings, userPortfolio.settings)) {
-            this.db.pg.query(sql`
-        INSERT INTO user_portfolio_settings (user_portfolio_id, active_from, user_portfolio_settings)
-        VALUES(${userPortfolio.id}, ${null} ${JSON.stringify(userPortfolioSettings)} )
-        ON CONFLICT ON CONSTRAINT i_user_portfolio_settings_uk
-        DO UPDATE SET user_portfolio_settings = excluded.user_portfolio_settings;
-        `);
+            await this.db.pg.transaction(async (t) => {
+                const settingsExists =
+                    t.one(sql`SELECT id FROM user_portfolio_settings WHERE user_portfolio_id = ${userPortfolio.id}
+                AND active_from is null;
+                `);
+
+                if (settingsExists) {
+                    await t.query(sql`UPDATE user_portfolio_settings set user_portfolio_settings = ${JSON.stringify(
+                        userPortfolioSettings
+                    )}
+                    WHERE user_portfolio_id = ${userPortfolio.id};
+                    `);
+                } else {
+                    await t.query(sql`
+                    INSERT INTO user_portfolio_settings (user_portfolio_id, active_from, user_portfolio_settings)
+                    VALUES(${userPortfolio.id}, ${null}, ${JSON.stringify(userPortfolioSettings)} );`);
+                }
+            });
         }
 
         if (

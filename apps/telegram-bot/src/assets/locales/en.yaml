@@ -154,6 +154,7 @@ dialogs:
         portfolio: >
             ${options}\n\n
             <b>Status:</b> ${status}\n
+            <b>Trading amount:</b> ${amount} ${amountType}\n
             <b>Current exchange balance:</b> ${round(currentBalance,2)} $\n\n
             <b>Closed trades:</b> ${tradesCount}\n
             <b>Net Profit/Loss:</b> ${netProfit}\n\n
@@ -315,6 +316,11 @@ dialogs:
             % of the balance
         fixedCurrency: $ fixed
         start: 🟢 Start
+        progress: >
+            📈 Configuring your trading portfolio
+
+
+            ⏳ Please wait...
     editPortfolio:
         confirmEdit: >
             ⚙️ Changing your portfolio settings
@@ -340,7 +346,7 @@ dialogs:
             📈 Configuring your trading portfolio
 
 
-            You portfolio options will change after portfolio is builded again.
+            ✅ You portfolio options will change after portfolio is builded again.
     editExchangeAcc:
         chooseExchange: >
             🔑 Linking Exchange Account

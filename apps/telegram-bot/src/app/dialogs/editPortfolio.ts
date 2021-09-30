@@ -115,7 +115,7 @@ const handleAmount = async (ctx: BotContext) => {
     }
 
     const { amountType: tradingAmountType, balancePercent, tradingAmountCurrency } = data;
-
+    await ctx.reply(ctx.i18n.t("dialogs.addPortfolio.progress"));
     try {
         await ctx.gql.request<{ editUserPortfolio: { result: string } }>(
             ctx,
@@ -170,6 +170,7 @@ const optionsChosen = async (ctx: BotContext) => {
     if (option !== "done") ctx.session.dialog.current.data.selectedOptions.push(option);
     const selected = ctx.session.dialog.current.data.selectedOptions as string[];
     if (selected.length === ctx.catalog.options.length || option === "done") {
+        await ctx.reply(ctx.i18n.t("dialogs.addPortfolio.progress"));
         let error;
         try {
             await ctx.gql.request<{ editUserPortfolio: { result: string } }>(

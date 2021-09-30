@@ -215,7 +215,8 @@ const worker = {
                       AND s.active_from IS NOT NULL 
                       AND s.active_from < now()))
                   )
-              AND p.id = ${job.userPortfolioId}; 
+              AND p.id = ${job.userPortfolioId}
+              ORDER BY ups.active_from DESC NULLS FIRST LIMIT 1; 
         `);
         const includeRobotsCondition =
             portfolio.settings.includeRobots &&
