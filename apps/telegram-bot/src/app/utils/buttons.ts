@@ -86,3 +86,111 @@ export const getConfirmButtons = (ctx: BotContext) =>
                 p: false
             })
         });
+
+export const getAmountTypeButtons = (ctx: BotContext) => {
+    return new InlineKeyboard()
+        .add({
+            text: ctx.i18n.t("dialogs.addPortfolio.fullBalance"),
+            callback_data: JSON.stringify({
+                d: ctx.session.dialog.current?.id || null,
+                a: ctx.session.dialog.current.action,
+                p: "fullBalance"
+            })
+        })
+        .row()
+        .add({
+            text: ctx.i18n.t("dialogs.addPortfolio.balancePercent"),
+            callback_data: JSON.stringify({
+                d: ctx.session.dialog.current?.id || null,
+                a: ctx.session.dialog.current.action,
+                p: "balancePercent"
+            })
+        })
+        .row()
+        .add({
+            text: ctx.i18n.t("dialogs.addPortfolio.currencyFixed"),
+            callback_data: JSON.stringify({
+                d: ctx.session.dialog.current?.id || null,
+                a: ctx.session.dialog.current.action,
+                p: "currencyFixed"
+            })
+        });
+};
+
+export const getPercentButtons = (ctx: BotContext) => {
+    return new InlineKeyboard()
+        .add({
+            text: "10%",
+            callback_data: JSON.stringify({
+                d: ctx.session.dialog.current?.id || null,
+                a: ctx.session.dialog.current.action,
+                p: 10
+            })
+        })
+        .add({
+            text: "20%",
+            callback_data: JSON.stringify({
+                d: ctx.session.dialog.current?.id || null,
+                a: ctx.session.dialog.current.action,
+                p: 20
+            })
+        })
+        .add({
+            text: "30%",
+            callback_data: JSON.stringify({
+                d: ctx.session.dialog.current?.id || null,
+                a: ctx.session.dialog.current.action,
+                p: 30
+            })
+        })
+        .row()
+        .add({
+            text: "40%",
+            callback_data: JSON.stringify({
+                d: ctx.session.dialog.current?.id || null,
+                a: ctx.session.dialog.current.action,
+                p: 40
+            })
+        })
+        .add({
+            text: "50%",
+            callback_data: JSON.stringify({
+                d: ctx.session.dialog.current?.id || null,
+                a: ctx.session.dialog.current.action,
+                p: 50
+            })
+        })
+        .add({
+            text: "60%",
+            callback_data: JSON.stringify({
+                d: ctx.session.dialog.current?.id || null,
+                a: ctx.session.dialog.current.action,
+                p: 60
+            })
+        })
+        .row()
+        .add({
+            text: "70%",
+            callback_data: JSON.stringify({
+                d: ctx.session.dialog.current?.id || null,
+                a: ctx.session.dialog.current.action,
+                p: 70
+            })
+        })
+        .add({
+            text: "80%",
+            callback_data: JSON.stringify({
+                d: ctx.session.dialog.current?.id || null,
+                a: ctx.session.dialog.current.action,
+                p: 80
+            })
+        })
+        .add({
+            text: "90%",
+            callback_data: JSON.stringify({
+                d: ctx.session.dialog.current?.id || null,
+                a: ctx.session.dialog.current.action,
+                p: 90
+            })
+        });
+};

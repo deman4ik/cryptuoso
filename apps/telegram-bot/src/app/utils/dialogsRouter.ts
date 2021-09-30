@@ -153,9 +153,9 @@ export class DialogsRouter {
 
                             ctx.session.dialog.current = {
                                 id: generateRandomString(3),
-                                action: current.prev.action,
+                                action: current.data.backAction ?? current.prev.action,
                                 name: getDialogName(current.prev.action),
-                                data: { ...current.prev.data, ...move.data },
+                                data: { ...current.prev.data, ...current.data.backData, ...move.data },
                                 prev
                             };
 

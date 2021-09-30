@@ -38,7 +38,7 @@ export class GraphQLClient {
                 });
             }
             logger.error("GraphQLClient Error:", err);
-            throw err;
+            throw new Error(JSON.parse(JSON.stringify(err))?.response?.errors[0]?.message || err.message);
         }
     }
 }

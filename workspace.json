@@ -1012,29 +1012,6 @@
                 }
             }
         },
-        "graphql-client": {
-            "root": "libs/graphql-client",
-            "sourceRoot": "libs/graphql-client/src",
-            "projectType": "library",
-            "schematics": {},
-            "architect": {
-                "lint": {
-                    "builder": "@nrwl/linter:eslint",
-                    "options": {
-                        "lintFilePatterns": ["libs/graphql-client/**/*.ts"]
-                    }
-                },
-                "test": {
-                    "builder": "@nrwl/jest:jest",
-                    "options": {
-                        "jestConfig": "libs/graphql-client/jest.config.js",
-                        "passWithNoTests": true,
-                        "tsConfig": "libs/graphql-client/tsconfig.spec.json"
-                    },
-                    "outputs": ["coverage/libs/graphql-client"]
-                }
-            }
-        },
         "helpers": {
             "root": "libs/helpers",
             "sourceRoot": "libs/helpers/src",

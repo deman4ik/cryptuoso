@@ -1,321 +1,53 @@
 import { round } from "@cryptuoso/helpers";
-import logger from "@cryptuoso/logger";
-import { UserExchangeAccountInfo } from "@cryptuoso/user-state";
 import { InlineKeyboard } from "grammy";
-import { BotContext, IUserSub } from "../types";
-import { getOptionsButtons } from "../utils/buttons";
+import { BotContext } from "../types";
+import { getAmountTypeButtons, getOptionsButtons, getPercentButtons } from "../utils/buttons";
 import { Router } from "../utils/dialogsRouter";
 import { gql } from "../utils/graphql-client";
-import { createUserSubActions } from "./createUserSub";
-import { editExchangeAccActions } from "./editExchangeAcc";
 import { tradingActions } from "./trading";
 
 export const enum editPortfolioActions {
     enter = "ePf:enter",
-    amountType = "ePf:amType",
-    initBalance = "ePf:initBal",
-    handleInitBalance = "ePf:hIBal",
-    amount = "ePf:amount",
-    handleAmount = "ePf:hAmount",
-    finish = "ePf:finish",
     options = "ePf:opts",
-    optionsChosen = "ePf:optsCh"
+    optionsChosen = "ePf:optsCh",
+    amountType = "aPf:amType",
+    amount = "aPf:amount",
+    handleAmount = "aPf:hAmount"
 }
 
-const getTypeButtons = (ctx: BotContext) => {
-    return new InlineKeyboard()
-        .add({
-            text: ctx.i18n.t("dialogs.editPortfolio.automated"),
-            callback_data: JSON.stringify({
-                d: ctx.session.dialog.current?.id || null,
-                a: editPortfolioActions.amountType,
-                p: "trading"
-            })
-        })
-        .row()
-        .add({
-            text: ctx.i18n.t("dialogs.editPortfolio.manual"),
-            callback_data: JSON.stringify({
-                d: ctx.session.dialog.current?.id || null,
-                a: editPortfolioActions.initBalance,
-                p: "signals"
-            })
-        });
-};
-
-const getAmountTypeButtons = (ctx: BotContext) => {
-    return new InlineKeyboard()
-        .add({
-            text: ctx.i18n.t("dialogs.editPortfolio.fullBalance"),
-            callback_data: JSON.stringify({
-                d: ctx.session.dialog.current?.id || null,
-                a: editPortfolioActions.amount,
-                p: "fullBalance"
-            })
-        })
-        .row()
-        .add({
-            text: ctx.i18n.t("dialogs.editPortfolio.balancePercent"),
-            callback_data: JSON.stringify({
-                d: ctx.session.dialog.current?.id || null,
-                a: editPortfolioActions.amount,
-                p: "balancePercent"
-            })
-        })
-        .row()
-        .add({
-            text: ctx.i18n.t("dialogs.editPortfolio.currencyFixed"),
-            callback_data: JSON.stringify({
-                d: ctx.session.dialog.current?.id || null,
-                a: editPortfolioActions.amount,
-                p: "currencyFixed"
-            })
-        });
-};
-
-const getPercentButtons = (ctx: BotContext) => {
-    return new InlineKeyboard()
-        .add({
-            text: "10%",
-            callback_data: JSON.stringify({
-                d: ctx.session.dialog.current?.id || null,
-                a: editPortfolioActions.finish,
-                p: 10
-            })
-        })
-        .add({
-            text: "20%",
-            callback_data: JSON.stringify({
-                d: ctx.session.dialog.current?.id || null,
-                a: editPortfolioActions.finish,
-                p: 20
-            })
-        })
-        .add({
-            text: "30%",
-            callback_data: JSON.stringify({
-                d: ctx.session.dialog.current?.id || null,
-                a: editPortfolioActions.finish,
-                p: 30
-            })
-        })
-        .row()
-        .add({
-            text: "40%",
-            callback_data: JSON.stringify({
-                d: ctx.session.dialog.current?.id || null,
-                a: editPortfolioActions.finish,
-                p: 40
-            })
-        })
-        .add({
-            text: "50%",
-            callback_data: JSON.stringify({
-                d: ctx.session.dialog.current?.id || null,
-                a: editPortfolioActions.finish,
-                p: 50
-            })
-        })
-        .add({
-            text: "60%",
-            callback_data: JSON.stringify({
-                d: ctx.session.dialog.current?.id || null,
-                a: editPortfolioActions.finish,
-                p: 60
-            })
-        })
-        .row()
-        .add({
-            text: "70%",
-            callback_data: JSON.stringify({
-                d: ctx.session.dialog.current?.id || null,
-                a: editPortfolioActions.finish,
-                p: 70
-            })
-        })
-        .add({
-            text: "80%",
-            callback_data: JSON.stringify({
-                d: ctx.session.dialog.current?.id || null,
-                a: editPortfolioActions.finish,
-                p: 80
-            })
-        })
-        .add({
-            text: "90%",
-            callback_data: JSON.stringify({
-                d: ctx.session.dialog.current?.id || null,
-                a: editPortfolioActions.finish,
-                p: 90
-            })
-        });
-};
-
-const getCreatedButtons = (ctx: BotContext) => {
-    return new InlineKeyboard()
-        .add({
-            text: ctx.i18n.t("dialogs.editPortfolio.start"),
-            callback_data: JSON.stringify({
-                d: ctx.session.dialog.current?.id || null,
-                a: tradingActions.start,
-                p: "start"
-            })
-        })
-        .row()
-        .add({
-            text: ctx.i18n.t("dialogs.editPortfolio.editOptions"),
-            callback_data: JSON.stringify({
-                d: ctx.session.dialog.current?.id || null,
-                a: editPortfolioActions.options,
-                p: "options"
-            })
-        })
-        .row()
-        .add({
-            text: ctx.i18n.t("dialogs.editPortfolio.editAmount"),
-            callback_data: JSON.stringify({
-                d: ctx.session.dialog.current?.id || null,
-                a: editPortfolioActions.amount,
-                p: "amount"
-            })
-        });
-};
-
-const router: Router = new Map();
-
-const chooseType = async (ctx: BotContext) => {
-    await ctx.dialog.edit();
-    await ctx.reply(ctx.i18n.t("dialogs.editPortfolio.type"), { reply_markup: getTypeButtons(ctx) });
-
-    ctx.session.dialog.current.data.edit = true;
-};
-
-const initBalance = async (ctx: BotContext) => {
-    ctx.session.dialog.current.data.edit = false;
-    ctx.dialog.next(editPortfolioActions.handleInitBalance);
-    await ctx.reply(ctx.i18n.t("dialogs.editPortfolio.initBalance"));
-};
-
-const handleBalance = async (ctx: BotContext) => {
-    let balance = parseFloat(ctx.session.dialog.current.data.payload);
-    let error;
-    if (isNaN(balance)) error = ctx.i18n.t("dialogs.editPortfolio.invalidInput");
-    balance = round(balance);
-    if (balance < ctx.session.dialog.current.data.minBalance)
-        error = ctx.i18n.t("dialogs.editPortfolio.insufficientInitBalance", {
-            minBalance: ctx.session.dialog.current.data.minBalance
-        });
-
-    if (error) {
-        await ctx.reply(error);
-        ctx.dialog.jump(editPortfolioActions.initBalance);
-        return;
-    }
-
-    ctx.session.dialog.current.data.initialBalance = round(balance);
-    ctx.session.dialog.current.data.amountType = "balancePercent";
-    ctx.session.dialog.current.data.balancePercent = 100;
-    ctx.dialog.enter(editPortfolioActions.finish);
-};
-
-const chooseAmountType = async (ctx: BotContext) => {
-    const { data } = ctx.session.dialog.current;
-    if (!ctx.session.dialog.current.data.type) ctx.session.dialog.current.data.type = data.payload;
-
-    if (!ctx.session.userSub || !ctx.session.userExAcc || data.reload) {
-        const { myUserExAcc, myUserSub } = await ctx.gql.request<{
-            myUserExAcc: UserExchangeAccountInfo[];
-            myUserSub: IUserSub[];
-        }>(
-            ctx,
-            gql`
-                query user_ex_acc($userId: uuid!) {
-                    myUserExAcc: v_user_exchange_accs(
-                        where: { user_id: { _eq: $userId } }
-                        limit: 1
-                        order_by: { created_at: desc }
-                    ) {
-                        id
-                        exchange
-                        name
-                        status
-                        balance: total_balance_usd
-                    }
-                    myUserSub: user_subs(
-                        where: { user_id: { _eq: $userId }, status: { _nin: ["canceled", "expired"] } }
-                        order_by: { created_at: desc_nulls_last }
-                        limit: 1
-                    ) {
-                        id
-                        user_id
-                        status
-                        trial_started
-                        trial_ended
-                        active_from
-                        active_to
-                        subscription {
-                            id
-                            name
-                            description
-                        }
-                        subscriptionOption {
-                            code
-                            name
-                        }
-                        userPayments: user_payments(order_by: { created_at: desc_nulls_last }, limit: 1) {
-                            id
-                            code
-                            url
-                            status
-                            price
-                            created_at
-                            expires_at
-                            subscription_from
-                            subscription_to
-                        }
-                    }
-                }
-            `,
-            {
-                userId: ctx.session.user.id
-            }
-        );
-
-        if (!myUserSub || !Array.isArray(myUserSub) || !myUserSub.length) {
-            ctx.dialog.enter(createUserSubActions.enter);
-            return;
-        }
-
-        if (!myUserExAcc || !Array.isArray(myUserExAcc) || !myUserExAcc.length) {
-            ctx.dialog.enter(editExchangeAccActions.handler, {
-                exchange: data.exchange,
-                scene: "exchange",
-                expectInput: true
-            });
-            return;
-        }
-
-        const [userExAcc] = myUserExAcc;
-        ctx.session.userExAcc = userExAcc;
-        ctx.session.dialog.current.data.initialBalance = userExAcc.balance;
-        ctx.session.dialog.current.data.userExAccId = userExAcc.id;
-    }
-
-    if (ctx.session.dialog.current.data.initialBalance < data.minBalance) {
-        await ctx.reply(
-            ctx.i18n.t("dialogs.editPortfolio.insufficient", {
-                currentBalance: ctx.session.dialog.current.data.initialBalance,
-                minBalance: data.minBalance,
-                exchange: data.exchange
-            })
-        );
+const enter = async (ctx: BotContext) => {
+    if (!ctx.session.portfolio || ctx.session.portfolio.type === "signals") {
         ctx.dialog.reset();
         return;
     }
 
-    const text = ctx.i18n.t("dialogs.editPortfolio.amountType", {
+    await ctx.reply(ctx.i18n.t("dialogs.editPortfolio.confirmEdit"), {
+        reply_markup: new InlineKeyboard()
+            .add({
+                text: ctx.i18n.t("dialogs.editPortfolio.editOptions"),
+                callback_data: JSON.stringify({
+                    d: ctx.session.dialog.current?.id || null,
+                    a: editPortfolioActions.options,
+                    p: true
+                })
+            })
+            .row()
+            .add({
+                text: ctx.i18n.t("dialogs.editPortfolio.editAmount"),
+                callback_data: JSON.stringify({
+                    d: ctx.session.dialog.current?.id || null,
+                    a: editPortfolioActions.amountType,
+                    p: true
+                })
+            })
+    });
+};
+
+const amountType = async (ctx: BotContext) => {
+    const text = ctx.i18n.t("dialogs.addPortfolio.amountType", {
         balance: ctx.session.dialog.current.data.initialBalance
     });
+    ctx.dialog.next(editPortfolioActions.amount);
     const buttons = getAmountTypeButtons(ctx);
 
     await ctx.dialog.edit();
@@ -323,30 +55,31 @@ const chooseAmountType = async (ctx: BotContext) => {
     ctx.session.dialog.current.data.edit = true;
 };
 
-const setAmount = async (ctx: BotContext) => {
+const amount = async (ctx: BotContext) => {
     const { data } = ctx.session.dialog.current;
     if (!ctx.session.dialog.current.data.amountType) ctx.session.dialog.current.data.amountType = data.payload;
     const amountType = ctx.session.dialog.current.data.amountType;
 
     if (amountType === "fullBalance") {
         ctx.session.dialog.current.data.amountType = "balancePercent";
-        ctx.session.dialog.current.data.balancePercent = 100;
-        ctx.dialog.jump(editPortfolioActions.finish);
+        ctx.session.dialog.current.data.payload = 100;
+        ctx.dialog.jump(editPortfolioActions.handleAmount);
         return;
     } else if (amountType === "balancePercent") {
         ctx.session.dialog.current.data.amountType = "balancePercent";
 
-        const text = ctx.i18n.t("dialogs.editPortfolio.amountTypePercent");
+        const text = ctx.i18n.t("dialogs.addPortfolio.amountTypePercent");
+        ctx.dialog.next(editPortfolioActions.handleAmount);
         const buttons = getPercentButtons(ctx);
         ctx.session.dialog.current.data.expectInput = true;
-        ctx.dialog.next(editPortfolioActions.handleAmount);
+
         await ctx.dialog.edit();
         await ctx.reply(text, { reply_markup: buttons });
     } else if (amountType === "currencyFixed") {
         ctx.session.dialog.current.data.amountType = "currencyFixed";
         ctx.session.dialog.current.data.expectInput = true;
         ctx.dialog.next(editPortfolioActions.handleAmount);
-        await ctx.reply(ctx.i18n.t("dialogs.editPortfolio.amountTypeCurrency"));
+        await ctx.reply(ctx.i18n.t("dialogs.addPortfolio.amountTypeCurrency"));
     }
     ctx.session.dialog.current.data.edit = false;
 };
@@ -355,20 +88,20 @@ const handleAmount = async (ctx: BotContext) => {
     const { data } = ctx.session.dialog.current;
     const amount = parseFloat(data.payload);
     let error;
-    if (isNaN(amount)) error = ctx.i18n.t("dialogs.editPortfolio.invalidInput");
+    if (isNaN(amount)) error = ctx.i18n.t("dialogs.addPortfolio.invalidInput");
 
     if (data.amountType === "balancePercent") {
         const percent = round(amount);
-        if (percent < 1 || percent > 100) error = ctx.i18n.t("dialogs.editPortfolio.invalidPercent");
+        if (percent < 1 || percent > 100) error = ctx.i18n.t("dialogs.addPortfolio.invalidPercent");
         else {
             ctx.session.dialog.current.data.balancePercent = percent;
         }
     } else if (data.amountType === "currencyFixed") {
         const amountCurrency = round(amount);
         if (ctx.session.userExAcc.balance < amountCurrency)
-            error = ctx.i18n.t("dialogs.editPortfolio.invalidFixedAmount");
+            error = ctx.i18n.t("dialogs.addPortfolio.invalidFixedAmount");
         else if (data.minBalance > amountCurrency)
-            error = ctx.i18n.t("dialogs.editPortfolio.invalidFixedAmount", { minBalance: data.minBalance });
+            error = ctx.i18n.t("dialogs.addPortfolio.invalidFixedAmount", { minBalance: data.minBalance });
         else {
             ctx.session.dialog.current.data.tradingAmountCurrency = round(amountCurrency);
         }
@@ -381,110 +114,46 @@ const handleAmount = async (ctx: BotContext) => {
         return;
     }
 
-    if (data.return) ctx.dialog.enter(tradingActions.enter, { reload: true, edit: false });
-    else ctx.dialog.jump(editPortfolioActions.finish);
-};
+    const { amountType: tradingAmountType, balancePercent, tradingAmountCurrency } = data;
 
-const finish = async (ctx: BotContext) => {
-    const {
-        exchange,
-        userExAccId,
-        selectedOptions: options,
-        type,
-        amountType,
-        balancePercent,
-        tradingAmountCurrency,
-        initialBalance
-    } = ctx.session.dialog.current.data as {
-        exchange: string;
-        userExAccId: string;
-        selectedOptions: string[];
-        type: string;
-        amountType: string;
-        balancePercent: number;
-        tradingAmountCurrency: number;
-        initialBalance: number;
-    };
-
-    let error;
-    let result;
     try {
-        ({
-            createUserPortfolio: { result }
-        } = await ctx.gql.request<{ createUserPortfolio: { result: string } }>(
+        await ctx.gql.request<{ editUserPortfolio: { result: string } }>(
             ctx,
             gql`
-                mutation (
-                    $exchange: String!
-                    $type: String!
-                    $userExAccId: uuid
+                mutation editUserPortfolio(
+                    $userPortfolioId: uuid!
                     $tradingAmountType: String!
                     $balancePercent: Int
                     $tradingAmountCurrency: Int
-                    $initialBalance: numeric
-                    $options: PortfolioOptions
                 ) {
-                    createUserPortfolio(
-                        exchange: $exchange
-                        type: $type
-                        userExAccId: $userExAccId
+                    editUserPortfolio(
+                        userPortfolioId: $userPortfolioId
                         tradingAmountType: $tradingAmountType
                         balancePercent: $balancePercent
                         tradingAmountCurrency: $tradingAmountCurrency
-                        initialBalance: $initialBalance
-                        options: $options
                     ) {
                         result
                     }
                 }
             `,
             {
-                exchange,
-                userExAccId,
-                options: ctx.catalog.options.reduce((prev, cur) => ({ ...prev, [cur]: options.includes(cur) }), {}),
-                type,
-                tradingAmountType: amountType,
+                userPortfolioId: ctx.session.portfolio.id,
+                tradingAmountType,
                 balancePercent,
-                tradingAmountCurrency,
-                initialBalance
+                tradingAmountCurrency
             }
-        ));
+        );
     } catch (err) {
         error = err.message;
     }
-
     if (error) {
-        await ctx.reply(
-            ctx.i18n.t("dialogs.editPortfolio.failed", {
-                error
-            })
-        );
-        ctx.dialog.reset();
+        await ctx.reply(ctx.i18n.t("failed", { error }));
     }
-    if (result) {
-        ctx.session.dialog.current.data.userPortfolioId = result;
-        ctx.session.dialog.current.data.return = true;
 
-        await ctx.reply(
-            ctx.i18n.t("dialogs.editPortfolio.created", {
-                exchange: ctx.session.dialog.current.data.exchange,
-                options: options.map((o) => `✅ ${ctx.i18n.t(`options.${o}`)}`).join("\n "),
-                initialBalance,
-                amount: balancePercent || tradingAmountCurrency,
-                amountType:
-                    amountType === "balancePercent"
-                        ? ctx.i18n.t("dialogs.editPortfolio.ofBalance")
-                        : ctx.i18n.t("dialogs.editPortfolio.fixedCurrency"),
-                warning: type === "trading" ? ctx.i18n.t("warning") : ""
-            }),
-            {
-                reply_markup: getCreatedButtons(ctx)
-            }
-        );
-    }
+    ctx.dialog.enter(tradingActions.enter, { reload: true, edit: false });
 };
 
-const chooseOptions = async (ctx: BotContext) => {
+const options = async (ctx: BotContext) => {
     ctx.session.dialog.current.data.selectedOptions = [];
     ctx.dialog.next(editPortfolioActions.optionsChosen);
 
@@ -544,15 +213,13 @@ const optionsChosen = async (ctx: BotContext) => {
         );
     }
 };
+const router: Router = new Map();
 
-router.set(editPortfolioActions.enter, chooseType);
-router.set(editPortfolioActions.amountType, chooseAmountType);
-router.set(editPortfolioActions.initBalance, initBalance);
-router.set(editPortfolioActions.handleInitBalance, handleBalance);
-router.set(editPortfolioActions.amount, setAmount);
+router.set(editPortfolioActions.enter, enter);
+router.set(editPortfolioActions.amountType, amountType);
+router.set(editPortfolioActions.amount, amount);
 router.set(editPortfolioActions.handleAmount, handleAmount);
-router.set(editPortfolioActions.finish, finish);
-router.set(editPortfolioActions.options, chooseOptions);
+router.set(editPortfolioActions.options, options);
 router.set(editPortfolioActions.optionsChosen, optionsChosen);
 
 export const editPortfolio = {

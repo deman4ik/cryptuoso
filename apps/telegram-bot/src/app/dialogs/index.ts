@@ -2,7 +2,7 @@ import { account } from "./account";
 import { checkoutUserSub } from "./checkoutUserSub";
 import { createUserSub } from "./createUserSub";
 import { editExchangeAcc } from "./editExchangeAcc";
-import { editPortfolio } from "./editPortfolio";
+import { addPortfolio } from "./addPortfolio";
 import { listPortfolios } from "./listPortfolios";
 import { login } from "./login";
 import { paymentHistory } from "./paymentHistory";
@@ -16,7 +16,7 @@ export const dialogs = {
     [checkoutUserSub.name]: checkoutUserSub,
     [createUserSub.name]: createUserSub,
     [editExchangeAcc.name]: editExchangeAcc,
-    [editPortfolio.name]: editPortfolio,
+    [addPortfolio.name]: addPortfolio,
     [listPortfolios.name]: listPortfolios,
     [login.name]: login,
     [paymentHistory.name]: paymentHistory,

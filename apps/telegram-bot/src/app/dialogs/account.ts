@@ -1,7 +1,4 @@
 import dayjs from "@cryptuoso/dayjs";
-import { gql } from "@cryptuoso/graphql-client";
-import { chunkArray } from "@cryptuoso/helpers";
-import logger from "@cryptuoso/logger";
 import { User, UserExchangeAccountInfo } from "@cryptuoso/user-state";
 import { InlineKeyboard } from "grammy";
 import { BotContext, IUserSub } from "../types";
@@ -11,6 +8,7 @@ import { editExchangeAccActions } from "./editExchangeAcc";
 import { checkoutUserSubActions } from "./checkoutUserSub";
 import { createUserSubActions } from "./createUserSub";
 import { paymentHistoryActions } from "./paymentHistory";
+import { gql } from "../utils/graphql-client";
 
 export const enum accountActions {
     enter = "a:enter",
@@ -229,7 +227,7 @@ const accountInfo = async (ctx: BotContext) => {
     const exchangeAccText = userExAcc
         ? ctx.i18n.t("dialogs.exchangeAccount.info", {
               exchange: userExAcc.exchange,
-              status: ctx.i18n.t(userExAcc.status),
+              status: ctx.i18n.t(`userExAccStatus.${userExAcc.status}`),
               error: userExAcc.error || "",
               balance: userExAcc.balance
           })
@@ -340,18 +338,29 @@ const checkExchangeAccount = async (ctx: BotContext) => {
 
 const editExchangeAccount = async (ctx: BotContext) => {
     if (ctx.session.userExAcc) {
-        ctx.dialog.enter(editExchangeAccActions.enter);
+        ctx.dialog.enter(editExchangeAccActions.enter, {
+            edit: false,
+            backAction: accountActions.enter,
+            backData: { edit: false, reload: true }
+        });
     } else {
         ctx.dialog.enter(editExchangeAccActions.handler, {
+            edit: false,
             exchange: ctx.session.userExAcc.exchange,
             scene: "key",
-            expectInput: true
+            expectInput: true,
+            backAction: accountActions.enter,
+            backData: { edit: false, reload: true }
         });
     }
 };
 
 const checkout = async (ctx: BotContext) => {
-    ctx.dialog.enter(checkoutUserSubActions.enter, { edit: true });
+    ctx.dialog.enter(checkoutUserSubActions.enter, {
+        edit: true,
+        backAction: accountActions.enter,
+        backData: { edit: true, reload: true }
+    });
 };
 
 const paymentHistory = async (ctx: BotContext) => {
@@ -363,7 +372,11 @@ const paymentHistory = async (ctx: BotContext) => {
 };
 
 const changePlan = async (ctx: BotContext) => {
-    ctx.dialog.enter(createUserSubActions.enter, { edit: true });
+    ctx.dialog.enter(createUserSubActions.enter, {
+        edit: true,
+        backAction: accountActions.enter,
+        backData: { edit: true, reload: true }
+    });
 };
 
 const router: Router = new Map();

@@ -1,5 +1,4 @@
 import dayjs from "@cryptuoso/dayjs";
-import logger from "@cryptuoso/logger";
 import { InlineKeyboard } from "grammy";
 import { BotContext, IUserPayment } from "../types";
 import { Router } from "../utils/dialogsRouter";

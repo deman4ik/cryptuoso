@@ -1,11 +1,10 @@
-import { gql } from "@cryptuoso/graphql-client";
-import logger from "@cryptuoso/logger";
 import { PortfolioInfo } from "@cryptuoso/portfolio-state";
 import { BotContext } from "../types";
 import { getExchangeButtons, getOptionsButtons, getPortfolioActions } from "../utils/buttons";
 import { Router } from "../utils/dialogsRouter";
 import { getEquityChartUrl } from "@cryptuoso/quickchart";
-import { editPortfolioActions } from "./editPortfolio";
+import { addPortfolioActions } from "./addPortfolio";
+import { gql } from "../utils/graphql-client";
 
 export const enum listPortfoliosActions {
     enter = "lPfs:enter",
@@ -194,7 +193,7 @@ const portfolioActions = async (ctx: BotContext) => {
             portfolioCode: string;
             loadedPortfolios: { [key: string]: PortfolioInfo };
         };
-        ctx.dialog.enter(editPortfolioActions.enter, {
+        ctx.dialog.enter(addPortfolioActions.enter, {
             edit: true,
             exchange,
             selectedOptions,

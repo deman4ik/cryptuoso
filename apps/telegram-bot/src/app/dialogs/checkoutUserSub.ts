@@ -1,10 +1,8 @@
 import dayjs from "@cryptuoso/dayjs";
-import { gql } from "@cryptuoso/graphql-client";
-import logger from "@cryptuoso/logger";
 import { InlineKeyboard } from "grammy";
 import { BotContext, IUserPayment } from "../types";
 import { Router } from "../utils/dialogsRouter";
-import { accountActions } from "./account";
+import { gql } from "../utils/graphql-client";
 
 export const enum checkoutUserSubActions {
     enter = "chUSub:enter",
@@ -13,7 +11,7 @@ export const enum checkoutUserSubActions {
 
 const getCheckoutUserSubButtons = (ctx: BotContext) => {
     const buttons = [];
-
+    let keyboard = new InlineKeyboard();
     const { userPayment } = ctx.session.dialog.current.data;
     if (["RESOLVED", "EXPIRED", "CANCELED"].includes(userPayment.status))
         buttons.push({
@@ -24,6 +22,9 @@ const getCheckoutUserSubButtons = (ctx: BotContext) => {
                 p: true
             })
         });
+    if (userPayment.status === "NEW") {
+        keyboard = keyboard.url(ctx.i18n.t("dialogs.checkoutUserSub.buy"), userPayment.url);
+    }
     buttons.push({
         text: ctx.i18n.t("keyboards.backKeyboard.back"),
         callback_data: JSON.stringify({
@@ -32,7 +33,6 @@ const getCheckoutUserSubButtons = (ctx: BotContext) => {
             p: true
         })
     });
-    let keyboard = new InlineKeyboard();
 
     keyboard = keyboard.row(...buttons);
 
@@ -73,7 +73,7 @@ const enter = async (ctx: BotContext) => {
     );
 
     ctx.session.dialog.current.data.userPayment = userPayment;
-
+    await ctx.dialog.edit();
     await ctx.reply(
         ctx.i18n.t("dialogs.checkoutUserSub.info", {
             subscriptionName: userSub.subscription.name,

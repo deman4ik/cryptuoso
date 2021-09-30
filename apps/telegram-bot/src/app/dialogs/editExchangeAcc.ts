@@ -1,7 +1,7 @@
-import { gql } from "@cryptuoso/graphql-client";
 import { BotContext } from "../types";
 import { getExchangeButtons } from "../utils/buttons";
 import { Router } from "../utils/dialogsRouter";
+import { gql } from "../utils/graphql-client";
 
 export const enum editExchangeAccActions {
     enter = "editExAcc:enter",

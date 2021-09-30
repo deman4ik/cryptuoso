@@ -368,7 +368,7 @@ export default class PortfolioManagerService extends HTTPService {
             userId,
             userExAccId,
             exchange,
-            status: "started"
+            status: "starting"
         };
 
         const userPortfolioSettings: PortfolioSettings = {

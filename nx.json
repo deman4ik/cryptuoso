@@ -97,9 +97,6 @@
         "exwatcher-runner": {
             "tags": []
         },
-        "graphql-client": {
-            "tags": []
-        },
         "helpers": {
             "tags": []
         },

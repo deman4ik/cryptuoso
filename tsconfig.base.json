@@ -32,7 +32,6 @@
             "@cryptuoso/events": ["libs/events/src/index.ts"],
             "@cryptuoso/exwatcher-base": ["libs/exwatcher-base/src/index.ts"],
             "@cryptuoso/exwatcher-events": ["libs/exwatcher-events/src/index.ts"],
-            "@cryptuoso/graphql-client": ["libs/graphql-client/src/index.ts"],
             "@cryptuoso/helpers": ["libs/helpers/src/index.ts"],
             "@cryptuoso/importer-events": ["libs/importer-events/src/index.ts"],
             "@cryptuoso/importer-state": ["libs/importer-state/src/index.ts"],

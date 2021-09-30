@@ -1,25 +1,16 @@
 import dayjs from "@cryptuoso/dayjs";
 import { chunkArray, plusNum } from "@cryptuoso/helpers";
 import logger from "@cryptuoso/logger";
-import {
-    ClosedPosition,
-    OpenPosition,
-    PortfolioSettings,
-    UserPortfolioInfo,
-    UserPortfolioState
-} from "@cryptuoso/portfolio-state";
+import { ClosedPosition, OpenPosition, UserPortfolioInfo } from "@cryptuoso/portfolio-state";
 import { getEquityChartUrl } from "@cryptuoso/quickchart";
-import { PerformanceVals } from "@cryptuoso/trade-stats";
 import { UserExchangeAccountInfo } from "@cryptuoso/user-state";
-import { InlineKeyboardButton } from "@grammyjs/types";
 import { InlineKeyboard } from "grammy";
 import { BotContext } from "../types";
 import { getConfirmButtons } from "../utils/buttons";
 import { Router } from "../utils/dialogsRouter";
 import { gql } from "../utils/graphql-client";
-import { getBackKeyboard, getMainKeyboard } from "../utils/keyboard";
+import { getBackKeyboard } from "../utils/keyboard";
 import { editPortfolioActions } from "./editPortfolio";
-
 import { listPortfoliosActions } from "./listPortfolios";
 
 export const enum tradingActions {
@@ -263,7 +254,9 @@ const onEnter = async (ctx: BotContext) => {
             reply_markup: getBackKeyboard(ctx)
         });
     if (!ctx.session.portfolio) {
-        ctx.dialog.enter(listPortfoliosActions.enter);
+        if (ctx.session.userExAcc) {
+            ctx.dialog.enter(listPortfoliosActions.options, { exchange: ctx.session.userExAcc.exchange });
+        } else ctx.dialog.enter(listPortfoliosActions.enter);
         return;
     }
 
@@ -289,7 +282,7 @@ const onEnter = async (ctx: BotContext) => {
     )}${ctx.i18n.t("lastInfoUpdatedAt", { lastInfoUpdatedAt: portfolio.lastInfoUpdatedAt })}`;
 
     await ctx.dialog.edit();
-    if (portfolio.stats?.equityAvg) {
+    if (portfolio.stats?.equityAvg && Array.isArray(portfolio.stats?.equityAvg) && portfolio.stats?.equityAvg.length) {
         await ctx.replyWithPhoto(getEquityChartUrl(portfolio.stats.equityAvg), {
             caption: text,
             parse_mode: "HTML",
@@ -301,6 +294,9 @@ const onEnter = async (ctx: BotContext) => {
 };
 
 const confirmStart = async (ctx: BotContext) => {
+    if (ctx.session.dialog.current.data.reload) {
+        await getTradingInfo(ctx);
+    }
     await ctx.dialog.next(tradingActions.start);
     ctx.session.dialog.current.data.edit = false;
     await ctx.reply(
@@ -371,6 +367,9 @@ const start = async (ctx: BotContext) => {
 };
 
 const confirmStop = async (ctx: BotContext) => {
+    if (ctx.session.dialog.current.data.reload) {
+        await getTradingInfo(ctx);
+    }
     await ctx.dialog.next(tradingActions.stop);
     ctx.session.dialog.current.data.edit = false;
     await ctx.reply(
@@ -443,6 +442,9 @@ const stop = async (ctx: BotContext) => {
 };
 
 const confirmDelete = async (ctx: BotContext) => {
+    if (ctx.session.dialog.current.data.reload) {
+        await getTradingInfo(ctx);
+    }
     await ctx.dialog.next(tradingActions.delete);
     ctx.session.dialog.current.data.edit = false;
     await ctx.reply(ctx.i18n.t("dialogs.trading.confirmDelete"), { reply_markup: getConfirmButtons(ctx) });
@@ -487,6 +489,7 @@ const deletePortfolio = async (ctx: BotContext) => {
         return;
     }
     if (result) {
+        ctx.session.portfolio = null;
         await ctx.reply(ctx.i18n.t("dialogs.trading.deleted"));
 
         ctx.dialog.reset();
@@ -497,7 +500,7 @@ const stats = async (ctx: BotContext) => {
     await getTradingInfo(ctx);
     const { portfolio } = ctx.session;
 
-    if (!portfolio.stats) {
+    if (!portfolio.stats.lastPosition) {
         await ctx.dialog.edit();
 
         await ctx.reply(
@@ -508,7 +511,7 @@ const stats = async (ctx: BotContext) => {
         );
         return;
     }
-    logger.debug(portfolio.stats);
+
     const text = `${ctx.i18n.t("dialogs.trading.statsTitle", { exchange: portfolio.exchange })}${ctx.i18n.t(
         "performance.stats",
         {
@@ -591,46 +594,7 @@ const closedPositions = async (ctx: BotContext) => {
 };
 
 const edit = async (ctx: BotContext) => {
-    const { data } = ctx.session.dialog.current;
-
-    if (!ctx.session.portfolio || ctx.session.portfolio.type === "signals") {
-        ctx.dialog.reset();
-        return;
-    }
-
-    if (data.payload === "edit") {
-        await ctx.reply(ctx.i18n.t("dialogs.trading.confirmEdit"), {
-            reply_markup: new InlineKeyboard()
-                .add({
-                    text: ctx.i18n.t("dialogs.trading.editOptions"),
-                    callback_data: JSON.stringify({
-                        d: ctx.session.dialog.current?.id || null,
-                        a: tradingActions.edit,
-                        p: "options"
-                    })
-                })
-                .row()
-                .add({
-                    text: ctx.i18n.t("dialogs.trading.editAmount"),
-                    callback_data: JSON.stringify({
-                        d: ctx.session.dialog.current?.id || null,
-                        a: tradingActions.edit,
-                        p: "amount"
-                    })
-                })
-        });
-    } else if (data.payload === "options") {
-        await ctx.dialog.enter(editPortfolioActions.options, {
-            edit: true
-        });
-    } else if (data.payload === "amount") {
-        await ctx.dialog.enter(editPortfolioActions.amountType, {
-            edit: true,
-            reload: true,
-            exchange: ctx.session.portfolio.exchange,
-            type: ctx.session.portfolio.type
-        });
-    }
+    ctx.dialog.enter(editPortfolioActions.enter, { edit: true });
 };
 
 router.set(tradingActions.enter, onEnter);

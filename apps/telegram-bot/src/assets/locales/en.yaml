@@ -132,6 +132,7 @@ dialogs:
             <b>When your payment will be resolved your subscription will be ✳️ activated.</b>\n
             <a href='https://commerce.coinbase.com/faq#customers'>How it works?</a></i>
         check: 🔄 Check payment status
+        buy: BUY WITH CRYPTO
     paymentHistory:
         info: <b>Payments History:</b>\n\n${history}
         none: <b>No payments yet</b>
@@ -165,8 +166,6 @@ dialogs:
         start: 🟢 Start
         stop: ⛔ Stop
         edit: ⚙️ Edit
-        editOptions: ⚙️ Change Portfolio Options
-        editAmount: ⚙️ Change Trading Amount
         delete: ❌ Delete
         stats: 📊 Performance
         openPos: 📬 Open trades
@@ -180,21 +179,14 @@ dialogs:
             Are you sure you want to stop trading now?\n\n
             ${warning}
         confirmDelete: >
-            ❌ Deleting your trading portfolio
+            ⚠️ Deleting your trading portfolio
 
 
             Are you sure you want to delete you portfolio?
 
 
             You will lost all your trading history!
-        confirmEdit: >
-            ⚙️ Changing your portfolio settings
 
-
-            You can change trading amount any time.
-
-
-            You can change portfolio options while it is ⛔ Stopped or once in a month while it is 🟢 Started
         starting: >
             ✳️ Starting your trading portfolio
 
@@ -206,11 +198,10 @@ dialogs:
 
             ⏳ Please wait...
         deleted: >
-            ❌ Your trading portfolio is deleted 
+            ✅ Your trading portfolio is deleted 
 
 
             You can now create new portfolio in 📈  Trading section
-
     listPortfolios:
         chooseExchange: >
             💼 Selecting optimal trading portfolio
@@ -245,10 +236,10 @@ dialogs:
             <b>Sharpe Ratio:</b> ${stats.sharpeRatio} \n
         subscribe: ✅  Subscribe
         back: ◀️ Choose another options
-    editPortfolio:
+    addPortfolio:
         insufficient: >
-            ❌ You current exchange balance (${currentBalance} $) is <b>insufficient</b>.\n
-            Minimum required balance is ${minBalance} $.\n\n
+            ❌ You current exchange balance (${round(currentBalance,2)} $) is <b>insufficient</b>.\n
+            Minimum required balance is ${round(minBalance,2)} $.\n\n
             Please replenish your balance on ${formatExchange(exchange)} exchange and try again.
         type: >
             📈 Configuring your trading portfolio
@@ -314,15 +305,25 @@ dialogs:
             <b>${error}</b>\n\n
             Please try again! Or contact <b>❓ Support</b>
         created: >
-            📈 Your ${formatExchange(exchange)} portfolio is created!\n\n
+            📈 Your ${formatExchange(exchange)} portfolio and is ✳️ Starting!\n\n
+            Portfolio Options:\n
             ${options}\n\n
             Your initial balance is ${initialBalance} $\n
             Your trading amount is ${amount} ${amountType}\n\n
-            Are you sure you want to start trading now?\n\n
             ${warning}
-        ofBalance: \% of the balance
+        ofBalance: >
+            % of the balance
         fixedCurrency: $ fixed
         start: 🟢 Start
+    editPortfolio:
+        confirmEdit: >
+            ⚙️ Changing your portfolio settings
+
+
+            You can change trading amount any time.
+
+
+            You can change portfolio options while it is ⛔ Stopped or once in a month while it is 🟢 Started
         editOptions: ⚙️ Change Portfolio Options
         editAmount: ⚙️ Change Trading Amount
         chooseOptions: >

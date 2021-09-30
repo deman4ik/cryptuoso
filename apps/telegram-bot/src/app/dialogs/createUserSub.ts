@@ -132,7 +132,7 @@ const option = async (ctx: BotContext) => {
 
     if (error) {
         await ctx.reply(
-            ctx.i18n.t("dialogscreateUserSub.failed", {
+            ctx.i18n.t("dialogs.createUserSub.failed", {
                 name: userSub.subscription.name,
                 error
             })
