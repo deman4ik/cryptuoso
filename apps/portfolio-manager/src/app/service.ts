@@ -474,7 +474,7 @@ export default class PortfolioManagerService extends HTTPService {
                 403
             );
 
-        const newOptions = { ...options, ...userPortfolio.settings.options };
+        const newOptions = { ...userPortfolio.settings.options, ...options };
         if (tradingAmountType) {
             let initialBalance = userPortfolio.settings.initialBalance;
             if (userPortfolio.type === "trading") {
