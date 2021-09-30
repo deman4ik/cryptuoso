@@ -93,7 +93,7 @@ export const getAmountTypeButtons = (ctx: BotContext) => {
             text: ctx.i18n.t("dialogs.addPortfolio.fullBalance"),
             callback_data: JSON.stringify({
                 d: ctx.session.dialog.current?.id || null,
-                a: ctx.session.dialog.current.action,
+                a: ctx.session.dialog.move?.action,
                 p: "fullBalance"
             })
         })
@@ -102,7 +102,7 @@ export const getAmountTypeButtons = (ctx: BotContext) => {
             text: ctx.i18n.t("dialogs.addPortfolio.balancePercent"),
             callback_data: JSON.stringify({
                 d: ctx.session.dialog.current?.id || null,
-                a: ctx.session.dialog.current.action,
+                a: ctx.session.dialog.move?.action,
                 p: "balancePercent"
             })
         })
@@ -111,7 +111,7 @@ export const getAmountTypeButtons = (ctx: BotContext) => {
             text: ctx.i18n.t("dialogs.addPortfolio.currencyFixed"),
             callback_data: JSON.stringify({
                 d: ctx.session.dialog.current?.id || null,
-                a: ctx.session.dialog.current.action,
+                a: ctx.session.dialog.move?.action,
                 p: "currencyFixed"
             })
         });
@@ -123,7 +123,7 @@ export const getPercentButtons = (ctx: BotContext) => {
             text: "10%",
             callback_data: JSON.stringify({
                 d: ctx.session.dialog.current?.id || null,
-                a: ctx.session.dialog.current.action,
+                a: ctx.session.dialog.move?.action,
                 p: 10
             })
         })
@@ -131,7 +131,7 @@ export const getPercentButtons = (ctx: BotContext) => {
             text: "20%",
             callback_data: JSON.stringify({
                 d: ctx.session.dialog.current?.id || null,
-                a: ctx.session.dialog.current.action,
+                a: ctx.session.dialog.move?.action,
                 p: 20
             })
         })
@@ -139,7 +139,7 @@ export const getPercentButtons = (ctx: BotContext) => {
             text: "30%",
             callback_data: JSON.stringify({
                 d: ctx.session.dialog.current?.id || null,
-                a: ctx.session.dialog.current.action,
+                a: ctx.session.dialog.move?.action,
                 p: 30
             })
         })
@@ -148,7 +148,7 @@ export const getPercentButtons = (ctx: BotContext) => {
             text: "40%",
             callback_data: JSON.stringify({
                 d: ctx.session.dialog.current?.id || null,
-                a: ctx.session.dialog.current.action,
+                a: ctx.session.dialog.move?.action,
                 p: 40
             })
         })
@@ -156,7 +156,7 @@ export const getPercentButtons = (ctx: BotContext) => {
             text: "50%",
             callback_data: JSON.stringify({
                 d: ctx.session.dialog.current?.id || null,
-                a: ctx.session.dialog.current.action,
+                a: ctx.session.dialog.move?.action,
                 p: 50
             })
         })
@@ -164,7 +164,7 @@ export const getPercentButtons = (ctx: BotContext) => {
             text: "60%",
             callback_data: JSON.stringify({
                 d: ctx.session.dialog.current?.id || null,
-                a: ctx.session.dialog.current.action,
+                a: ctx.session.dialog.move?.action,
                 p: 60
             })
         })
@@ -173,7 +173,7 @@ export const getPercentButtons = (ctx: BotContext) => {
             text: "70%",
             callback_data: JSON.stringify({
                 d: ctx.session.dialog.current?.id || null,
-                a: ctx.session.dialog.current.action,
+                a: ctx.session.dialog.move?.action,
                 p: 70
             })
         })
@@ -181,7 +181,7 @@ export const getPercentButtons = (ctx: BotContext) => {
             text: "80%",
             callback_data: JSON.stringify({
                 d: ctx.session.dialog.current?.id || null,
-                a: ctx.session.dialog.current.action,
+                a: ctx.session.dialog.move?.action,
                 p: 80
             })
         })
@@ -189,7 +189,7 @@ export const getPercentButtons = (ctx: BotContext) => {
             text: "90%",
             callback_data: JSON.stringify({
                 d: ctx.session.dialog.current?.id || null,
-                a: ctx.session.dialog.current.action,
+                a: ctx.session.dialog.move?.action,
                 p: 90
             })
         });

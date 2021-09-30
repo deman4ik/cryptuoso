@@ -272,6 +272,11 @@ const onEnter = async (ctx: BotContext) => {
                 .join("\n "),
             status: ctx.i18n.t(`status.${portfolio.status}`),
             currentBalance: userExAcc.balance,
+            amount: portfolio.settings.balancePercent || portfolio.settings.tradingAmountCurrency,
+            amountType:
+                portfolio.settings.tradingAmountType === "balancePercent"
+                    ? ctx.i18n.t("dialogs.addPortfolio.ofBalance")
+                    : ctx.i18n.t("dialogs.addPortfolio.fixedCurrency"),
             netProfit: portfolio.stats?.netProfit
                 ? `${plusNum(portfolio.stats.netProfit)} $ (${plusNum(portfolio.stats.percentNetProfit)}%)`
                 : `0 $`,

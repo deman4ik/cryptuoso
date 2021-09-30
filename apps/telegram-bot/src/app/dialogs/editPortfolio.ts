@@ -10,9 +10,9 @@ export const enum editPortfolioActions {
     enter = "ePf:enter",
     options = "ePf:opts",
     optionsChosen = "ePf:optsCh",
-    amountType = "aPf:amType",
-    amount = "aPf:amount",
-    handleAmount = "aPf:hAmount"
+    amountType = "ePf:amType",
+    amount = "ePf:amount",
+    handleAmount = "ePf:hAmount"
 }
 
 const enter = async (ctx: BotContext) => {
@@ -45,7 +45,7 @@ const enter = async (ctx: BotContext) => {
 
 const amountType = async (ctx: BotContext) => {
     const text = ctx.i18n.t("dialogs.addPortfolio.amountType", {
-        balance: ctx.session.dialog.current.data.initialBalance
+        balance: ctx.session.portfolio.settings.initialBalance
     });
     ctx.dialog.next(editPortfolioActions.amount);
     const buttons = getAmountTypeButtons(ctx);
@@ -198,7 +198,8 @@ const optionsChosen = async (ctx: BotContext) => {
         if (error) {
             await ctx.reply(ctx.i18n.t("failed", { error }));
         }
-        ctx.dialog.enter(tradingActions.enter, { edit: false, reload: true });
+        await ctx.dialog.edit();
+        await ctx.reply(ctx.i18n.t("dialogs.editPortfolio.optionsChange"));
     } else {
         ctx.dialog.next(editPortfolioActions.optionsChosen);
         await ctx.dialog.edit();

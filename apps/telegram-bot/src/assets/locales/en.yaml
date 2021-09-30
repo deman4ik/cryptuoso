@@ -154,7 +154,7 @@ dialogs:
         portfolio: >
             ${options}\n\n
             <b>Status:</b> ${status}\n
-            <b>Current exchange balance:</b> ${currentBalance} $\n\n
+            <b>Current exchange balance:</b> ${round(currentBalance,2)} $\n\n
             <b>Closed trades:</b> ${tradesCount}\n
             <b>Net Profit/Loss:</b> ${netProfit}\n\n
             <b>Open trades:</b> ${openTradeCount}\n
@@ -264,11 +264,11 @@ dialogs:
             Please try again.
         insufficientInitBalance: >
             ❌ Balance you entered is <b>insufficient</b>.\n\n
-            Minimum required balance is ${minBalance} $.\n\n
+            Minimum required balance is ${round(minBalance)} $.\n\n
             Please try again.
         amountType: >
             📈 Configuring your trading portfolio\n\n
-            Your trading balance is <b>${balance} $</b>\n\n
+            Your trading balance is <b>${round(balance,2)} $</b>\n\n
             Choose trading amount option:
         fullBalance: Use all current balance
         balancePercent: Set % of the balance
@@ -298,7 +298,7 @@ dialogs:
              Please try again.
         insufficientFixedAmount: >
             ❌ Your trading amount is <b>insufficient</b>.\n
-            Minimum required trading amount is ${minBalance} $.\n\n
+            Minimum required trading amount is ${round(minBalance)} $.\n\n
             Please try again.
         failed: >
             ❌ Failed to create portfolio.\n\n
@@ -308,7 +308,7 @@ dialogs:
             📈 Your ${formatExchange(exchange)} portfolio and is ✳️ Starting!\n\n
             Portfolio Options:\n
             ${options}\n\n
-            Your initial balance is ${initialBalance} $\n
+            Your initial balance is ${round(initialBalance,2)} $\n
             Your trading amount is ${amount} ${amountType}\n\n
             ${warning}
         ofBalance: >
@@ -336,6 +336,11 @@ dialogs:
             You choosed: \n\n
             <b>${options}</b> \n\n
             You can choose more options or press ✅ <b>Done</b>
+        optionsChange: >
+            📈 Configuring your trading portfolio
+
+
+            You portfolio options will change after portfolio is builded again.
     editExchangeAcc:
         chooseExchange: >
             🔑 Linking Exchange Account

@@ -511,11 +511,11 @@ export default class PortfolioManagerService extends HTTPService {
             AND p.exchange = ${userPortfolio.exchange} 
             AND p.base = true
             AND p.status = 'started'
-            AND p.option_risk = ${options.risk}
-            AND p.option_profit = ${options.profit}
-            AND p.option_win_rate = ${options.winRate}
-            AND p.option_efficiency = ${options.efficiency}
-            AND p.option_money_management = ${options.moneyManagement};
+            AND p.option_risk = ${newOptions.risk}
+            AND p.option_profit = ${newOptions.profit}
+            AND p.option_win_rate = ${newOptions.winRate}
+            AND p.option_efficiency = ${newOptions.efficiency}
+            AND p.option_money_management = ${newOptions.moneyManagement};
             `);
 
                 leverage = calcUserLeverage(recommendedBalance, defaultLeverage, maxLeverage, portfolioBalance);
