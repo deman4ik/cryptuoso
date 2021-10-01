@@ -57,7 +57,6 @@ export const UserRobotRunnerSchema = {
     [UserRobotRunnerEvents.PAUSE]: RunnerPauseSchema,
     [UserRobotRunnerEvents.RESUME]: RunnerPauseSchema,
     [UserRobotRunnerEvents.CONFIRM_TRADE]: {
-        userRobotId: "uuid",
         userPositionId: "uuid",
         cancel: { type: "boolean", optional: true, default: false }
     },

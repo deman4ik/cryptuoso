@@ -400,6 +400,7 @@ export class UserPosition {
             userRobotId: this._userRobotId,
             userPositionId: this._id,
             userPortfolioId: this._userPortfolioId,
+            userPortfolioType: this.emulated ? "signals" : "trading",
             userId: this._userId,
             status: this._status,
             entryAction: this._entryAction,
