@@ -52,6 +52,7 @@ export interface BasePosition {
         currentBalance?: number;
         prevBalance?: number;
     };
+    minAmountCurrency?: number;
 }
 
 export const calcPositionProfit = (

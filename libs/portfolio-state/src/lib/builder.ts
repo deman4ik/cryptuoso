@@ -3,10 +3,11 @@ import { Subject } from "threads/observable";
 import { PortfolioOptions, PortfolioRobot, PortfolioState, UserPortfolioState } from "./types";
 import { BasePosition } from "@cryptuoso/market";
 import { periodStatsToArray, TradeStats, TradeStatsCalc } from "@cryptuoso/trade-stats";
-import { percentBetween, round, sum, uniqueElementsBy } from "@cryptuoso/helpers";
+import { calcPercentValue, percentBetween, round, sum, uniqueElementsBy } from "@cryptuoso/helpers";
 import { getPortfolioBalance, getPortfolioRobotsCount, getPortfolioMinBalance } from "./helpers";
 
 interface PortoflioRobotState extends PortfolioRobot {
+    minAmountCurrency?: number;
     stats?: TradeStats;
     positions: BasePosition[];
 }
@@ -46,8 +47,9 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
             (a, b) => a === b
         );
 
-        this.robots = robotIds.reduce(
-            (prev, cur) => ({
+        this.robots = robotIds.reduce((prev, cur) => {
+            const robotPositions = positions.filter(({ robotId }) => robotId === cur);
+            return {
                 ...prev,
                 [cur]: {
                     robotId: cur,
@@ -55,11 +57,11 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
                     share: 0,
                     amountInCurrency: 0,
                     priority: 0,
-                    positions: positions.filter(({ robotId }) => robotId === cur)
+                    minAmountCurrency: robotPositions[0].minAmountCurrency,
+                    positions: robotPositions
                 }
-            }),
-            {}
-        );
+            };
+        }, {});
         this.log.debug(`Portfolio #${this.portfolio.id} inited ${Object.keys(this.robots).length} robots`);
     }
 
@@ -78,17 +80,19 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
             balancePercent,
             tradingAmountCurrency
         );
-        const minBalance = getPortfolioMinBalance(
-            portfolioBalance,
-            minTradeAmount,
-            this.portfolio.settings.minRobotsCount,
-            this.portfolio.settings.leverage,
-            !!this.portfolio.settings.maxRobotsCount
-        );
-        let maxRobotsCount = getPortfolioRobotsCount(portfolioBalance, minTradeAmount);
-        if (this.portfolio.settings.maxRobotsCount) {
-            maxRobotsCount = this.portfolio.settings.maxRobotsCount || maxRobotsCount;
-        }
+        const minBalance =
+            this.portfolio.context.minBalance ||
+            getPortfolioMinBalance(
+                portfolioBalance,
+                minTradeAmount,
+                this.portfolio.settings.minRobotsCount,
+                this.portfolio.settings.leverage,
+                !!this.portfolio.settings.maxRobotsCount
+            );
+        const maxRobotsCount =
+            this.portfolio.context.robotsCount ||
+            this.portfolio.settings.maxRobotsCount ||
+            getPortfolioRobotsCount(portfolioBalance, minTradeAmount);
 
         const minRobotsCount =
             this.portfolio.settings.minRobotsCount || getPortfolioRobotsCount(minBalance, minTradeAmount);
@@ -206,14 +210,23 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
                 robots[key].share = this.portfolio.settings.robotsShare[key];
             }
 
-            if (robots[key].share < 0) robots[key].share = 0;
+            if (robots[key].share < 1) {
+                robots[key].share = 0;
+            } else if (robots[key].minAmountCurrency) {
+                const amountInCurrency = calcPercentValue(this.portfolio.settings.initialBalance, robots[key].share);
+                if (amountInCurrency < robots[key].minAmountCurrency) robots[key].share = 0;
+            }
         }
 
         //const minShare = Math.min(...Object.values(robots).map((r) => r.share));
         // this.portfolio.variables.minBalance = round(this.portfolio.context.minTradeAmount * (100 / minShare));
-
-        for (const [key, robot] of Object.entries(robots)) {
-            robots[key].positions = robot.positions.map((pos) => {
+        const portfolioRobots: {
+            [key: string]: PortoflioRobotState;
+        } = Object.values(robots)
+            .filter((r) => r.share)
+            .reduce((p, c) => ({ ...p, [c.robotId]: { ...c } }), {});
+        for (const [key, robot] of Object.entries(portfolioRobots)) {
+            portfolioRobots[key].positions = robot.positions.map((pos) => {
                 return {
                     ...pos,
                     meta: {
@@ -222,7 +235,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
                 };
             });
         }
-        return robots;
+        return portfolioRobots;
     }
 
     async calcPortfolioStats(robots: Readonly<{ [key: string]: PortoflioRobotState }>) {
@@ -433,7 +446,11 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
             const robotsList = await this.sortRobots(this.robots); // сортировка от худших к лучшим
 
             const currentPortfolio = Object.freeze(await this.calcPortfolio(robotsList));
-            this.log.debug(`Portfolio #${this.portfolio.id} - Portfolio builded ${robotsList.length} robots`);
+            this.log.debug(
+                `Portfolio #${this.portfolio.id} - Portfolio builded ${
+                    Object.keys(currentPortfolio.robots).length
+                } robots`
+            );
 
             return {
                 portfolio: {

@@ -6,6 +6,7 @@ import { sql, pg, makeChunksGenerator, pgUtil } from "@cryptuoso/postgres";
 import {
     PortfolioBuilder,
     PortfolioBuilderJob,
+    PortfolioInfo,
     PortfolioState,
     UserPortfolioBuilderJob,
     UserPortfolioState
@@ -76,13 +77,16 @@ const worker = {
                 sql`
         SELECT p.id, p.robot_id, p.direction, p.entry_date, p.entry_price,
          p.exit_date, p.exit_price, p.volume,
-          p.worst_profit, p.max_price, p.profit, p.bars_held
-        FROM v_robot_positions p, robots r 
+          p.worst_profit, p.max_price, p.profit, p.bars_held, m.min_amount_currency 
+        FROM v_robot_positions p, robots r, v_markets m
         WHERE p.robot_id = r.id 
           AND r.exchange = ${portfolio.exchange}
           AND r.available >= ${portfolio.available}
           AND p.emulated = 'false'
           AND p.status = 'closed'
+          AND m.exchange = r.exchange 
+          AND m.asset = r.asset
+          AND m.currency = r.currency
           ${includeRobotsCondition}
           ${excludeRobotsCondition}
           ${includeAssetsCondition}
@@ -260,22 +264,37 @@ const worker = {
         const dateToCondition = portfolio.settings.dateTo
             ? sql`AND p.entry_date <= ${portfolio.settings.dateTo}`
             : sql``;
+        const { risk, profit, winRate, efficiency, moneyManagement } = portfolio.settings.options;
+        const basePortfolio = await pg.maybeOne<{
+            id: string;
+            limits: PortfolioInfo["limits"];
+            portfolioRobotsCount: number;
+        }>(sql`SELECT p.id, p.limits, p.portfolio_robots_count FROM v_portfolios p
+            WHERE
+             p.exchange = ${portfolio.exchange}
+            AND p.base = true
+            AND p.status = 'started'
+            AND p.option_risk = ${risk}
+            AND p.option_profit = ${profit}
+            AND p.option_win_rate = ${winRate}
+            AND p.option_efficiency = ${efficiency}
+            AND p.option_money_management = ${moneyManagement}`);
+
+        if (basePortfolio) {
+            portfolio.context.minBalance = basePortfolio.limits.minBalance;
+            portfolio.context.robotsCount = basePortfolio.portfolioRobotsCount;
+        }
         const userPortfolioBuilder = new PortfolioBuilder<UserPortfolioState>(portfolio, subject);
         const maxRobotsCount = userPortfolioBuilder.maxRobotsCount;
-        const { risk, profit, winRate, efficiency, moneyManagement } = portfolio.settings.options;
-        const portfolioRobots = await pg.any<{
-            robotId: string;
-        }>(sql`SELECT pr.robot_id FROM portfolio_robots pr, v_portfolios p, robots r
-        WHERE pr.portfolio_id = p.id 
+
+        let hasPredefinedRobots = 0;
+        let portfolioRobotsCondition = sql``;
+        if (basePortfolio) {
+            const portfolioRobots = await pg.any<{
+                robotId: string;
+            }>(sql`SELECT pr.robot_id FROM portfolio_robots pr,  robots r
+        WHERE pr.portfolio_id = ${basePortfolio.id} 
         AND pr.robot_id = r.id
-        AND p.exchange = ${portfolio.exchange}
-        AND p.base = true
-        AND p.status = 'started'
-        AND p.option_risk = ${risk}
-        AND p.option_profit = ${profit}
-        AND p.option_win_rate = ${winRate}
-        AND p.option_efficiency = ${efficiency}
-        AND p.option_money_management = ${moneyManagement}
         ${includeRobotsCondition}
         ${excludeRobotsCondition}
         ${includeAssetsCondition}
@@ -285,27 +304,31 @@ const worker = {
         ORDER BY pr.priority 
         LIMIT ${maxRobotsCount}`);
 
-        const hasPredefinedRobots = portfolioRobots && Array.isArray(portfolioRobots) && portfolioRobots.length;
-        const portfolioRobotsCondition = hasPredefinedRobots
-            ? sql`AND r.id in (${sql.join(
-                  portfolioRobots.map((r) => r.robotId),
-                  sql`, `
-              )})`
-            : sql``;
+            hasPredefinedRobots = portfolioRobots && Array.isArray(portfolioRobots) && portfolioRobots.length;
+            portfolioRobotsCondition = hasPredefinedRobots
+                ? sql`AND r.id in (${sql.join(
+                      portfolioRobots.map((r) => r.robotId),
+                      sql`, `
+                  )})`
+                : sql``;
+        }
         const positions: BasePosition[] = await DataStream.from(
             makeChunksGenerator(
                 pg,
                 sql`
         SELECT p.id, p.robot_id, p.direction, p.entry_date, p.entry_price,
          p.exit_date, p.exit_price, p.volume,
-          p.worst_profit, p.max_price, p.profit, p.bars_held
-        FROM v_robot_positions p, robots r, users u 
+          p.worst_profit, p.max_price, p.profit, p.bars_held, m.min_amount_currency 
+        FROM v_robot_positions p, robots r, users u, v_markets m
         WHERE p.robot_id = r.id 
           AND r.exchange = ${portfolio.exchange}
           AND u.id = ${portfolio.userId}
           AND r.available >= u.access
           AND p.emulated = 'false'
           AND p.status = 'closed'
+          AND m.exchange = r.exchange 
+          AND m.asset = r.asset
+          AND m.currency = r.currency
           ${includeRobotsCondition}
           ${excludeRobotsCondition}
           ${includeAssetsCondition}
@@ -321,15 +344,12 @@ const worker = {
             )
         ).reduce(async (accum: BasePosition[], chunk: BasePosition[]) => [...accum, ...chunk], []);
 
-        logger.debug(positions.length);
         if (!positions.length) throw new Error("No robots found for portfolio settings");
         userPortfolioBuilder.init(positions);
 
         logger.info(`#${job.userPortfolioId} user portfolio builder inited`);
         logger.info(`Processing #${userPortfolioBuilder.portfolio.id} user portfolio build`);
-        const result = hasPredefinedRobots
-            ? await userPortfolioBuilder.buildOnce()
-            : await userPortfolioBuilder.build();
+        const result = basePortfolio ? await userPortfolioBuilder.buildOnce() : await userPortfolioBuilder.build();
 
         await pg.transaction(async (t) => {
             await t.query(sql`UPDATE user_portfolio_settings 

@@ -86,7 +86,7 @@ export default class PortfolioManagerService extends HTTPService {
                             optional: true
                         },
                         leverage: { type: "number", optional: true, integer: true, default: 2 },
-                        minRobotsCount: { type: "number", optional: true, integer: true, default: 20 },
+                        minRobotsCount: { type: "number", optional: true, integer: true, default: 5 },
                         maxRobotsCount: { type: "number", optional: true, integer: true },
                         includeTimeframes: { type: "array", enum: Timeframe.validArray, optional: true },
                         excludeTimeframes: { type: "array", enum: Timeframe.validArray, optional: true },
@@ -544,7 +544,7 @@ export default class PortfolioManagerService extends HTTPService {
         if (!equals(userPortfolioSettings, userPortfolio.settings)) {
             await this.db.pg.transaction(async (t) => {
                 const settingsExists =
-                    t.one(sql`SELECT id FROM user_portfolio_settings WHERE user_portfolio_id = ${userPortfolio.id}
+                    await t.maybeOne(sql`SELECT id FROM user_portfolio_settings WHERE user_portfolio_id = ${userPortfolio.id}
                 AND active_from is null;
                 `);
 

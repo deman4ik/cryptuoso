@@ -61,6 +61,8 @@ export interface PortfolioContext {
     minTradeAmount: number;
     feeRate: number;
     currentBalance: number;
+    minBalance?: number;
+    robotsCount?: number;
 }
 
 export interface PortfolioState extends PortfolioDB {
