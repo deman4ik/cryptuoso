@@ -31,11 +31,11 @@ import dayjs from "@cryptuoso/dayjs";
 import { keysToCamelCase, round, roundFirstSignificant } from "@cryptuoso/helpers";
 import { TradeStatsRunnerEvents, TradeStatsRunnerUserRobot } from "@cryptuoso/trade-stats-events";
 
-export type UserRobotRunnerServiceConfig = BaseServiceConfig;
+export type UserRobotWorkerServiceConfig = BaseServiceConfig;
 
-export default class UserRobotRunnerService extends BaseService {
+export default class UserRobotWorkerService extends BaseService {
     #jobRetries = 3;
-    constructor(config?: UserRobotRunnerServiceConfig) {
+    constructor(config?: UserRobotWorkerServiceConfig) {
         super(config);
         try {
             this.addOnStartHandler(this.onServiceStart);
@@ -112,7 +112,7 @@ export default class UserRobotRunnerService extends BaseService {
 
         if (userPortfolioId) {
             if (userPortfolioType === "signals") balance = userPortfolioSettings.initialBalance;
-            else balance = totalBalanceUsd; //? или тоже initialBalance
+            else balance = totalBalanceUsd;
             if (userPortfolioSettings.tradingAmountType === "balancePercent") {
                 const currentPortfolioBalance = (userPortfolioSettings.balancePercent / 100) * balance;
 
@@ -450,7 +450,7 @@ export default class UserRobotRunnerService extends BaseService {
                 await this.db.pg.query(sql`
                 UPDATE user_robots
                 SET status = ${UserRobotStatus.paused}, 
-                    error = ${err.message}
+                    message = ${err.message}
                 WHERE id = ${job.userRobotId};`);
                 await this.events.emit<UserRobotWorkerStatus>({
                     type: UserRobotWorkerEvents.PAUSED,

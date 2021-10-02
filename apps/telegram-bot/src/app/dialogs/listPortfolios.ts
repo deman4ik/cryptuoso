@@ -73,7 +73,7 @@ const optionsChosen = async (ctx: BotContext) => {
         ctx.session.dialog.current.data.edit = true;
         await ctx.reply(
             ctx.i18n.t("dialogs.listPortfolios.chooseMoreOptions", {
-                options: selected.map((o) => ctx.i18n.t(`options.${o}`)).join(" ")
+                options: selected.map((o) => `✅ ${ctx.i18n.t(`options.${o}`)}`).join("\n ")
             }),
             {
                 reply_markup: getOptionsButtons(ctx)

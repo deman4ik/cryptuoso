@@ -1,4 +1,5 @@
 import { round } from "@cryptuoso/helpers";
+import logger from "@cryptuoso/logger";
 import { UserExchangeAccountInfo } from "@cryptuoso/user-state";
 import { InlineKeyboard } from "grammy";
 import { BotContext, IUserSub } from "../types";
@@ -49,7 +50,10 @@ const chooseType = async (ctx: BotContext) => {
 };
 
 const initBalance = async (ctx: BotContext) => {
+    const { data } = ctx.session.dialog.current;
+    if (!ctx.session.dialog.current.data.type) ctx.session.dialog.current.data.type = data.payload;
     ctx.session.dialog.current.data.edit = false;
+    ctx.session.dialog.current.data.expectInput = true;
     ctx.dialog.next(addPortfolioActions.handleInitBalance);
     await ctx.reply(ctx.i18n.t("dialogs.addPortfolio.initBalance"));
 };
@@ -73,7 +77,7 @@ const handleInitBalance = async (ctx: BotContext) => {
     ctx.session.dialog.current.data.initialBalance = round(balance);
     ctx.session.dialog.current.data.amountType = "balancePercent";
     ctx.session.dialog.current.data.balancePercent = 100;
-    ctx.dialog.enter(addPortfolioActions.finish);
+    ctx.dialog.jump(addPortfolioActions.finish);
 };
 
 const amountType = async (ctx: BotContext) => {

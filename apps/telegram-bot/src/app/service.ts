@@ -6,7 +6,7 @@ import { hydrateReply, parseMode } from "parse-mode";
 import path from "path";
 import { auth } from "./middleware/auth";
 import { Auth } from "@cryptuoso/auth-utils";
-import { GraphQLClient } from "./utils/graphql-client";
+import { gql, GraphQLClient } from "./utils/graphql-client";
 import logger from "@cryptuoso/logger";
 import { getMainKeyboard, getStartKeyboard } from "./utils/keyboard";
 import { dialogs } from "./dialogs";
@@ -112,7 +112,6 @@ export default class TelegramBotService extends BaseService {
         this.bot.use(auth);
         this.bot.on("callback_query:data", async (ctx: any, next: NextFunction) => {
             const data: { d: string; a: string; p?: string | number | boolean } = JSON.parse(ctx.callbackQuery.data);
-
             if (data && data.a && data.d) {
                 if (data.a === "back" && ctx.session.dialog.current && ctx.session.dialog.current.prev) {
                     if (ctx.session.dialog.current.data.backAction) {
@@ -127,6 +126,37 @@ export default class TelegramBotService extends BaseService {
                     await next();
                     return;
                 }
+                if (data.d === "T") {
+                    let error;
+                    try {
+                        await ctx.gql.request(
+                            ctx,
+                            gql`mutation userRobotConfirmTrade($userPositionId: uuid!, $cancel: Boolean) {
+                            userRobotConfirmTrade(userPositionId: $userPositionId, cancel: $cancel) {
+                              result
+                            }
+                          }, {
+                            userPositionId: data.p,
+                            cancel: data.a === "f"
+                          }
+                          `
+                        );
+                    } catch (err) {
+                        error = err.message;
+                    }
+
+                    if (error) {
+                        await ctx.reply(ctx.i18n.t("failed", { error }));
+                        ctx.dialogs.reset();
+                    }
+
+                    await ctx.reply(
+                        ctx.i18n.t("userTrade.success", {
+                            status:
+                                data.a === "f" ? ctx.i18n.t("userTrade.canceled") : ctx.i18n.t("userTrade.confirmed")
+                        })
+                    );
+                }
                 if (
                     ctx.session.dialog.current &&
                     getDialogName(data.a) === ctx.session.dialog.current.name &&
@@ -138,6 +168,7 @@ export default class TelegramBotService extends BaseService {
                     return;
                 }
             }
+
             await ctx.answerCallbackQuery();
             await this.mainMenu(ctx);
         });
@@ -204,7 +235,7 @@ export default class TelegramBotService extends BaseService {
     }
 
     async onStarted() {
-        /* const queueKey = this.name;
+        const queueKey = this.name;
 
         this.createQueue(queueKey);
 
@@ -212,13 +243,13 @@ export default class TelegramBotService extends BaseService {
 
         await this.addJob(queueKey, JobTypes.checkNotifications, null, {
             repeat: {
-                //cron: "*/ //5 * * * * *"
-        /*      },
+                cron: "*/5 * * * * *"
+            },
             attempts: 10,
             backoff: { type: "exponential", delay: 60000 },
             removeOnComplete: 1,
             removeOnFail: 10
-        }); */
+        });
 
         await this.bot.start();
     }
@@ -296,12 +327,10 @@ export default class TelegramBotService extends BaseService {
         }
     }
 
-    async sendMessage({ telegramId, message }: { telegramId: number; message: string }) {
+    async sendMessage({ telegramId, message, options }: { telegramId: number; message: string; options: any }) {
         try {
             this.log.debug(`Sending ${message} to ${telegramId}`);
-            await this.bot.api.sendMessage(telegramId, message, {
-                parse_mode: "HTML"
-            });
+            await this.bot.api.sendMessage(telegramId, message, { ...options, parse_mode: "HTML" });
             return { success: true };
         } catch (err) {
             this.log.error(err);

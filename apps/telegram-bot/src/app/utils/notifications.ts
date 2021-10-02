@@ -8,12 +8,14 @@ import {
     PortfolioManagerUserPortfolioBuildError
 } from "@cryptuoso/portfolio-events";
 import { UserPortfolioStatus } from "@cryptuoso/user-robot-events";
+import { InlineKeyboard } from "grammy";
 
 export function handleUserTrade(notification: Notification<any> & { telegramId: number }) {
     const {
         robotCode,
         status,
-        code,
+        userPositionId,
+        userPortfolioType,
         asset,
         entryAction,
         entryPrice,
@@ -34,16 +36,15 @@ export function handleUserTrade(notification: Notification<any> & { telegramId: 
     let tradeText;
     if (status === UserPositionStatus.open) {
         tradeText = this.i18n.t(LANG, "userTrade.open", {
-            code,
             entryAction: this.i18n.t(LANG, `tradeAction.${entryAction}`),
             entryPrice: +entryPrice,
             entryDate: dayjs.utc(entryDate).format("YYYY-MM-DD HH:mm UTC"),
             volume: entryExecuted,
-            asset
+            asset,
+            confirm: userPortfolioType === "signals" ? this.i18n.t(LANG, "userTrade.confirmTrade") : ""
         });
     } else {
         tradeText = this.i18n.t(LANG, "userTrade.closed", {
-            code,
             volume: exitExecuted,
             asset,
             entryAction: this.i18n.t(LANG, `tradeAction.${entryAction}`),
@@ -57,9 +58,34 @@ export function handleUserTrade(notification: Notification<any> & { telegramId: 
         });
     }
 
+    let options;
+    if (userPortfolioType === "signals") {
+        options = {
+            reply_markup: new InlineKeyboard()
+                .add({
+                    text: this.i18n.t("userTrade.confirmTradeButton"),
+                    callback_data: JSON.stringify({
+                        d: "T",
+                        a: "t",
+                        p: userPositionId
+                    })
+                })
+                .row()
+                .add({
+                    text: this.i18n.t("userTrade.confirmTradeButton"),
+                    callback_data: JSON.stringify({
+                        d: "T",
+                        a: "f",
+                        p: userPositionId
+                    })
+                })
+        };
+    }
+
     return {
         telegramId: notification.telegramId,
-        message: `${info}${tradeText}`
+        message: `${info}${tradeText}`,
+        options
     };
 }
 
@@ -77,11 +103,7 @@ export function handleUserExAccError(notification: Notification<any> & { telegra
 }
 
 export function handleUserRobotError(notification: Notification<any> & { telegramId: number }) {
-    const {
-        userRobotId,
-        robotCode: code,
-        error
-    } = notification.data as {
+    const { userRobotId, robotCode, error } = notification.data as {
         userRobotId: string;
         robotCode: string;
         error: string;
@@ -92,30 +114,8 @@ export function handleUserRobotError(notification: Notification<any> & { telegra
         telegramId: notification.telegramId,
         message: this.i18n.t(LANG, `userRobot.error`, {
             id: userRobotId,
-            code,
+            code: robotCode,
             error: error ? error.split("<html>")[0] : ""
-        })
-    };
-}
-
-export function handleUserRobotStatus(notification: Notification<any> & { telegramId: number }) {
-    const {
-        status,
-        message,
-        robotCode: code
-    } = notification.data as {
-        status: UserRobotStatus;
-        message?: string;
-        robotCode: string;
-    };
-    //TODO: Set lang from DB
-    const LANG = "en";
-    return {
-        telegramId: notification.telegramId,
-        message: this.i18n.t(LANG, `userRobot.status`, {
-            code,
-            message: message ? message.split("<html>")[0] : "",
-            status
         })
     };
 }
@@ -218,7 +218,8 @@ export function handleUserPortfolioBuilded(
     return {
         telegramId: notification.telegramId,
         message: this.i18n.t(LANG, "notifications.status", {
-            status: this.i18n.t(LANG, "status.builded")
+            status: this.i18n.t(LANG, "status.builded"),
+            message: ""
         })
     };
 }
@@ -244,7 +245,7 @@ export function handleUserPortfolioStatus(notification: Notification<UserPortfol
         telegramId: notification.telegramId,
         message: this.i18n.t(LANG, "notifications.status", {
             status: this.i18n.t(LANG, `status.${status}`),
-            message
+            message: message || ""
         })
     };
 }

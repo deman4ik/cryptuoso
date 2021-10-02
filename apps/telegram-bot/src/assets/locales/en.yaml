@@ -226,11 +226,11 @@ dialogs:
             <b>First trade:</b> ${formatDate(stats.firstPosition.entryDate)}\n
             <b>Average trades per year:</b> ${round(stats.avgTradesCount)}\n\n
             <b>Starting balance:</b> ${round(settings.initialBalance)} $\n
-            <b>Current balance:</b> ${round(stats.currentBalance)} $ (+${round(stats.percentNetProfit)}%)\n\n
+            <b>Current balance:</b> ${round(stats.currentBalance)} $ (${plus(round(stats.percentNetProfit))}%)\n\n
             <b>Recommended trading balance:</b> ${round(limits.recommendedBalance)} $\n
             <b>Minimum trading balance:</b> ${round(limits.minBalance)} $\n\n
             <b>Performance:</b>\n
-            <b>Total Net Profit:</b> ${round(stats.netProfit)} $\n
+            <b>Total Net Profit:</b> ${plus(round(stats.netProfit))} $\n
             <b>Max Drawdown:</b> ${round(stats.maxDrawdown)} $\n
             <b>Payoff Ratio:</b> ${stats.payoffRatio} \n
             <b>Recovery Factor:</b> ${stats.recoveyFactor} \n
@@ -471,7 +471,9 @@ warning: It is a realtime automated trading mode using your exchange account and
 warningStop: If there are any <b>open positions</b> they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!
 notAvailable: Not available
 notifications:
-    status: 💼 Portfolio is ${status} now!\n\n${message}
+    status: >
+        💼 Portfolio is ${status} now!\n
+        ${message}
     newTrade: 🤖✅ New  Trade!
     newSignal: 🚨 New Signal
 positions:
@@ -520,3 +522,41 @@ performance:
         <b>Sharpe Ratio:</b> ${sharpeRatio}
 lastInfoUpdatedAt: >
     \n\nInfo updated: ${formatDateSec(lastInfoUpdatedAt)}\n
+userTrade:
+    new: >
+        🤖✅ New Trade!\n\n
+    open: >
+        -------\n
+        <b>Entry:</b> ${entryAction}\n
+        <b>Entry Date:</b> ${entryDate}\n
+        <b>Entry Price:</b> ${entryPrice} $\n
+        <b>Amount:</b> ${volume} ${asset}\n\n
+        ${confirm}
+    closed: >
+        -------\n
+        <b>Entry:</b> ${entryAction}\n
+        <b>Entry Date:</b> ${entryDate}\n
+        <b>Entry Price:</b> ${entryPrice} $\n\n
+        <b>Exit:</b> ${exitAction}\n
+        <b>Exit Date:</b> ${exitDate}\n
+        <b>Exit Price:</b> ${exitPrice} $\n\n
+        <b>Amount:</b> ${volume} ${asset}\n\n
+        <b>Bars Held:</b> ${barsHeld}\n
+        <b>Profit:</b> ${profit} $\n
+    confirmTrade: ⚠️ Please confirm you executed this trade on your exchange account
+    confirmTradeButton: ✅ Confirm Trade
+    cancelTradeButton: ❌ Cancel Trade
+    success: Trade is ${status}!
+    confirmed: ✅ Confirmed
+    canceled: ❌ Canceled
+userRobot:
+    error: >
+        ❌ Error occurred while processing robot job.\n\n
+        ${error} \n\n
+        🤖 <b>#${code}</b> (${id})\n\n
+        Please contact support.
+    orderError: >
+        ❌ Error occurred while processing order <b>${orderId}</b>.\n\n
+        ${error} \n\n
+        🤖 <b>#${code}</b> (${id})\n\n
+        Please check your API Keys and Robot settings or contact support.
