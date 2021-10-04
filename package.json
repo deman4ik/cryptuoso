@@ -90,6 +90,8 @@
         "serve:support": "nx serve support --watch=false",
         "build:telegram-bot": "nx build telegram-bot --prod",
         "serve:telegram-bot": "nx serve telegram-bot --watch=false",
+        "build:legacy-telegram-bot": "nx build legacy-telegram-bot --prod",
+        "serve:legacy-telegram-bot": "nx serve legacy-telegram-bot --watch=false",
         "build:webhooks": "nx build webhooks --prod",
         "serve:webhooks": "nx serve webhooks --watch=false",
         "build:portfolio-manager": "nx build portfolio-manager --prod",
