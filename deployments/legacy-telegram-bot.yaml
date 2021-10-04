@@ -74,16 +74,16 @@ spec:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
                                 key: HASURA_URL
-                      - name: LEGACY_BOT_TOKEN
+                      - name: BOT_TOKEN
                         valueFrom:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
-                                key: BOT_TOKEN
-                      - name: LEGACY_BOT_HOST
+                                key: LEGACY_BOT_TOKEN
+                      - name: BOT_HOST
                         valueFrom:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
-                                key: BOT_HOST
+                                key: LEGACY_BOT_HOST
                       - name: MAILGUN_API_KEY
                         valueFrom:
                             secretKeyRef:
