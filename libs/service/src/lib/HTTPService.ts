@@ -1,4 +1,4 @@
-import restana, { Service, Protocol, Request, Response, RequestHandler } from "restana";
+import restana, { Service, Protocol, Request, Response, RequestHandler, ErrorHandler } from "restana";
 import ifunless from "middleware-if-unless";
 import bodyParser from "body-parser";
 import helmet from "helmet";
@@ -35,6 +35,7 @@ export interface HTTPServiceConfig extends BaseServiceConfig {
     port?: number;
     enableActions?: boolean; // default: true
     enableWebhooks?: boolean; // default: false
+    errorHandler?: ErrorHandler<Protocol.HTTP>;
 }
 
 export class HTTPService extends BaseService {
@@ -56,7 +57,7 @@ export class HTTPService extends BaseService {
             this._v = new Validator();
             this._port = config?.port || +process.env.PORT || +process.env.NODE_PORT || 3000;
             this._server = restana({
-                errorHandler: this._errorHandler.bind(this)
+                errorHandler: config?.errorHandler ? config?.errorHandler.bind(this) : this._errorHandler.bind(this)
             });
             this._server.use(helmet() as RequestHandler<Protocol.HTTP>);
             this._server.use(bodyParser.json());
@@ -106,6 +107,10 @@ export class HTTPService extends BaseService {
             this.log.error("Error while constructing HTTPService", err);
             process.exit(1);
         }
+    }
+
+    get server() {
+        return this._server;
     }
 
     private async _startServer() {

@@ -1,5 +1,5 @@
-import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
-import { Bot, BotError, GrammyError, HttpError, NextFunction, session } from "grammy";
+import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
+import { Bot, BotError, GrammyError, HttpError, NextFunction, session, webhookCallback } from "grammy";
 import { RedisAdapter } from "@satont/grammy-redis-storage";
 import { I18n } from "@grammyjs/i18n";
 import { hydrateReply, parseMode } from "parse-mode";
@@ -35,21 +35,29 @@ import {
     handleUserPortfolioStatus
 } from "./utils/notifications";
 import { startActions } from "./dialogs/start";
+import { Request, Response, Protocol } from "restana";
 
-export type TelegramBotServiceConfig = BaseServiceConfig;
+export type TelegramBotServiceConfig = HTTPServiceConfig;
 
 const enum JobTypes {
     checkNotifications = "checkNotifications"
 }
 
-export default class TelegramBotService extends BaseService {
+export default class TelegramBotService extends HTTPService {
     bot: Bot;
     authUtils: Auth;
     gqlClient: GraphQLClient;
     i18n: I18n;
 
     constructor(config?: TelegramBotServiceConfig) {
-        super(config);
+        super({
+            ...config,
+            enableActions: false,
+            errorHandler: async (err: Error, req: Request<Protocol.HTTP>, res: Response<Protocol.HTTP>) => {
+                this.log.error(err);
+                this.log.debug(req);
+            }
+        });
         this.authUtils = new Auth();
         this.gqlClient = new GraphQLClient({
             refreshToken: this.authUtils.refreshTokenTg.bind(this.authUtils)
@@ -251,7 +259,7 @@ export default class TelegramBotService extends BaseService {
             removeOnFail: 10
         });
 
-        await this.bot.start();
+        await this.server.use(webhookCallback(this.bot, "express"));
     }
 
     async checkNotifications() {
@@ -262,6 +270,7 @@ export default class TelegramBotService extends BaseService {
             AND n.send_telegram = true
             AND u.status > 0
             AND u.telegram_id is not null
+            AND u.access in (5,10)
             ORDER BY timestamp; 
             `);
 
@@ -306,7 +315,10 @@ export default class TelegramBotService extends BaseService {
                             messageToSend = handleUserSubStatus.call(this, notification);
                             break;
                         default:
-                            continue;
+                            await this.db.pg.query(sql`
+                            UPDATE notifications 
+                            SET send_telegram = false 
+                            WHERE id = ${notification.id};`);
                     }
 
                     if (messageToSend) {

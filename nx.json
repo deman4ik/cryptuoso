@@ -97,6 +97,9 @@
         "exwatcher-runner": {
             "tags": []
         },
+        "graphql-client": {
+            "tags": []
+        },
         "helpers": {
             "tags": []
         },
@@ -110,6 +113,9 @@
             "tags": []
         },
         "importer-worker": {
+            "tags": []
+        },
+        "legacy-telegram-bot": {
             "tags": []
         },
         "logger": {

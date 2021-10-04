@@ -1,0 +1,149 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    labels:
+        app: <APP>
+        env: <ENV>
+    name: <APP>
+    namespace: <ENV>
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: <APP>
+            env: <ENV>
+    template:
+        metadata:
+            labels:
+                app: <APP>
+                env: <ENV>
+        spec:
+            imagePullSecrets:
+                - name: cpz-registry
+            containers:
+                - image: <IMAGE>
+                  imagePullPolicy: IfNotPresent
+                  name: <APP>
+                  readinessProbe:
+                      httpGet:
+                          path: /ready
+                          port: 9000
+                      failureThreshold: 1
+                      initialDelaySeconds: 5
+                      periodSeconds: 5
+                      successThreshold: 1
+                      timeoutSeconds: 5
+                  livenessProbe:
+                      httpGet:
+                          path: /live
+                          port: 9000
+                      failureThreshold: 3
+                      initialDelaySeconds: 10
+                      periodSeconds: 30
+                      successThreshold: 1
+                      timeoutSeconds: 5
+                  startupProbe:
+                      httpGet:
+                          path: /live
+                          port: 9000
+                      failureThreshold: 3
+                      initialDelaySeconds: 10
+                      periodSeconds: 30
+                      successThreshold: 1
+                      timeoutSeconds: 5
+                  env:
+                      - name: SERVICE
+                        value: <APP>
+                      - name: API_KEY
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: API_KEY
+                      - name: PGCS
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: PGCS
+                      - name: REDISCS
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: REDISCS
+                      - name: HASURA_URL
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: HASURA_URL
+                      - name: LEGACY_BOT_TOKEN
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: BOT_TOKEN
+                      - name: LEGACY_BOT_HOST
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: BOT_HOST
+                      - name: MAILGUN_API_KEY
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: MAILGUN_API_KEY
+                      - name: MAILGUN_DOMAIN
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: MAILGUN_DOMAIN
+                      - name: REFRESH_TOKEN_EXPIRES
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: REFRESH_TOKEN_EXPIRES
+                      - name: JWT_SECRET
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: JWT_SECRET
+                      - name: JWT_TOKEN_EXPIRES
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: JWT_TOKEN_EXPIRES
+                      - name: GA_UA_TRACKING_ID
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: GA_UA_TRACKING_ID
+                  ports:
+                      - containerPort: 3000
+                        protocol: TCP
+                      - containerPort: 9000
+                        protocol: TCP
+                  resources:
+                      requests:
+                          memory: 128Mi
+                          cpu: "100m"
+                      limits:
+                          memory: 512Mi
+                          cpu: "300m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+    labels:
+        app: <APP>
+        env: <ENV>
+    name: <APP>
+    namespace: <ENV>
+spec:
+    ports:
+        - name: "api"
+          port: 3000
+          targetPort: 3000
+        - name: "check"
+          port: 9000
+          targetPort: 9000
+    selector:
+        app: <APP>
+        env: <ENV>
+    type: ClusterIP
