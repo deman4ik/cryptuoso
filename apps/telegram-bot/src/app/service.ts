@@ -182,7 +182,7 @@ export default class TelegramBotService extends HTTPService {
         });
 
         this.bot.command("start", this.startHandler.bind(this));
-
+        this.bot.command("menu", this.mainMenu.bind(this));
         this.bot.hears(this.i18n.t("en", "keyboards.mainKeyboard.trading"), async (ctx: any, next: NextFunction) => {
             ctx.session.dialog.current = null;
             ctx.dialog.enter(tradingActions.enter, { reload: true, edit: false });
