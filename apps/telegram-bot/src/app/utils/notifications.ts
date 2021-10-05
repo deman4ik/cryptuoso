@@ -31,7 +31,7 @@ export function handleUserTrade(notification: Notification<any> & { telegramId: 
     //TODO: Set lang from DB
     const LANG = "en";
     const info = this.i18n.t(LANG, "userTrade.new", {
-        code: robotCode
+        n: ""
     });
     let tradeText;
     if (status === UserPositionStatus.open) {

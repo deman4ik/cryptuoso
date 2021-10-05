@@ -533,7 +533,7 @@ lastInfoUpdatedAt: >
     \n\nInfo updated: ${formatDateSec(lastInfoUpdatedAt)}\n
 userTrade:
     new: >
-        🤖✅ New Trade!\n\n
+        🤖✅ New Trade!\n\n${n}
     open: >
         -------\n
         <b>Entry:</b> ${entryAction}\n
