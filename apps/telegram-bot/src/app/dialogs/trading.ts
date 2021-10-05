@@ -122,7 +122,7 @@ const getTradingInfo = async (ctx: BotContext) => {
     if (
         !ctx.session.portfolio ||
         ctx.session.dialog.current?.data?.reload ||
-        dayjs.utc().diff(dayjs.utc(ctx.session.portfolio.lastInfoUpdatedAt), "second") < 5
+        dayjs.utc().diff(dayjs.utc(ctx.session.portfolio.lastInfoUpdatedAt), "second") > 5
     ) {
         const {
             myPortfolio,
@@ -238,11 +238,11 @@ const getTradingInfo = async (ctx: BotContext) => {
             ctx.session.portfolio.unrealizedProfit = unrealizedProfit;
             ctx.session.portfolio.openTradesCount = openTradesCount;
             ctx.session.portfolio.lastInfoUpdatedAt = dayjs.utc().toISOString();
-        }
+        } else ctx.session.portfolio = null;
         if (myUserExAcc && Array.isArray(myUserExAcc) && myUserExAcc.length) {
             const [userExAcc] = myUserExAcc;
             ctx.session.userExAcc = userExAcc;
-        }
+        } else ctx.session.userExAcc = null;
     }
 };
 

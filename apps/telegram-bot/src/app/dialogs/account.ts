@@ -120,7 +120,7 @@ const getAccountInfo = async (ctx: BotContext) => {
         !ctx.session.userSub ||
         !ctx.session.updatedAt ||
         ctx.session.dialog.current?.data?.reload ||
-        dayjs.utc().diff(dayjs.utc(ctx.session.updatedAt), "second") < 5
+        dayjs.utc().diff(dayjs.utc(ctx.session.updatedAt), "second") > 5
     ) {
         const { myUser, myUserExAcc, myUserSub } = await ctx.gql.request<{
             myUser: User[];
@@ -196,15 +196,15 @@ const getAccountInfo = async (ctx: BotContext) => {
         if (myUser && Array.isArray(myUser) && myUser.length) {
             const [user] = myUser;
             ctx.session.user = { ...ctx.session.user, ...user };
-        }
+        } else ctx.session.user = null;
         if (myUserExAcc && Array.isArray(myUserExAcc) && myUserExAcc.length) {
             const [userExAcc] = myUserExAcc;
             ctx.session.userExAcc = userExAcc;
-        }
+        } else ctx.session.userExAcc = null;
         if (myUserSub && Array.isArray(myUserSub) && myUserSub.length) {
             const [userSub] = myUserSub;
             ctx.session.userSub = userSub;
-        }
+        } else ctx.session.userSub = null;
         ctx.session.updatedAt = dayjs.utc().toISOString();
     }
 };

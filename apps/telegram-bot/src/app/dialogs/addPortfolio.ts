@@ -330,7 +330,9 @@ const finish = async (ctx: BotContext) => {
         await ctx.reply(
             ctx.i18n.t("dialogs.addPortfolio.created", {
                 exchange: ctx.session.dialog.current.data.exchange,
-                options: options.map((o) => `✅ ${ctx.i18n.t(`options.${o}`)}`).join("\n "),
+                options: options
+                    .map((o) => `✅ <b>${ctx.i18n.t(`options.${o}`)}</b> - <i>${ctx.i18n.t(`options.info.${o}`)}</i>`)
+                    .join("\n "),
                 initialBalance,
                 amount: balancePercent || tradingAmountCurrency,
                 amountType:

@@ -259,7 +259,8 @@ export default class TelegramBotService extends HTTPService {
             removeOnFail: 10
         });
 
-        await this.server.use(webhookCallback(this.bot, "express"));
+        if (process.env.BOT_LOCAL) this.bot.start();
+        else await this.server.use(webhookCallback(this.bot, "express"));
     }
 
     async checkNotifications() {

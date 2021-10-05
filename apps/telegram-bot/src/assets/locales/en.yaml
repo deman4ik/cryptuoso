@@ -214,11 +214,12 @@ dialogs:
             💼 Selecting optimal trading portfolio
 
 
-            Please choose available options:
+            Please choose available options:\n
+            ${options}
         chooseMoreOptions: >
             💼 Selecting optimal trading portfolio \n\n
             You choosed: \n\n
-            <b>${options}</b> \n\n
+            ${options} \n\n
             You can choose more options or press ✅ <b>Done</b>
         portfolio: >
             💼 ${formatExchange(exchange)} portfolio\n\n
@@ -336,11 +337,12 @@ dialogs:
             📈 Configuring your trading portfolio
 
 
-            Please choose available options:
+            Please choose available options:\n
+            ${options}
         chooseMoreOptions: >
             📈 Configuring your trading portfolio\n\n
             You choosed: \n\n
-            <b>${options}</b> \n\n
+            ${options} \n\n
             You can choose more options or press ✅ <b>Done</b>
         optionsChange: >
             📈 Configuring your trading portfolio
@@ -409,6 +411,12 @@ options:
     winRate: Win Rate
     efficiency: Efficiency
     done: ✅ Done
+    info:
+        profit: Profit maximization
+        risk: Earnings with minimal risk
+        moneyManagement: Increase the ratio between the size of the win and the loss's size
+        winRate: Maximizing the number of profitable trades
+        efficiency: The return of an investment compared to it's risk
 menu: Please use Menu in Telegram keyboard section ↘️
 defaultHandler: 🚧 Hey, please choose a section with the Telegram keyboard before typing anything
 unknownError: Unknown error

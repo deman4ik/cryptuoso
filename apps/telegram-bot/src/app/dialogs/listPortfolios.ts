@@ -54,9 +54,16 @@ const chooseOptions = async (ctx: BotContext) => {
 
     await ctx.dialog.edit();
     ctx.session.dialog.current.data.edit = true;
-    await ctx.reply(ctx.i18n.t("dialogs.listPortfolios.chooseOptions"), {
-        reply_markup: getOptionsButtons(ctx)
-    });
+    await ctx.reply(
+        ctx.i18n.t("dialogs.listPortfolios.chooseOptions", {
+            options: ctx.catalog.options
+                .map((o) => `<b>${ctx.i18n.t(`options.${o}`)}</b> - <i>${ctx.i18n.t(`options.info.${o}`)}</i>`)
+                .join("\n ")
+        }),
+        {
+            reply_markup: getOptionsButtons(ctx)
+        }
+    );
 };
 
 const optionsChosen = async (ctx: BotContext) => {
@@ -73,7 +80,9 @@ const optionsChosen = async (ctx: BotContext) => {
         ctx.session.dialog.current.data.edit = true;
         await ctx.reply(
             ctx.i18n.t("dialogs.listPortfolios.chooseMoreOptions", {
-                options: selected.map((o) => `✅ ${ctx.i18n.t(`options.${o}`)}`).join("\n ")
+                options: selected
+                    .map((o) => `✅ <b>${ctx.i18n.t(`options.${o}`)}</b> - <i>${ctx.i18n.t(`options.info.${o}`)}</i>`)
+                    .join("\n ")
             }),
             {
                 reply_markup: getOptionsButtons(ctx)
@@ -193,10 +202,11 @@ const portfolioActions = async (ctx: BotContext) => {
             portfolioCode: string;
             loadedPortfolios: { [key: string]: PortfolioInfo };
         };
-        ctx.dialog.enter(addPortfolioActions.enter, {
+        ctx.dialog.enter(addPortfolioActions.amountType, {
             edit: true,
             exchange,
             selectedOptions,
+            type: "trading",
             minBalance: loadedPortfolios[portfolioCode].limits.minBalance
         });
     } else if (action === "back") {
