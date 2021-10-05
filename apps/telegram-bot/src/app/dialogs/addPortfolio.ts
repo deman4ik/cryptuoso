@@ -342,7 +342,7 @@ const finish = async (ctx: BotContext) => {
                 warning: type === "trading" ? ctx.i18n.t("warning") : ""
             })
         );
-        ctx.dialog.enter(tradingActions.enter, { edit: false, reload: true });
+        ctx.dialog.reset();
     }
 };
 const router: Router = new Map();

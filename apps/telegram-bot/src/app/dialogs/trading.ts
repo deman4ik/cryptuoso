@@ -119,6 +119,8 @@ const getTradingButtons = (ctx: BotContext) => {
 const router: Router = new Map();
 
 const getTradingInfo = async (ctx: BotContext) => {
+    logger.debug(!!ctx.session.portfolio);
+    logger.debug(ctx.session.dialog.current?.data?.reload);
     if (
         !ctx.session.portfolio ||
         ctx.session.dialog.current?.data?.reload ||
@@ -232,6 +234,7 @@ const getTradingInfo = async (ctx: BotContext) => {
                 userId: ctx.session.user.id
             }
         );
+        logger.debug(myPortfolio);
         if (myPortfolio && Array.isArray(myPortfolio) && myPortfolio.length) {
             const [portfolio] = myPortfolio;
             ctx.session.portfolio = portfolio;
@@ -263,20 +266,24 @@ const onEnter = async (ctx: BotContext) => {
     const portfolio = ctx.session.portfolio;
     const userExAcc = ctx.session.userExAcc;
 
+    const settings = portfolio.settings;
     const text = `${ctx.i18n.t("dialogs.trading.infoTitle", { exchange: portfolio.exchange })}${ctx.i18n.t(
         "dialogs.trading.portfolio",
         {
-            options: Object.entries(portfolio.settings.options)
-                .filter(([, val]) => !!val)
-                .map(([o]) => `✅ ${ctx.i18n.t(`options.${o}`)}`)
-                .join("\n "),
+            options: settings
+                ? Object.entries(settings.options)
+                      .filter(([, val]) => !!val)
+                      .map(([o]) => `✅ ${ctx.i18n.t(`options.${o}`)}`)
+                      .join("\n ")
+                : "",
             status: ctx.i18n.t(`status.${portfolio.status}`),
             currentBalance: userExAcc.balance,
-            amount: portfolio.settings.balancePercent || portfolio.settings.tradingAmountCurrency,
-            amountType:
-                portfolio.settings.tradingAmountType === "balancePercent"
+            amount: settings ? settings.balancePercent || settings.tradingAmountCurrency : "",
+            amountType: settings
+                ? settings.tradingAmountType === "balancePercent"
                     ? ctx.i18n.t("dialogs.addPortfolio.ofBalance")
-                    : ctx.i18n.t("dialogs.addPortfolio.fixedCurrency"),
+                    : ctx.i18n.t("dialogs.addPortfolio.fixedCurrency")
+                : "",
             netProfit: portfolio.stats?.netProfit
                 ? `${plusNum(portfolio.stats.netProfit)} $ (${plusNum(portfolio.stats.percentNetProfit)}%)`
                 : `0 $`,

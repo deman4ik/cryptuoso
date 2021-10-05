@@ -5,7 +5,7 @@ import Redis from "ioredis";
 import { I18n } from "@grammyjs/i18n";
 import { hydrateReply, parseMode } from "parse-mode";
 import path from "path";
-import { auth } from "./middleware/auth";
+import { auth } from "./utils/auth";
 import { Auth } from "@cryptuoso/auth-utils";
 import { gql, GraphQLClient } from "./utils/graphql-client";
 import logger from "@cryptuoso/logger";

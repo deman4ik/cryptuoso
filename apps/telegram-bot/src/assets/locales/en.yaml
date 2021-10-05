@@ -312,7 +312,8 @@ dialogs:
             ${options}\n\n
             Your initial balance is ${round(initialBalance,2)} $\n
             Your trading amount is ${amount} ${amountType}\n\n
-            ${warning}
+            ${warning}\n\n
+            ⏳ Please wait till portfolio is ✅<b>Builded</b> and 🟢 <b>Started</b>
         ofBalance: >
             % of the balance
         fixedCurrency: $ fixed
