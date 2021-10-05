@@ -181,7 +181,6 @@ const getTradingInfo = async (ctx: BotContext) => {
                             recoveyFactor: recovery_factor
                             avgTradesCount: avg_trades_count_years
                             equityAvg: equity_avg
-                            equity: equity
                             firstPosition: first_position
                             lastPosition: last_position
                         }
@@ -533,7 +532,7 @@ const stats = async (ctx: BotContext) => {
     )}`;
 
     await ctx.dialog.edit();
-    await ctx.replyWithPhoto(getEquityChartUrl(portfolio.stats.equity), {
+    await ctx.replyWithPhoto(getEquityChartUrl(portfolio.stats.equityAvg), {
         caption: text,
         reply_markup: getTradingButtons(ctx)
     });
