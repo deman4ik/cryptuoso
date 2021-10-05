@@ -1,6 +1,7 @@
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import { Bot, BotError, GrammyError, HttpError, NextFunction, session, webhookCallback } from "grammy";
 import { RedisAdapter } from "@satont/grammy-redis-storage";
+import Redis from "ioredis";
 import { I18n } from "@grammyjs/i18n";
 import { hydrateReply, parseMode } from "parse-mode";
 import path from "path";
@@ -54,8 +55,20 @@ export default class TelegramBotService extends HTTPService {
             ...config,
             enableActions: false,
             errorHandler: async (err: Error, req: Request<Protocol.HTTP>, res: Response<Protocol.HTTP>) => {
-                this.log.error(err);
-                this.log.debug(req);
+                if (err instanceof BotError) {
+                    this.log.error(err.error);
+                    const ctx = (err as BotError<BotContext>).ctx;
+
+                    ctx.dialog.reset();
+                    await ctx.reply(ctx.i18n.t("failed", { error: err.message ?? "" }), {
+                        reply_markup: ctx.session?.user ? getMainKeyboard(ctx) : getStartKeyboard(ctx)
+                    });
+                    res.end();
+                } else {
+                    this.log.error(err);
+                    res.send(err.message, 500);
+                    res.end();
+                }
             }
         });
         this.authUtils = new Auth();
@@ -93,7 +106,12 @@ export default class TelegramBotService extends HTTPService {
                         move: null
                     }
                 }),
-                storage: new RedisAdapter({ instance: this.redis.duplicate() })
+                storage: new RedisAdapter({
+                    instance: new Redis(
+                        process.env.REDISCS, //,{enableReadyCheck: false}
+                        { maxRetriesPerRequest: null, connectTimeout: 60000, keyPrefix: "tg:" }
+                    )
+                })
             })
         );
         this.bot.use(this.i18n.middleware() as any);
@@ -204,9 +222,9 @@ export default class TelegramBotService extends HTTPService {
             await next();
         });
         this.bot.hears(this.i18n.t("en", "keyboards.backKeyboard.back"), async (ctx: any, next: NextFunction) => {
-            const current = ctx.session.dialog.current;
+            const current = ctx.session.dialog?.current;
 
-            if (!current.prev) {
+            if (!current?.prev) {
                 await this.mainMenu(ctx);
             } else ctx.dialog.return({ edit: false });
             await next();
@@ -245,7 +263,7 @@ export default class TelegramBotService extends HTTPService {
     async onStarted() {
         const queueKey = this.name;
 
-        this.createQueue(queueKey);
+        this.createQueue(queueKey, null, null, null, { completed: false });
 
         this.createWorker(queueKey, this.checkNotifications);
 
@@ -259,8 +277,9 @@ export default class TelegramBotService extends HTTPService {
             removeOnFail: 10
         });
 
-        if (process.env.BOT_LOCAL) this.bot.start();
-        else await this.server.use(webhookCallback(this.bot, "express"));
+        // if (process.env.BOT_LOCAL) this.bot.start();
+        //else
+        await this.server.use(webhookCallback(this.bot, "express"));
     }
 
     async checkNotifications() {

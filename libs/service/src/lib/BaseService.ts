@@ -322,7 +322,13 @@ export class BaseService {
         name: string,
         queueOpts?: QueueOptions,
         schedulerOpts?: QueueSchedulerOptions,
-        eventsOpts?: QueueEventsOptions
+        eventsOpts?: QueueEventsOptions,
+        logOpts?: {
+            completed?: boolean;
+            failed?: boolean;
+            stalled?: boolean;
+            progress?: boolean;
+        }
     ) => {
         if (this.#queues[name]) throw new Error(`Queue ${name} already exists`);
         this.#queues[name] = {
@@ -341,14 +347,18 @@ export class BaseService {
                 connection: this.redis.duplicate()
             })
         };
-        this.#queues[name].events.on("completed", ({ jobId, returnvalue }) =>
-            this.#jobCompletedLogger(name, jobId, returnvalue)
-        );
-        this.#queues[name].events.on("failed", ({ jobId, failedReason }) =>
-            this.#jobErrorLogger(name, jobId, failedReason)
-        );
-        this.#queues[name].events.on("stalled", ({ jobId }) => this.#jobStalledLogger(name, jobId));
-        this.#queues[name].events.on("progress", ({ jobId, data }) => this.#jobProgressLogger(name, jobId, data));
+        if (logOpts?.completed !== false)
+            this.#queues[name].events.on("completed", ({ jobId, returnvalue }) =>
+                this.#jobCompletedLogger(name, jobId, returnvalue)
+            );
+        if (logOpts?.failed !== false)
+            this.#queues[name].events.on("failed", ({ jobId, failedReason }) =>
+                this.#jobErrorLogger(name, jobId, failedReason)
+            );
+        if (logOpts?.stalled !== false)
+            this.#queues[name].events.on("stalled", ({ jobId }) => this.#jobStalledLogger(name, jobId));
+        if (logOpts?.progress !== false)
+            this.#queues[name].events.on("progress", ({ jobId, data }) => this.#jobProgressLogger(name, jobId, data));
         this.#queuesClean.start();
     };
 
