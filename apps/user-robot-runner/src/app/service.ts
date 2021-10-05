@@ -669,15 +669,6 @@ export default class UserRobotRunnerService extends HTTPService {
         if (!userSub)
             throw new ActionsHandlerError(`Your Cryptuoso Subscription is not Active.`, null, "FORBIDDEN", 403);
 
-        if (userPortfolio.status === "buildError") {
-            await this.events.emit<PortfolioManagerBuildUserPortfolio>({
-                type: PortfolioManagerInEvents.BUILD_USER_PORTFOLIO,
-                data: {
-                    userPortfolioId: userPortfolio.id
-                }
-            });
-        }
-
         if (userPortfolio.status === "error") {
             const userRobots = await this.db.pg.any<{ id: string }>(sql`
                 SELECT id 
@@ -690,9 +681,10 @@ export default class UserRobotRunnerService extends HTTPService {
         }
 
         const startedAt = dayjs.utc().toISOString();
+        const status = userPortfolio.settings ? "started" : "starting";
         await this.db.pg.query(sql`
         UPDATE user_portfolios
-        SET status =  'starting',
+        SET status =  ${status},
         message = ${message || null},
         started_at = ${userPortfolio.startedAt || startedAt},
         stopped_at = null
@@ -701,9 +693,16 @@ export default class UserRobotRunnerService extends HTTPService {
 
         if (userPortfolio.settings && userPortfolio.status !== "error" && userPortfolio.status !== "buildError") {
             await this.syncPortfolioRobots({ userPortfolioId: userPortfolio.id });
+        } else {
+            await this.events.emit<PortfolioManagerBuildUserPortfolio>({
+                type: PortfolioManagerInEvents.BUILD_USER_PORTFOLIO,
+                data: {
+                    userPortfolioId: userPortfolio.id
+                }
+            });
         }
 
-        return "starting";
+        return status;
     }
 
     async stopPortfolio({ id, message }: UserRobotRunnerStopPortfolio, user: User) {
