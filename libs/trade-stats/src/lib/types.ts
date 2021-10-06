@@ -111,6 +111,7 @@ export interface FullStats extends Stats {
     avgPercentGrossLossYears: number | null;
     avgPercentGrossLossQuarters: number | null;
     avgPercentGrossLossMonths: number | null;
+    avgPercentNetProfitYearly: number | null;
     emulateNextPosition: boolean | null;
     marginNextPosition: number | null;
     zScore: number | null;

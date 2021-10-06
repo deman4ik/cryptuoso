@@ -256,6 +256,7 @@ export class TradeStatsCalc implements TradeStats {
             avgPercentGrossLossYears: nvl(fullStats?.avgPercentGrossLossYears),
             avgPercentGrossLossQuarters: nvl(fullStats?.avgPercentGrossLossQuarters),
             avgPercentGrossLossMonths: nvl(fullStats?.avgPercentGrossLossMonths),
+            avgPercentNetProfitYearly: nvl(fullStats?.avgPercentNetProfitYearly),
             emulateNextPosition: nvl(fullStats?.emulateNextPosition, false),
             marginNextPosition: nvl(fullStats?.marginNextPosition, 1),
             zScore: nvl(fullStats?.zScore),
@@ -606,6 +607,11 @@ export class TradeStatsCalc implements TradeStats {
             ...quarters.map(({ stats: { percentGrossLoss } }) => percentGrossLoss)
         );
         stats.avgPercentGrossLossMonths = average(...months.map(({ stats: { percentGrossLoss } }) => percentGrossLoss));
+
+        if (months.length < 12) {
+            stats.avgPercentNetProfitYearly =
+                sum(...months.map(({ stats: { percentNetProfit } }) => percentNetProfit)) * (12 / months.length);
+        } else stats.avgPercentNetProfitYearly = stats.avgPercentNetProfitYears;
 
         if (this.hasBalance) {
             const prevMonths = months
