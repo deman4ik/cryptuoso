@@ -181,6 +181,7 @@ const getTradingInfo = async (ctx: BotContext) => {
                             sharpeRatio: sharpe_ratio
                             recoveyFactor: recovery_factor
                             avgTradesCount: avg_trades_count_years
+                            avgPercentNetProfitYearly: avg_percent_net_profit_yearly
                             equityAvg: equity_avg
                             firstPosition: first_position
                             lastPosition: last_position

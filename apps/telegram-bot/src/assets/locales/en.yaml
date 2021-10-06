@@ -524,6 +524,7 @@ performance:
         <b>Average trades per year:</b> ${round(avgTradesCount)}\n\n
         <b>Current portfolio balance:</b> ${round(currentBalance,2)} $ (${plus(round(percentNetProfit))}%)\n\n
         <b>Total Net Profit:</b> ${plus(round(netProfit,2))} $\n
+        <b>Annual percent Net Profit:</b> ${plus(round(avgPercentNetProfitYearly))}%
         <b>Max Drawdown:</b> ${round(maxDrawdown,2)} $\n
         <b>Max Drawdown Date:</b> ${formatDate(maxDrawdownDate)} \n
         <b>Payoff Ratio:</b> ${payoffRatio} \n
