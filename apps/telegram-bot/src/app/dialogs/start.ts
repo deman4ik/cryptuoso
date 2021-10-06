@@ -11,9 +11,7 @@ export const enum startActions {
 }
 
 const enter = async (ctx: BotContext) => {
-    await ctx.reply(ctx.i18n.t("dialogs.start.enter", { username: ctx.utils.formatName(ctx) }), {
-        reply_markup: getBackKeyboard(ctx)
-    });
+    await ctx.reply(ctx.i18n.t("dialogs.start.enter", { username: ctx.utils.formatName(ctx) }), getBackKeyboard(ctx));
     await sleep(1000);
     ctx.session.dialog.current.data.expectInput = true;
     ctx.dialog.next(startActions.route);

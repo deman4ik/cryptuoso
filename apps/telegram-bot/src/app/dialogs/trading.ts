@@ -254,9 +254,7 @@ const onEnter = async (ctx: BotContext) => {
     await getTradingInfo(ctx);
 
     if (!ctx.session.dialog.current.data.edit)
-        await ctx.reply(ctx.i18n.t("keyboards.mainKeyboard.trading"), {
-            reply_markup: getBackKeyboard(ctx)
-        });
+        await ctx.reply(ctx.i18n.t("keyboards.mainKeyboard.trading"), getBackKeyboard(ctx));
     if (!ctx.session.portfolio) {
         if (ctx.session.userExAcc) {
             ctx.dialog.enter(listPortfoliosActions.options, { exchange: ctx.session.userExAcc.exchange });

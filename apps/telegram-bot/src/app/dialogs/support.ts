@@ -10,7 +10,7 @@ export const enum supportActions {
 }
 
 const enter = async (ctx: BotContext) => {
-    await ctx.reply(ctx.i18n.t("keyboards.mainKeyboard.support"), { reply_markup: getBackKeyboard(ctx) });
+    await ctx.reply(ctx.i18n.t("keyboards.mainKeyboard.support"), getBackKeyboard(ctx));
     await sleep(1000);
     ctx.session.dialog.current.data.expectInput = true;
     ctx.dialog.next(supportActions.message);

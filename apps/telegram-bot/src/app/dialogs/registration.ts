@@ -61,9 +61,7 @@ const confirm = async (ctx: BotContext) => {
         ctx.i18n.t("welcome", {
             username: name
         }),
-        {
-            reply_markup: getMainKeyboard(ctx)
-        }
+        getMainKeyboard(ctx)
     );
 };
 
@@ -170,12 +168,11 @@ const input = async (ctx: BotContext) => {
             ctx.i18n.t("welcome", {
                 username: ctx.utils.formatName(ctx)
             }),
-            {
-                reply_markup: getMainKeyboard(ctx)
-            }
+
+            getMainKeyboard(ctx)
         );
     } else {
-        await ctx.reply(ctx.i18n.t("defaultHandler"), { reply_markup: getStartKeyboard(ctx) });
+        await ctx.reply(ctx.i18n.t("defaultHandler"), getStartKeyboard(ctx));
     }
 };
 

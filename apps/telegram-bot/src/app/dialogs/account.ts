@@ -213,10 +213,7 @@ const accountInfo = async (ctx: BotContext) => {
     await getAccountInfo(ctx);
 
     const edit = ctx.session.dialog.current.data.edit;
-    if (!edit)
-        await ctx.reply(ctx.i18n.t("keyboards.mainKeyboard.account"), {
-            reply_markup: getBackKeyboard(ctx)
-        });
+    if (!edit) await ctx.reply(ctx.i18n.t("keyboards.mainKeyboard.account"), getBackKeyboard(ctx));
 
     const { user, userExAcc, userSub } = ctx.session;
 

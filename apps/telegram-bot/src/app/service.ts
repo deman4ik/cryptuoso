@@ -60,9 +60,10 @@ export default class TelegramBotService extends HTTPService {
                     const ctx = (err as BotError<BotContext>).ctx;
 
                     ctx.dialog.reset();
-                    await ctx.reply(ctx.i18n.t("failed", { error: err.message ?? "" }), {
-                        reply_markup: ctx.session?.user ? getMainKeyboard(ctx) : getStartKeyboard(ctx)
-                    });
+                    await ctx.reply(
+                        ctx.i18n.t("failed", { error: err.message ?? "" }),
+                        ctx.session?.user ? getMainKeyboard(ctx) : getStartKeyboard(ctx)
+                    );
                     res.end();
                 } else {
                     this.log.error(err);
@@ -253,9 +254,10 @@ export default class TelegramBotService extends HTTPService {
                 logger.error("Unknown error:", e);
             }
             ctx.dialog.reset();
-            await ctx.reply(ctx.i18n.t("failed", { error: err.message ?? "" }), {
-                reply_markup: ctx.session?.user ? getMainKeyboard(ctx) : getStartKeyboard(ctx)
-            });
+            await ctx.reply(
+                ctx.i18n.t("failed", { error: err.message ?? "" }),
+                ctx.session?.user ? getMainKeyboard(ctx) : getStartKeyboard(ctx)
+            );
         });
         this.addOnStartedHandler(this.onStarted);
     }
@@ -428,17 +430,15 @@ export default class TelegramBotService extends HTTPService {
         if (!ctx.session?.user) {
             ctx.dialog.enter(startActions.enter);
         } else {
-            await ctx.reply(ctx.i18n.t("menu"), { reply_markup: getMainKeyboard(ctx) });
+            await ctx.reply(ctx.i18n.t("menu"), getMainKeyboard(ctx));
         }
     }
 
     async defaultHandler(ctx: BotContext) {
         if (!ctx.session?.user) {
-            await ctx.reply(ctx.i18n.t("defaultHandler"), {
-                reply_markup: getStartKeyboard(ctx)
-            });
+            await ctx.reply(ctx.i18n.t("defaultHandler"), getStartKeyboard(ctx));
         } else {
-            await ctx.reply(ctx.i18n.t("defaultHandler"), { reply_markup: getMainKeyboard(ctx) });
+            await ctx.reply(ctx.i18n.t("defaultHandler"), getMainKeyboard(ctx));
         }
     }
 }
