@@ -128,7 +128,7 @@ export class TradeStatsCalc implements TradeStats {
     }
 
     public async calculate(): Promise<TradeStats> {
-        this.periodStats = this.calcPeriodStats(this.positions, this.prevPeriodStats);
+        this.periodStats = this.calcPeriodStats(this.positions, this.prevFullStats, this.prevPeriodStats);
         this.fullStats = this.calcFullStats(this.positions, this.prevFullStats, this.periodStats);
 
         return {
@@ -543,6 +543,8 @@ export class TradeStatsCalc implements TradeStats {
             stats.periodStats.year[key] = {
                 ...value,
                 stats: {
+                    initialBalance: value.stats.initialBalance,
+                    currentBalance: value.stats.currentBalance,
                     tradesCount: value.stats.tradesCount,
                     percentNetProfit: value.stats.percentNetProfit,
                     percentGrossProfit: value.stats.percentGrossProfit,
@@ -555,6 +557,8 @@ export class TradeStatsCalc implements TradeStats {
             stats.periodStats.quarter[key] = {
                 ...value,
                 stats: {
+                    initialBalance: value.stats.initialBalance,
+                    currentBalance: value.stats.currentBalance,
                     tradesCount: value.stats.tradesCount,
                     percentNetProfit: value.stats.percentNetProfit,
                     percentGrossProfit: value.stats.percentGrossProfit,
@@ -567,6 +571,8 @@ export class TradeStatsCalc implements TradeStats {
             stats.periodStats.month[key] = {
                 ...value,
                 stats: {
+                    initialBalance: value.stats.initialBalance,
+                    currentBalance: value.stats.currentBalance,
                     tradesCount: value.stats.tradesCount,
                     percentNetProfit: value.stats.percentNetProfit,
                     percentGrossProfit: value.stats.percentGrossProfit,
@@ -669,6 +675,7 @@ export class TradeStatsCalc implements TradeStats {
 
     private calcPeriodStats(
         positions: BasePosition[],
+        prevStats: FullStats,
         prevPeriodStats: TradeStats["periodStats"]
     ): TradeStats["periodStats"] {
         const periodStats = { ...prevPeriodStats };
@@ -692,9 +699,13 @@ export class TradeStatsCalc implements TradeStats {
                         dateTo: year.dateTo,
                         stats: this.initBaseStats()
                     };
-                    const prevPeriodStats = Object.values(periodStats.year).find(
-                        ({ dateFrom }) => dateFrom === dayjs.utc(year.dateFrom).add(-1, "year").toISOString()
-                    );
+                    const prevPeriodStats =
+                        Object.values(periodStats.year).find(
+                            ({ dateFrom }) => dateFrom === dayjs.utc(year.dateFrom).add(-1, "year").toISOString()
+                        ) ||
+                        Object.values(prevStats.periodStats.year).find(
+                            ({ dateFrom }) => dateFrom === dayjs.utc(year.dateFrom).add(-1, "year").toISOString()
+                        );
                     if (currentPositions.length) {
                         if (!periodStats.year[year.key].stats.firstPosition)
                             periodStats.year[year.key].stats.firstPosition = currentPositions[0];
@@ -740,9 +751,13 @@ export class TradeStatsCalc implements TradeStats {
                         dateTo: quarter.dateTo,
                         stats: this.initBaseStats()
                     };
-                    const prevPeriodStats = Object.values(periodStats.quarter).find(
-                        ({ dateFrom }) => dateFrom === dayjs.utc(quarter.dateFrom).add(-1, "quarter").toISOString()
-                    );
+                    const prevPeriodStats =
+                        Object.values(periodStats.quarter).find(
+                            ({ dateFrom }) => dateFrom === dayjs.utc(quarter.dateFrom).add(-1, "quarter").toISOString()
+                        ) ||
+                        Object.values(prevStats.periodStats.quarter).find(
+                            ({ dateFrom }) => dateFrom === dayjs.utc(quarter.dateFrom).add(-1, "quarter").toISOString()
+                        );
                     if (currentPositions.length) {
                         if (!periodStats.quarter[quarter.key].stats.firstPosition)
                             periodStats.quarter[quarter.key].stats.firstPosition = currentPositions[0];
@@ -789,9 +804,13 @@ export class TradeStatsCalc implements TradeStats {
                         stats: this.initBaseStats()
                     };
 
-                    const prevPeriodStats = Object.values(periodStats.month).find(
-                        ({ dateFrom }) => dateFrom === dayjs.utc(month.dateFrom).add(-1, "month").toISOString()
-                    );
+                    const prevPeriodStats =
+                        Object.values(periodStats.month).find(
+                            ({ dateFrom }) => dateFrom === dayjs.utc(month.dateFrom).add(-1, "month").toISOString()
+                        ) ||
+                        Object.values(prevStats.periodStats.month).find(
+                            ({ dateFrom }) => dateFrom === dayjs.utc(month.dateFrom).add(-1, "month").toISOString()
+                        );
                     if (currentPositions.length) {
                         if (!periodStats.month[month.key].stats.firstPosition)
                             periodStats.month[month.key].stats.firstPosition = currentPositions[0];

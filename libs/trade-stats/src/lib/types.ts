@@ -36,6 +36,8 @@ export interface BaseStats {
 }
 
 export interface BasePeriodStats {
+    initialBalance: BaseStats["initialBalance"];
+    currentBalance: BaseStats["currentBalance"];
     tradesCount: BaseStats["tradesCount"];
     percentNetProfit: BaseStats["percentNetProfit"];
     percentGrossProfit: BaseStats["percentGrossProfit"];

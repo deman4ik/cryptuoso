@@ -50,10 +50,10 @@ export function periodStatsFromArray(arr: PeriodStats<BaseStats>[] = []) {
         periodStats.year[`${period.year}`] = period;
     }
     for (const period of arr.filter(({ period }) => period === "quarter")) {
-        periodStats.year[`${period.year}.${period.quarter}`] = period;
+        periodStats.quarter[`${period.year}.${period.quarter}`] = period;
     }
     for (const period of arr.filter(({ period }) => period === "month")) {
-        periodStats.year[`${period.year}.${period.month}`] = period;
+        periodStats.month[`${period.year}.${period.month}`] = period;
     }
     return periodStats;
 }
