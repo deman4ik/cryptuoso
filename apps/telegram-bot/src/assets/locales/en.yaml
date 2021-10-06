@@ -478,7 +478,7 @@ tradeAction:
     closeShort: BUY ⬆️ (Close Short 🔴)
 warning: It is a realtime automated trading mode using your exchange account and you use it at your own risk!
 warningStop: If there are any <b>open positions</b> they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!
-notAvailable: Not available
+notAvailable: Not available yet
 notifications:
     status: >
         💼 Portfolio is ${status} now!\n

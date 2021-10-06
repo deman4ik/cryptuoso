@@ -170,6 +170,7 @@ const getTradingInfo = async (ctx: BotContext) => {
                         stoppedAt: stopped_at
                         settings: user_portfolio_settings
                         stats {
+                            tradesCount: trades_count
                             currentBalance: current_balance
                             netProfit: net_profit
                             percentNetProfit: percent_net_profit
