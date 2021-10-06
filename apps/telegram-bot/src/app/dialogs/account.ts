@@ -337,7 +337,7 @@ const checkExchangeAccount = async (ctx: BotContext) => {
 };
 
 const editExchangeAccount = async (ctx: BotContext) => {
-    if (ctx.session.userExAcc) {
+    if (!ctx.session.userExAcc) {
         ctx.dialog.enter(editExchangeAccActions.enter, {
             edit: false,
             backAction: accountActions.enter,

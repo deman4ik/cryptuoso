@@ -277,9 +277,8 @@ export default class TelegramBotService extends HTTPService {
             removeOnFail: 10
         });
 
-        // if (process.env.BOT_LOCAL) this.bot.start();
-        //else
-        await this.server.use(webhookCallback(this.bot, "express"));
+        if (process.env.BOT_LOCAL) this.bot.start();
+        else await this.server.use(webhookCallback(this.bot, "express"));
     }
 
     async checkNotifications() {
@@ -366,11 +365,11 @@ export default class TelegramBotService extends HTTPService {
             return { success: true };
         } catch (err) {
             this.log.error(err);
-            return this.blockHandler(telegramId, err.response);
+            return this.blockHandler(telegramId, err);
         }
     }
 
-    async blockHandler(telegramId: number, error: { ok: boolean; error_code: number; description: string }) {
+    async blockHandler(telegramId: number, error: GrammyError) {
         try {
             this.log.warn(`${telegramId}`, error);
             if (error && error.ok === false && (error.error_code === 403 || error.error_code === 400)) {
