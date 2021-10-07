@@ -118,17 +118,18 @@ export class BaseService {
     };
 
     redisRetryStrategy = (times: number) => {
-        this.#log.warn(`REDIS Retries to recconect ${times}`);
+        this.#log.warn(`REDIS Retries to reconnect ${times}`);
         if (times > 20) process.exit(1);
         const delay = Math.min(times * 500, 5000);
         return delay;
     };
 
     redisReconnectOnError = (err: Error) => {
+        if (err.message.includes("BUSYGROUP")) return true;
         this.#log.error(`REDIS Error: ${err.message}`, err);
         /* if (err.message.toLowerCase().includes("eai_again") || err.message.toLowerCase().includes("econnreset"))
             process.exit(1);*/
-        return 2;
+        return true;
     };
 
     #hanleRedisError = (err: Error) => {
