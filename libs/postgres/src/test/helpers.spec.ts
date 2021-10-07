@@ -1,4 +1,4 @@
-import { prepareUnnest } from "./helpers";
+import { prepareUnnest } from "../lib/helpers";
 
 describe("Test postgres helpers", () => {
     describe("Test prepareUnnest", () => {

@@ -110,7 +110,13 @@ export default class TelegramBotService extends HTTPService {
                 storage: new RedisAdapter({
                     instance: new Redis(
                         process.env.REDISCS, //,{enableReadyCheck: false}
-                        { maxRetriesPerRequest: null, connectTimeout: 60000, keyPrefix: "tg:" }
+                        {
+                            maxRetriesPerRequest: null,
+                            connectTimeout: 60000,
+                            keyPrefix: "tg:",
+                            retryStrategy: this.redisRetryStrategy.bind(this),
+                            reconnectOnError: this.redisReconnectOnError.bind(this)
+                        }
                     )
                 })
             })

@@ -1,4 +1,4 @@
-import { EventsCatalog, Event } from "./catalog";
+import { EventsCatalog, Event } from "../lib/catalog";
 //import util from "util";
 //util.inspect(obj, false, null, true)
 

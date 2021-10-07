@@ -73,7 +73,12 @@ export class BaseService {
             };
             this.#redisConnection = new Redis(
                 process.env.REDISCS, //,{enableReadyCheck: false}
-                { maxRetriesPerRequest: null, connectTimeout: 60000 }
+                {
+                    maxRetriesPerRequest: null,
+                    connectTimeout: 60000,
+                    retryStrategy: this.redisRetryStrategy.bind(this),
+                    reconnectOnError: this.redisReconnectOnError.bind(this)
+                }
             );
             this.#redisConnection.on("error", this.#hanleRedisError.bind(this));
 
@@ -112,9 +117,24 @@ export class BaseService {
         this.#log.error("unhandledRejection", err);
     };
 
+    redisRetryStrategy = (times: number) => {
+        this.#log.warn(`REDIS Retries to recconect ${times}`);
+        if (times > 20) process.exit(1);
+        const delay = Math.min(times * 500, 5000);
+        return delay;
+    };
+
+    redisReconnectOnError = (err: Error) => {
+        this.#log.error(`REDIS Error: ${err.message}`, err);
+        /* if (err.message.toLowerCase().includes("eai_again") || err.message.toLowerCase().includes("econnreset"))
+            process.exit(1);*/
+        return 2;
+    };
+
     #hanleRedisError = (err: Error) => {
-        this.#log.error(`REDIS Error: `, err.message);
-        if (err.message.toLowerCase().includes("eai_again")) process.exit(1);
+        this.#log.error(`REDIS on Error: ${err.message}`, err);
+        /* if (err.message.toLowerCase().includes("eai_again") || err.message.toLowerCase().includes("econnreset"))
+            process.exit(1);*/
     };
 
     #addOnStartHandler = async (func: () => Promise<void>) => {

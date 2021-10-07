@@ -1,4 +1,4 @@
-import { BaseError, ActionsHandlerError } from "./errors";
+import { BaseError, ActionsHandlerError } from "../lib/errors";
 
 describe("errors", () => {
     it("should generate BaseError", () => {

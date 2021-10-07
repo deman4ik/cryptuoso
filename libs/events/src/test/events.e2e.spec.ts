@@ -1,10 +1,10 @@
 import "jest-extended";
 import Redis from "ioredis";
 import { createLightship } from "lightship";
-import { Events, EventsConfig } from "./events";
+import { Events, EventsConfig } from "../lib/events";
 import { sleep } from "@cryptuoso/helpers";
 import { ValidationSchema } from "fastest-validator";
-import { BASE_REDIS_PREFIX } from "./catalog";
+import { BASE_REDIS_PREFIX } from "../lib/catalog";
 
 //TODO: one service for all tests
 const SERVICES = {
