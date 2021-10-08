@@ -571,13 +571,14 @@ export default class UserRobotRunnerService extends HTTPService {
        `);
         if (userPortfolio.status !== "starting" && userPortfolio.status !== "started") return;
         if (userPortfolio.settings && userPortfolio.robots && Array.isArray(userPortfolio.robots)) {
-            this.db.pg.transaction(async (t) => {
-                await t.query(sql`UPDATE user_robots 
+            try {
+                await this.db.pg.transaction(async (t) => {
+                    await t.query(sql`UPDATE user_robots 
             SET settings = jsonb_set(settings::jsonb,'{active}','false')
             WHERE user_portfolio_id = ${userPortfolio.id};
             `);
 
-                await t.query(sql`
+                    await t.query(sql`
             INSERT INTO user_robots 
             (user_portfolio_id, robot_id, user_ex_acc_id, user_id, status, settings)
             SELECT *
@@ -602,7 +603,17 @@ export default class UserRobotRunnerService extends HTTPService {
                 ON CONFLICT ON CONSTRAINT user_robots_user_portfolio_id_robot_id_key
                 DO UPDATE SET settings = excluded.settings, status = excluded.status;
             `);
-            });
+                });
+            } catch (error) {
+                this.log.error(error);
+                await this.events.emit<PortfolioManagerUserPortfolioBuildError>({
+                    type: PortfolioManagerOutEvents.USER_PORTFOLIO_BUILD_ERROR,
+                    data: {
+                        userPortfolioId: userPortfolio.id,
+                        error: error.message
+                    }
+                });
+            }
             this.log.info(`Added ${userPortfolio.robots.length} robots to User Portfolio #${userPortfolioId}`);
         } else {
             this.log.warn(`User Portfolio #${userPortfolio.id} has no active robots`);

@@ -314,8 +314,7 @@ export default class PortfolioManagerService extends HTTPService {
         const oldUserRobots = await this.db.pg.oneFirst<number>(sql`
         SELECT COUNT(1)
         FROM user_robots
-        WHERE user_id = ${userId} 
-        AND status != ${UserRobotStatus.stopped}
+        WHERE user_id = ${userId};
         `);
 
         if (oldUserRobots > 0) {
