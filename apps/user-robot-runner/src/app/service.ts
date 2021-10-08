@@ -850,9 +850,11 @@ export default class UserRobotRunnerService extends HTTPService {
         `);
 
     async handleUserRobotWorkerEvents(event: Event) {
+        const type = event.type.replace("com.cryptuoso.", "");
+
+        if (type.includes("portfolio")) return; //TODO
         const { userRobotId } = event.data as { userRobotId: string };
 
-        const type = event.type.replace("com.cryptuoso.", "");
         const historyType = type.replace(`${USER_ROBOT_WORKER_TOPIC}.`, "");
         this.log.info(`User Robot's #${userRobotId} ${historyType} event`, JSON.stringify(event.data));
         await this.#saveUserRobotHistory(userRobotId, historyType, event.data);
@@ -913,7 +915,6 @@ export default class UserRobotRunnerService extends HTTPService {
             !event.error.toLowerCase().includes("gateway") &&
             !event.error.toLowerCase().includes("getaddrinfo") &&
             !event.error.toLowerCase().includes("network") &&
-            !event.error.toLowerCase().includes("request") &&
             !event.error.toLowerCase().includes("econnreset")
         )
             await this.pause({

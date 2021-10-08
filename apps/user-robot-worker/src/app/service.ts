@@ -154,6 +154,11 @@ export default class UserRobotWorkerService extends BaseService {
             volumeInCurrency = limits.max.amountUSD;
         }
 
+        if (volumeInCurrency < 6) {
+            volumeInCurrency = 6;
+            volume = calcCurrencyDynamic(volumeInCurrency, currentPrice);
+        }
+
         if (userPortfolioId) {
             if (balance < volumeInCurrency) throw new Error("Exchange account balance is insufficient");
         }
