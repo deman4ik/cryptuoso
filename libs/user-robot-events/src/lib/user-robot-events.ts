@@ -64,7 +64,7 @@ export const UserRobotRunnerSchema = {
     [UserRobotRunnerEvents.START_PORTFOLIO]: RunnerSchema,
     [UserRobotRunnerEvents.STOP_PORTFOLIO]: RunnerSchema,
     [UserRobotRunnerEvents.SYNC_PORTFOLIO_ROBOTS]: {
-        userPositionId: "uuid"
+        userPortfolioId: "uuid"
     }
 };
 
