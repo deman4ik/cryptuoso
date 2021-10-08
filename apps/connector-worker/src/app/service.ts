@@ -447,6 +447,7 @@ export default class ConnectorRunnerService extends BaseService {
                             : order.status,
                     nextJob: null
                 };
+                nextJob = null;
             }
 
             try {
