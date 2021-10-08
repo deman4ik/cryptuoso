@@ -162,7 +162,17 @@ export default class PortfolioManagerService extends HTTPService {
 
     async onServiceStart(): Promise<void> {
         this.createQueue("portfolioBuilder");
-        this.createWorker("portfolioBuilder", this.portfolioBuilderProcess);
+        this.createWorker("portfolioBuilder", this.process);
+        await this.addJob("portfolioBuilder", "userPortfolioCheck", null, {
+            jobId: "userPortfolioCheck",
+            repeat: {
+                cron: "0 0 */12 * * *"
+            },
+            attempts: 3,
+            backoff: { type: "exponential", delay: 60000 },
+            removeOnComplete: 1,
+            removeOnFail: 10
+        });
     }
 
     generateOptions() {
@@ -678,6 +688,40 @@ export default class PortfolioManagerService extends HTTPService {
                     removeOnFail: 10
                 }
             );
+        }
+    }
+    async process(job: Job) {
+        if (job.name === "check") {
+            await this.portfolioSettingsCheck();
+        } else if (job.name === "build") {
+            await this.portfolioBuilderProcess(job);
+        } else {
+            this.log.error(`Unknown job ${job.name}`, job);
+        }
+    }
+
+    async portfolioSettingsCheck() {
+        this.log.info("Checking User Portfolios with new settings");
+        const userPortfolios = await this.db.pg.any<{ id: string }>(sql`
+        select up.id from v_user_portfolios up
+        where up.status = 'started' and up.active_from is not null
+        and up.active_from < current_date  - interval '1 month';
+        `);
+
+        if (userPortfolios && Array.isArray(userPortfolios) && userPortfolios.length) {
+            this.log.info(`Rebuilding ${userPortfolios.length} User Portfolios...`);
+            for (const { id } of userPortfolios) {
+                await this.addJob<UserPortfolioBuilderJob>(
+                    "portfolioBuilder",
+                    "build",
+                    { userPortfolioId: id, type: "userPortfolio" },
+                    {
+                        jobId: id,
+                        removeOnComplete: true,
+                        removeOnFail: 10
+                    }
+                );
+            }
         }
     }
 

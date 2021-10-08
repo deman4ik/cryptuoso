@@ -99,6 +99,11 @@ export default class UserRobotRunnerService extends HTTPService {
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.STOP_PORTFOLIO],
                     handler: this._httpHandler.bind(this, this.stopPortfolio.bind(this))
+                },
+                syncPortfolioRobots: {
+                    roles: [UserRoles.admin, UserRoles.manager],
+                    inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.SYNC_PORTFOLIO_ROBOTS],
+                    handler: this._httpHandler.bind(this, this.syncPortfolioRobots.bind(this))
                 }
             });
             this.events.subscribe({
@@ -158,6 +163,14 @@ export default class UserRobotRunnerService extends HTTPService {
             jobId: UserRobotRunnerJobType.idleUserOrders,
             repeat: {
                 every: 60000
+            },
+            removeOnComplete: 1,
+            removeOnFail: 10
+        });
+        await this.addJob(Queues.userRobotRunner, UserRobotRunnerJobType.checkUserPortfolioRobots, null, {
+            jobId: UserRobotRunnerJobType.checkUserPortfolioRobots,
+            repeat: {
+                cron: "0 10 */12 * * *"
             },
             removeOnComplete: 1,
             removeOnFail: 10
@@ -947,6 +960,9 @@ export default class UserRobotRunnerService extends HTTPService {
             case UserRobotRunnerJobType.idleUserOrders:
                 await this.checkIdleUserOrders();
                 break;
+            case UserRobotRunnerJobType.checkUserPortfolioRobots:
+                await this.checkUserPortfolioRobots();
+                break;
             default:
                 this.log.error(`Unknow job ${job.name}`);
         }
@@ -1009,6 +1025,28 @@ export default class UserRobotRunnerService extends HTTPService {
             }
         } catch (err) {
             this.log.error("Failed to check idle user orders", err);
+        }
+    }
+
+    async checkUserPortfolioRobots() {
+        this.log.info("Checking user portfolios robots in sync");
+        const userPortfolios = await this.db.pg.any<{ id: string }>(sql`
+          SELECT t.id FROM (
+                SELECT p.id, 
+                       jsonb_array_length(p.robots) as robots_count, 
+			           (select count(1) from user_robots ur
+						where (ur.settings->'active')::boolean = true
+						 and ur.user_portfolio_id = p.id) as user_robots_count
+                FROM v_user_portfolios p 
+                WHERE p.status = 'started') t 
+           WHERE t.robots_count!=t.user_robots_count;
+        `);
+
+        if (userPortfolios && Array.isArray(userPortfolios) && userPortfolios.length) {
+            this.log.info(`${userPortfolios.length} User portfolios not in sync`);
+            for (const { id } of userPortfolios) {
+                await this.syncPortfolioRobots({ userPortfolioId: id });
+            }
         }
     }
 
