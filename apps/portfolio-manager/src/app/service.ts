@@ -34,7 +34,6 @@ import {
     PortfolioManagerPortfolioBuilded,
     PortfolioManagerUserPortfolioBuilded
 } from "@cryptuoso/portfolio-events";
-import { UserRobotStatus } from "@cryptuoso/user-robot-state";
 import { Timeframe } from "@cryptuoso/market";
 
 export type PortfolioManagerServiceConfig = HTTPServiceConfig;
@@ -561,7 +560,7 @@ export default class PortfolioManagerService extends HTTPService {
                     await t.query(sql`UPDATE user_portfolio_settings set user_portfolio_settings = ${JSON.stringify(
                         userPortfolioSettings
                     )}
-                    WHERE user_portfolio_id = ${userPortfolio.id};
+                    WHERE id = ${settingsExists.id};
                     `);
                 } else {
                     await t.query(sql`
