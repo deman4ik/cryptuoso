@@ -1,6 +1,6 @@
 import logger, { Logger } from "@cryptuoso/logger";
 import { Subject } from "threads/observable";
-import { PortfolioOptions, PortfolioRobot, PortfolioState, UserPortfolioState } from "./types";
+import { PortfolioOptions, PortfolioOptionWeights, PortfolioRobot, PortfolioState, UserPortfolioState } from "./types";
 import { BasePosition } from "@cryptuoso/market";
 import { periodStatsToArray, TradeStats, TradeStatsCalc } from "@cryptuoso/trade-stats";
 import { calcPercentValue, percentBetween, round, sum, uniqueElementsBy } from "@cryptuoso/helpers";
@@ -22,14 +22,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
     #log: Logger;
     #subject: Subject<number>;
     portfolio: T;
-    optionWeights: { [Weight in keyof PortfolioOptions]: number } = {
-        //diversification: 1.1,
-        profit: 1.1,
-        risk: 1.1,
-        moneyManagement: 1,
-        winRate: 1,
-        efficiency: 1.2
-    };
+    optionWeights: PortfolioOptionWeights;
     robots: {
         [key: string]: PortoflioRobotState;
     } = {};
@@ -38,6 +31,14 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
         this.#log = logger;
         this.#subject = subject;
         this.portfolio = portfolio;
+        this.optionWeights = {
+            profit: 1.1,
+            risk: 1.1,
+            moneyManagement: 1,
+            winRate: 1,
+            efficiency: 1.2,
+            ...this.portfolio.settings.optionWeights
+        };
         this.#calcPortfolioVariables();
     }
 

@@ -10,8 +10,11 @@ export interface PortfolioOptions {
     efficiency: boolean;
 }
 
+export type PortfolioOptionWeights = { [Weight in keyof PortfolioOptions]: number };
+
 export interface PortfolioSettings {
     options: PortfolioOptions;
+    optionWeights?: PortfolioOptionWeights;
     tradingAmountType: "currencyFixed" | "balancePercent";
     balancePercent?: number;
     tradingAmountCurrency?: number;
