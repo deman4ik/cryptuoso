@@ -22,6 +22,7 @@ import { sql } from "@cryptuoso/postgres";
 import { capitalize, equals, formatExchange, nvl } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
 import { ActionsHandlerError, BaseError } from "@cryptuoso/errors";
+import { UserSub } from "@cryptuoso/billing";
 import {
     PortfolioManagerInSchema,
     PortfolioManagerInEvents,
@@ -334,6 +335,16 @@ export default class PortfolioManagerService extends HTTPService {
             `);
             if (userExAcc.exchange !== exchange) throw new Error("Wrong exchange");
             initialBalance = userExAcc.balance;
+
+            const userSub = await this.db.pg.maybeOne<{ id: UserSub["id"] }>(sql`
+            SELECT id 
+            FROM user_subs
+            WHERE user_id = ${userId}
+            AND status in (${"active"},${"trial"});
+            `);
+
+            if (!userSub)
+                throw new ActionsHandlerError(`Your Cryptuoso Subscription is not Active.`, null, "FORBIDDEN", 403);
         } else throw new Error("Unknown user portfolio type");
 
         const portfolioBalance = getPortfolioBalance(
@@ -689,16 +700,16 @@ export default class PortfolioManagerService extends HTTPService {
         }
     }
     async process(job: Job) {
-        if (job.name === "check") {
-            await this.portfolioSettingsCheck();
+        if (job.name === "userPortfolioCheck") {
+            await this.userPortfolioSettingsCheck();
         } else if (job.name === "build") {
             await this.portfolioBuilderProcess(job);
         } else {
-            this.log.error(`Unknown job ${job.name}`, job);
+            this.log.error(`Unknown job ${job.name}`);
         }
     }
 
-    async portfolioSettingsCheck() {
+    async userPortfolioSettingsCheck() {
         this.log.info("Checking User Portfolios with new settings");
         const userPortfolios = await this.db.pg.any<{ id: string }>(sql`
         select up.id from v_user_portfolios up

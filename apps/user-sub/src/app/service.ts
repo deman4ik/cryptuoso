@@ -17,7 +17,7 @@ import {
     UserSubPaymentStatusEvent,
     UserSubStatusEvent
 } from "@cryptuoso/user-sub-events";
-import { UserRobotRunnerEvents, UserRobotRunnerStop } from "@cryptuoso/user-robot-events";
+import { UserRobotRunnerEvents, UserRobotRunnerStopPortfolio } from "@cryptuoso/user-robot-events";
 import { Job } from "bullmq";
 import { BaseError } from "ccxt";
 import { v4 as uuid } from "uuid";
@@ -160,15 +160,15 @@ export default class UserSubService extends HTTPService {
 
             for (const sub of expiredSubscriptions) {
                 this.log.info(`Subscription #${sub.id} for user #${sub.userId} expired`);
-                const userRobots = await this.db.pg.any<{ id: string }>(sql`
+                const userPortfolios = await this.db.pg.any<{ id: string }>(sql`
                             SELECT id 
-                            FROM user_robots 
+                            FROM user_portfolios
                             WHERE user_id = ${sub.userId} 
                             AND status = 'started';`);
-                if (userRobots && userRobots.length) {
-                    for (const { id } of userRobots) {
-                        await this.events.emit<UserRobotRunnerStop>({
-                            type: UserRobotRunnerEvents.STOP,
+                if (userPortfolios && userPortfolios.length) {
+                    for (const { id } of userPortfolios) {
+                        await this.events.emit<UserRobotRunnerStopPortfolio>({
+                            type: UserRobotRunnerEvents.STOP_PORTFOLIO,
                             data: {
                                 id,
                                 message: "Subscription expired"
@@ -561,15 +561,15 @@ export default class UserSubService extends HTTPService {
            AND user_id = ${user.id};
            `);
 
-            const userRobots = await this.db.pg.any<{ id: string }>(sql`
+            const userPortfolios = await this.db.pg.any<{ id: string }>(sql`
            SELECT id 
-           FROM user_robots 
+           FROM user_portfolios
            WHERE user_id = ${user.id} 
            AND status = 'started';`);
-            if (userRobots && userRobots.length) {
-                for (const { id } of userRobots) {
-                    await this.events.emit<UserRobotRunnerStop>({
-                        type: UserRobotRunnerEvents.STOP,
+            if (userPortfolios && userPortfolios.length) {
+                for (const { id } of userPortfolios) {
+                    await this.events.emit<UserRobotRunnerStopPortfolio>({
+                        type: UserRobotRunnerEvents.STOP_PORTFOLIO,
                         data: {
                             id,
                             message: "Subscription canceled"

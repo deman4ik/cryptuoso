@@ -131,6 +131,10 @@ export default class UserRobotRunnerService extends HTTPService {
                     handler: this.stop.bind(this),
                     schema: UserRobotRunnerSchema[UserRobotRunnerEvents.STOP]
                 },
+                [UserRobotRunnerEvents.STOP_PORTFOLIO]: {
+                    handler: this.stopPortfolio.bind(this),
+                    schema: UserRobotRunnerSchema[UserRobotRunnerEvents.STOP_PORTFOLIO]
+                },
                 [PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED]: {
                     handler: this.handleUserPortfolioBuilded.bind(this),
                     schema: PortfolioManagerOutSchema[PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED]
