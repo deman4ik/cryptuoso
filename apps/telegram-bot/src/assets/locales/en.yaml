@@ -572,6 +572,11 @@ userRobot:
         Please check your API Keys and Robot settings or contact support.
 userSubscription:
     error: ❌  Error occured while processing your payment\n\n${error}
+    notActive: >
+        ❌  Your Cryptuoso Subscription is not active.
+
+
+        Please renew you subscription.
     status: 💰 Subscription <b>${name}</b> is <b>${status}</b>${message}
     expiring: ${date}\n\nPlease renew you subscription.\n\nAfter subscription expires all robots will be <b>stopped</b>! If there are any <b>open positions</b> they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!
     expired: \n\nAll robots are <b>stopping</b> now! If there are any <b>open positions</b> they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!

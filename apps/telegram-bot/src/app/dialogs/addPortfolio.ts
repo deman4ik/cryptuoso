@@ -6,6 +6,7 @@ import { BotContext, IUserSub } from "../types";
 import { getAmountTypeButtons, getPercentButtons } from "../utils/buttons";
 import { Router } from "../utils/dialogsRouter";
 import { gql } from "../utils/graphql-client";
+import { account, accountActions } from "./account";
 import { createUserSubActions } from "./createUserSub";
 import { editExchangeAccActions } from "./editExchangeAcc";
 import { tradingActions } from "./trading";
@@ -146,6 +147,13 @@ const amountType = async (ctx: BotContext) => {
         if (!myUserSub || !Array.isArray(myUserSub) || !myUserSub.length) {
             ctx.dialog.enter(createUserSubActions.enter);
             return;
+        } else {
+            const [userSub] = myUserSub;
+
+            if (userSub.status !== "active" && userSub.status !== "trial") {
+                await ctx.reply(ctx.i18n.t("userSubscription.notActive"));
+                ctx.dialog.enter(accountActions.enter);
+            }
         }
 
         if (!myUserExAcc || !Array.isArray(myUserExAcc) || !myUserExAcc.length) {
