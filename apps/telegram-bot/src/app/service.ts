@@ -114,7 +114,7 @@ export default class TelegramBotService extends HTTPService {
                             maxRetriesPerRequest: null,
                             connectTimeout: 60000,
                             keyPrefix: "tg:",
-                            retryStrategy: this.redisRetryStrategy.bind(this),
+                            // retryStrategy: this.redisRetryStrategy.bind(this),
                             reconnectOnError: this.redisReconnectOnError.bind(this)
                         }
                     )

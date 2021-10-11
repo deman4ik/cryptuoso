@@ -76,7 +76,7 @@ export class BaseService {
                 {
                     maxRetriesPerRequest: null,
                     connectTimeout: 60000,
-                    retryStrategy: this.redisRetryStrategy.bind(this),
+                    //retryStrategy: this.redisRetryStrategy.bind(this),
                     reconnectOnError: this.redisReconnectOnError.bind(this)
                 }
             );
@@ -125,10 +125,10 @@ export class BaseService {
     };
 
     redisReconnectOnError = (err: Error) => {
-        if (err.message.includes("BUSYGROUP")) return true;
+        if (err.message.toUpperCase().includes("BUSYGROUP")) return true;
         this.#log.error(`REDIS Error: ${err.message}`, err);
-        /* if (err.message.toLowerCase().includes("eai_again") || err.message.toLowerCase().includes("econnreset"))
-            process.exit(1);*/
+        if (err.message.toLowerCase().includes("eai_again") || err.message.toLowerCase().includes("econnreset"))
+            process.exit(1);
         return true;
     };
 

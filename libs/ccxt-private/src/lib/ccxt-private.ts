@@ -990,13 +990,15 @@ export class PrivateConnector {
             };
         } catch (err) {
             this.log.error(err, order);
+            const message = err.message?.toLowerCase();
             if (
                 err instanceof ccxt.NetworkError ||
-                err.message?.toLowerCase().includes("gateway") ||
-                err.message?.toLowerCase().includes("getaddrinfo") ||
-                err.message?.toLowerCase().includes("network") ||
-                err.message?.toLowerCase().includes("request") ||
-                err.message?.toLowerCase().includes("econnreset") ||
+                message.includes("gateway") ||
+                message.includes("getaddrinfo") ||
+                message.includes("network") ||
+                message.includes("request") ||
+                message.includes("econnreset") ||
+                (message.includes("no such order found") && order.exchange === "bitfinex") ||
                 !order.nextJob?.retries ||
                 order.nextJob?.retries < 5
             ) {

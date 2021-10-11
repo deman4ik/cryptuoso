@@ -291,13 +291,14 @@ export class UserPosition {
                     "ERR_CONFLICT"
                 );
 
-            if (!this._entryExecuted) {
+            if (!this._entryOrders.filter((o) => o.status === OrderStatus.closed).length) {
                 this._entryStatus = UserPositionOrderStatus.new;
-            } else if (this._entryExecuted && this._entryExecuted === 0) {
+            } else if (
+                this._entryOrders.filter((o) => o.status === OrderStatus.closed).length &&
+                this._entryExecuted === 0
+            ) {
                 this._entryStatus = UserPositionOrderStatus.open;
-            } else if (this._entryExecuted > 0 && this._entryExecuted !== this._entryVolume) {
-                this._entryStatus = UserPositionOrderStatus.partial;
-            } else if (this._entryExecuted === this._entryVolume) {
+            } else if (this._entryExecuted > 0) {
                 this._hasRecentTrade = true;
 
                 this._entryStatus = UserPositionOrderStatus.closed;

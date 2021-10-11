@@ -75,7 +75,7 @@ export default class PortfolioManagerService extends HTTPService {
                 createUserPortfolio: {
                     inputSchema: {
                         exchange: "string",
-                        type: { type: "enum", values: ["signals", "trading"] },
+                        type: { type: "enum", values: ["signals", "trading"], default: "trading" },
                         userExAccId: { type: "uuid", optional: true },
                         tradingAmountType: { type: "string" },
                         balancePercent: { type: "number", optional: true },
