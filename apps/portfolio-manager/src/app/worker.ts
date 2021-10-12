@@ -209,9 +209,10 @@ const worker = {
                    ups.active_from as user_portfolio_settings_active_from,
                    ups.user_portfolio_settings as settings,
                    json_build_object('minTradeAmount', m.min_trade_amount,
-                                     'feeRate', m.fee_rate) as context
+                                     'feeRate', m.fee_rate) as context,
+                                     ea.total_balance_usd as current_exchange_balance
             FROM user_portfolios p, user_portfolio_settings ups,
-            mv_exchange_info m
+            mv_exchange_info m, v_user_exchange_accs ea
             WHERE p.exchange = m.exchange
               AND p.id = ups.user_portfolio_id
               AND (ups.active_from is null OR ups.active_from = ((SELECT max(s.active_from) AS max
@@ -221,6 +222,7 @@ const worker = {
                       AND s.active_from < now()))
                   )
               AND p.id = ${job.userPortfolioId}
+              AND ea.id = p.user_ex_acc_id
               ORDER BY ups.active_from DESC NULLS FIRST LIMIT 1; 
         `);
         const includeRobotsCondition =
@@ -284,6 +286,7 @@ const worker = {
             portfolio.context.minBalance = basePortfolio.limits.minBalance;
             portfolio.context.robotsCount = basePortfolio.portfolioRobotsCount;
         }
+        portfolio.settings.initialBalance = portfolio.currentExchangeBalance;
         const userPortfolioBuilder = new PortfolioBuilder<UserPortfolioState>(portfolio, subject);
         const maxRobotsCount = userPortfolioBuilder.maxRobotsCount;
 

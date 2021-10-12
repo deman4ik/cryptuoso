@@ -682,10 +682,10 @@ export default class PortfolioManagerService extends HTTPService {
 
     async buildUserPortfolios() {
         const userPortfolios = await this.db.pg.any<{ id: UserPortfolioDB["id"] }>(sql`
-        SELECT id FROM user_portfolios where status = ${"active"};
+        SELECT id FROM user_portfolios where status = ${"started"};
         `);
         if (!userPortfolios || !Array.isArray(userPortfolios) || !userPortfolios.length)
-            return "No active user portfolios";
+            return { result: "No active user portfolios" };
         for (const { id } of userPortfolios) {
             await this.addJob<UserPortfolioBuilderJob>(
                 "portfolioBuilder",

@@ -79,6 +79,9 @@ export class UserPosition {
     _ordersToCreate: Order[];
     _connectorJobs: ConnectorJob[];
     _hasRecentTrade: boolean;
+    _meta?: {
+        currentBalance?: number;
+    };
 
     constructor(state: UserPositionState) {
         this._id = state.id;
@@ -129,6 +132,7 @@ export class UserPosition {
         this._nextJob = state.nextJob;
         this._entryOrders = state.entryOrders || [];
         this._exitOrders = state.exitOrders || [];
+        this._meta = state.meta || { currentBalance: null };
         this._ordersToCreate = [];
         this._connectorJobs = [];
         this._hasRecentTrade = false;
@@ -462,7 +466,8 @@ export class UserPosition {
             barsHeld: this._barsHeld,
             nextJobAt: this._nextJobAt,
             nextJob: this._nextJob,
-            emulated: this._emulated
+            emulated: this._emulated,
+            meta: this._meta
         };
     }
 
@@ -755,6 +760,7 @@ export class UserPosition {
 
         const lastOrder = this.lastEntryOrder;
         if (!lastOrder) return;
+
         if (
             this.hasEntrySlippage &&
             this._internalState.entrySlippageCount < this._tradeSettings.slippage.entry.count
@@ -982,6 +988,8 @@ export class UserPosition {
         } else if (this._nextJob === UserPositionJob.cancel) {
             this._tryToCancel();
         }
+        const lastOrder = this.lastExitOrder || this.lastEntryOrder;
+        if (lastOrder) this._meta.currentBalance = lastOrder.currentBalance;
     }
 
     confirmEntryTrade() {

@@ -74,6 +74,9 @@ export interface UserPositionDB {
     nextJobAt?: string;
     nextJob?: UserPositionJob;
     emulated: boolean;
+    meta?: {
+        currentBalance?: number;
+    };
 }
 
 export interface UserPositionState extends UserPositionDB {

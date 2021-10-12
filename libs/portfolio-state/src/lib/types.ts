@@ -142,6 +142,7 @@ export interface UserPortfolioState extends UserPortfolioDB {
         minRobotsCount: number;
     };
     robots?: PortfolioRobotDB[];
+    currentExchangeBalance?: number;
 }
 
 export interface OpenPosition {

@@ -73,6 +73,7 @@ export interface Order {
     error?: any;
     nextJob?: OrderJob;
     info?: ccxt.Order;
+    currentBalance?: number;
 }
 
 export interface UnknownOrder {

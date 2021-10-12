@@ -188,7 +188,7 @@ export default class UserRobotWorkerService extends BaseService {
         exit_price, exit_date, exit_candle_timestamp,
         exit_volume, exit_executed, exit_remaining,
         internal_state, reason, profit, bars_held,
-        next_job_at, next_job, emulated
+        next_job_at, next_job, emulated, meta
          ) 
          VALUES (
              ${p.id}, ${p.prefix}, ${p.code}, 
@@ -205,7 +205,7 @@ export default class UserRobotWorkerService extends BaseService {
              ${JSON.stringify(p.internalState) || null}, ${p.reason || null},
              ${p.profit || null}, ${p.barsHeld || null},
              ${p.nextJobAt || null}, ${p.nextJob || null},
-             ${p.emulated || false}
+             ${p.emulated || false}, ${JSON.stringify(p.meta)}
          )
           ON CONFLICT ON CONSTRAINT user_positions_pkey 
           DO UPDATE SET updated_at = now(),
@@ -233,7 +233,8 @@ export default class UserRobotWorkerService extends BaseService {
           profit = excluded.profit,
           bars_held = excluded.bars_held,
           next_job_at = excluded.next_job_at,
-          next_job = excluded.next_job;
+          next_job = excluded.next_job,
+          meta = excluded.meta;
             `);
         }
     };

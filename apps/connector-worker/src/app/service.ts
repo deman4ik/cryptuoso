@@ -220,7 +220,7 @@ export default class ConnectorRunnerService extends BaseService {
         try {
             const userExAccId = job.id;
             this.log.info(`Connector #${userExAccId} started processing jobs`);
-            let updateBalances = false;
+
             if (job.name === ConnectorJobType.order) {
                 let nextJobs = await this.#getNextJobs(userExAccId);
                 if (!nextJobs || !Array.isArray(nextJobs) || nextJobs.length === 0) return;
@@ -241,7 +241,7 @@ export default class ConnectorRunnerService extends BaseService {
                             const [nextJob] = orderJobs.sort((a, b) =>
                                 sortDesc(dayjs.utc(a.nextJobAt).valueOf(), dayjs.utc(b.nextJobAt).valueOf())
                             );
-                            ({ updateBalances } = await this.processNextOrderJob(exchangeAcc, nextJob));
+                            await this.processNextOrderJob(exchangeAcc, nextJob);
                         })
                     );
 
@@ -256,10 +256,10 @@ export default class ConnectorRunnerService extends BaseService {
             `);
             }
 
-            if (job.name === ConnectorJobType.balance || updateBalances) {
+            if (job.name === ConnectorJobType.balance) {
                 const exchangeAcc: UserExchangeAccount = await this.#getUserExAcc(userExAccId);
 
-                if (job.name === ConnectorJobType.balance) await this.initConnector(exchangeAcc);
+                await this.initConnector(exchangeAcc);
                 const balances: UserExchangeAccBalances = await this.connectors[userExAccId].getBalances();
 
                 let status = exchangeAcc.status;
@@ -410,7 +410,7 @@ export default class ConnectorRunnerService extends BaseService {
         }
     }
 
-    async processNextOrderJob(exAcc: UserExchangeAccount, job: ConnectorJob): Promise<{ updateBalances: boolean }> {
+    async processNextOrderJob(exAcc: UserExchangeAccount, job: ConnectorJob): Promise<void> {
         const { exchange } = exAcc;
         const { userExAccId, orderId } = job;
         try {
@@ -463,6 +463,16 @@ export default class ConnectorRunnerService extends BaseService {
                 throw new BaseError(`Failed to save order #${order.id} - ${error.message}`, { order, nextJob });
             }
 
+            if (order.status === OrderStatus.closed) {
+                const balances: UserExchangeAccBalances = await this.connectors[userExAccId].getBalances();
+
+                await this.db.pg.query(sql`
+                UPDATE user_exchange_accs SET balances = ${JSON.stringify(balances) || null},
+                WHERE id = ${userExAccId};
+                `);
+                order.currentBalance = balances.totalUSD;
+            }
+
             if (order.status === OrderStatus.closed || order.status === OrderStatus.canceled) {
                 await this.events.emit<OrdersStatusEvent>({
                     type: ConnectorWorkerEvents.ORDER_STATUS,
@@ -473,7 +483,8 @@ export default class ConnectorRunnerService extends BaseService {
                         userRobotId: order.userRobotId,
                         userPositionId: order.userPositionId,
                         positionId: order.positionId,
-                        status: order.status
+                        status: order.status,
+                        currentBalance: order.currentBalance
                     }
                 });
             } else if (order.error) {
@@ -495,8 +506,6 @@ export default class ConnectorRunnerService extends BaseService {
             }
 
             this.log.info(`UserExAcc #${order.userExAccId} processed order ${order.id}`, order);
-            if (order.status === OrderStatus.closed) return { updateBalances: true };
-            return { updateBalances: false };
         } catch (err) {
             this.log.error(err, job);
             throw err;

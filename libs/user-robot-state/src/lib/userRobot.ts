@@ -338,7 +338,7 @@ export class UserRobot {
                 "ERR_WRONG"
             );
 
-        const position = this._positions[order.userPositionId] || this._positions[order.positionId]; //TODO: remove positionId option
+        const position = this._positions[order.userPositionId];
         if (!position)
             throw new BaseError(
                 "Position not found",
