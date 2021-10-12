@@ -7,6 +7,7 @@ import {
     PortfolioBuilder,
     PortfolioBuilderJob,
     PortfolioInfo,
+    PortfolioSettings,
     PortfolioState,
     UserPortfolioBuilderJob,
     UserPortfolioState
@@ -258,18 +259,17 @@ const worker = {
             portfolio.settings.excludeTimeframes.length
                 ? sql`AND r.timeframe NOT IN (${sql.join(portfolio.settings.excludeTimeframes, sql`, `)})`
                 : sql``;
-        const dateFromCondition = portfolio.settings.dateFrom
+        let dateFromCondition = portfolio.settings.dateFrom
             ? sql`AND p.entry_date >= ${portfolio.settings.dateFrom}`
             : sql``;
-        const dateToCondition = portfolio.settings.dateTo
-            ? sql`AND p.entry_date <= ${portfolio.settings.dateTo}`
-            : sql``;
+        let dateToCondition = portfolio.settings.dateTo ? sql`AND p.entry_date <= ${portfolio.settings.dateTo}` : sql``;
         const { risk, profit, winRate, efficiency, moneyManagement } = portfolio.settings.options;
         const basePortfolio = await pg.maybeOne<{
             id: string;
             limits: PortfolioInfo["limits"];
             portfolioRobotsCount: number;
-        }>(sql`SELECT p.id, p.limits, p.portfolio_robots_count FROM v_portfolios p
+            settings: PortfolioSettings;
+        }>(sql`SELECT p.id, p.limits, p.portfolio_robots_count, p.settings FROM v_portfolios p
             WHERE
              p.exchange = ${portfolio.exchange}
             AND p.base = true
@@ -311,6 +311,11 @@ const worker = {
                       sql`, `
                   )})`
                 : sql``;
+
+            if (basePortfolio.settings.dateFrom)
+                dateFromCondition = sql`AND p.entry_date >= ${basePortfolio.settings.dateFrom}`;
+            if (basePortfolio.settings.dateTo)
+                dateToCondition = sql`AND p.entry_date <= ${basePortfolio.settings.dateTo}`;
         }
         const positions: BasePosition[] = await DataStream.from(
             makeChunksGenerator(
