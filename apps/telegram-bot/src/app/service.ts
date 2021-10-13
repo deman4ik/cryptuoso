@@ -273,7 +273,7 @@ export default class TelegramBotService extends HTTPService {
 
         this.createQueue(queueKey, null, null, null, { completed: false });
 
-        this.createWorker(queueKey, this.checkNotifications);
+        //     this.createWorker(queueKey, this.checkNotifications);
 
         await this.addJob(queueKey, JobTypes.checkNotifications, null, {
             repeat: {

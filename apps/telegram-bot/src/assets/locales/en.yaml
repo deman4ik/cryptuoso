@@ -152,15 +152,21 @@ dialogs:
         success: ⛔ Trading are stopping now...
     trading:
         portfolio: >
-            ${options}\n\n
+            ${settings}
             <b>Status:</b> ${status}\n
             <b>Trading amount:</b> ${amount} ${amountType}\n
             <b>Current exchange balance:</b> ${round(currentBalance,2)} $\n\n
-            <b>Closed trades:</b> ${tradesCount}\n
+            <b>📪  Closed trades:</b> ${tradesCount}\n
             <b>Net Profit/Loss:</b> ${netProfit}\n\n
-            <b>Open trades:</b> ${openTradeCount}\n
+            <b>📬  Open trades:</b> ${openTradeCount}\n
             <b>Unrealized Profit/Loss:</b> ${unrealizedProfit}
+        settings: ${title}\n ${options}\n\n
+        currentSettings: >
+            ⚙️ Current Settings
+        newSettings: >
+            ⚙️ New Settings (will be applied ${date})
         title: 📈 My ${formatExchange(exchange)} portfolio\n\n
+        firstBuild: after first builded
         infoTitle: 📈 My ${formatExchange(exchange)} portfolio ℹ️ Info\n\n
         statsTitle: 📈 My ${formatExchange(exchange)} portfolio 📊 Performance\n\n
         info: ℹ️ Info
@@ -338,10 +344,18 @@ dialogs:
             📈 Configuring your trading portfolio
 
 
+            You can change portfolio options while it is ⛔ Stopped or once in a month while it is 🟢 Started
+
+
             Please choose available options:\n
             ${options}
         chooseMoreOptions: >
             📈 Configuring your trading portfolio\n\n
+
+
+            You can change portfolio options while it is ⛔ Stopped or once in a month while it is 🟢 Started
+
+
             You choosed: \n\n
             ${options} \n\n
             You can choose more options or press ✅ <b>Done</b>

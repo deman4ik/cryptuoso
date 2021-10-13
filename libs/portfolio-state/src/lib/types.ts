@@ -170,7 +170,9 @@ export interface UserPortfolioInfo {
     status: UserPortfolioDB["status"];
     startedAt?: UserPortfolioDB["startedAt"];
     stoppedAt?: UserPortfolioDB["stoppedAt"];
-    settings: PortfolioSettings;
+    settings?: PortfolioSettings;
+    activeFrom?: string;
+    nextSettings?: PortfolioSettings;
     stats?: FullStats;
     unrealizedProfit?: number;
     openTradesCount?: number;

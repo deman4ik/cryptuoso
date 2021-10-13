@@ -168,7 +168,9 @@ const getTradingInfo = async (ctx: BotContext) => {
                         status
                         startedAt: started_at
                         stoppedAt: stopped_at
+                        activeFrom: active_from
                         settings: user_portfolio_settings
+                        nextSettings: next_user_portfolio_settings
                         stats {
                             tradesCount: trades_count
                             currentBalance: current_balance
@@ -266,23 +268,54 @@ const onEnter = async (ctx: BotContext) => {
     const userExAcc = ctx.session.userExAcc;
 
     const settings = portfolio.settings;
+    const nextSettings = portfolio.nextSettings;
+
+    let settingsText = "";
+    let amountText: any = "";
+    let amountTypeText = "";
+    if (settings) {
+        settingsText = ctx.i18n.t("dialogs.trading.settings", {
+            title: ctx.i18n.t("dialogs.trading.currentSettings"),
+            options: Object.entries(settings.options)
+                .filter(([, val]) => !!val)
+                .map(([o]) => `✅ ${ctx.i18n.t(`options.${o}`)}`)
+                .join("\n ")
+        });
+        amountText = settings.balancePercent || settings.tradingAmountCurrency;
+        amountTypeText =
+            settings.tradingAmountType === "balancePercent"
+                ? ctx.i18n.t("dialogs.addPortfolio.ofBalance")
+                : ctx.i18n.t("dialogs.addPortfolio.fixedCurrency");
+    }
+
+    if (nextSettings) {
+        settingsText = `${settingsText}${ctx.i18n.t("dialogs.trading.settings", {
+            title: ctx.i18n.t("dialogs.trading.newSettings", {
+                date: portfolio.activeFrom
+                    ? dayjs.utc(portfolio.activeFrom).format("YYYY-MM-DD")
+                    : ctx.i18n.t("dialogs.trading.firstBuild")
+            }),
+            options: Object.entries(nextSettings.options)
+                .filter(([, val]) => !!val)
+                .map(([o]) => `✅ ${ctx.i18n.t(`options.${o}`)}`)
+                .join("\n ")
+        })}`;
+        if (amountText === "" && amountTypeText === "") {
+            amountText = nextSettings.balancePercent || nextSettings.tradingAmountCurrency;
+            amountTypeText =
+                nextSettings.tradingAmountType === "balancePercent"
+                    ? ctx.i18n.t("dialogs.addPortfolio.ofBalance")
+                    : ctx.i18n.t("dialogs.addPortfolio.fixedCurrency");
+        }
+    }
     const text = `${ctx.i18n.t("dialogs.trading.infoTitle", { exchange: portfolio.exchange })}${ctx.i18n.t(
         "dialogs.trading.portfolio",
         {
-            options: settings
-                ? Object.entries(settings.options)
-                      .filter(([, val]) => !!val)
-                      .map(([o]) => `✅ ${ctx.i18n.t(`options.${o}`)}`)
-                      .join("\n ")
-                : "",
+            settings: settingsText,
             status: ctx.i18n.t(`status.${portfolio.status}`),
             currentBalance: userExAcc.balance,
-            amount: settings ? settings.balancePercent || settings.tradingAmountCurrency : "",
-            amountType: settings
-                ? settings.tradingAmountType === "balancePercent"
-                    ? ctx.i18n.t("dialogs.addPortfolio.ofBalance")
-                    : ctx.i18n.t("dialogs.addPortfolio.fixedCurrency")
-                : "",
+            amount: amountText,
+            amountType: amountTypeText,
             netProfit: portfolio.stats?.netProfit
                 ? `${plusNum(portfolio.stats.netProfit)} $ (${plusNum(portfolio.stats.percentNetProfit)}%)`
                 : `0 $`,

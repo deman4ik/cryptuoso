@@ -1,14 +1,9 @@
 import logger from "@cryptuoso/logger";
 import { NextFunction } from "grammy";
-import { startActions } from "../dialogs/start";
 import { BotContext } from "../types";
 
 export const auth = async (ctx: BotContext, next: NextFunction) => {
     if (ctx.session.dialog.current && ["login", "registration", "start"].includes(ctx.session.dialog.current.name)) {
-        /* const isStart = ctx.message.text === ctx.i18n.t("keyboards.startKeybord.start");
-        if (isStart) {
-            ctx.dialog.enter(startActions.enter);
-        }*/
         await next();
         return;
     }
