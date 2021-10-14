@@ -426,7 +426,7 @@ export class TradeStatsCalc implements TradeStats {
         stats.avgGrossLoss = stats.grossLoss / stats.tradesLosing;
 
         stats.profitFactor = Math.abs(divide(stats.grossProfit, stats.grossLoss));
-        stats.recoveryFactor = divide(stats.netProfit, stats.maxDrawdown) * -1;
+        stats.recoveryFactor = divide(stats.percentNetProfit, stats.percentMaxDrawdown) * -1;
         stats.payoffRatio = Math.abs(divide(stats.avgGrossProfit, stats.avgGrossLoss));
 
         if (this.hasBalance) {

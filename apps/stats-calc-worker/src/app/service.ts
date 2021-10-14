@@ -142,14 +142,12 @@ export default class StatisticCalcWorkerService extends BaseService {
         }
     }
 
-    private async makeHandlers(
-        handlers: {
-            [K in StatsCalcJobType]?: {
-                schema: ValidationSchema;
-                handler: (params: StatsCalcJob) => Promise<boolean>;
-            };
-        }
-    ) {
+    private async makeHandlers(handlers: {
+        [K in StatsCalcJobType]?: {
+            schema: ValidationSchema;
+            handler: (params: StatsCalcJob) => Promise<boolean>;
+        };
+    }) {
         const v = new Validator();
 
         for (const [name, { schema, handler }] of Object.entries(handlers)) {

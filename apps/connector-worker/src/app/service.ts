@@ -29,7 +29,6 @@ export type ConnectorRunnerServiceConfig = BaseServiceConfig;
 
 export default class ConnectorRunnerService extends BaseService {
     #pool: Pool<any>;
-    #robotJobRetries = 3;
 
     connectors: { [key: string]: PrivateConnector } = {};
     constructor(config?: ConnectorRunnerServiceConfig) {
@@ -147,7 +146,7 @@ export default class ConnectorRunnerService extends BaseService {
                 ex_id, ex_timestamp, ex_last_trade_at,
                 remaining, executed, fee, 
                 last_checked_at, params,
-                error, next_job
+                error, next_job, meta
             ) VALUES (
                 ${order.id}, ${order.userExAccId}, ${order.userRobotId},
                 ${order.positionId || null}, ${order.userPositionId},
@@ -159,7 +158,8 @@ export default class ConnectorRunnerService extends BaseService {
                 ${order.exId || null}, ${order.exTimestamp || null}, ${order.exLastTradeAt || null},
                 ${order.remaining || null}, ${order.executed || null}, ${order.fee || null},
                 ${order.lastCheckedAt || null}, ${JSON.stringify(order.params) || null},
-                ${order.error || null}, ${JSON.stringify(order.nextJob) || null}
+                ${order.error || null}, ${JSON.stringify(order.nextJob) || null}.
+                ${JSON.stringify(order.meta) || JSON.stringify({})}
             );
             `);
     };
@@ -180,7 +180,8 @@ export default class ConnectorRunnerService extends BaseService {
          last_checked_at = ${order.lastCheckedAt || null},
          error = ${JSON.stringify(order.error) || null},
          next_job = ${JSON.stringify(order.nextJob) || null},
-         info = ${JSON.stringify(order.info) || null}
+         info = ${JSON.stringify(order.info) || null},
+         meta = ${JSON.stringify(order.meta) || JSON.stringify({})}
          WHERE id = ${order.id}
         `);
         } catch (error) {
@@ -470,7 +471,7 @@ export default class ConnectorRunnerService extends BaseService {
                 UPDATE user_exchange_accs SET balances = ${JSON.stringify(balances) || null},
                 WHERE id = ${userExAccId};
                 `);
-                order.currentBalance = balances.totalUSD;
+                order.meta = { ...order.meta, currentBalance: balances.totalUSD };
             }
 
             if (order.status === OrderStatus.closed || order.status === OrderStatus.canceled) {
@@ -483,8 +484,7 @@ export default class ConnectorRunnerService extends BaseService {
                         userRobotId: order.userRobotId,
                         userPositionId: order.userPositionId,
                         positionId: order.positionId,
-                        status: order.status,
-                        currentBalance: order.currentBalance
+                        status: order.status
                     }
                 });
             } else if (order.error) {

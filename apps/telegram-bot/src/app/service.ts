@@ -276,11 +276,10 @@ export default class TelegramBotService extends HTTPService {
         this.createWorker(queueKey, this.checkNotifications);
 
         await this.addJob(queueKey, JobTypes.checkNotifications, null, {
+            jobId: JobTypes.checkNotifications,
             repeat: {
                 cron: "*/5 * * * * *"
             },
-            attempts: 10,
-            backoff: { type: "exponential", delay: 60000 },
             removeOnComplete: 1,
             removeOnFail: 10
         });

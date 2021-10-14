@@ -32,8 +32,7 @@ const OrderSchema = {
     userRobotId: "uuid",
     userPositionId: "uuid",
     positionId: { type: "uuid", optional: true },
-    status: { type: "enum", values: ["new", "open", "closed", "canceled"] },
-    currentBalance: { type: "number", optional: true }
+    status: { type: "enum", values: ["new", "open", "closed", "canceled"] }
 };
 
 export const ConnectorWorkerSchema = {
@@ -63,7 +62,6 @@ export interface OrdersStatusEvent {
     userPositionId: string;
     positionId?: string;
     status: OrderStatus;
-    currentBalance?: number;
 }
 
 export interface OrdersErrorEvent extends OrdersStatusEvent {

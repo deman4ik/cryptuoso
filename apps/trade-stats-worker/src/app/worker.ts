@@ -234,13 +234,19 @@ class StatsCalcWorker {
             }
 
             let calcFrom;
+            let entryDate;
             if (!recalc && initialStats?.fullStats) {
                 calcFrom = initialStats.fullStats.lastPosition.exitDate;
+            }
+
+            if (recalc && portfolio.settings.dateFrom) {
+                entryDate = portfolio.settings.dateFrom;
             }
             if (calcFrom) logger.debug(`Calculating portfolio #${portfolioId} stats from ${calcFrom}`);
             else logger.debug(`Calculating portfolio #${portfolioId} stats full`);
 
             const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
+            const conditionEntryDate = !entryDate ? sql`` : sql`AND p.entry_date > ${entryDate}`;
             const querySelectPart = sql`
             SELECT p.id, p.robot_id, p.direction, p.entry_date, p.entry_price, p.exit_date, p.exit_price, p.bars_held, p.meta, p.max_price
         `;
@@ -249,6 +255,7 @@ class StatsCalcWorker {
             WHERE p.portfolio_id = ${portfolioId}
                 AND p.status = 'closed'
                 ${conditionExitDate}
+                ${conditionEntryDate}
         `;
             const queryCommonPart = sql`
             ${querySelectPart}
@@ -274,8 +281,13 @@ class StatsCalcWorker {
             const newStats: TradeStats = await this.calcStats(
                 positions,
                 {
-                    job: { ...job, savePositions: true, feeRate: portfolio.settings.feeRate || portfolio.feeRate },
-                    initialBalance: portfolio.settings.initialBalance
+                    job: {
+                        ...job,
+                        savePositions: true,
+                        feeRate: portfolio.settings.feeRate || portfolio.feeRate
+                    },
+                    initialBalance: portfolio.settings.initialBalance,
+                    leverage: portfolio.settings.leverage
                 },
                 initialStats
             );

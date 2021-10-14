@@ -989,7 +989,7 @@ export class UserPosition {
             this._tryToCancel();
         }
         const lastOrder = this.lastExitOrder || this.lastEntryOrder;
-        if (lastOrder) this._meta.currentBalance = lastOrder.currentBalance;
+        if (lastOrder) this._meta.currentBalance = lastOrder.meta?.currentBalance;
     }
 
     confirmEntryTrade() {

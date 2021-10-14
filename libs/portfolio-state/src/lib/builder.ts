@@ -96,7 +96,9 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
             getPortfolioRobotsCount(portfolioBalance, minTradeAmount);
 
         const minRobotsCount =
-            this.portfolio.settings.minRobotsCount || getPortfolioRobotsCount(minBalance, minTradeAmount);
+            this.portfolio.context.robotsCount ||
+            this.portfolio.settings.minRobotsCount ||
+            getPortfolioRobotsCount(minBalance, minTradeAmount);
 
         this.portfolio.variables = {
             portfolioBalance,
