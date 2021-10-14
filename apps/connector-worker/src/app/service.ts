@@ -451,6 +451,20 @@ export default class ConnectorRunnerService extends BaseService {
                 nextJob = null;
             }
 
+            if (order.status === OrderStatus.closed) {
+                try {
+                    const balances: UserExchangeAccBalances = await this.connectors[userExAccId].getBalances();
+
+                    await this.db.pg.query(sql`
+                UPDATE user_exchange_accs SET balances = ${JSON.stringify(balances) || null},
+                WHERE id = ${userExAccId};
+                `);
+                    order.meta = { ...order.meta, currentBalance: balances.totalUSD };
+                } catch (error) {
+                    this.log.error(`Failed to check user balance #${userExAccId}`, error);
+                }
+            }
+
             try {
                 await this.db.pg.transaction(async (t) => {
                     await this.#saveOrder(t, order);
@@ -462,16 +476,6 @@ export default class ConnectorRunnerService extends BaseService {
             } catch (error) {
                 this.log.error(`Failed to save order #${order.id}`, error, order, nextJob);
                 throw new BaseError(`Failed to save order #${order.id} - ${error.message}`, { order, nextJob });
-            }
-
-            if (order.status === OrderStatus.closed) {
-                const balances: UserExchangeAccBalances = await this.connectors[userExAccId].getBalances();
-
-                await this.db.pg.query(sql`
-                UPDATE user_exchange_accs SET balances = ${JSON.stringify(balances) || null},
-                WHERE id = ${userExAccId};
-                `);
-                order.meta = { ...order.meta, currentBalance: balances.totalUSD };
             }
 
             if (order.status === OrderStatus.closed || order.status === OrderStatus.canceled) {
