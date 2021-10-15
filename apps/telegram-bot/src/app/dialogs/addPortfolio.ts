@@ -167,14 +167,12 @@ const amountType = async (ctx: BotContext) => {
 
         const [userExAcc] = myUserExAcc;
         ctx.session.userExAcc = userExAcc;
-        ctx.session.dialog.current.data.initialBalance = userExAcc.balance;
-        ctx.session.dialog.current.data.userExAccId = userExAcc.id;
     }
 
-    if (ctx.session.dialog.current.data.initialBalance < data.minBalance) {
+    if (ctx.session.userExAcc.balance < data.minBalance) {
         await ctx.reply(
             ctx.i18n.t("dialogs.addPortfolio.insufficient", {
-                currentBalance: ctx.session.dialog.current.data.initialBalance,
+                currentBalance: ctx.session.userExAcc.balance,
                 minBalance: data.minBalance,
                 exchange: data.exchange
             })
@@ -184,7 +182,7 @@ const amountType = async (ctx: BotContext) => {
     }
 
     const text = ctx.i18n.t("dialogs.addPortfolio.amountType", {
-        balance: ctx.session.dialog.current.data.initialBalance
+        balance: ctx.session.userExAcc.balance
     });
     ctx.dialog.next(addPortfolioActions.amount);
     const buttons = getAmountTypeButtons(ctx);

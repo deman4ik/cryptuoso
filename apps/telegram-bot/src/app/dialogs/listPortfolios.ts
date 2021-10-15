@@ -5,6 +5,7 @@ import { Router } from "../utils/dialogsRouter";
 import { getEquityChartUrl } from "@cryptuoso/quickchart";
 import { addPortfolioActions } from "./addPortfolio";
 import { gql } from "../utils/graphql-client";
+import logger from "@cryptuoso/logger";
 
 export const enum listPortfoliosActions {
     enter = "lPfs:enter",
@@ -186,10 +187,17 @@ const showPortfolio = async (ctx: BotContext) => {
     });
     await ctx.dialog.edit();
     ctx.dialog.next(listPortfoliosActions.actions);
-    await ctx.replyWithPhoto(getEquityChartUrl(portfolio.stats.equityAvg), {
-        caption: text,
-        reply_markup: getPortfolioActions(ctx)
-    });
+    try {
+        await ctx.replyWithPhoto(getEquityChartUrl(portfolio.stats.equityAvg), {
+            caption: text,
+            reply_markup: getPortfolioActions(ctx)
+        });
+    } catch (err) {
+        logger.error(err);
+        await ctx.reply(text, {
+            reply_markup: getPortfolioActions(ctx)
+        });
+    }
 };
 
 const portfolioActions = async (ctx: BotContext) => {
