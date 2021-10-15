@@ -445,7 +445,7 @@ export class TradeStatsCalc implements TradeStats {
                 stats.stdDevPercentNetProfit = Math.sqrt(stats.sumPercentNetProfitSqDiff) / (stats.tradesCount - 1);
                 stats.sharpeRatio = stats.avgPercentNetProfit / stats.stdDevPercentNetProfit;
             } */
-            stats.recoveryFactor = divide(stats.percentNetProfit, stats.percentMaxDrawdown) * -1;
+            stats.recoveryFactor = divide(stats.percentNetProfit, stats.percentMaxDrawdown);
         } else {
             stats.recoveryFactor = divide(stats.netProfit, stats.maxDrawdown) * -1;
         }
@@ -528,7 +528,7 @@ export class TradeStatsCalc implements TradeStats {
             stats.percentNetProfit = (stats.netProfit / stats.initialBalance) * 100;
             stats.percentGrossProfit = (stats.grossProfit / stats.initialBalance) * 100;
             stats.percentGrossLoss = (stats.grossLoss / stats.initialBalance) * 100;
-            stats.recoveryFactor = divide(stats.percentNetProfit, stats.percentMaxDrawdown) * -1;
+            stats.recoveryFactor = divide(stats.percentNetProfit, stats.percentMaxDrawdown);
         } else {
             stats.recoveryFactor = divide(stats.netProfit, stats.maxDrawdown) * -1;
         }
