@@ -794,11 +794,12 @@ export default class UserRobotRunnerService extends HTTPService {
     async handlePortfolioBuilded({ portfolioId }: PortfolioManagerPortfolioBuilded) {
         try {
             const portfolio = await this.db.pg.one<{
+                exchange: PortfolioDB["exchange"];
                 settings: PortfolioDB["settings"];
                 status: PortfolioDB["status"];
                 base: PortfolioDB["base"];
             }>(sql`
-            SELECT settings, status, base 
+            SELECT exchange, settings, status, base 
             FROM portfolios 
             WHERE id = ${portfolioId};`);
 
@@ -809,6 +810,7 @@ export default class UserRobotRunnerService extends HTTPService {
             SELECT p.id
             FROM v_user_portfolios p
             WHERE (p.user_portfolio_settings->>'custom')::boolean = false
+            AND p.exchange = ${portfolio.exchange}
             AND p.option_risk = ${options.risk}
             AND p.option_profit = ${options.profit}
             AND p.option_win_rate = ${options.winRate}
@@ -840,7 +842,9 @@ export default class UserRobotRunnerService extends HTTPService {
                     this.log.error(`Failed to update user portfolio's #${id} settings and sync`, error);
                 }
             }
-            this.log.info(`Synced ${userPortfolios.length} user portfolios with ${portfolioId} portfolio robots`);
+            this.log.info(
+                `Synced ${userPortfolios.length} user portfolio ${robots.length} robots with ${portfolioId} portfolio`
+            );
         } catch (error) {
             this.log.error(`Failed to handle portfolio's #${portfolioId} builded event`, error);
         }
