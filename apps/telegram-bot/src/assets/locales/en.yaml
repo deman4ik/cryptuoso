@@ -166,7 +166,7 @@ dialogs:
         newSettings: >
             ⚙️ New Settings (will be applied ${date})
         title: 📈 My ${formatExchange(exchange)} portfolio\n\n
-        firstBuild: after first builded
+        nextBuild: after next build
         infoTitle: 📈 My ${formatExchange(exchange)} portfolio ℹ️ Info\n\n
         statsTitle: 📈 My ${formatExchange(exchange)} portfolio 📊 Performance\n\n
         info: ℹ️ Info
@@ -319,7 +319,7 @@ dialogs:
             Your initial balance is ${round(initialBalance,2)} $\n
             Your trading amount is ${amount} ${amountType}\n\n
             ${warning}\n\n
-            ⏳ Please wait till portfolio is ✅<b>Builded</b> and 🟢 <b>Started</b>
+            ⏳ Please wait till portfolio is 🟢 <b>Started</b>
         ofBalance: >
             % of the balance
         fixedCurrency: $ fixed
@@ -363,7 +363,7 @@ dialogs:
             📈 Configuring your trading portfolio
 
 
-            ✅ You portfolio options will change after portfolio is builded again.
+            ✅ You portfolio options configuration will be applied soon.
     editExchangeAcc:
         chooseExchange: >
             🔑 Linking Exchange Account

@@ -18,7 +18,8 @@ export const enum UserRobotRunnerEvents {
     CONFIRM_TRADE = "in-user-robot-runner.confirm-trade",
     START_PORTFOLIO = "in-user-robot-runner.start-portfolio",
     STOP_PORTFOLIO = "in-user-robot-runner.stop-portfolio",
-    SYNC_PORTFOLIO_ROBOTS = "in-user-robot-runner.sync-portfolio-robots"
+    SYNC_PORTFOLIO_ROBOTS = "in-user-robot-runner.sync-portfolio-robots",
+    SYNC_USER_PORTFOLIO_ROBOTS = "in-user-robot-runner.sync-user-portfolio-robots"
 }
 
 export const USER_ROBOT_WORKER_TOPIC = "out-user-robot-worker";
@@ -64,6 +65,9 @@ export const UserRobotRunnerSchema = {
     [UserRobotRunnerEvents.START_PORTFOLIO]: RunnerSchema,
     [UserRobotRunnerEvents.STOP_PORTFOLIO]: RunnerSchema,
     [UserRobotRunnerEvents.SYNC_PORTFOLIO_ROBOTS]: {
+        exchange: { type: "string", optional: true }
+    },
+    [UserRobotRunnerEvents.SYNC_USER_PORTFOLIO_ROBOTS]: {
         userPortfolioId: "uuid"
     }
 };

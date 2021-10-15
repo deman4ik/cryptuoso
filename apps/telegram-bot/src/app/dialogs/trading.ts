@@ -293,7 +293,7 @@ const onEnter = async (ctx: BotContext) => {
             title: ctx.i18n.t("dialogs.trading.newSettings", {
                 date: portfolio.activeFrom
                     ? dayjs.utc(portfolio.activeFrom).format("YYYY-MM-DD")
-                    : ctx.i18n.t("dialogs.trading.firstBuild")
+                    : ctx.i18n.t("dialogs.trading.nextBuild")
             }),
             options: Object.entries(nextSettings.options)
                 .filter(([, val]) => !!val)

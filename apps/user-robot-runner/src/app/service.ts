@@ -42,12 +42,13 @@ import { Event } from "@cryptuoso/events";
 import { OrderStatus, SignalEvent, TradeAction } from "@cryptuoso/market";
 import { UserSub } from "@cryptuoso/billing";
 import { GA } from "@cryptuoso/analytics";
-import { UserPortfolioDB, UserPortfolioState } from "@cryptuoso/portfolio-state";
+import { PortfolioDB, PortfolioRobotDB, UserPortfolioDB, UserPortfolioState } from "@cryptuoso/portfolio-state";
 import {
     PortfolioManagerBuildUserPortfolio,
     PortfolioManagerInEvents,
     PortfolioManagerOutEvents,
     PortfolioManagerOutSchema,
+    PortfolioManagerPortfolioBuilded,
     PortfolioManagerUserPortfolioBuilded,
     PortfolioManagerUserPortfolioBuildError
 } from "@cryptuoso/portfolio-events";
@@ -104,6 +105,11 @@ export default class UserRobotRunnerService extends HTTPService {
                     roles: [UserRoles.admin, UserRoles.manager],
                     inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.SYNC_PORTFOLIO_ROBOTS],
                     handler: this._httpHandler.bind(this, this.syncPortfolioRobots.bind(this))
+                },
+                syncUserPortfolioRobots: {
+                    roles: [UserRoles.admin, UserRoles.manager],
+                    inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.SYNC_USER_PORTFOLIO_ROBOTS],
+                    handler: this._httpHandler.bind(this, this.syncUserPortfolioRobots.bind(this))
                 }
             });
             this.events.subscribe({
@@ -134,6 +140,10 @@ export default class UserRobotRunnerService extends HTTPService {
                 [UserRobotRunnerEvents.STOP_PORTFOLIO]: {
                     handler: this.stopPortfolio.bind(this),
                     schema: UserRobotRunnerSchema[UserRobotRunnerEvents.STOP_PORTFOLIO]
+                },
+                [PortfolioManagerOutEvents.PORTFOLIO_BUILDED]: {
+                    handler: this.handlePortfolioBuilded.bind(this),
+                    schema: PortfolioManagerOutSchema[PortfolioManagerOutEvents.PORTFOLIO_BUILDED]
                 },
                 [PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED]: {
                     handler: this.handleUserPortfolioBuilded.bind(this),
@@ -279,15 +289,6 @@ export default class UserRobotRunnerService extends HTTPService {
                 403
             );
 
-        /*if (userRobot.status === UserRobotStatus.paused) {
-            throw new ActionsHandlerError(
-                `Something went wrong with your robot. It will be started automatically when everything is fixed.`,
-                null,
-                "FORBIDDEN",
-                403
-            );
-        }*/
-
         const userSub = await this.db.pg.maybeOne<{ id: UserSub["id"] }>(sql`
         SELECT id 
         FROM user_subs
@@ -342,15 +343,6 @@ export default class UserRobotRunnerService extends HTTPService {
                 "FORBIDDEN",
                 403
             );
-
-        /*  if (userRobot.status === UserRobotStatus.paused) {
-            throw new ActionsHandlerError(
-                `Something went wrong with your robot. It will be started automatically when everything is fixed.`,
-                null,
-                "FORBIDDEN",
-                403
-            );
-        } */
 
         if (userRobot.status === UserRobotStatus.stopped || userRobot.status === UserRobotStatus.stopping) {
             return userRobot.status;
@@ -563,7 +555,21 @@ export default class UserRobotRunnerService extends HTTPService {
         );
     }
 
-    async syncPortfolioRobots({ userPortfolioId }: { userPortfolioId: string }) {
+    async syncPortfolioRobots({ exchange }: { exchange: string }) {
+        const exchangeCondition = exchange ? sql`AND exchange = ${exchange}` : sql``;
+        const portfolios = await this.db.pg.any<{ id: PortfolioDB["id"] }>(sql`
+        SELECT id from portfolios 
+        where base = true 
+        and status = 'started' 
+        ${exchangeCondition};
+        `);
+
+        for (const { id } of portfolios) {
+            await this.handlePortfolioBuilded({ portfolioId: id });
+        }
+    }
+
+    async syncUserPortfolioRobots({ userPortfolioId }: { userPortfolioId: string }) {
         this.log.info(`Syncing User Portfolio #${userPortfolioId} robots`);
         const userPortfolio = await this.db.pg.one<UserPortfolioState>(sql`
         SELECT p.id, p.type, p.user_id, p.user_ex_acc_id, p.exchange, p.status, 
@@ -678,14 +684,6 @@ export default class UserRobotRunnerService extends HTTPService {
                     403
                 );
         }
-        /*if (userRobot.status === UserRobotStatus.paused) {
-            throw new ActionsHandlerError(
-                `Something went wrong with your robot. It will be started automatically when everything is fixed.`,
-                null,
-                "FORBIDDEN",
-                403
-            );
-        }*/
 
         const userSub = await this.db.pg.maybeOne<{ id: UserSub["id"] }>(sql`
         SELECT id 
@@ -719,15 +717,15 @@ export default class UserRobotRunnerService extends HTTPService {
         WHERE id = ${id};
         `);
 
-        if (userPortfolio.settings && userPortfolio.status !== "error" && userPortfolio.status !== "buildError") {
-            await this.syncPortfolioRobots({ userPortfolioId: userPortfolio.id });
-        } else {
+        if (userPortfolio.settings.custom) {
             await this.events.emit<PortfolioManagerBuildUserPortfolio>({
                 type: PortfolioManagerInEvents.BUILD_USER_PORTFOLIO,
                 data: {
                     userPortfolioId: userPortfolio.id
                 }
             });
+        } else if (userPortfolio.settings && userPortfolio.robots?.length) {
+            await this.syncUserPortfolioRobots({ userPortfolioId: userPortfolio.id });
         }
 
         return status;
@@ -755,15 +753,6 @@ export default class UserRobotRunnerService extends HTTPService {
                 "FORBIDDEN",
                 403
             );
-
-        /*  if (userPortfolio.status === "paused") {
-            throw new ActionsHandlerError(
-                `Something went wrong with your portfolio. It will be started automatically when everything is fixed.`,
-                null,
-                "FORBIDDEN",
-                403
-            );
-        } */
 
         if (userPortfolio.status === "stopped") {
             return userPortfolio.status;
@@ -802,6 +791,61 @@ export default class UserRobotRunnerService extends HTTPService {
         return status;
     }
 
+    async handlePortfolioBuilded({ portfolioId }: PortfolioManagerPortfolioBuilded) {
+        try {
+            const portfolio = await this.db.pg.one<{
+                settings: PortfolioDB["settings"];
+                status: PortfolioDB["status"];
+                base: PortfolioDB["base"];
+            }>(sql`
+            SELECT settings, status, base 
+            FROM portfolios 
+            WHERE id = ${portfolioId};`);
+
+            if (!portfolio.base || portfolio.status !== "started") return;
+
+            const { options } = portfolio.settings;
+            const userPortfolios = await this.db.pg.any<{ id: UserPortfolioDB["id"] }>(sql`
+            SELECT p.id
+            FROM v_user_portfolios p
+            WHERE (p.user_portfolio_settings->>'custom')::boolean = false
+            AND p.option_risk = ${options.risk}
+            AND p.option_profit = ${options.profit}
+            AND p.option_win_rate = ${options.winRate}
+            AND p.option_efficiency = ${options.efficiency}
+            AND p.option_money_management = ${options.moneyManagement};`);
+
+            if (!userPortfolios || !Array.isArray(userPortfolios) || !userPortfolios.length) return;
+
+            const robots = await this.db.pg.any<PortfolioRobotDB>(sql`
+                SELECT robot_id, active, share, priority
+                FROM portfolio_robots
+                WHERE portfolio_id = ${portfolioId}
+                AND active = true;`);
+
+            if (!robots || !Array.isArray(robots) || !robots.length) {
+                this.log.error(`No portfolio robots found for ${portfolioId} portfolio`);
+                return;
+            }
+
+            const stringifiedRobots = JSON.stringify(robots);
+            for (const { id } of userPortfolios) {
+                try {
+                    await this.db.pg.query(sql`
+                update user_portfolio_settings set robots = ${stringifiedRobots}
+                WHERE user_portfolio_id = ${id} and active = true;
+                `);
+                    await this.syncUserPortfolioRobots({ userPortfolioId: id });
+                } catch (error) {
+                    this.log.error(`Failed to update user portfolio's #${id} settings and sync`, error);
+                }
+            }
+            this.log.info(`Synced ${userPortfolios.length} user portfolios with ${portfolioId} portfolio robots`);
+        } catch (error) {
+            this.log.error(`Failed to handle portfolio's #${portfolioId} builded event`, error);
+        }
+    }
+
     async handleUserPortfolioBuilded({ userPortfolioId }: PortfolioManagerUserPortfolioBuilded) {
         try {
             this.log.info(`Handling User Portfolio #${userPortfolioId} builded event`);
@@ -826,7 +870,7 @@ export default class UserRobotRunnerService extends HTTPService {
         `);
             }
 
-            await this.syncPortfolioRobots({ userPortfolioId });
+            await this.syncUserPortfolioRobots({ userPortfolioId });
 
             if (status) {
                 await this.events.emit<UserPortfolioStatus>({
@@ -1060,7 +1104,7 @@ export default class UserRobotRunnerService extends HTTPService {
         if (userPortfolios && Array.isArray(userPortfolios) && userPortfolios.length) {
             this.log.info(`${userPortfolios.length} User portfolios not in sync`);
             for (const { id } of userPortfolios) {
-                await this.syncPortfolioRobots({ userPortfolioId: id });
+                await this.syncUserPortfolioRobots({ userPortfolioId: id });
             }
         }
     }

@@ -159,7 +159,7 @@ export default class ConnectorRunnerService extends BaseService {
                 ${order.remaining || null}, ${order.executed || null}, ${order.fee || null},
                 ${order.lastCheckedAt || null}, ${JSON.stringify(order.params) || null},
                 ${order.error || null}, ${JSON.stringify(order.nextJob) || null}.
-                ${JSON.stringify(order.meta) || JSON.stringify({})}
+                ${JSON.stringify(order.meta) || null}
             );
             `);
     };
@@ -181,7 +181,7 @@ export default class ConnectorRunnerService extends BaseService {
          error = ${JSON.stringify(order.error) || null},
          next_job = ${JSON.stringify(order.nextJob) || null},
          info = ${JSON.stringify(order.info) || null},
-         meta = ${JSON.stringify(order.meta) || JSON.stringify({})}
+         meta = ${JSON.stringify(order.meta) || null}
          WHERE id = ${order.id}
         `);
         } catch (error) {

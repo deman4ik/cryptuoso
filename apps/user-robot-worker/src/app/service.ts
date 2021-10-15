@@ -291,7 +291,7 @@ export default class UserRobotWorkerService extends BaseService {
 
         try {
             const userRobotState = await this.#getUserRobotState(userRobotId);
-            this.log.info(userRobotState);
+
             const settings = await this.#getCurrentSettings(userRobotState);
 
             const userRobot = new UserRobot({ ...userRobotState, settings });

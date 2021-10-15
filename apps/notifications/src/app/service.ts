@@ -74,10 +74,10 @@ export default class NotificationsService extends BaseService {
                     schema: UserSubOutSchema[UserSubOutEvents.USER_SUB_STATUS],
                     handler: this.handleUserSubStatus.bind(this)
                 },
-                [PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED]: {
+                /*    [PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED]: {
                     schema: PortfolioManagerOutSchema[PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED],
                     handler: this.handleUserPortfolioBuilded.bind(this)
-                },
+                },*/
                 [PortfolioManagerOutEvents.USER_PORTFOLIO_BUILD_ERROR]: {
                     schema: PortfolioManagerOutSchema[PortfolioManagerOutEvents.USER_PORTFOLIO_BUILD_ERROR],
                     handler: this.handleUserPortfolioBuildError.bind(this)

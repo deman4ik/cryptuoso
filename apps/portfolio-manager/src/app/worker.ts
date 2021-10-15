@@ -225,6 +225,10 @@ const worker = {
               AND ea.id = p.user_ex_acc_id
               ORDER BY ups.active_from DESC NULLS FIRST LIMIT 1; 
         `);
+        if (!portfolio.settings.custom) {
+            logger.warn(`User Portfolio ${job.userPortfolioId} is not custom`);
+            return;
+        }
         const includeRobotsCondition =
             portfolio.settings.includeRobots &&
             Array.isArray(portfolio.settings.includeRobots) &&
