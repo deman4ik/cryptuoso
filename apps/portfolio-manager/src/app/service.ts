@@ -775,28 +775,7 @@ export default class PortfolioManagerService extends HTTPService {
     }
 
     async userPortfolioSettingsCheck() {
-        this.log.info("Checking User Portfolios with new settings");
-        const userPortfolios = await this.db.pg.any<{ id: string }>(sql`
-        select up.id from v_user_portfolios up
-        where up.status = 'started' and up.active_from is not null
-        and up.active_from < current_date  - interval '1 month';
-        `);
-
-        if (userPortfolios && Array.isArray(userPortfolios) && userPortfolios.length) {
-            this.log.info(`Rebuilding ${userPortfolios.length} User Portfolios...`);
-            for (const { id } of userPortfolios) {
-                await this.addJob<UserPortfolioBuilderJob>(
-                    "portfolioBuilder",
-                    "build",
-                    { userPortfolioId: id, type: "userPortfolio" },
-                    {
-                        jobId: id,
-                        removeOnComplete: true,
-                        removeOnFail: 10
-                    }
-                );
-            }
-        }
+        return;
     }
 
     async portfolioBuilderProcess(job: Job<PortfolioBuilderJob | UserPortfolioBuilderJob, boolean>) {
