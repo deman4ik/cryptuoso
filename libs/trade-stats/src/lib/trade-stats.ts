@@ -426,7 +426,7 @@ export class TradeStatsCalc implements TradeStats {
         stats.avgGrossLoss = stats.grossLoss / stats.tradesLosing;
 
         stats.profitFactor = Math.abs(divide(stats.grossProfit, stats.grossLoss));
-        stats.recoveryFactor = divide(stats.percentNetProfit, stats.percentMaxDrawdown) * -1;
+
         stats.payoffRatio = Math.abs(divide(stats.avgGrossProfit, stats.avgGrossLoss));
 
         if (this.hasBalance) {
@@ -445,6 +445,9 @@ export class TradeStatsCalc implements TradeStats {
                 stats.stdDevPercentNetProfit = Math.sqrt(stats.sumPercentNetProfitSqDiff) / (stats.tradesCount - 1);
                 stats.sharpeRatio = stats.avgPercentNetProfit / stats.stdDevPercentNetProfit;
             } */
+            stats.recoveryFactor = divide(stats.percentNetProfit, stats.percentMaxDrawdown) * -1;
+        } else {
+            stats.recoveryFactor = divide(stats.netProfit, stats.maxDrawdown) * -1;
         }
 
         stats.lastPosition = positions[positions.length - 1];
@@ -518,13 +521,16 @@ export class TradeStatsCalc implements TradeStats {
         stats.avgGrossLoss = stats.grossLoss / stats.tradesLosing;
 
         stats.profitFactor = Math.abs(divide(stats.grossProfit, stats.grossLoss));
-        stats.recoveryFactor = divide(stats.netProfit, stats.maxDrawdown) * -1;
+
         stats.payoffRatio = Math.abs(divide(stats.avgGrossProfit, stats.avgGrossLoss));
 
         if (this.hasBalance) {
             stats.percentNetProfit = (stats.netProfit / stats.initialBalance) * 100;
             stats.percentGrossProfit = (stats.grossProfit / stats.initialBalance) * 100;
             stats.percentGrossLoss = (stats.grossLoss / stats.initialBalance) * 100;
+            stats.recoveryFactor = divide(stats.percentNetProfit, stats.percentMaxDrawdown) * -1;
+        } else {
+            stats.recoveryFactor = divide(stats.netProfit, stats.maxDrawdown) * -1;
         }
 
         stats.lastPosition = positions[positions.length - 1];

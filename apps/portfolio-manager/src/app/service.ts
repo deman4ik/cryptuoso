@@ -434,10 +434,10 @@ export default class PortfolioManagerService extends HTTPService {
 
             if (!custom && robots && robots.length) {
                 await t.query(sql`
-                insert into user_portfolio_settings (user_portfolio_id, active_from, user_portfolio_settings, robots)
+                insert into user_portfolio_settings (user_portfolio_id, active_from, user_portfolio_settings, robots, active)
                 values (${userPortfolio.id}, ${dayjs.utc().toISOString()}, ${JSON.stringify(
                     userPortfolioSettings
-                )}, ${JSON.stringify(robots)}); 
+                )}, ${JSON.stringify(robots)}, ${true}); 
                 `);
             } else {
                 custom = true;

@@ -120,7 +120,7 @@ const handleAmount = async (ctx: BotContext) => {
         await ctx.gql.request<{ editUserPortfolio: { result: string } }>(
             ctx,
             gql`
-                mutation editUserPortfolio(
+                mutation editUserPortfolioAmount(
                     $userPortfolioId: uuid!
                     $tradingAmountType: String!
                     $balancePercent: Int
@@ -183,7 +183,7 @@ const optionsChosen = async (ctx: BotContext) => {
             await ctx.gql.request<{ editUserPortfolio: { result: string } }>(
                 ctx,
                 gql`
-                    mutation editUserPortfolio($userPortfolioId: uuid!, $options: PortfolioOptions!) {
+                    mutation editUserPortfolioOptions($userPortfolioId: uuid!, $options: PortfolioOptions!) {
                         editUserPortfolio(userPortfolioId: $userPortfolioId, options: $options) {
                             result
                         }
