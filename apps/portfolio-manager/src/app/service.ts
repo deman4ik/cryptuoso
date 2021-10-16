@@ -334,6 +334,7 @@ export default class PortfolioManagerService extends HTTPService {
             FROM user_exchange_accs ea
             WHERE ea.id = ${userExAccId};
             `);
+            if (!userExAcc) throw new Error("Exchange account not found");
             if (userExAcc.exchange !== exchange) throw new Error("Wrong exchange");
             initialBalance = userExAcc.balance;
 

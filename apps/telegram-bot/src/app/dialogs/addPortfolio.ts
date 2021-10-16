@@ -255,7 +255,6 @@ const handleAmount = async (ctx: BotContext) => {
 const finish = async (ctx: BotContext) => {
     const {
         exchange,
-        userExAccId,
         selectedOptions: options,
         type,
         amountType,
@@ -264,7 +263,6 @@ const finish = async (ctx: BotContext) => {
         initialBalance
     } = ctx.session.dialog.current.data as {
         exchange: string;
-        userExAccId: string;
         selectedOptions: string[];
         type: string;
         amountType: string;
@@ -308,7 +306,7 @@ const finish = async (ctx: BotContext) => {
             `,
             {
                 exchange,
-                userExAccId,
+                userExAccId: ctx.session.userExAcc.id,
                 options: ctx.catalog.options.reduce((prev, cur) => ({ ...prev, [cur]: options.includes(cur) }), {}),
                 type,
                 tradingAmountType: amountType,
