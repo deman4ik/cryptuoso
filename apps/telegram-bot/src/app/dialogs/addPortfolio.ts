@@ -259,8 +259,7 @@ const finish = async (ctx: BotContext) => {
         type,
         amountType,
         balancePercent,
-        tradingAmountCurrency,
-        initialBalance
+        tradingAmountCurrency
     } = ctx.session.dialog.current.data as {
         exchange: string;
         selectedOptions: string[];
@@ -268,7 +267,6 @@ const finish = async (ctx: BotContext) => {
         amountType: string;
         balancePercent: number;
         tradingAmountCurrency: number;
-        initialBalance: number;
     };
 
     let error;
@@ -287,7 +285,6 @@ const finish = async (ctx: BotContext) => {
                     $tradingAmountType: String!
                     $balancePercent: Int
                     $tradingAmountCurrency: Int
-                    $initialBalance: numeric
                     $options: PortfolioOptions
                 ) {
                     createUserPortfolio(
@@ -297,7 +294,6 @@ const finish = async (ctx: BotContext) => {
                         tradingAmountType: $tradingAmountType
                         balancePercent: $balancePercent
                         tradingAmountCurrency: $tradingAmountCurrency
-                        initialBalance: $initialBalance
                         options: $options
                     ) {
                         result
@@ -311,8 +307,7 @@ const finish = async (ctx: BotContext) => {
                 type,
                 tradingAmountType: amountType,
                 balancePercent,
-                tradingAmountCurrency,
-                initialBalance
+                tradingAmountCurrency
             }
         ));
     } catch (err) {
@@ -337,7 +332,7 @@ const finish = async (ctx: BotContext) => {
                 options: options
                     .map((o) => `✅ <b>${ctx.i18n.t(`options.${o}`)}</b> - <i>${ctx.i18n.t(`options.info.${o}`)}</i>`)
                     .join("\n "),
-                initialBalance,
+                initialBalance: ctx.session.userExAcc.balance,
                 amount: balancePercent || tradingAmountCurrency,
                 amountType:
                     amountType === "balancePercent"
