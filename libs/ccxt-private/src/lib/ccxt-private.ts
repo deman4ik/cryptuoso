@@ -585,12 +585,12 @@ export class PrivateConnector {
                         err instanceof ccxt.InvalidNonce ||
                         err instanceof ccxt.InvalidOrder ||
                         err.message.includes("EAPI:Invalid key") ||
-                        err.message.includes("Invalid API-key")
+                        err.message.includes("Invalid API-key") ||
+                        err.message.include("notional")
                     ) {
                         throw err;
                     }
                     if (
-                        err instanceof ccxt.ExchangeError ||
                         err instanceof ccxt.NetworkError ||
                         err.message?.toLowerCase().includes("gateway") ||
                         err.message?.toLowerCase().includes("getaddrinfo") ||

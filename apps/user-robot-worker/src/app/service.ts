@@ -154,8 +154,8 @@ export default class UserRobotWorkerService extends BaseService {
             volumeInCurrency = limits.max.amountUSD;
         }
 
-        if (volumeInCurrency < 6) {
-            volumeInCurrency = 6;
+        if (volumeInCurrency < 7) {
+            volumeInCurrency = 7;
             volume = calcCurrencyDynamic(volumeInCurrency, currentPrice);
         }
 
