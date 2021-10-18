@@ -197,6 +197,33 @@ const worker = {
 
                 `);
             }
+
+            if (job.saveSteps && result.steps && result.steps.length) {
+                await t.query(sql`DELETE FROM portfolio_build_steps 
+                WHERE portfolio_id = ${result.portfolio.id};`);
+                await t.query(sql`
+                INSERT INTO portfolio_build_steps (portfolio_id, step, prev_portfolio_robots, current_portfolio_robots, comparison, rating, approve)
+                SELECT * FROM ${sql.unnest(
+                    pgUtil.prepareUnnest(
+                        result.steps.map((s, i) => ({
+                            ...s,
+                            portfolioId: result.portfolio.id,
+                            step: i + 1
+                        })),
+                        [
+                            "portfolioId",
+                            "step",
+                            "prevPortfolioRobots",
+                            "currentPortfolioRobots",
+                            "comparison",
+                            "rating",
+                            "approve"
+                        ]
+                    ),
+                    ["uuid", "int8", "jsonb", "jsonb", "jsonb", "numeric", "bool"]
+                )}
+                `);
+            }
         });
         await pg.query(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY mv_portfolio_limits;`);
         logger.info(`#${portfolioBuilder.portfolio.id} portfolio build finished`);
@@ -265,65 +292,16 @@ const worker = {
             portfolio.settings.excludeTimeframes.length
                 ? sql`AND r.timeframe NOT IN (${sql.join(portfolio.settings.excludeTimeframes, sql`, `)})`
                 : sql``;
-        let dateFromCondition = portfolio.settings.dateFrom
+        const dateFromCondition = portfolio.settings.dateFrom
             ? sql`AND p.entry_date >= ${portfolio.settings.dateFrom}`
             : sql``;
-        let dateToCondition = portfolio.settings.dateTo ? sql`AND p.entry_date <= ${portfolio.settings.dateTo}` : sql``;
-        const { risk, profit, winRate, efficiency, moneyManagement } = portfolio.settings.options;
-        const basePortfolio = await pg.maybeOne<{
-            id: string;
-            limits: PortfolioInfo["limits"];
-            portfolioRobotsCount: number;
-            settings: PortfolioSettings;
-        }>(sql`SELECT p.id, p.limits, p.portfolio_robots_count, p.settings FROM v_portfolios p
-            WHERE
-             p.exchange = ${portfolio.exchange}
-            AND p.base = true
-            AND p.status = 'started'
-            AND p.option_risk = ${risk}
-            AND p.option_profit = ${profit}
-            AND p.option_win_rate = ${winRate}
-            AND p.option_efficiency = ${efficiency}
-            AND p.option_money_management = ${moneyManagement}`);
+        const dateToCondition = portfolio.settings.dateTo
+            ? sql`AND p.entry_date <= ${portfolio.settings.dateTo}`
+            : sql``;
 
-        if (basePortfolio) {
-            portfolio.context.minBalance = basePortfolio.limits.minBalance;
-            portfolio.context.robotsCount = basePortfolio.portfolioRobotsCount;
-        }
         portfolio.settings.initialBalance = portfolio.currentExchangeBalance;
         const userPortfolioBuilder = new PortfolioBuilder<UserPortfolioState>(portfolio, subject);
-        const maxRobotsCount = userPortfolioBuilder.maxRobotsCount;
 
-        let hasPredefinedRobots = 0;
-        let portfolioRobotsCondition = sql``;
-        if (basePortfolio) {
-            const portfolioRobots = await pg.any<{
-                robotId: string;
-            }>(sql`SELECT pr.robot_id FROM portfolio_robots pr,  robots r
-        WHERE pr.portfolio_id = ${basePortfolio.id} 
-        AND pr.robot_id = r.id
-        ${includeRobotsCondition}
-        ${excludeRobotsCondition}
-        ${includeAssetsCondition}
-        ${excludeAssetsCondition}
-        ${includeTimeframesCondition}
-        ${excludeTimeframesCondition}
-        ORDER BY pr.priority 
-        LIMIT ${maxRobotsCount}`);
-
-            hasPredefinedRobots = portfolioRobots && Array.isArray(portfolioRobots) && portfolioRobots.length;
-            portfolioRobotsCondition = hasPredefinedRobots
-                ? sql`AND r.id in (${sql.join(
-                      portfolioRobots.map((r) => r.robotId),
-                      sql`, `
-                  )})`
-                : sql``;
-
-            if (basePortfolio.settings.dateFrom)
-                dateFromCondition = sql`AND p.entry_date >= ${basePortfolio.settings.dateFrom}`;
-            if (basePortfolio.settings.dateTo)
-                dateToCondition = sql`AND p.entry_date <= ${basePortfolio.settings.dateTo}`;
-        }
         const positions: BasePosition[] = await DataStream.from(
             makeChunksGenerator(
                 pg,
@@ -349,7 +327,6 @@ const worker = {
           ${excludeTimeframesCondition}
           ${dateFromCondition}
           ${dateToCondition}
-          ${portfolioRobotsCondition}
           ORDER BY p.exit_date
         `,
                 1000
@@ -361,7 +338,7 @@ const worker = {
 
         logger.info(`#${job.userPortfolioId} user portfolio builder inited`);
         logger.info(`Processing #${userPortfolioBuilder.portfolio.id} user portfolio build`);
-        const result = basePortfolio ? await userPortfolioBuilder.buildOnce() : await userPortfolioBuilder.build();
+        const result = await userPortfolioBuilder.build();
 
         await pg.transaction(async (t) => {
             await t.query(sql`UPDATE user_portfolio_settings 

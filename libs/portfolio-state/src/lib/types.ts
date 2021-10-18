@@ -109,6 +109,7 @@ export interface PortfolioInfo {
 export interface PortfolioBuilderJob {
     portfolioId: string;
     type: "portfolio";
+    saveSteps?: boolean;
 }
 
 export interface UserPortfolioBuilderJob {

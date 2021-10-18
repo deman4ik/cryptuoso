@@ -17,7 +17,8 @@ export const enum PortfolioManagerOutEvents {
 
 export const PortfolioManagerInSchema = {
     [PortfolioManagerInEvents.BUILD_PORTFOLIO]: {
-        portfolioId: "uuid"
+        portfolioId: "uuid",
+        saveSteps: { type: "boolean", optional: true }
     },
     [PortfolioManagerInEvents.BUILD_PORTFOLIOS]: {
         exchange: "string"
@@ -46,6 +47,7 @@ export const PortfolioManagerOutSchema = {
 
 export interface PortfolioManagerBuildPortfolio {
     portfolioId: string;
+    saveSteps?: boolean;
 }
 
 export interface PotrfolioManagerBuildPortfolios {

@@ -695,14 +695,14 @@ export default class PortfolioManagerService extends HTTPService {
        `);
     }
 
-    async buildPortfolio({ portfolioId }: PortfolioManagerBuildPortfolio) {
+    async buildPortfolio({ portfolioId, saveSteps }: PortfolioManagerBuildPortfolio) {
         await this.db.pg.one<{ id: PortfolioDB["id"] }>(sql`
         SELECT id FROM portfolios where id = ${portfolioId};
         `);
         await this.addJob<PortfolioBuilderJob>(
             "portfolioBuilder",
             "build",
-            { portfolioId, type: "portfolio" },
+            { portfolioId, type: "portfolio", saveSteps },
             {
                 jobId: portfolioId,
                 removeOnComplete: true,
