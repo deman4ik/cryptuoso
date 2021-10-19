@@ -361,17 +361,18 @@ export default class PortfolioManagerService extends HTTPService {
             const {
                 portfolioId,
                 limits: { recommendedBalance },
-                defaultLeverage,
+                settings: { leverage: defaultLeverage },
                 maxLeverage
             } = await this.db.pg.one<{
                 portfolioId: string;
                 limits: {
                     recommendedBalance: number;
                 };
-                defaultLeverage: number;
+                settings: PortfolioSettings;
+
                 maxLeverage: number;
             }>(sql`
-        SELECT p.id as portfolio_id, p.limits, e.default_leverage, e.max_leverage from v_portfolios p, exchanges e where 
+        SELECT p.id as portfolio_id, p.limits, p.settings, e.max_leverage from v_portfolios p, exchanges e where 
         e.code = ${exchange}
         AND p.exchange = ${exchange} 
         AND p.base = true
@@ -571,16 +572,16 @@ export default class PortfolioManagerService extends HTTPService {
             if (!custom) {
                 const {
                     limits: { recommendedBalance },
-                    defaultLeverage,
+                    settings: { leverage: defaultLeverage },
                     maxLeverage
                 } = await this.db.pg.one<{
                     limits: {
                         recommendedBalance: number;
                     };
-                    defaultLeverage: number;
+                    settings: PortfolioSettings;
                     maxLeverage: number;
                 }>(sql`
-            SELECT p.limits, e.default_leverage, e.max_leverage from v_portfolios p, exchanges e where 
+            SELECT p.limits, p.settings, e.max_leverage from v_portfolios p, exchanges e where 
             e.code = ${userPortfolio.exchange}
             and p.id = ${portfolioId};
             `);

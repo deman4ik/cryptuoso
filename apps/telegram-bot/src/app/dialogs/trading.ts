@@ -327,7 +327,7 @@ const onEnter = async (ctx: BotContext) => {
 
     await ctx.dialog.edit();
     if (portfolio.stats?.equityAvg && Array.isArray(portfolio.stats?.equityAvg) && portfolio.stats?.equityAvg.length) {
-        await ctx.replyWithPhoto(getEquityChartUrl(portfolio.stats.equityAvg), {
+        await ctx.replyWithPhoto(await getEquityChartUrl(portfolio.stats.equityAvg), {
             caption: text,
             parse_mode: "HTML",
             reply_markup: getTradingButtons(ctx)
@@ -565,7 +565,7 @@ const stats = async (ctx: BotContext) => {
     )}`;
 
     await ctx.dialog.edit();
-    await ctx.replyWithPhoto(getEquityChartUrl(portfolio.stats.equityAvg), {
+    await ctx.replyWithPhoto(await getEquityChartUrl(portfolio.stats.equityAvg), {
         caption: text,
         reply_markup: getTradingButtons(ctx)
     });

@@ -188,7 +188,7 @@ const showPortfolio = async (ctx: BotContext) => {
     await ctx.dialog.edit();
     ctx.dialog.next(listPortfoliosActions.actions);
     try {
-        await ctx.replyWithPhoto(getEquityChartUrl(portfolio.stats.equityAvg), {
+        await ctx.replyWithPhoto(await getEquityChartUrl(portfolio.stats.equityAvg), {
             caption: text,
             reply_markup: getPortfolioActions(ctx)
         });

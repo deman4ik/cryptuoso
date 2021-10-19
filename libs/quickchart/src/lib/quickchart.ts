@@ -1,4 +1,5 @@
 import QuickChart from "quickchart-js";
+import tinyurl from "tinyurl";
 import { PerformanceVals } from "@cryptuoso/trade-stats";
 
 export function getChartUrl(config: any, width = 600, height = 300, backgroundColor = "#0C1940"): string {
@@ -11,8 +12,8 @@ export function getChartUrl(config: any, width = 600, height = 300, backgroundCo
     return qc.getUrl().replace("quickchart.io", "api.dev.cryptuoso.com/qc");
 }
 
-export function getEquityChartUrl(data: PerformanceVals) {
-    return getChartUrl({
+export async function getEquityChartUrl(data: PerformanceVals): Promise<string> {
+    const chartUrl = getChartUrl({
         type: "line",
         data: {
             datasets: [
@@ -75,4 +76,8 @@ export function getEquityChartUrl(data: PerformanceVals) {
             }
         }
     });
+
+    const shortUrl = await tinyurl.shorten(chartUrl);
+
+    return shortUrl;
 }

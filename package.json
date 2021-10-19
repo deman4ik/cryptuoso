@@ -147,6 +147,7 @@
         "telegraf": "^3.38.0",
         "telegraf-throttler": "^0.2.0",
         "threads": "^1.7.0",
+        "tinyurl": "^1.1.7",
         "tslib": "^2.3.1",
         "tulind": "github:deman4ik/tulipnode",
         "typescript": "^4.4.3",
