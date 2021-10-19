@@ -344,7 +344,7 @@ const editExchangeAccount = async (ctx: BotContext) => {
         ctx.dialog.enter(editExchangeAccActions.handler, {
             edit: false,
             exchange: ctx.session.userExAcc.exchange,
-            scene: "key",
+            scene: "exchange",
             expectInput: true,
             backAction: accountActions.enter,
             backData: { edit: false, reload: true }
