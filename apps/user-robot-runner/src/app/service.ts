@@ -1,4 +1,4 @@
-import { GenericObject } from "@cryptuoso/helpers";
+import { formatExchange, GenericObject } from "@cryptuoso/helpers";
 import { sql } from "@cryptuoso/postgres";
 import { HTTPService, HTTPServiceConfig, RequestExtended } from "@cryptuoso/service";
 import { User, UserExchangeAccount, UserExchangeAccStatus, UserRoles } from "@cryptuoso/user-state";
@@ -661,10 +661,10 @@ export default class UserRobotRunnerService extends HTTPService {
         if (userPortfolio.type === "trading") {
             const userExchangeAccount = await this.db.pg.maybeOne<{
                 id: UserExchangeAccount["id"];
-                name: UserExchangeAccount["name"];
+                exchange: UserExchangeAccount["exchange"];
                 status: UserExchangeAccount["status"];
             }>(sql`
-                SELECT id, name, status
+                SELECT id, exchange, status
                 FROM user_exchange_accs
                 WHERE id = ${userPortfolio.userExAccId};
             `);
@@ -678,7 +678,9 @@ export default class UserRobotRunnerService extends HTTPService {
                 );
             if (userExchangeAccount.status !== UserExchangeAccStatus.enabled)
                 throw new ActionsHandlerError(
-                    `Something went wrong with your User Exchange Account ${userExchangeAccount.name}. Please check and update your exchange API keys.`,
+                    `Something went wrong with your ${formatExchange(
+                        userExchangeAccount.exchange
+                    )} Exchange Account. Please check and update your exchange API keys.`,
                     null,
                     "FORBIDDEN",
                     403

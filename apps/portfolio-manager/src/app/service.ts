@@ -16,7 +16,7 @@ import {
     calcUserLeverage,
     PortfolioRobotDB
 } from "@cryptuoso/portfolio-state";
-import { User, UserExchangeAccountInfo, UserRoles } from "@cryptuoso/user-state";
+import { User, UserExchangeAccountInfo, UserExchangeAccStatus, UserRoles } from "@cryptuoso/user-state";
 import { v4 as uuid } from "uuid";
 import combinate from "combinate";
 import { sql } from "@cryptuoso/postgres";
@@ -328,6 +328,7 @@ export default class PortfolioManagerService extends HTTPService {
         } else if (type === "trading") {
             const userExAcc = await this.db.pg.maybeOne<{
                 exchange: UserExchangeAccountInfo["exchange"];
+                status: UserExchangeAccountInfo["status"];
                 balance: UserExchangeAccountInfo["balance"];
             }>(sql`
             SELECT exchange, ((ea.balances ->> 'totalUSD'::text))::numeric as balance
@@ -336,6 +337,15 @@ export default class PortfolioManagerService extends HTTPService {
             `);
             if (!userExAcc) throw new Error("Exchange account not found");
             if (userExAcc.exchange !== exchange) throw new Error("Wrong exchange");
+            if (userExAcc.status !== UserExchangeAccStatus.enabled)
+                throw new ActionsHandlerError(
+                    `Something went wrong with your ${formatExchange(
+                        userExAcc.exchange
+                    )} Exchange Account. Please check and update your exchange API keys.`,
+                    null,
+                    "FORBIDDEN",
+                    403
+                );
             initialBalance = userExAcc.balance;
 
             const userSub = await this.db.pg.maybeOne<{ id: UserSub["id"] }>(sql`
