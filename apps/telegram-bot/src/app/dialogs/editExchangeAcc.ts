@@ -98,7 +98,7 @@ const handler = async (ctx: BotContext) => {
                 `,
                 {
                     exchange,
-                    keys: { key, secret, pass }
+                    keys: { id: ctx.session.userExAcc?.id || null, key, secret, pass }
                 }
             ));
         } catch (err) {
