@@ -247,7 +247,7 @@ export default class UserRobotRunnerService extends HTTPService {
         }>(sql`
             SELECT ur.id, ur.user_id, ur.user_ex_acc_id, ur.user_portfolio_id, ur.status
             FROM user_robots ur
-            WHERE  ur.id = ${id};
+            WHERE ur.id = ${id};
         `);
 
         if (!userRobot) throw new ActionsHandlerError("User Robot not found", { userRobotId: id }, "NOT_FOUND", 404);
@@ -698,13 +698,17 @@ export default class UserRobotRunnerService extends HTTPService {
             throw new ActionsHandlerError(`Your Cryptuoso Subscription is not Active.`, null, "FORBIDDEN", 403);
 
         if (userPortfolio.status === "error") {
-            const userRobots = await this.db.pg.any<{ id: string }>(sql`
+            const userRobots: readonly { id: string }[] = await this.db.pg.any<{ id: string }>(sql`
                 SELECT id 
                 FROM user_robots 
                 WHERE user_portfolio_id = ${userPortfolio.id} and status = 'paused' and (settings->'active')::boolean = true`);
 
             if (userRobots && Array.isArray(userRobots) && userRobots.length) {
-                await Promise.all(userRobots.map(async (id: string) => this.start({ id }, null)));
+                await Promise.all(
+                    (userRobots as readonly { id: string }[]).map(async ({ id }: { id: string }) =>
+                        this.start({ id }, null)
+                    )
+                );
             }
         }
 
@@ -758,6 +762,12 @@ export default class UserRobotRunnerService extends HTTPService {
 
         if (userPortfolio.status === "stopped") {
             return userPortfolio.status;
+        }
+
+        if (userPortfolio.status === "error") {
+            await this.db.pg.query(sql`
+                UPDATE user_robots SET status = 'stopping' 
+                WHERE user_portfolio_id = ${userPortfolio.id} and status = 'paused' and (settings->'active')::boolean = true`);
         }
 
         const userRobots = await this.db.pg.any<{
