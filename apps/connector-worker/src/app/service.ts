@@ -372,8 +372,6 @@ export default class ConnectorRunnerService extends BaseService {
                 }
             }
 
-            if (this.connectors[userExAccId]) delete this.connectors[userExAccId];
-
             this.log.info(`Connector #${userExAccId} finished processing jobs`);
 
             await beacon.die();
@@ -408,6 +406,8 @@ export default class ConnectorRunnerService extends BaseService {
             }
 
             throw e;
+        } finally {
+            if (this.connectors[job.id]) delete this.connectors[job.id];
         }
     }
 
