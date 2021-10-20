@@ -210,7 +210,7 @@ const portfolioActions = async (ctx: BotContext) => {
             portfolioCode: string;
             loadedPortfolios: { [key: string]: PortfolioInfo };
         };
-        ctx.dialog.enter(addPortfolioActions.amountType, {
+        ctx.dialog.enter(addPortfolioActions.enter, {
             edit: true,
             exchange,
             selectedOptions,

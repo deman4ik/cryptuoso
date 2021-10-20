@@ -1,6 +1,6 @@
 import { OrdersErrorEvent, UserExchangeAccountErrorEvent } from "@cryptuoso/connector-events";
 import dayjs from "@cryptuoso/dayjs";
-import { UserPositionStatus, UserRobotStatus, UserTradeEvent } from "@cryptuoso/user-robot-state";
+import { UserPositionStatus, UserTradeEvent } from "@cryptuoso/user-robot-state";
 import { Notification } from "@cryptuoso/user-state";
 import { UserSubErrorEvent, UserSubPaymentStatusEvent, UserSubStatusEvent } from "@cryptuoso/user-sub-events";
 import {
@@ -8,14 +8,10 @@ import {
     PortfolioManagerUserPortfolioBuildError
 } from "@cryptuoso/portfolio-events";
 import { UserPortfolioStatus } from "@cryptuoso/user-robot-events";
-import { InlineKeyboard } from "grammy";
 
 export function handleUserTrade(notification: Notification<any> & { telegramId: number }) {
     const {
-        robotCode,
         status,
-        userPositionId,
-        userPortfolioType,
         asset,
         entryAction,
         entryPrice,
@@ -25,7 +21,6 @@ export function handleUserTrade(notification: Notification<any> & { telegramId: 
         exitPrice,
         exitDate,
         exitExecuted,
-        barsHeld,
         profit
     } = notification.data as UserTradeEvent & { robotCode: string };
     //TODO: Set lang from DB
@@ -40,8 +35,7 @@ export function handleUserTrade(notification: Notification<any> & { telegramId: 
             entryPrice: +entryPrice,
             entryDate: dayjs.utc(entryDate).format("YYYY-MM-DD HH:mm UTC"),
             volume: entryExecuted,
-            asset,
-            confirm: userPortfolioType === "signals" ? this.i18n.t(LANG, "userTrade.confirmTrade") : ""
+            asset
         });
     } else {
         tradeText = this.i18n.t(LANG, "userTrade.closed", {
@@ -53,39 +47,13 @@ export function handleUserTrade(notification: Notification<any> & { telegramId: 
             exitAction: this.i18n.t(LANG, `tradeAction.${exitAction}`),
             exitPrice: +exitPrice,
             exitDate: dayjs.utc(exitDate).format("YYYY-MM-DD HH:mm UTC"),
-            barsHeld,
             profit
         });
     }
 
-    let options;
-    if (userPortfolioType === "signals") {
-        options = {
-            reply_markup: new InlineKeyboard()
-                .add({
-                    text: this.i18n.t("userTrade.confirmTradeButton"),
-                    callback_data: JSON.stringify({
-                        d: "T",
-                        a: "t",
-                        p: userPositionId
-                    })
-                })
-                .row()
-                .add({
-                    text: this.i18n.t("userTrade.confirmTradeButton"),
-                    callback_data: JSON.stringify({
-                        d: "T",
-                        a: "f",
-                        p: userPositionId
-                    })
-                })
-        };
-    }
-
     return {
         telegramId: notification.telegramId,
-        message: `${info}${tradeText}`,
-        options
+        message: `${info}${tradeText}`
     };
 }
 

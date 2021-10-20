@@ -1,5 +1,5 @@
 import dayjs from "@cryptuoso/dayjs";
-import { average, calcPercentValue, chunkArray, divide, nvl, round, sortAsc, sortDesc, sum } from "@cryptuoso/helpers";
+import { average, calcPercentValue, chunkArray, divide, nvl, round, sortAsc, sum } from "@cryptuoso/helpers";
 import { BasePosition, calcPositionProfit } from "@cryptuoso/market";
 import { calcZScore, createDatesPeriod } from "./helpers";
 import { BaseStats, FullStats, PerformanceVals, Stats, StatsMeta, TradeStats, TradeStatsPortfolio } from "./types";

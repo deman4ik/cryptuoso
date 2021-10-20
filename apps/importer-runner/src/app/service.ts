@@ -12,7 +12,6 @@ import {
     ImporterWorkerCancel
 } from "@cryptuoso/importer-events";
 import { BaseError } from "@cryptuoso/errors";
-import { Timeframe } from "@cryptuoso/market";
 import { UserRoles } from "@cryptuoso/user-state";
 import { sql } from "@cryptuoso/postgres";
 

@@ -21,7 +21,6 @@ import logger, { Logger } from "@cryptuoso/logger";
 import { sql, pg, pgUtil, makeChunksGenerator } from "@cryptuoso/postgres";
 import { PortfolioSettings } from "@cryptuoso/portfolio-state";
 import { equals } from "@cryptuoso/helpers";
-import dayjs from "@cryptuoso/dayjs";
 
 class StatsCalcWorker {
     #log: Logger;

@@ -39,7 +39,7 @@ const getTradingButtons = (ctx: BotContext) => {
             })
         }
     ];
-    const { stats, status, type } = ctx.session.portfolio;
+    const { stats, status } = ctx.session.portfolio;
     if (stats) {
         buttons.push({
             text: ctx.i18n.t("dialogs.trading.stats"),
@@ -87,15 +87,15 @@ const getTradingButtons = (ctx: BotContext) => {
             })
         });
     }
-    if (type === "trading")
-        buttons.push({
-            text: ctx.i18n.t("dialogs.trading.edit"),
-            callback_data: JSON.stringify({
-                d: ctx.session.dialog.current?.id || null,
-                a: tradingActions.edit,
-                p: "edit"
-            })
-        });
+
+    buttons.push({
+        text: ctx.i18n.t("dialogs.trading.edit"),
+        callback_data: JSON.stringify({
+            d: ctx.session.dialog.current?.id || null,
+            a: tradingActions.edit,
+            p: "edit"
+        })
+    });
 
     if (status === "stopped") {
         buttons.push({
@@ -345,7 +345,7 @@ const confirmStart = async (ctx: BotContext) => {
     ctx.session.dialog.current.data.edit = false;
     await ctx.reply(
         ctx.i18n.t("dialogs.trading.confirmStart", {
-            warning: ctx.session.portfolio.type === "trading" ? ctx.i18n.t("warning") : ""
+            warning: ctx.i18n.t("warning")
         }),
         { reply_markup: getConfirmButtons(ctx) }
     );
@@ -418,7 +418,7 @@ const confirmStop = async (ctx: BotContext) => {
     ctx.session.dialog.current.data.edit = false;
     await ctx.reply(
         ctx.i18n.t("dialogs.trading.confirmStop", {
-            warning: ctx.session.portfolio.type === "trading" ? ctx.i18n.t("warningStop") : ""
+            warning: ctx.i18n.t("warningStop")
         }),
         { reply_markup: getConfirmButtons(ctx) }
     );

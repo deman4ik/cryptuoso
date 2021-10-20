@@ -3,16 +3,16 @@ import { Subject } from "threads/observable";
 import { PortfolioOptions, PortfolioOptionWeights, PortfolioRobot, PortfolioState, UserPortfolioState } from "./types";
 import { BasePosition } from "@cryptuoso/market";
 import { periodStatsToArray, TradeStats, TradeStatsCalc } from "@cryptuoso/trade-stats";
-import { calcPercentValue, percentBetween, round, sum, uniqueElementsBy } from "@cryptuoso/helpers";
+import { percentBetween, round, sum, uniqueElementsBy } from "@cryptuoso/helpers";
 import { getPortfolioBalance, getPortfolioRobotsCount, getPortfolioMinBalance } from "./helpers";
 
-interface PortoflioRobotState extends PortfolioRobot {
+export interface PortoflioRobotState extends PortfolioRobot {
     minAmountCurrency?: number;
     stats?: TradeStats;
     positions: BasePosition[];
 }
 
-interface PortfolioCalculated {
+export interface PortfolioCalculated {
     robots: { [key: string]: PortoflioRobotState };
     tradeStats: TradeStats;
     correlationPercent?: number;

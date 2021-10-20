@@ -107,7 +107,6 @@ const enter = async (ctx: BotContext) => {
 };
 
 const option = async (ctx: BotContext) => {
-    const { userSub } = ctx.session;
     const { sub, payload: option } = ctx.session.dialog.current.data;
 
     let error;

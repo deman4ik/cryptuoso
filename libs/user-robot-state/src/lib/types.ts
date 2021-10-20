@@ -73,7 +73,6 @@ export interface UserPositionDB {
     barsHeld?: number;
     nextJobAt?: string;
     nextJob?: UserPositionJob;
-    emulated: boolean;
     meta?: {
         currentBalance?: number;
     };
@@ -115,7 +114,6 @@ export interface UserRobotDB {
     settings: {
         volume: number;
         active?: boolean;
-        emulated?: boolean;
         share?: number;
     };
 }
@@ -128,7 +126,6 @@ export interface UserRobotState extends UserRobotDB {
     tradeSettings: TradeSettings;
     positions: UserPositionState[];
     userPortfolio?: {
-        type: UserPortfolioDB["type"];
         status?: UserPortfolioDB["status"];
         settings?: UserPortfolioState["settings"];
     };
@@ -147,20 +144,14 @@ export const enum UserRobotJobType {
     pause = "pause",
     signal = "signal",
     order = "order",
-    disable = "disable",
-    confirmTrade = "confirmTrade"
-}
-
-export interface UserRobotConfirmTradeJob {
-    userPositionId: string;
-    cancel?: boolean;
+    disable = "disable"
 }
 
 export interface UserRobotJob {
     id?: string;
     userRobotId: string;
     type: UserRobotJobType;
-    data?: SignalEvent | OrdersStatusEvent | { message?: string } | UserRobotConfirmTradeJob;
+    data?: SignalEvent | OrdersStatusEvent | { message?: string };
     retries?: number;
     error?: string;
 }
@@ -178,7 +169,6 @@ export interface UserTradeEvent extends UserRobotEventData {
     userRobotId: string;
     userPositionId: string;
     userPortfolioId?: string;
-    userPortfolioType?: UserPortfolioDB["type"];
     userId: string;
     status: UserPositionStatus;
     entryAction?: TradeAction;

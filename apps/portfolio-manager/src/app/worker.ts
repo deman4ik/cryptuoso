@@ -6,8 +6,6 @@ import { sql, pg, makeChunksGenerator, pgUtil } from "@cryptuoso/postgres";
 import {
     PortfolioBuilder,
     PortfolioBuilderJob,
-    PortfolioInfo,
-    PortfolioSettings,
     PortfolioState,
     UserPortfolioBuilderJob,
     UserPortfolioState

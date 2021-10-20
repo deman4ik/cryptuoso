@@ -77,15 +77,10 @@ export default class PortfolioManagerService extends HTTPService {
                 createUserPortfolio: {
                     inputSchema: {
                         exchange: "string",
-                        type: { type: "enum", values: ["signals", "trading"], default: "trading" },
-                        userExAccId: { type: "uuid", optional: true },
+                        userExAccId: { type: "uuid" },
                         tradingAmountType: { type: "string" },
                         balancePercent: { type: "number", optional: true },
                         tradingAmountCurrency: { type: "number", optional: true },
-                        initialBalance: {
-                            type: "number",
-                            optional: true
-                        },
                         leverage: { type: "number", optional: true, integer: true, default: 2 },
                         minRobotsCount: { type: "number", optional: true, integer: true, default: 5 },
                         maxRobotsCount: { type: "number", optional: true, integer: true },
@@ -278,13 +273,11 @@ export default class PortfolioManagerService extends HTTPService {
 
     async createUserPortfolio(
         {
-            type,
             exchange,
             userExAccId,
             tradingAmountType,
             balancePercent,
             tradingAmountCurrency,
-            initialBalance: userInitialBalance,
             leverage,
             maxRobotsCount,
             minRobotsCount,
@@ -296,9 +289,7 @@ export default class PortfolioManagerService extends HTTPService {
             custom
         }: PortfolioSettings & {
             exchange: UserPortfolioDB["exchange"];
-            type: UserPortfolioDB["type"];
-            userExAccId?: UserPortfolioDB["userExAccId"];
-            initialBalance?: PortfolioSettings["initialBalance"];
+            userExAccId: UserPortfolioDB["userExAccId"];
             custom: boolean;
         },
         user: User
@@ -322,42 +313,37 @@ export default class PortfolioManagerService extends HTTPService {
             throw new Error("You still have started robots");
         }
 
-        let initialBalance;
-        if (type === "signals") {
-            initialBalance = userInitialBalance;
-        } else if (type === "trading") {
-            const userExAcc = await this.db.pg.maybeOne<{
-                exchange: UserExchangeAccountInfo["exchange"];
-                status: UserExchangeAccountInfo["status"];
-                balance: UserExchangeAccountInfo["balance"];
-            }>(sql`
+        const userExAcc = await this.db.pg.maybeOne<{
+            exchange: UserExchangeAccountInfo["exchange"];
+            status: UserExchangeAccountInfo["status"];
+            balance: UserExchangeAccountInfo["balance"];
+        }>(sql`
             SELECT exchange, ((ea.balances ->> 'totalUSD'::text))::numeric as balance
             FROM user_exchange_accs ea
             WHERE ea.id = ${userExAccId};
             `);
-            if (!userExAcc) throw new Error("Exchange account not found");
-            if (userExAcc.exchange !== exchange) throw new Error("Wrong exchange");
-            if (userExAcc.status !== UserExchangeAccStatus.enabled)
-                throw new ActionsHandlerError(
-                    `Something went wrong with your ${formatExchange(
-                        userExAcc.exchange
-                    )} Exchange Account. Please check and update your exchange API keys.`,
-                    null,
-                    "FORBIDDEN",
-                    403
-                );
-            initialBalance = userExAcc.balance;
+        if (!userExAcc) throw new Error("Exchange account not found");
+        if (userExAcc.exchange !== exchange) throw new Error("Wrong exchange");
+        if (userExAcc.status !== UserExchangeAccStatus.enabled)
+            throw new ActionsHandlerError(
+                `Something went wrong with your ${formatExchange(
+                    userExAcc.exchange
+                )} Exchange Account. Please check and update your exchange API keys.`,
+                null,
+                "FORBIDDEN",
+                403
+            );
+        const initialBalance = userExAcc.balance;
 
-            const userSub = await this.db.pg.maybeOne<{ id: UserSub["id"] }>(sql`
+        const userSub = await this.db.pg.maybeOne<{ id: UserSub["id"] }>(sql`
             SELECT id 
             FROM user_subs
             WHERE user_id = ${userId}
             AND status in (${"active"},${"trial"});
             `);
 
-            if (!userSub)
-                throw new ActionsHandlerError(`Your Cryptuoso Subscription is not Active.`, null, "FORBIDDEN", 403);
-        } else throw new Error("Unknown user portfolio type");
+        if (!userSub)
+            throw new ActionsHandlerError(`Your Cryptuoso Subscription is not Active.`, null, "FORBIDDEN", 403);
 
         const portfolioBalance = getPortfolioBalance(
             initialBalance,
@@ -406,7 +392,6 @@ export default class PortfolioManagerService extends HTTPService {
 
         const userPortfolio: UserPortfolioDB = {
             id: uuid(),
-            type,
             userId,
             userExAccId,
             exchange,
@@ -435,9 +420,8 @@ export default class PortfolioManagerService extends HTTPService {
         await this.db.pg.transaction(async (t) => {
             await t.query(sql`
         insert into user_portfolios
-        (id, type, user_id, user_ex_acc_id, exchange, status)
+        (id, user_id, user_ex_acc_id, exchange, status)
         VALUES (${userPortfolio.id},
-        ${userPortfolio.type}, 
         ${userPortfolio.userId},
         ${userPortfolio.userExAccId || null}, 
         ${userPortfolio.exchange},
@@ -561,17 +545,17 @@ export default class PortfolioManagerService extends HTTPService {
 
         if (tradingAmountType) {
             let initialBalance = userPortfolio.settings.initialBalance;
-            if (userPortfolio.type === "trading") {
-                const userExAcc = await this.db.pg.maybeOne<{
-                    exchange: UserExchangeAccountInfo["exchange"];
-                    balance: UserExchangeAccountInfo["balance"];
-                }>(sql`
+
+            const userExAcc = await this.db.pg.maybeOne<{
+                exchange: UserExchangeAccountInfo["exchange"];
+                balance: UserExchangeAccountInfo["balance"];
+            }>(sql`
                 SELECT exchange, ((ea.balances ->> 'totalUSD'::text))::numeric as balance
                 FROM user_exchange_accs ea
                 WHERE ea.id = ${userPortfolio.userExAccId};
                 `);
-                initialBalance = userExAcc.balance;
-            }
+            initialBalance = userExAcc.balance;
+
             const portfolioBalance = getPortfolioBalance(
                 initialBalance,
                 tradingAmountType,
@@ -676,11 +660,11 @@ export default class PortfolioManagerService extends HTTPService {
     ) {
         const userPortfolio = await this.db.pg.one<{
             id: UserPortfolioDB["id"];
-            type: UserPortfolioDB["type"];
+
             userId: UserPortfolioDB["userId"];
             status: UserPortfolioDB["status"];
         }>(sql`
-        SELECT p.id, p.type, p.user_id, p.status
+        SELECT p.id, p.user_id, p.status
            FROM user_portfolios p
            WHERE p.id = ${userPortfolioId}; 
        `);
@@ -693,11 +677,10 @@ export default class PortfolioManagerService extends HTTPService {
                 403
             );
 
-        if (userPortfolio.type === "trading" && userPortfolio.status === "started") {
+        if (userPortfolio.status === "started") {
             throw new BaseError("User portfolio must be stopped before deleting", {
                 userPortfolioId,
-                status: userPortfolio.status,
-                type: userPortfolio.type
+                status: userPortfolio.status
             });
         }
 

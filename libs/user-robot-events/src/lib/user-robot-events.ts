@@ -96,12 +96,6 @@ export interface UserRobotRunnerResume {
     message?: string;
 }
 
-export interface UserRobotRunnerConfirmTrade {
-    userRobotId: string;
-    userPositionId: string;
-    cancel?: boolean;
-}
-
 export interface UserRobotRunnerStartPortfolio {
     id: string;
     message?: string;

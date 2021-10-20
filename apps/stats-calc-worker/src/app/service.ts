@@ -6,12 +6,7 @@ import { StatisticsUtils } from "./statsWorker";
 import { sql, QueryType, makeChunksGenerator } from "@cryptuoso/postgres";
 import { checkTradeStats, TradeStats } from "@cryptuoso/stats-calc";
 import { UserAggrStatsTypes } from "@cryptuoso/user-state";
-import {
-    StatsCalcJob,
-    StatsCalcJobType,
-    StatsCalcWorkerErrorEvent,
-    StatsCalcWorkerEvents
-} from "@cryptuoso/stats-calc-events";
+import { StatsCalcJob, StatsCalcJobType } from "@cryptuoso/stats-calc-events";
 import { BasePosition } from "@cryptuoso/market";
 import Validator, { ValidationSchema, SyncCheckFunction, AsyncCheckFunction } from "fastest-validator";
 import dayjs from "dayjs";

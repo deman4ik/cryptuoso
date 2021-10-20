@@ -1,8 +1,8 @@
 import positions from "./data/positions";
-import { PortfolioBuilder } from "../lib/builder";
+import { PortfolioBuilder, PortfolioCalculated, PortoflioRobotState } from "../lib/builder";
 import { PortfolioState } from "../lib/types";
 import { amounts } from "./data/amountsResults";
-import { portfolioResult } from "./data/portfolioResult";
+//import { portfolioResult } from "./data/portfolioResult";
 //import util from "util";
 //import fs from "fs";
 
@@ -62,7 +62,7 @@ describe("Test portfolio state", () => {
             const sortedRobotsList = await portfolioBuilder.sortRobots(portfolioBuilder.robots);
             const result = await portfolioBuilder.calcAmounts(sortedRobotsList);
             expect(
-                Object.values(result.robots).map((r) => ({
+                Object.values(result).map((r) => ({
                     robotId: r.robotId,
                     amountInCurrency: r.amountInCurrency,
                     share: r.share
@@ -84,7 +84,10 @@ describe("Test portfolio state", () => {
             const sortedRobotsList = await portfolioBuilder.sortRobots(portfolioBuilder.robots);
             const prevPortfolio = await portfolioBuilder.calcPortfolio([sortedRobotsList[0]]);
             const currentPortfolio = await portfolioBuilder.calcPortfolio([sortedRobotsList[0], sortedRobotsList[1]]);
-            const result = await portfolioBuilder.comparePortfolios(prevPortfolio, currentPortfolio);
+            const result = await portfolioBuilder.comparePortfolios(
+                prevPortfolio as PortfolioCalculated,
+                currentPortfolio as PortfolioCalculated
+            );
             expect(result.approve).toBe(false);
         });
         it("Should build new portfolio", async () => {

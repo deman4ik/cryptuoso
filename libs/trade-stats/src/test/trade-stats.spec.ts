@@ -1,6 +1,6 @@
 import { TradeStatsCalc } from "../lib/trade-stats";
 import { positions } from "./data/positions";
-import { robotStatsResult, portfolioStatsResult } from "./data/results";
+import { robotStatsResult } from "./data/results";
 //import util from "util";
 import fs from "fs";
 import dayjs from "@cryptuoso/dayjs";

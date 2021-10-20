@@ -5,7 +5,6 @@ import {
     UserPositionDB,
     UserPositionState,
     UserPositionStatus,
-    UserRobotConfirmTradeJob,
     UserRobotDB,
     UserRobotInternalState,
     UserRobotState,
@@ -165,7 +164,7 @@ export class UserRobot {
         this._message = data?.message || null;
         if (this.hasActivePositions)
             Object.keys(this._positions).forEach((key) => {
-                this._positions[key].cancel(this._currentPrice);
+                this._positions[key].cancel();
                 this._positions[key].executeJob();
             });
     }
@@ -249,7 +248,7 @@ export class UserRobot {
                 if (previousActivePositions?.length) {
                     hasPreviousActivePositions = true;
                     for (const position of previousActivePositions) {
-                        position.cancel(this._currentPrice);
+                        position.cancel();
                         position.executeJob();
                     }
                 }
@@ -291,11 +290,10 @@ export class UserRobot {
                         entrySlippageCount: 0,
                         exitSlippageCount: 0,
                         delayedSignal: delay && signal
-                    },
-                    emulated: this._userPortfolio?.type === "signals"
+                    }
                 });
 
-                if (!delay || this._positions[newPositionId].emulated) {
+                if (!delay) {
                     this._positions[newPositionId].handleSignal(signal);
                     this._positions[newPositionId].executeJob();
                 }
@@ -351,23 +349,5 @@ export class UserRobot {
 
         position.executeJob();
         if (!this.hasActivePositions) this.handleDelayedPositions();
-    }
-
-    confirmTrade({ userPositionId, cancel = false }: UserRobotConfirmTradeJob) {
-        const position = this._positions[userPositionId];
-        if (!position)
-            throw new BaseError(
-                "Position not found",
-                {
-                    userPositionId,
-                    userRobotId: this._id
-                },
-                "ERR_NOT_FOUND"
-            );
-        if (cancel) {
-            position.cancelTrade();
-        } else {
-            position.confirmEntryTrade();
-        }
     }
 }

@@ -14,7 +14,6 @@ import {
 } from "@cryptuoso/user-robot-state";
 import {
     UserPortfolioStatus,
-    UserRobotRunnerConfirmTrade,
     UserRobotRunnerEvents,
     UserRobotRunnerPause,
     UserRobotRunnerResume,
@@ -82,12 +81,6 @@ export default class UserRobotRunnerService extends HTTPService {
                     roles: [UserRoles.admin, UserRoles.manager],
                     inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.RESUME],
                     handler: this._httpHandler.bind(this, this.resume.bind(this))
-                },
-                userRobotConfirmTrade: {
-                    auth: true,
-                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
-                    inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.CONFIRM_TRADE],
-                    handler: this.HTTPWithAuthHandler.bind(this, this.confirmTrade.bind(this))
                 },
                 userPortfolioStart: {
                     auth: true,
@@ -520,41 +513,6 @@ export default class UserRobotRunnerService extends HTTPService {
         return userRobotsToResume.length;
     }
 
-    async confirmTrade({ userPositionId, cancel }: UserRobotRunnerConfirmTrade, user: User) {
-        const userRobot = await this.db.pg.maybeOne<{
-            id: UserRobotDB["id"];
-            userId: UserRobotDB["userId"];
-            status: UserRobotStatus;
-        }>(sql`
-        SELECT ur.id, ur.user_id, ur.status 
-          FROM user_robots ur, user_positions up
-          WHERE up.id = ${userPositionId}
-            AND ur.id = up.user_robot_id
-            AND ur.status = ${UserRobotStatus.started};
-        `);
-
-        if (!userRobot) throw new ActionsHandlerError("User Robot not found", { userPositionId }, "NOT_FOUND", 404);
-
-        if (user && userRobot.userId !== user.id)
-            throw new ActionsHandlerError(
-                "Current user isn't owner of this User Robot",
-                { userRobotId: userRobot.id },
-                "FORBIDDEN",
-                403
-            );
-        await this.addUserRobotJob(
-            {
-                userRobotId: userRobot.id,
-                type: UserRobotJobType.confirmTrade,
-                data: {
-                    userPositionId,
-                    cancel
-                }
-            },
-            UserRobotStatus.started
-        );
-    }
-
     async syncPortfolioRobots({ exchange }: { exchange: string }) {
         const exchangeCondition = exchange ? sql`AND exchange = ${exchange}` : sql``;
         const portfolios = await this.db.pg.any<{ id: PortfolioDB["id"] }>(sql`
@@ -602,8 +560,7 @@ export default class UserRobotRunnerService extends HTTPService {
                             status: "started",
                             settings: JSON.stringify({
                                 active: r.active,
-                                share: r.share,
-                                emulated: userPortfolio.type === "signals"
+                                share: r.share
                             })
                         })),
                         ["userPortfolioId", "robotId", "userExAccId", "userId", "status", "settings"]
@@ -658,34 +615,32 @@ export default class UserRobotRunnerService extends HTTPService {
             return userPortfolio.status;
         }
 
-        if (userPortfolio.type === "trading") {
-            const userExchangeAccount = await this.db.pg.maybeOne<{
-                id: UserExchangeAccount["id"];
-                exchange: UserExchangeAccount["exchange"];
-                status: UserExchangeAccount["status"];
-            }>(sql`
+        const userExchangeAccount = await this.db.pg.maybeOne<{
+            id: UserExchangeAccount["id"];
+            exchange: UserExchangeAccount["exchange"];
+            status: UserExchangeAccount["status"];
+        }>(sql`
                 SELECT id, exchange, status
                 FROM user_exchange_accs
                 WHERE id = ${userPortfolio.userExAccId};
             `);
 
-            if (!userExchangeAccount)
-                throw new ActionsHandlerError(
-                    "User Exchange Account not found",
-                    { userExAccId: userPortfolio.userExAccId },
-                    "NOT_FOUND",
-                    404
-                );
-            if (userExchangeAccount.status !== UserExchangeAccStatus.enabled)
-                throw new ActionsHandlerError(
-                    `Something went wrong with your ${formatExchange(
-                        userExchangeAccount.exchange
-                    )} Exchange Account. Please check and update your exchange API keys.`,
-                    null,
-                    "FORBIDDEN",
-                    403
-                );
-        }
+        if (!userExchangeAccount)
+            throw new ActionsHandlerError(
+                "User Exchange Account not found",
+                { userExAccId: userPortfolio.userExAccId },
+                "NOT_FOUND",
+                404
+            );
+        if (userExchangeAccount.status !== UserExchangeAccStatus.enabled)
+            throw new ActionsHandlerError(
+                `Something went wrong with your ${formatExchange(
+                    userExchangeAccount.exchange
+                )} Exchange Account. Please check and update your exchange API keys.`,
+                null,
+                "FORBIDDEN",
+                403
+            );
 
         const userSub = await this.db.pg.maybeOne<{ id: UserSub["id"] }>(sql`
         SELECT id 

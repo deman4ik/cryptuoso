@@ -1,18 +1,15 @@
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
-import { SignalEvents, Signal, SignalSchema } from "@cryptuoso/robot-events";
 import {
     UserPortfolioStatus,
     UserRobotWorkerError,
     UserRobotWorkerEvents,
     UserRobotWorkerSchema,
-    UserRobotWorkerStatus,
     UserTradeEvents,
     UserTradeSchema
 } from "@cryptuoso/user-robot-events";
 import { UserSettings, Notification } from "@cryptuoso/user-state";
-import { SignalType, TradeAction } from "@cryptuoso/market";
 import { sql } from "@cryptuoso/postgres";
-import { chunkArray, GenericObject } from "@cryptuoso/helpers";
+import { chunkArray } from "@cryptuoso/helpers";
 import {
     ConnectorWorkerEvents,
     ConnectorWorkerSchema,
@@ -29,7 +26,6 @@ import {
 } from "@cryptuoso/user-sub-events";
 import dayjs from "@cryptuoso/dayjs";
 import mailUtil from "@cryptuoso/mail";
-import { UserPortfolioDB } from "@cryptuoso/portfolio-state";
 import {
     PortfolioManagerOutEvents,
     PortfolioManagerOutSchema,
@@ -125,7 +121,6 @@ export default class NotificationsService extends BaseService {
     #getUserRobotInfo = async (userRobotId: string) =>
         this.db.pg.one<{
             userPortfolioId: string;
-            userPortfolioType: UserPortfolioDB["type"];
             userRobotId: string;
             robotId: string;
             robotCode: string;
@@ -137,7 +132,6 @@ export default class NotificationsService extends BaseService {
         }>(sql`
     SELECT 
     up.id as user_portfolio_id,
-    up.type as user_portfolio_type,
     ur.id as user_robot_id,
      r.id as robot_id,
      r.code as robot_code,
@@ -187,7 +181,6 @@ export default class NotificationsService extends BaseService {
             const { userRobotId, entryDate, exitDate } = event;
             const {
                 userPortfolioId,
-                userPortfolioType,
                 robotCode,
                 telegramId,
                 email,
@@ -201,7 +194,7 @@ export default class NotificationsService extends BaseService {
                 userId,
                 timestamp: exitDate || entryDate || dayjs.utc().toISOString(),
                 type: "user.trade",
-                data: { ...event, robotCode, userPortfolioId, userPortfolioType },
+                data: { ...event, robotCode, userPortfolioId },
                 userRobotId,
                 sendEmail: trading.email && email ? true : false,
                 sendTelegram: trading.telegram && telegramId ? true : false

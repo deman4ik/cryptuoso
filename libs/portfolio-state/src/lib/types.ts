@@ -122,7 +122,6 @@ export interface UserPortfolioDB {
     userId: string;
     userExAccId?: string;
     exchange: string;
-    type: "signals" | "trading";
     status: "starting" | "started" | "stopping" | "stopped" | "error" | "buildError";
     startedAt?: string;
     stoppedAt?: string;
@@ -167,7 +166,6 @@ export interface UserPortfolioInfo {
     id: UserPortfolioDB["id"];
     userExAccId?: UserPortfolioDB["userExAccId"];
     exchange: UserPortfolioDB["exchange"];
-    type: UserPortfolioDB["type"];
     status: UserPortfolioDB["status"];
     startedAt?: UserPortfolioDB["startedAt"];
     stoppedAt?: UserPortfolioDB["stoppedAt"];

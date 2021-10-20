@@ -10,8 +10,7 @@ import {
     UserPositionDB,
     UserRobotStateExt,
     UserPositionStatus,
-    UserTradeEvent,
-    UserRobotConfirmTradeJob
+    UserTradeEvent
 } from "@cryptuoso/user-robot-state";
 import {
     UserRobotWorkerError,
@@ -101,7 +100,7 @@ export default class UserRobotWorkerService extends BaseService {
         currentPrice,
         totalBalanceUsd,
         userPortfolioId,
-        userPortfolio: { type: userPortfolioType, settings: userPortfolioSettings },
+        userPortfolio: { settings: userPortfolioSettings },
         limits,
         precision,
         userRobotSettings //TODO: deprecate
@@ -111,8 +110,7 @@ export default class UserRobotWorkerService extends BaseService {
         let balance;
 
         if (userPortfolioId) {
-            if (userPortfolioType === "signals") balance = userPortfolioSettings.initialBalance;
-            else balance = totalBalanceUsd;
+            balance = totalBalanceUsd;
             if (userPortfolioSettings.tradingAmountType === "balancePercent") {
                 const currentPortfolioBalance = (userPortfolioSettings.balancePercent / 100) * balance;
 
@@ -188,7 +186,7 @@ export default class UserRobotWorkerService extends BaseService {
         exit_price, exit_date, exit_candle_timestamp,
         exit_volume, exit_executed, exit_remaining,
         internal_state, reason, profit, bars_held,
-        next_job_at, next_job, emulated, meta
+        next_job_at, next_job, meta
          ) 
          VALUES (
              ${p.id}, ${p.prefix}, ${p.code}, 
@@ -205,7 +203,7 @@ export default class UserRobotWorkerService extends BaseService {
              ${JSON.stringify(p.internalState) || null}, ${p.reason || null},
              ${p.profit || null}, ${p.barsHeld || null},
              ${p.nextJobAt || null}, ${p.nextJob || null},
-             ${p.emulated || false}, ${JSON.stringify(p.meta)}
+             ${JSON.stringify(p.meta)}
          )
           ON CONFLICT ON CONSTRAINT user_positions_pkey 
           DO UPDATE SET updated_at = now(),
@@ -339,8 +337,6 @@ export default class UserRobotWorkerService extends BaseService {
                     }
                 };
                 eventsToSend.push(pausedEvent);
-            } else if (type === UserRobotJobType.confirmTrade) {
-                if (userRobot.state.settings.emulated) userRobot.confirmTrade(data as UserRobotConfirmTradeJob);
             } else throw new BaseError(`Unknown user robot job type "${type}"`, job);
 
             if (

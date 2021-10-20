@@ -7,7 +7,7 @@ import { hydrateReply, parseMode } from "parse-mode";
 import path from "path";
 import { auth } from "./utils/auth";
 import { Auth } from "@cryptuoso/auth-utils";
-import { gql, GraphQLClient } from "./utils/graphql-client";
+import { GraphQLClient } from "./utils/graphql-client";
 import logger from "@cryptuoso/logger";
 import { getMainKeyboard, getStartKeyboard } from "./utils/keyboard";
 import { dialogs } from "./dialogs";
@@ -159,37 +159,7 @@ export default class TelegramBotService extends HTTPService {
                     await next();
                     return;
                 }
-                if (data.d === "T") {
-                    let error;
-                    try {
-                        await ctx.gql.request(
-                            ctx,
-                            gql`mutation userRobotConfirmTrade($userPositionId: uuid!, $cancel: Boolean) {
-                            userRobotConfirmTrade(userPositionId: $userPositionId, cancel: $cancel) {
-                              result
-                            }
-                          }, {
-                            userPositionId: data.p,
-                            cancel: data.a === "f"
-                          }
-                          `
-                        );
-                    } catch (err) {
-                        error = err.message;
-                    }
 
-                    if (error) {
-                        await ctx.reply(ctx.i18n.t("failed", { error }));
-                        ctx.dialogs.reset();
-                    }
-
-                    await ctx.reply(
-                        ctx.i18n.t("userTrade.success", {
-                            status:
-                                data.a === "f" ? ctx.i18n.t("userTrade.canceled") : ctx.i18n.t("userTrade.confirmed")
-                        })
-                    );
-                }
                 if (
                     ctx.session.dialog.current &&
                     getDialogName(data.a) === ctx.session.dialog.current.name &&

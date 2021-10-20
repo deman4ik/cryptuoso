@@ -249,22 +249,6 @@ dialogs:
             ❌ You current exchange balance (${round(currentBalance,2)} $) is <b>insufficient</b>.\n
             Minimum required balance is ${round(minBalance,2)} $.\n\n
             Please replenish your balance on ${formatExchange(exchange)} exchange and try again.
-        type: >
-            📈 Configuring your trading portfolio
-
-
-            Choose the way you want to trade:
-                
-            <b>Automated</b> - Fully automated trading on your exchange account
-
-            <b>Manual</b> - Receive trading signals and trade by yourself
-        automated: Automated
-        manual: Manual
-        initBalance: >
-            📈 Configuring your trading portfolio
-
-
-            Please enter desired trading amount in $
         invalidInput: >
             ❌ Your input is invalid.
 
@@ -332,30 +316,17 @@ dialogs:
     editPortfolio:
         confirmEdit: >
             ⚙️ Changing your portfolio settings
-
-
-            You can change trading amount any time.
-
-
-            You can change portfolio options while it is ⛔ Stopped or once in a month while it is 🟢 Started
         editOptions: ⚙️ Change Portfolio Options
         editAmount: ⚙️ Change Trading Amount
         chooseOptions: >
             📈 Configuring your trading portfolio
 
 
-            You can change portfolio options while it is ⛔ Stopped or once in a month while it is 🟢 Started
-
-
-            Please choose available options:\n
+            Please choose available options:
+                
             ${options}
         chooseMoreOptions: >
             📈 Configuring your trading portfolio\n\n
-
-
-            You can change portfolio options while it is ⛔ Stopped or once in a month while it is 🟢 Started
-
-
             You choosed: \n\n
             ${options} \n\n
             You can choose more options or press ✅ <b>Done</b>
@@ -553,9 +524,8 @@ userTrade:
         -------\n
         <b>Entry:</b> ${entryAction}\n
         <b>Entry Date:</b> ${entryDate}\n
-        <b>Entry Price:</b> ${entryPrice} $\n
-        <b>Amount:</b> ${volume} ${asset}\n\n
-        ${confirm}
+        <b>Entry Price:</b> ${entryPrice} $\n\n
+        <b>Amount:</b> ${volume} ${asset}
     closed: >
         -------\n
         <b>Entry:</b> ${entryAction}\n
@@ -564,15 +534,8 @@ userTrade:
         <b>Exit:</b> ${exitAction}\n
         <b>Exit Date:</b> ${exitDate}\n
         <b>Exit Price:</b> ${exitPrice} $\n\n
-        <b>Amount:</b> ${volume} ${asset}\n\n
-        <b>Bars Held:</b> ${barsHeld}\n
+        <b>Amount:</b> ${volume} ${asset}\n
         <b>Profit:</b> ${profit} $\n
-    confirmTrade: ⚠️ Please confirm you executed this trade on your exchange account
-    confirmTradeButton: ✅ Confirm Trade
-    cancelTradeButton: ❌ Cancel Trade
-    success: Trade is ${status}!
-    confirmed: ✅ Confirmed
-    canceled: ❌ Canceled
 userRobot:
     error: >
         ❌ Error occurred while processing robot job.\n\n

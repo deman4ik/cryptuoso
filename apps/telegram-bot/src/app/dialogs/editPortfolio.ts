@@ -16,7 +16,7 @@ export const enum editPortfolioActions {
 }
 
 const enter = async (ctx: BotContext) => {
-    if (!ctx.session.portfolio || ctx.session.portfolio.type === "signals") {
+    if (!ctx.session.portfolio) {
         ctx.dialog.reset();
         return;
     }

@@ -1,87 +1,22 @@
 import { round } from "@cryptuoso/helpers";
-import logger from "@cryptuoso/logger";
 import { UserExchangeAccountInfo } from "@cryptuoso/user-state";
-import { InlineKeyboard } from "grammy";
 import { BotContext, IUserSub } from "../types";
 import { getAmountTypeButtons, getPercentButtons } from "../utils/buttons";
 import { Router } from "../utils/dialogsRouter";
 import { gql } from "../utils/graphql-client";
-import { account, accountActions } from "./account";
+import { accountActions } from "./account";
 import { createUserSubActions } from "./createUserSub";
 import { editExchangeAccActions } from "./editExchangeAcc";
-import { tradingActions } from "./trading";
 
 export const enum addPortfolioActions {
     enter = "aPf:enter",
-    amountType = "aPf:amType",
-    initBalance = "aPf:initBal",
-    handleInitBalance = "aPf:hIBal",
     amount = "aPf:amount",
     handleAmount = "aPf:hAmount",
     finish = "aPf:finish",
     start = "aPf:start"
 }
 
-const getTypeButtons = (ctx: BotContext) => {
-    return new InlineKeyboard()
-        .add({
-            text: ctx.i18n.t("dialogs.addPortfolio.automated"),
-            callback_data: JSON.stringify({
-                d: ctx.session.dialog.current?.id || null,
-                a: addPortfolioActions.amountType,
-                p: "trading"
-            })
-        })
-        .row()
-        .add({
-            text: ctx.i18n.t("dialogs.addPortfolio.manual"),
-            callback_data: JSON.stringify({
-                d: ctx.session.dialog.current?.id || null,
-                a: addPortfolioActions.initBalance,
-                p: "signals"
-            })
-        });
-};
-
-const chooseType = async (ctx: BotContext) => {
-    await ctx.dialog.edit();
-    await ctx.reply(ctx.i18n.t("dialogs.addPortfolio.type"), { reply_markup: getTypeButtons(ctx) });
-
-    ctx.session.dialog.current.data.edit = true;
-};
-
-const initBalance = async (ctx: BotContext) => {
-    const { data } = ctx.session.dialog.current;
-    if (!ctx.session.dialog.current.data.type) ctx.session.dialog.current.data.type = data.payload;
-    ctx.session.dialog.current.data.edit = false;
-    ctx.session.dialog.current.data.expectInput = true;
-    ctx.dialog.next(addPortfolioActions.handleInitBalance);
-    await ctx.reply(ctx.i18n.t("dialogs.addPortfolio.initBalance"));
-};
-
-const handleInitBalance = async (ctx: BotContext) => {
-    let balance = parseFloat(ctx.session.dialog.current.data.payload);
-    let error;
-    if (isNaN(balance)) error = ctx.i18n.t("dialogs.addPortfolio.invalidInput");
-    balance = round(balance);
-    if (balance < ctx.session.dialog.current.data.minBalance)
-        error = ctx.i18n.t("dialogs.addPortfolio.insufficientInitBalance", {
-            minBalance: ctx.session.dialog.current.data.minBalance
-        });
-
-    if (error) {
-        await ctx.reply(error);
-        ctx.dialog.jump(addPortfolioActions.initBalance);
-        return;
-    }
-
-    ctx.session.dialog.current.data.initialBalance = round(balance);
-    ctx.session.dialog.current.data.amountType = "balancePercent";
-    ctx.session.dialog.current.data.balancePercent = 100;
-    ctx.dialog.jump(addPortfolioActions.finish);
-};
-
-const amountType = async (ctx: BotContext) => {
+const enter = async (ctx: BotContext) => {
     const { data } = ctx.session.dialog.current;
     if (!ctx.session.dialog.current.data.type) ctx.session.dialog.current.data.type = data.payload;
 
@@ -256,14 +191,12 @@ const finish = async (ctx: BotContext) => {
     const {
         exchange,
         selectedOptions: options,
-        type,
         amountType,
         balancePercent,
         tradingAmountCurrency
     } = ctx.session.dialog.current.data as {
         exchange: string;
         selectedOptions: string[];
-        type: string;
         amountType: string;
         balancePercent: number;
         tradingAmountCurrency: number;
@@ -280,7 +213,6 @@ const finish = async (ctx: BotContext) => {
             gql`
                 mutation (
                     $exchange: String!
-                    $type: String!
                     $userExAccId: uuid
                     $tradingAmountType: String!
                     $balancePercent: Int
@@ -289,7 +221,6 @@ const finish = async (ctx: BotContext) => {
                 ) {
                     createUserPortfolio(
                         exchange: $exchange
-                        type: $type
                         userExAccId: $userExAccId
                         tradingAmountType: $tradingAmountType
                         balancePercent: $balancePercent
@@ -304,7 +235,6 @@ const finish = async (ctx: BotContext) => {
                 exchange,
                 userExAccId: ctx.session.userExAcc.id,
                 options: ctx.catalog.options.reduce((prev, cur) => ({ ...prev, [cur]: options.includes(cur) }), {}),
-                type,
                 tradingAmountType: amountType,
                 balancePercent,
                 tradingAmountCurrency
@@ -338,17 +268,14 @@ const finish = async (ctx: BotContext) => {
                     amountType === "balancePercent"
                         ? ctx.i18n.t("dialogs.addPortfolio.ofBalance")
                         : ctx.i18n.t("dialogs.addPortfolio.fixedCurrency"),
-                warning: type === "trading" ? ctx.i18n.t("warning") : ""
+                warning: ctx.i18n.t("warning")
             })
         );
         ctx.dialog.reset();
     }
 };
 const router: Router = new Map();
-router.set(addPortfolioActions.enter, chooseType);
-router.set(addPortfolioActions.amountType, amountType);
-router.set(addPortfolioActions.initBalance, initBalance);
-router.set(addPortfolioActions.handleInitBalance, handleInitBalance);
+router.set(addPortfolioActions.enter, enter);
 router.set(addPortfolioActions.amount, amount);
 router.set(addPortfolioActions.handleAmount, handleAmount);
 router.set(addPortfolioActions.finish, finish);

@@ -5,13 +5,10 @@ import { v4 as uuid } from "uuid";
 import dayjs from "@cryptuoso/dayjs";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { Timeframe, CandleType, ExchangePrice, ExchangeCandle } from "@cryptuoso/market";
-//import { createSocksProxyAgent } from "@cryptuoso/ccxt-public";
-import { sleep, groupBy } from "@cryptuoso/helpers";
+import { sleep } from "@cryptuoso/helpers";
 import {
     ImporterRunnerEvents,
     ImporterRunnerStart,
-    ImporterWorkerSchema,
-    ImporterWorkerEvents,
     ImporterWorkerFinished,
     ImporterWorkerFailed
 } from "@cryptuoso/importer-events";
