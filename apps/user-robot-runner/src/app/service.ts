@@ -656,7 +656,7 @@ export default class UserRobotRunnerService extends HTTPService {
             const userRobots: readonly { id: string }[] = await this.db.pg.any<{ id: string }>(sql`
                 SELECT id 
                 FROM user_robots 
-                WHERE user_portfolio_id = ${userPortfolio.id} and status = 'paused' and (settings->'active')::boolean = true`);
+                WHERE user_portfolio_id = ${userPortfolio.id} and status != 'started' and (settings->'active')::boolean = true`);
 
             if (userRobots && Array.isArray(userRobots) && userRobots.length) {
                 await Promise.all(
