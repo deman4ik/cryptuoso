@@ -1,10 +1,11 @@
 <a href="https://cryptuoso.com">
- <img align="left" width="150" height="150" src="https://pbs.twimg.com/profile_images/1225427644621230081/EJL1Ucky_200x200.jpg">  
+ <img align="left" width="150" height="150" src="https://pbs.twimg.com/profile_images/1367844968270880773/sldxMHdS_400x400.jpg">  
 </a> 
 <br>
 <a href="https://cryptuoso.com">
 <h2 align="center">Cryptuoso - Cryptocurrency Trading Robots</h2>
 </a> 
+<br>
 <br>
 <br>
 

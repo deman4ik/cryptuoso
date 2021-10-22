@@ -24,8 +24,7 @@ export async function getEquityChartUrl(data: PerformanceVals): Promise<string> 
                     borderColor: "#00FFFC",
                     borderWidth: 2,
                     pointBackgroundColor: "#00FFFC",
-                    pointRadius: 0,
-                    lineTension: 0.5
+                    pointRadius: 0
                 }
             ]
         },
