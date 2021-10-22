@@ -208,6 +208,7 @@ const optionsChosen = async (ctx: BotContext) => {
         }
         await ctx.dialog.edit();
         await ctx.reply(ctx.i18n.t("dialogs.editPortfolio.optionsChange"));
+        ctx.dialog.reset();
     } else {
         ctx.dialog.next(editPortfolioActions.optionsChosen);
         await ctx.dialog.edit();
