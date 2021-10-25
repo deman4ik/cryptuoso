@@ -792,6 +792,91 @@ export class PrivateConnector {
         }
     }
 
+    async checkOrderExists(order: Order) {
+        try {
+            const { exchange, asset, currency, exId } = order;
+            if (!exId) return null;
+            let orders: ccxt.Order[] = [];
+            const creationDate = dayjs.utc(order.createdAt).valueOf();
+            if (this.connector.has["fetchOrders"]) {
+                const call = async (bail: (e: Error) => void) => {
+                    try {
+                        return await this.connector.fetchOrders(this.getSymbol(asset, currency), creationDate);
+                    } catch (e) {
+                        if (
+                            (e instanceof ccxt.NetworkError &&
+                                !(e instanceof ccxt.InvalidNonce) &&
+                                !(e instanceof ccxt.DDoSProtection) &&
+                                !(e instanceof ccxt.DDoSProtection)) ||
+                            e.message?.toLowerCase().includes("gateway") ||
+                            e.message?.toLowerCase().includes("getaddrinfo") ||
+                            e.message?.toLowerCase().includes("network") ||
+                            e.message?.toLowerCase().includes("econnreset")
+                        ) {
+                            await this.initConnector();
+                            throw e;
+                        }
+                        bail(e);
+                    }
+                };
+                orders = await retry(call, this.retryOptions);
+            } else if (this.connector.has["fetchOpenOrders"] && this.connector.has["fetchClosedOrders"]) {
+                const callOpen = async (bail: (e: Error) => void) => {
+                    try {
+                        return await this.connector.fetchOpenOrders(this.getSymbol(asset, currency), creationDate);
+                    } catch (e) {
+                        if (
+                            (e instanceof ccxt.NetworkError &&
+                                !(e instanceof ccxt.InvalidNonce) &&
+                                !(e instanceof ccxt.DDoSProtection)) ||
+                            e.message?.toLowerCase().includes("gateway") ||
+                            e.message?.toLowerCase().includes("getaddrinfo") ||
+                            e.message?.toLowerCase().includes("network") ||
+                            e.message?.toLowerCase().includes("econnreset")
+                        ) {
+                            await this.initConnector();
+                            throw e;
+                        }
+                        bail(e);
+                    }
+                };
+                const callClosed = async (bail: (e: Error) => void) => {
+                    try {
+                        return await this.connector.fetchClosedOrders(this.getSymbol(asset, currency), creationDate);
+                    } catch (e) {
+                        if (
+                            (e instanceof ccxt.NetworkError &&
+                                !(e instanceof ccxt.InvalidNonce) &&
+                                !(e instanceof ccxt.DDoSProtection)) ||
+                            e.message?.toLowerCase().includes("gateway") ||
+                            e.message?.toLowerCase().includes("getaddrinfo") ||
+                            e.message?.toLowerCase().includes("network") ||
+                            e.message?.toLowerCase().includes("econnreset")
+                        ) {
+                            await this.initConnector();
+                            throw e;
+                        }
+                        bail(e);
+                    }
+                };
+                const openOrders = await retry(callOpen, this.retryOptions);
+                const closedOrders = await retry(callClosed, this.retryOptions);
+                orders = [...closedOrders, ...openOrders];
+            } else {
+                this.log.error(`Can't fetch orders from ${exchange}`);
+                return null;
+            }
+
+            if (!orders || !Array.isArray(orders) || orders.length === 0) return null;
+
+            const orderExists = orders.find((o) => o.id === exId);
+            return orderExists;
+        } catch (e) {
+            this.log.error(e);
+            return null;
+        }
+    }
+
     async getRecentOrders(asset: string, currency: string, creationDate?: number): Promise<UnknownOrder[]> {
         try {
             let orders: ccxt.Order[] = [];
@@ -919,14 +1004,19 @@ export class PrivateConnector {
                 try {
                     return await this.connector.fetchOrder(exId, this.getSymbol(asset, currency));
                 } catch (e) {
+                    const message = e.message?.toLowerCase();
+                    if (message.includes("no such order found") && exchange === "bitfinex") {
+                        const orderExists = await this.checkOrderExists(order);
+                        if (orderExists) return orderExists;
+                    }
                     if (
                         (e instanceof ccxt.NetworkError &&
                             !(e instanceof ccxt.InvalidNonce) &&
                             !(e instanceof ccxt.DDoSProtection)) ||
-                        e.message?.toLowerCase().includes("gateway") ||
-                        e.message?.toLowerCase().includes("getaddrinfo") ||
-                        e.message?.toLowerCase().includes("network") ||
-                        e.message?.toLowerCase().includes("econnreset")
+                        message.includes("gateway") ||
+                        message.includes("getaddrinfo") ||
+                        message.includes("network") ||
+                        message.includes("econnreset")
                     ) {
                         await this.initConnector();
                         throw e;
@@ -991,6 +1081,7 @@ export class PrivateConnector {
         } catch (err) {
             this.log.error(err, order);
             const message = err.message?.toLowerCase();
+
             if (
                 err instanceof ccxt.NetworkError ||
                 message.includes("gateway") ||
@@ -998,7 +1089,6 @@ export class PrivateConnector {
                 message.includes("network") ||
                 message.includes("request") ||
                 message.includes("econnreset") ||
-                (message.includes("no such order found") && order.exchange === "bitfinex") ||
                 !order.nextJob?.retries ||
                 order.nextJob?.retries < 5
             ) {
