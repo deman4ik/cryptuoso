@@ -907,7 +907,8 @@ export default class UserRobotRunnerService extends HTTPService {
     }
 
     async handleSignalTradeEvents(signal: Signal) {
-        const { id, robotId, timestamp } = signal;
+        const { id, robotId, timestamp, emulated } = signal;
+        if (emulated) return;
         const userRobots = await this.db.pg.any<{ id: string; status: UserRobotStatus }>(
             sql`
             SELECT id, status 
