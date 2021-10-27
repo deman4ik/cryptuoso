@@ -318,7 +318,7 @@ export default class PortfolioManagerService extends HTTPService {
             status: UserExchangeAccountInfo["status"];
             balance: UserExchangeAccountInfo["balance"];
         }>(sql`
-            SELECT exchange, ((ea.balances ->> 'totalUSD'::text))::numeric as balance
+            SELECT exchange, status, ((ea.balances ->> 'totalUSD'::text))::numeric as balance
             FROM user_exchange_accs ea
             WHERE ea.id = ${userExAccId};
             `);

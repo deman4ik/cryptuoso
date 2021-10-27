@@ -6,6 +6,8 @@ import { getEquityChartUrl } from "@cryptuoso/quickchart";
 import { addPortfolioActions } from "./addPortfolio";
 import { gql } from "../utils/graphql-client";
 import logger from "@cryptuoso/logger";
+import { editPortfolioActions } from "./editPortfolio";
+import { equals } from "@cryptuoso/helpers";
 
 export const enum listPortfoliosActions {
     enter = "lPfs:enter",
@@ -178,12 +180,18 @@ const showPortfolio = async (ctx: BotContext) => {
     }
     const portfolio = ctx.session.dialog.current.data.loadedPortfolios[portfolioCode];
 
+    ctx.session.dialog.current.data.subscribed =
+        ctx.session.portfolio && equals(ctx.session.portfolio.settings.options, options);
+
     const text = ctx.i18n.t("dialogs.listPortfolios.portfolio", {
         ...portfolio,
         options: Object.entries(portfolio.settings.options)
             .filter(([, val]) => !!val)
             .map(([o]) => `✅ ${ctx.i18n.t(`options.${o}`)}`)
-            .join("\n ")
+            .join("\n "),
+        subscribed: ctx.session.dialog.current.data.subscribed
+            ? `\n${ctx.i18n.t("listPortfolios.alreadySubscribed")}`
+            : ""
     });
     await ctx.dialog.edit();
     ctx.dialog.next(listPortfoliosActions.actions);
@@ -210,13 +218,21 @@ const portfolioActions = async (ctx: BotContext) => {
             portfolioCode: string;
             loadedPortfolios: { [key: string]: PortfolioInfo };
         };
-        ctx.dialog.enter(addPortfolioActions.enter, {
-            edit: true,
-            exchange,
-            selectedOptions,
-            type: "trading",
-            minBalance: loadedPortfolios[portfolioCode].limits.minBalance
-        });
+        if (ctx.session.portfolio) {
+            if (ctx.session.dialog.current.data.subscribed) {
+                await ctx.reply(ctx.i18n.t("listPortfolios.alreadySubscribed"));
+                ctx.dialog.reset();
+            } else
+                ctx.dialog.enter(editPortfolioActions.optionsChosen, {
+                    selectedOptions
+                });
+        } else
+            ctx.dialog.enter(addPortfolioActions.enter, {
+                edit: true,
+                exchange,
+                selectedOptions,
+                minBalance: loadedPortfolios[portfolioCode].limits.minBalance
+            });
     } else if (action === "back") {
         ctx.dialog.enter(listPortfoliosActions.options, { ...ctx.session.dialog.current.data });
     }

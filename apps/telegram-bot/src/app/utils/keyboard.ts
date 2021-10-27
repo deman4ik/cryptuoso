@@ -31,6 +31,8 @@ export const getMainKeyboard = (ctx: BotContext) => {
             resize_keyboard: true,
             keyboard: new Keyboard()
                 .text(ctx.i18n.t("keyboards.mainKeyboard.trading"))
+                .text(ctx.i18n.t("keyboards.mainKeyboard.publicPortfolios"))
+                .row()
                 .text(ctx.i18n.t("keyboards.mainKeyboard.account"))
                 .text(ctx.i18n.t("keyboards.mainKeyboard.support"))
                 .build()

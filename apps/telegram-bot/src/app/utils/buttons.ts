@@ -47,25 +47,31 @@ export const getOptionsButtons = (ctx: BotContext) => {
     return keyboard;
 };
 
-export const getPortfolioActions = (ctx: BotContext) =>
-    new InlineKeyboard()
-        .add({
-            text: ctx.i18n.t("dialogs.listPortfolios.subscribe"),
-            callback_data: JSON.stringify({
-                d: ctx.session.dialog.current?.id || null,
-                a: ctx.session.dialog.move?.action || null,
-                p: "subscribe"
+export const getPortfolioActions = (ctx: BotContext) => {
+    let keyboard = new InlineKeyboard();
+
+    if (!ctx.session.dialog.current.data.subscribed)
+        keyboard = keyboard
+            .add({
+                text: ctx.i18n.t("dialogs.listPortfolios.subscribe"),
+                callback_data: JSON.stringify({
+                    d: ctx.session.dialog.current?.id || null,
+                    a: ctx.session.dialog.move?.action || null,
+                    p: "subscribe"
+                })
             })
+            .row();
+
+    keyboard = keyboard.add({
+        text: ctx.i18n.t("dialogs.listPortfolios.back"),
+        callback_data: JSON.stringify({
+            d: ctx.session.dialog.current?.id || null,
+            a: ctx.session.dialog.move?.action || null,
+            p: "back"
         })
-        .row()
-        .add({
-            text: ctx.i18n.t("dialogs.listPortfolios.back"),
-            callback_data: JSON.stringify({
-                d: ctx.session.dialog.current?.id || null,
-                a: ctx.session.dialog.move?.action || null,
-                p: "back"
-            })
-        });
+    });
+    return keyboard;
+};
 
 export const getConfirmButtons = (ctx: BotContext) =>
     new InlineKeyboard()

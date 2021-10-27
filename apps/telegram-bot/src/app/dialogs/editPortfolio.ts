@@ -1,9 +1,10 @@
 import { round } from "@cryptuoso/helpers";
 import { InlineKeyboard } from "grammy";
 import { BotContext } from "../types";
-import { getAmountTypeButtons, getOptionsButtons, getPercentButtons } from "../utils/buttons";
+import { getAmountTypeButtons, getPercentButtons } from "../utils/buttons";
 import { Router } from "../utils/dialogsRouter";
 import { gql } from "../utils/graphql-client";
+import { listPortfoliosActions } from "./listPortfolios";
 import { tradingActions } from "./trading";
 
 export const enum editPortfolioActions {
@@ -154,76 +155,45 @@ const handleAmount = async (ctx: BotContext) => {
 };
 
 const options = async (ctx: BotContext) => {
-    ctx.session.dialog.current.data.selectedOptions = [];
-    ctx.dialog.next(editPortfolioActions.optionsChosen);
-
-    await ctx.dialog.edit();
-    ctx.session.dialog.current.data.edit = true;
-    await ctx.reply(
-        ctx.i18n.t("dialogs.editPortfolio.chooseOptions", {
-            options: ctx.catalog.options
-                .map((o) => `<b>${ctx.i18n.t(`options.${o}`)}</b> - <i>${ctx.i18n.t(`options.info.${o}`)}</i>`)
-                .join("\n ")
-        }),
-        {
-            reply_markup: getOptionsButtons(ctx)
-        }
-    );
+    ctx.dialog.enter(listPortfoliosActions.options, {
+        edit: true,
+        exchange: ctx.session.portfolio.exchange
+    });
 };
 
 const optionsChosen = async (ctx: BotContext) => {
-    const option = ctx.session.dialog.current.data.payload as string;
-
-    if (option !== "done") ctx.session.dialog.current.data.selectedOptions.push(option);
-    const selected = ctx.session.dialog.current.data.selectedOptions as string[];
-    if (selected.length === ctx.catalog.options.length || option === "done") {
-        await ctx.reply(ctx.i18n.t("dialogs.addPortfolio.progress"));
-        let error;
-        try {
-            await ctx.gql.request<{ editUserPortfolio: { result: string } }>(
-                ctx,
-                gql`
-                    mutation editUserPortfolioOptions($userPortfolioId: uuid!, $options: PortfolioOptions!) {
-                        editUserPortfolio(userPortfolioId: $userPortfolioId, options: $options) {
-                            result
-                        }
+    await ctx.reply(ctx.i18n.t("dialogs.addPortfolio.progress"));
+    let error;
+    try {
+        await ctx.gql.request<{ editUserPortfolio: { result: string } }>(
+            ctx,
+            gql`
+                mutation editUserPortfolioOptions($userPortfolioId: uuid!, $options: PortfolioOptions!) {
+                    editUserPortfolio(userPortfolioId: $userPortfolioId, options: $options) {
+                        result
                     }
-                `,
-                {
-                    userPortfolioId: ctx.session.portfolio.id,
-                    options: ctx.catalog.options.reduce(
-                        (prev, cur) => ({
-                            ...prev,
-                            [cur]: ctx.session.dialog.current.data.selectedOptions.includes(cur)
-                        }),
-                        {}
-                    )
                 }
-            );
-        } catch (err) {
-            error = err.message;
-        }
-        if (error) {
-            await ctx.reply(ctx.i18n.t("failed", { error }));
-        }
-        await ctx.dialog.edit();
-        await ctx.reply(ctx.i18n.t("dialogs.editPortfolio.optionsChange"));
-        ctx.dialog.reset();
-    } else {
-        ctx.dialog.next(editPortfolioActions.optionsChosen);
-        await ctx.dialog.edit();
-        ctx.session.dialog.current.data.edit = true;
-        await ctx.reply(
-            ctx.i18n.t("dialogs.editPortfolio.chooseMoreOptions", {
-                options: selected
-                    .map((o) => `✅ <b>${ctx.i18n.t(`options.${o}`)}</b> - <i>${ctx.i18n.t(`options.info.${o}`)}</i>`)
-                    .join("\n ")
-            }),
+            `,
             {
-                reply_markup: getOptionsButtons(ctx)
+                userPortfolioId: ctx.session.portfolio.id,
+                options: ctx.catalog.options.reduce(
+                    (prev, cur) => ({
+                        ...prev,
+                        [cur]: ctx.session.dialog.current.data.selectedOptions.includes(cur)
+                    }),
+                    {}
+                )
             }
         );
+    } catch (err) {
+        error = err.message;
     }
+    if (error) {
+        await ctx.reply(ctx.i18n.t("failed", { error }));
+    }
+    await ctx.dialog.edit();
+    await ctx.reply(ctx.i18n.t("dialogs.editPortfolio.optionsChange"));
+    ctx.dialog.reset();
 };
 const router: Router = new Map();
 

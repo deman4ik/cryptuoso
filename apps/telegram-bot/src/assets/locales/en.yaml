@@ -12,6 +12,7 @@ keyboards:
         info: ❓ Info
     mainKeyboard:
         trading: 📈 Trading
+        publicPortfolios: 💼 Public Portfolios
         account: 👤 Account
         support: ❓ Support
     confirm:
@@ -242,8 +243,10 @@ dialogs:
             <b>Payoff Ratio:</b> ${stats.payoffRatio} \n
             <b>Recovery Factor:</b> ${stats.recoveyFactor} \n
             <b>Sharpe Ratio:</b> ${stats.sharpeRatio} \n
+            ${subscribed}
         subscribe: ✅  Subscribe
         back: ◀️ Choose another options
+        alreadySubscribed: ✅ You are already subscribed to this portfolio!
     addPortfolio:
         insufficient: >
             ❌ You current exchange balance (${round(currentBalance,2)} $) is <b>insufficient</b>.\n

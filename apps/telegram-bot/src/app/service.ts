@@ -37,6 +37,7 @@ import {
 } from "./utils/notifications";
 import { startActions } from "./dialogs/start";
 import { Request, Response, Protocol } from "restana";
+import { listPortfoliosActions } from "./dialogs/listPortfolios";
 
 export type TelegramBotServiceConfig = HTTPServiceConfig;
 
@@ -183,6 +184,19 @@ export default class TelegramBotService extends HTTPService {
             ctx.dialog.enter(tradingActions.enter, { reload: true, edit: false });
             await next();
         });
+        this.bot.hears(
+            this.i18n.t("en", "keyboards.mainKeyboard.publicPortfolios"),
+            async (ctx: any, next: NextFunction) => {
+                ctx.session.dialog.current = null;
+                if (ctx.session.portfolio || ctx.session.userExAcc)
+                    ctx.dialog.enter(listPortfoliosActions.options, {
+                        edit: true,
+                        exchange: ctx.session.portfolio?.exchange || ctx.session.userExAcc?.exchange
+                    });
+                else ctx.dialog.enter(listPortfoliosActions.enter);
+                await next();
+            }
+        );
         this.bot.hears(this.i18n.t("en", "keyboards.mainKeyboard.account"), async (ctx: any, next: NextFunction) => {
             ctx.session.dialog.current = null;
             ctx.dialog.enter(accountActions.enter);

@@ -570,6 +570,13 @@ export default class UserRobotRunnerService extends HTTPService {
                 ON CONFLICT ON CONSTRAINT user_robots_user_portfolio_id_robot_id_key
                 DO UPDATE SET settings = excluded.settings, status = excluded.status;
             `);
+
+                    await t.query(sql`
+            UPDATE user_portfolio_settings
+            SET synced_at = ${dayjs.utc().toISOString()}
+            WHERE user_portfolio_id = ${userPortfolioId}
+            AND active = true;
+            `);
                 });
             } catch (error) {
                 this.log.error(error);
