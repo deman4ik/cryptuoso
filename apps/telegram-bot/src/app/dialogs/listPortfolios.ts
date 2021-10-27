@@ -1,4 +1,4 @@
-import { PortfolioInfo } from "@cryptuoso/portfolio-state";
+import { PortfolioInfo, UserPortfolioInfo } from "@cryptuoso/portfolio-state";
 import { BotContext } from "../types";
 import { getExchangeButtons, getOptionsButtons, getPortfolioActions } from "../utils/buttons";
 import { Router } from "../utils/dialogsRouter";
@@ -8,6 +8,9 @@ import { gql } from "../utils/graphql-client";
 import logger from "@cryptuoso/logger";
 import { editPortfolioActions } from "./editPortfolio";
 import { equals } from "@cryptuoso/helpers";
+import { UserExchangeAccountInfo } from "@cryptuoso/user-state";
+import { getBackKeyboard } from "../utils/keyboard";
+import dayjs from "@cryptuoso/dayjs";
 
 export const enum listPortfoliosActions {
     enter = "lPfs:enter",
@@ -33,7 +36,9 @@ const chooseExchange = async (ctx: BotContext) => {
         );
         ctx.session.exchanges = exchanges;
     }
-
+    if (ctx.session.dialog.current.data.main)
+        await ctx.reply(ctx.i18n.t("keyboards.mainKeyboard.publicPortfolios"), getBackKeyboard(ctx));
+    ctx.session.dialog.current.data.main = false;
     ctx.dialog.next(listPortfoliosActions.options);
     ctx.session.dialog.current.data.edit = true;
     await ctx.reply(ctx.i18n.t("dialogs.listPortfolios.chooseExchange"), {
@@ -52,6 +57,135 @@ const chooseOptions = async (ctx: BotContext) => {
         }
         ctx.session.dialog.current.data.exchange = exchange;
     }
+
+    if (ctx.session.dialog.current.data.main)
+        await ctx.reply(ctx.i18n.t("keyboards.mainKeyboard.publicPortfolios"), getBackKeyboard(ctx));
+    if (!ctx.session.portfolio || !ctx.session.userExAcc || ctx.session.dialog.current?.data?.reload) {
+        const {
+            myPortfolio,
+            myUserExAcc,
+            openPosSum: {
+                aggregate: {
+                    sum: { unrealizedProfit },
+                    openTradesCount
+                }
+            }
+        } = await ctx.gql.request<{
+            openPosSum: {
+                aggregate: {
+                    sum: {
+                        unrealizedProfit: number;
+                    };
+                    openTradesCount: number;
+                };
+            };
+            myPortfolio: UserPortfolioInfo[];
+            myUserExAcc: UserExchangeAccountInfo[];
+        }>(
+            ctx,
+            gql`
+                query myPortfolio($userId: uuid!) {
+                    openPosSum: v_user_positions_aggregate(
+                        where: { user_id: { _eq: $userId }, status: { _eq: "open" } }
+                    ) {
+                        aggregate {
+                            sum {
+                                unrealizedProfit: profit
+                            }
+                            openTradesCount: count
+                        }
+                    }
+                    myPortfolio: v_user_portfolios(where: { user_id: { _eq: $userId } }) {
+                        id
+                        userExAccId: user_ex_acc_id
+                        exchange
+                        type
+                        status
+                        startedAt: started_at
+                        stoppedAt: stopped_at
+                        activeFrom: active_from
+                        settings: user_portfolio_settings
+                        nextSettings: next_user_portfolio_settings
+                        stats {
+                            tradesCount: trades_count
+                            currentBalance: current_balance
+                            netProfit: net_profit
+                            percentNetProfit: percent_net_profit
+                            winRate: win_rate
+                            maxDrawdown: max_drawdown
+                            maxDrawdownDate: max_drawdown_date
+                            payoffRatio: payoff_ratio
+                            sharpeRatio: sharpe_ratio
+                            recoveyFactor: recovery_factor
+                            avgTradesCount: avg_trades_count_years
+                            avgPercentNetProfitYearly: avg_percent_net_profit_yearly
+                            equityAvg: equity_avg
+                            firstPosition: first_position
+                            lastPosition: last_position
+                        }
+                        openPositions: positions(
+                            where: { status: { _eq: "open" } }
+                            order_by: { entry_date: desc_nulls_last }
+                        ) {
+                            id
+                            direction
+                            asset
+                            entryAction: entry_action
+                            entryPrice: entry_price
+                            entryDate: entry_date
+                            volume: entry_executed
+                            profit
+                        }
+                        closedPositions: positions(
+                            where: { status: { _in: ["closed", "closedAuto"] } }
+                            order_by: { exit_date: desc_nulls_last }
+                            limit: 5
+                        ) {
+                            id
+                            direction
+                            asset
+                            entryAction: entry_action
+                            entryPrice: entry_price
+                            entryDate: entry_date
+                            exitAction: exit_action
+                            exitPrice: exit_price
+                            exitDate: exit_date
+                            barsHeld: bars_held
+                            volume: exit_executed
+                            profit
+                        }
+                    }
+                    myUserExAcc: v_user_exchange_accs(
+                        where: { user_id: { _eq: $userId } }
+                        limit: 1
+                        order_by: { created_at: desc }
+                    ) {
+                        id
+                        exchange
+                        name
+                        status
+                        balance: total_balance_usd
+                    }
+                }
+            `,
+            {
+                userId: ctx.session.user.id
+            }
+        );
+        logger.debug(myPortfolio);
+        if (myPortfolio && Array.isArray(myPortfolio) && myPortfolio.length) {
+            const [portfolio] = myPortfolio;
+            ctx.session.portfolio = portfolio;
+            ctx.session.portfolio.unrealizedProfit = unrealizedProfit;
+            ctx.session.portfolio.openTradesCount = openTradesCount;
+            ctx.session.portfolio.lastInfoUpdatedAt = dayjs.utc().toISOString();
+        } else ctx.session.portfolio = null;
+        if (myUserExAcc && Array.isArray(myUserExAcc) && myUserExAcc.length) {
+            const [userExAcc] = myUserExAcc;
+            ctx.session.userExAcc = userExAcc;
+        } else ctx.session.userExAcc = null;
+    }
+
     ctx.session.dialog.current.data.selectedOptions = [];
     ctx.dialog.next(listPortfoliosActions.optionsChosen);
 
@@ -190,7 +324,7 @@ const showPortfolio = async (ctx: BotContext) => {
             .map(([o]) => `✅ ${ctx.i18n.t(`options.${o}`)}`)
             .join("\n "),
         subscribed: ctx.session.dialog.current.data.subscribed
-            ? `\n${ctx.i18n.t("listPortfolios.alreadySubscribed")}`
+            ? `\n${ctx.i18n.t("dialogs.listPortfolios.alreadySubscribed")}`
             : ""
     });
     await ctx.dialog.edit();
@@ -220,7 +354,7 @@ const portfolioActions = async (ctx: BotContext) => {
         };
         if (ctx.session.portfolio) {
             if (ctx.session.dialog.current.data.subscribed) {
-                await ctx.reply(ctx.i18n.t("listPortfolios.alreadySubscribed"));
+                await ctx.reply(ctx.i18n.t("dialogs.listPortfolios.alreadySubscribed"));
                 ctx.dialog.reset();
             } else
                 ctx.dialog.enter(editPortfolioActions.optionsChosen, {

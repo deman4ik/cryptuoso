@@ -191,6 +191,7 @@ export default class TelegramBotService extends HTTPService {
                 if (ctx.session.portfolio || ctx.session.userExAcc)
                     ctx.dialog.enter(listPortfoliosActions.options, {
                         edit: true,
+                        main: true,
                         exchange: ctx.session.portfolio?.exchange || ctx.session.userExAcc?.exchange
                     });
                 else ctx.dialog.enter(listPortfoliosActions.enter);

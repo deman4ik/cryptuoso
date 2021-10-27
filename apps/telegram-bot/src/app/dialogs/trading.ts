@@ -119,8 +119,6 @@ const getTradingButtons = (ctx: BotContext) => {
 const router: Router = new Map();
 
 const getTradingInfo = async (ctx: BotContext) => {
-    logger.debug(!!ctx.session.portfolio);
-    logger.debug(ctx.session.dialog.current?.data?.reload);
     if (
         !ctx.session.portfolio ||
         ctx.session.dialog.current?.data?.reload ||
