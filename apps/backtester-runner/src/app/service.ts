@@ -158,7 +158,7 @@ export default class BacktesterRunnerService extends HTTPService {
                          AND r.id = ${params.robotId};`
                 );
                 if (params.settings?.populateHistory && robot.status !== RobotStatus.starting)
-                    throw new BaseError(`Wrong Robot status "${status}" must be "${RobotStatus.starting}"`, {
+                    throw new BaseError(`Wrong Robot status "${robot.status}" must be "${RobotStatus.starting}"`, {
                         backtestId: params.id,
                         robotId: params.robotId
                     });

@@ -409,7 +409,7 @@ export class Backtester {
 
             robot.instance.clearEvents();
             robot.instance.checkAlerts();
-            robot.instance.calcStats();
+            await robot.instance.calcStats();
             this.#saveLogs(id);
             this.#saveSignals(id);
             this.#savePositions(id);
@@ -417,7 +417,7 @@ export class Backtester {
             await robot.instance.calcIndicators();
             robot.instance.runStrategy();
             robot.instance.finalize();
-            robot.instance.calcStats();
+            await robot.instance.calcStats();
             this.#saveLogs(id);
             this.#saveSignals(id);
             this.#savePositions(id);

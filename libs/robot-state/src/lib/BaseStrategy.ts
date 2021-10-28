@@ -18,6 +18,7 @@ import { RobotWorkerEvents, Signal, SignalEvents } from "@cryptuoso/robot-events
 import logger from "@cryptuoso/logger";
 import { RobotPositionState, StrategyProps } from "./types";
 import { StrategySettings } from "@cryptuoso/robot-settings";
+import { TradeStats } from "@cryptuoso/trade-stats";
 
 export interface StrategyState extends StrategyProps {
     strategySettings: StrategySettings;
@@ -31,6 +32,7 @@ export interface StrategyState extends StrategyProps {
     backtest?: boolean;
     emulateNextPosition?: boolean;
     marginNextPosition?: number;
+    stats?: TradeStats;
 }
 
 export class BaseStrategy {
@@ -48,6 +50,7 @@ export class BaseStrategy {
     _backtest?: boolean;
     _emulateNextPosition?: boolean;
     _marginNextPosition?: number;
+    _stats?: TradeStats;
     _candle: Candle;
     _candles: Candle[];
     _candlesProps: CandleProps;
@@ -83,6 +86,7 @@ export class BaseStrategy {
         this._backtest = state.backtest;
         this._emulateNextPosition = nvl(state.emulateNextPosition, false);
         this._marginNextPosition = nvl(state.marginNextPosition, 1);
+        this._stats = nvl(state.stats, {});
         this._candle = null;
         this._candles = []; // [{}]
         this._candlesProps = {
@@ -352,6 +356,10 @@ export class BaseStrategy {
         this._positionsHandleMargin(marginNextPosition);
     }
 
+    _handleStats(stats: TradeStats) {
+        this._stats = stats;
+    }
+
     _addIndicator(name: string, indicatorName: string, parameters: { [key: string]: any }) {
         this._indicators[name] = {
             name,
@@ -440,5 +448,9 @@ export class BaseStrategy {
 
     get posLastNumb() {
         return this._posLastNumb;
+    }
+
+    get stats() {
+        return this._stats;
     }
 }

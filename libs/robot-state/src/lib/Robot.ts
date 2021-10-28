@@ -336,6 +336,7 @@ export class Robot {
             backtest: this._backtest,
             emulateNextPosition: this.emulateNextPosition,
             marginNextPosition: this.marginNextPosition,
+            stats: this._emulatedStats,
             posLastNumb: strategyState.posLastNumb,
             positions: strategyState.positions,
             parametersSchema,
@@ -503,6 +504,7 @@ export class Robot {
         this._strategyInstance._handleIndicators(this._state.indicators);
         this._strategyInstance._handleEmulation(this.emulateNextPosition);
         this._strategyInstance._handleMargin(this.marginNextPosition);
+        this._strategyInstance._handleStats(this._emulatedStats);
         // Очищаем предыдущие  задачи у позиций
         this._strategyInstance._clearAlerts();
         // Запустить проверку стратегии
@@ -615,8 +617,10 @@ export class Robot {
 
             this._strategyInstance._handleEmulation(this.emulateNextPosition);
             this._strategyInstance._handleMargin(this.marginNextPosition);
+
             const notEmulatedPositions = this.closedPositions.filter((p) => !p.emulated);
             let newStats = this._stats;
+
             if (notEmulatedPositions.length) {
                 if (
                     notEmulatedPositions.length === this.closedPositions.length &&

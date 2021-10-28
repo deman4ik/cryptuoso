@@ -1092,6 +1092,10 @@ export class PrivateConnector {
                 !order.nextJob?.retries ||
                 order.nextJob?.retries < 5
             ) {
+                const timeout =
+                    message.includes("no such order found") && order.exchange === "bitfinex"
+                        ? this.#orderCheckTimeout * 15
+                        : this.#orderCheckTimeout * 5;
                 return {
                     order: {
                         ...order,
@@ -1104,10 +1108,7 @@ export class PrivateConnector {
                     nextJob: {
                         type: OrderJobType.check,
                         priority: Priority.low,
-                        nextJobAt: dayjs
-                            .utc()
-                            .add(this.#orderCheckTimeout * 5, "second")
-                            .toISOString()
+                        nextJobAt: dayjs.utc().add(timeout, "second").toISOString()
                     }
                 };
             }

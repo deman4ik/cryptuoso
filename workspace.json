@@ -20,7 +20,8 @@
                         "passWithNoTests": true
                     }
                 }
-            }
+            },
+            "tags": []
         },
         "auth": {
             "root": "apps/auth",
@@ -75,7 +76,8 @@
                     },
                     "outputs": ["coverage/apps/auth"]
                 }
-            }
+            },
+            "tags": []
         },
         "auth-utils": {
             "root": "libs/auth-utils",
@@ -98,7 +100,8 @@
                     },
                     "outputs": ["coverage/libs/auth-utils"]
                 }
-            }
+            },
+            "tags": []
         },
         "backtester-events": {
             "root": "libs/backtester-events",
@@ -126,7 +129,8 @@
                     },
                     "outputs": ["coverage/libs/backtester-events"]
                 }
-            }
+            },
+            "tags": []
         },
         "backtester-runner": {
             "root": "apps/backtester-runner",
@@ -184,7 +188,8 @@
                     },
                     "outputs": ["coverage/apps/backtester-runner"]
                 }
-            }
+            },
+            "tags": []
         },
         "backtester-state": {
             "root": "libs/backtester-state",
@@ -212,7 +217,8 @@
                     },
                     "outputs": ["coverage/libs/backtester-state"]
                 }
-            }
+            },
+            "tags": []
         },
         "backtester-worker": {
             "root": "apps/backtester-worker",
@@ -271,7 +277,8 @@
                     },
                     "outputs": ["coverage/apps/backtester-worker"]
                 }
-            }
+            },
+            "tags": []
         },
         "billing": {
             "root": "libs/billing",
@@ -292,7 +299,8 @@
                         "passWithNoTests": true
                     }
                 }
-            }
+            },
+            "tags": []
         },
         "ccxt-private": {
             "root": "libs/ccxt-private",
@@ -315,7 +323,8 @@
                     },
                     "outputs": ["coverage/libs/ccxt-private"]
                 }
-            }
+            },
+            "tags": []
         },
         "ccxt-public": {
             "root": "libs/ccxt-public",
@@ -340,7 +349,8 @@
                     },
                     "outputs": ["coverage/libs/ccxt-public"]
                 }
-            }
+            },
+            "tags": []
         },
         "connector-events": {
             "root": "libs/connector-events",
@@ -363,7 +373,8 @@
                     },
                     "outputs": ["coverage/libs/connector-events"]
                 }
-            }
+            },
+            "tags": []
         },
         "connector-runner": {
             "root": "apps/connector-runner",
@@ -416,7 +427,8 @@
                     },
                     "outputs": ["coverage/apps/connector-runner"]
                 }
-            }
+            },
+            "tags": []
         },
         "connector-state": {
             "root": "libs/connector-state",
@@ -439,7 +451,8 @@
                     },
                     "outputs": ["coverage/libs/connector-state"]
                 }
-            }
+            },
+            "tags": []
         },
         "connector-worker": {
             "root": "apps/connector-worker",
@@ -493,7 +506,8 @@
                     },
                     "outputs": ["coverage/apps/connector-worker"]
                 }
-            }
+            },
+            "tags": []
         },
         "dayjs": {
             "root": "libs/dayjs",
@@ -518,7 +532,8 @@
                     },
                     "outputs": ["coverage/libs/dayjs"]
                 }
-            }
+            },
+            "tags": []
         },
         "errors": {
             "root": "libs/errors",
@@ -543,7 +558,8 @@
                     },
                     "outputs": ["coverage/libs/errors"]
                 }
-            }
+            },
+            "tags": []
         },
         "events": {
             "root": "libs/events",
@@ -568,7 +584,8 @@
                     },
                     "outputs": ["coverage/libs/events"]
                 }
-            }
+            },
+            "tags": []
         },
         "events-manager": {
             "root": "apps/events-manager",
@@ -623,7 +640,8 @@
                     },
                     "outputs": ["coverage/apps/events-manager"]
                 }
-            }
+            },
+            "tags": []
         },
         "exwatcher-base": {
             "root": "libs/exwatcher-base",
@@ -648,7 +666,8 @@
                     },
                     "outputs": ["coverage/libs/exwatcher-base"]
                 }
-            }
+            },
+            "tags": []
         },
         "exwatcher-binance": {
             "root": "apps/exwatcher-binance",
@@ -706,7 +725,8 @@
                     },
                     "outputs": ["coverage/apps/exwatcher-binance"]
                 }
-            }
+            },
+            "tags": []
         },
         "exwatcher-bitfinex": {
             "root": "apps/exwatcher-bitfinex",
@@ -764,7 +784,8 @@
                     },
                     "outputs": ["coverage/apps/exwatcher-bitfinex"]
                 }
-            }
+            },
+            "tags": []
         },
         "exwatcher-events": {
             "root": "libs/exwatcher-events",
@@ -792,7 +813,8 @@
                     },
                     "outputs": ["coverage/libs/exwatcher-events"]
                 }
-            }
+            },
+            "tags": []
         },
         "exwatcher-huobipro": {
             "root": "apps/exwatcher-huobipro",
@@ -843,7 +865,8 @@
                         "passWithNoTests": true
                     }
                 }
-            }
+            },
+            "tags": []
         },
         "exwatcher-kraken": {
             "root": "apps/exwatcher-kraken",
@@ -901,7 +924,8 @@
                     },
                     "outputs": ["coverage/apps/exwatcher-kraken"]
                 }
-            }
+            },
+            "tags": []
         },
         "exwatcher-kucoin": {
             "root": "apps/exwatcher-kucoin",
@@ -952,7 +976,8 @@
                         "passWithNoTests": true
                     }
                 }
-            }
+            },
+            "tags": []
         },
         "exwatcher-runner": {
             "root": "apps/exwatcher-runner",
@@ -1010,7 +1035,8 @@
                     },
                     "outputs": ["coverage/apps/exwatcher-runner"]
                 }
-            }
+            },
+            "tags": []
         },
         "graphql-client": {
             "root": "libs/graphql-client",
@@ -1032,7 +1058,8 @@
                         "passWithNoTests": true
                     }
                 }
-            }
+            },
+            "tags": []
         },
         "helpers": {
             "root": "libs/helpers",
@@ -1057,7 +1084,8 @@
                     },
                     "outputs": ["coverage/libs/helpers"]
                 }
-            }
+            },
+            "tags": []
         },
         "importer-events": {
             "root": "libs/importer-events",
@@ -1085,7 +1113,8 @@
                     },
                     "outputs": ["coverage/libs/importer-events"]
                 }
-            }
+            },
+            "tags": []
         },
         "importer-runner": {
             "root": "apps/importer-runner",
@@ -1143,7 +1172,8 @@
                     },
                     "outputs": ["coverage/apps/importer-runner"]
                 }
-            }
+            },
+            "tags": []
         },
         "importer-state": {
             "root": "libs/importer-state",
@@ -1168,7 +1198,8 @@
                     },
                     "outputs": ["coverage/libs/importer-state"]
                 }
-            }
+            },
+            "tags": []
         },
         "importer-worker": {
             "root": "apps/importer-worker",
@@ -1227,7 +1258,8 @@
                     },
                     "outputs": ["coverage/apps/importer-worker"]
                 }
-            }
+            },
+            "tags": []
         },
         "legacy-telegram-bot": {
             "root": "apps/legacy-telegram-bot",
@@ -1278,7 +1310,8 @@
                         "passWithNoTests": true
                     }
                 }
-            }
+            },
+            "tags": []
         },
         "logger": {
             "root": "libs/logger",
@@ -1303,7 +1336,8 @@
                     },
                     "outputs": ["coverage/libs/logger"]
                 }
-            }
+            },
+            "tags": []
         },
         "mail": {
             "root": "libs/mail",
@@ -1328,7 +1362,8 @@
                     },
                     "outputs": ["coverage/libs/mail"]
                 }
-            }
+            },
+            "tags": []
         },
         "market": {
             "root": "libs/market",
@@ -1353,7 +1388,8 @@
                     },
                     "outputs": ["coverage/libs/market"]
                 }
-            }
+            },
+            "tags": []
         },
         "notifications": {
             "root": "apps/notifications",
@@ -1406,7 +1442,8 @@
                     },
                     "outputs": ["coverage/apps/notifications"]
                 }
-            }
+            },
+            "tags": []
         },
         "portfolio-events": {
             "root": "libs/portfolio-events",
@@ -1427,7 +1464,8 @@
                         "passWithNoTests": true
                     }
                 }
-            }
+            },
+            "tags": []
         },
         "portfolio-manager": {
             "root": "apps/portfolio-manager",
@@ -1479,7 +1517,8 @@
                         "passWithNoTests": true
                     }
                 }
-            }
+            },
+            "tags": []
         },
         "portfolio-state": {
             "root": "libs/portfolio-state",
@@ -1500,7 +1539,8 @@
                         "passWithNoTests": true
                     }
                 }
-            }
+            },
+            "tags": []
         },
         "postgres": {
             "root": "libs/postgres",
@@ -1525,7 +1565,8 @@
                     },
                     "outputs": ["coverage/libs/postgres"]
                 }
-            }
+            },
+            "tags": []
         },
         "quickchart": {
             "root": "libs/quickchart",
@@ -1546,7 +1587,8 @@
                         "passWithNoTests": true
                     }
                 }
-            }
+            },
+            "tags": []
         },
         "robot-events": {
             "root": "libs/robot-events",
@@ -1571,7 +1613,8 @@
                     },
                     "outputs": ["coverage/libs/robot-events"]
                 }
-            }
+            },
+            "tags": []
         },
         "robot-indicators": {
             "root": "libs/robot-indicators",
@@ -1599,7 +1642,8 @@
                     },
                     "outputs": ["coverage/libs/robot-indicators"]
                 }
-            }
+            },
+            "tags": []
         },
         "robot-runner": {
             "root": "apps/robot-runner",
@@ -1654,7 +1698,8 @@
                     },
                     "outputs": ["coverage/apps/robot-runner"]
                 }
-            }
+            },
+            "tags": []
         },
         "robot-settings": {
             "root": "libs/robot-settings",
@@ -1679,7 +1724,8 @@
                     },
                     "outputs": ["coverage/libs/robot-settings"]
                 }
-            }
+            },
+            "tags": []
         },
         "robot-state": {
             "root": "libs/robot-state",
@@ -1704,7 +1750,8 @@
                     },
                     "outputs": ["coverage/libs/robot-state"]
                 }
-            }
+            },
+            "tags": []
         },
         "robot-worker": {
             "root": "apps/robot-worker",
@@ -1760,7 +1807,8 @@
                     },
                     "outputs": ["coverage/apps/robot-worker"]
                 }
-            }
+            },
+            "tags": []
         },
         "service": {
             "root": "libs/service",
@@ -1785,7 +1833,8 @@
                     },
                     "outputs": ["coverage/libs/service"]
                 }
-            }
+            },
+            "tags": []
         },
         "stats-calc": {
             "root": "libs/stats-calc",
@@ -1810,7 +1859,8 @@
                     },
                     "outputs": ["coverage/libs/stats-calc"]
                 }
-            }
+            },
+            "tags": []
         },
         "stats-calc-events": {
             "root": "libs/stats-calc-events",
@@ -1838,7 +1888,8 @@
                     },
                     "outputs": ["coverage/libs/stats-calc-events"]
                 }
-            }
+            },
+            "tags": []
         },
         "stats-calc-runner": {
             "root": "apps/stats-calc-runner",
@@ -1896,7 +1947,8 @@
                     },
                     "outputs": ["coverage/apps/stats-calc-runner"]
                 }
-            }
+            },
+            "tags": []
         },
         "stats-calc-worker": {
             "root": "apps/stats-calc-worker",
@@ -1955,7 +2007,8 @@
                     },
                     "outputs": ["coverage/apps/stats-calc-worker"]
                 }
-            }
+            },
+            "tags": []
         },
         "support": {
             "root": "apps/support",
@@ -2008,7 +2061,8 @@
                     },
                     "outputs": ["coverage/apps/support"]
                 }
-            }
+            },
+            "tags": []
         },
         "telegram-bot": {
             "root": "apps/telegram-bot",
@@ -2061,7 +2115,8 @@
                     },
                     "outputs": ["coverage/apps/telegram-bot"]
                 }
-            }
+            },
+            "tags": []
         },
         "test-helpers": {
             "root": "libs/test-helpers",
@@ -2086,7 +2141,8 @@
                     },
                     "outputs": ["coverage/libs/test-helpers"]
                 }
-            }
+            },
+            "tags": []
         },
         "trade-stats": {
             "root": "libs/trade-stats",
@@ -2107,7 +2163,8 @@
                         "passWithNoTests": true
                     }
                 }
-            }
+            },
+            "tags": []
         },
         "trade-stats-events": {
             "root": "libs/trade-stats-events",
@@ -2128,7 +2185,8 @@
                         "passWithNoTests": true
                     }
                 }
-            }
+            },
+            "tags": []
         },
         "trade-stats-runner": {
             "root": "apps/trade-stats-runner",
@@ -2179,7 +2237,8 @@
                         "passWithNoTests": true
                     }
                 }
-            }
+            },
+            "tags": []
         },
         "trade-stats-worker": {
             "root": "apps/trade-stats-worker",
@@ -2231,7 +2290,8 @@
                         "passWithNoTests": true
                     }
                 }
-            }
+            },
+            "tags": []
         },
         "user-profile": {
             "root": "apps/user-profile",
@@ -2287,7 +2347,8 @@
                     },
                     "outputs": ["coverage/apps/user-profile"]
                 }
-            }
+            },
+            "tags": []
         },
         "user-robot-events": {
             "root": "libs/user-robot-events",
@@ -2310,7 +2371,8 @@
                     },
                     "outputs": ["coverage/libs/user-robot-events"]
                 }
-            }
+            },
+            "tags": []
         },
         "user-robot-runner": {
             "root": "apps/user-robot-runner",
@@ -2363,7 +2425,8 @@
                     },
                     "outputs": ["coverage/apps/user-robot-runner"]
                 }
-            }
+            },
+            "tags": []
         },
         "user-robot-state": {
             "root": "libs/user-robot-state",
@@ -2391,7 +2454,8 @@
                     },
                     "outputs": ["coverage/libs/user-robot-state"]
                 }
-            }
+            },
+            "tags": []
         },
         "user-robot-worker": {
             "root": "apps/user-robot-worker",
@@ -2444,7 +2508,8 @@
                     },
                     "outputs": ["coverage/apps/user-robot-worker"]
                 }
-            }
+            },
+            "tags": []
         },
         "user-signal-state": {
             "root": "libs/user-signal-state",
@@ -2472,7 +2537,8 @@
                     },
                     "outputs": ["coverage/libs/user-signal-state"]
                 }
-            }
+            },
+            "tags": []
         },
         "user-state": {
             "root": "libs/user-state",
@@ -2497,7 +2563,8 @@
                     },
                     "outputs": ["coverage/libs/user-state"]
                 }
-            }
+            },
+            "tags": []
         },
         "user-sub": {
             "root": "apps/user-sub",
@@ -2548,7 +2615,8 @@
                         "passWithNoTests": true
                     }
                 }
-            }
+            },
+            "tags": []
         },
         "user-sub-events": {
             "root": "libs/user-sub-events",
@@ -2569,7 +2637,8 @@
                         "passWithNoTests": true
                     }
                 }
-            }
+            },
+            "tags": []
         },
         "utils": {
             "root": "apps/utils",
@@ -2624,7 +2693,8 @@
                     },
                     "outputs": ["coverage/apps/utils"]
                 }
-            }
+            },
+            "tags": []
         },
         "webhooks": {
             "root": "apps/webhooks",
@@ -2675,70 +2745,8 @@
                         "passWithNoTests": true
                     }
                 }
-            }
+            },
+            "tags": []
         }
-    },
-    "cli": {
-        "defaultCollection": "@nrwl/node"
-    },
-    "schematics": {
-        "@nrwl/workspace": {
-            "library": {
-                "linter": "eslint"
-            }
-        },
-        "@nrwl/cypress": {
-            "cypress-project": {
-                "linter": "eslint"
-            }
-        },
-        "@nrwl/react": {
-            "application": {
-                "linter": "eslint"
-            },
-            "library": {
-                "linter": "eslint"
-            },
-            "storybook-configuration": {
-                "linter": "eslint"
-            }
-        },
-        "@nrwl/next": {
-            "application": {
-                "linter": "eslint"
-            }
-        },
-        "@nrwl/web": {
-            "application": {
-                "linter": "eslint"
-            }
-        },
-        "@nrwl/node": {
-            "application": {
-                "linter": "eslint"
-            },
-            "library": {
-                "linter": "eslint"
-            }
-        },
-        "@nrwl/nx-plugin": {
-            "plugin": {
-                "linter": "eslint"
-            }
-        },
-        "@nrwl/nest": {
-            "application": {
-                "linter": "eslint"
-            }
-        },
-        "@nrwl/express": {
-            "application": {
-                "linter": "eslint"
-            },
-            "library": {
-                "linter": "eslint"
-            }
-        }
-    },
-    "defaultProject": "importer-runner"
+    }
 }
