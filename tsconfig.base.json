@@ -61,5 +61,5 @@
         },
         "resolveJsonModule": true
     },
-    "exclude": ["node_modules", "tmp"]
+    "exclude": ["node_modules", "tmp", "strategies", "indicators"]
 }

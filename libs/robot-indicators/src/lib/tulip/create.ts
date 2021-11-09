@@ -747,6 +747,21 @@ methods.rsi = {
     }
 };
 
+methods.rsiLow = {
+    requires: ["optInTimePeriod"],
+    create: (params: { [key: string]: number }) => {
+        verifyParams("rsi", params);
+
+        return (data: CandleProps) =>
+            execute({
+                indicator: tulind.indicators.rsi,
+                inputs: [data.low],
+                options: [params.optInTimePeriod],
+                results: ["result"]
+            });
+    }
+};
+
 methods.sma = {
     requires: ["optInTimePeriod"],
     create: (params: { [key: string]: number }) => {

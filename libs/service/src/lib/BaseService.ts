@@ -71,15 +71,13 @@ export class BaseService {
                 pg: pg,
                 util: pgUtil
             };
-            this.#redisConnection = new Redis(
-                process.env.REDISCS, //,{enableReadyCheck: false}
-                {
-                    maxRetriesPerRequest: null,
-                    connectTimeout: 60000,
-                    //retryStrategy: this.redisRetryStrategy.bind(this),
-                    reconnectOnError: this.redisReconnectOnError.bind(this)
-                }
-            );
+            this.#redisConnection = new Redis(process.env.REDISCS, {
+                maxRetriesPerRequest: null,
+                enableReadyCheck: false,
+                connectTimeout: 60000,
+                //retryStrategy: this.redisRetryStrategy.bind(this),
+                reconnectOnError: this.redisReconnectOnError.bind(this)
+            });
             this.#redisConnection.on("error", this.#hanleRedisError.bind(this));
 
             this.#redLock = new RedLock([this.#redisConnection], {

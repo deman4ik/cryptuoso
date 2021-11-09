@@ -1,4 +1,4 @@
-import { chunkArrayIncrEnd, validate } from "@cryptuoso/helpers";
+import { addPercent, chunkArrayIncrEnd, round, validate } from "@cryptuoso/helpers";
 import { ValidationSchema } from "fastest-validator";
 import { CandleProps, DBCandle } from "@cryptuoso/market";
 import { NewEvent } from "@cryptuoso/events";
@@ -50,6 +50,10 @@ export class BaseIndicator {
     result: number | number[];
     _log = logger.debug.bind(logger);
     _strategySettings: StrategySettings;
+    _utils: {
+        round: (x: number, numPrecisionDigits?: number) => number;
+        addPercent: (num: number, perc: number) => number;
+    };
 
     constructor(state: IndicatorState) {
         this._name = state.name;
@@ -83,6 +87,10 @@ export class BaseIndicator {
         this._parametersSchema = state.parametersSchema;
         this._strategySettings = state.strategySettings || {};
         this._eventsToSend = [];
+        this._utils = {
+            round,
+            addPercent
+        };
     }
 
     init() {
@@ -116,6 +124,10 @@ export class BaseIndicator {
 
     done() {
         return Promise.resolve();
+    }
+
+    get utils() {
+        return this._utils;
     }
 
     prepareCandles(candles: DBCandle[]) {

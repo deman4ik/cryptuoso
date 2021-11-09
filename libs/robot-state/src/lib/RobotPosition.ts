@@ -361,7 +361,7 @@ export class RobotPosition {
                 break;
             }
             case OrderType.market: {
-                nextPrice = RobotPosition.checkMarket(action, price, this._candle, this._backtest);
+                nextPrice = this._candle.open;
                 break;
             }
             default:
@@ -381,11 +381,11 @@ export class RobotPosition {
     public static checkMarket(action: TradeAction, price: number, currentCandle: DBCandle, isBacktest = false) {
         if (action === TradeAction.long || action === TradeAction.closeShort) {
             if (!isBacktest) return +Math.max(+currentCandle.close, +price);
-            else return +Math.max(+currentCandle.open, +price);
+            else return +currentCandle.open;
         }
         if (action === TradeAction.short || action === TradeAction.closeLong) {
             if (!isBacktest) return +Math.min(+currentCandle.close, +price);
-            else return +Math.min(+currentCandle.open, +price);
+            else return +currentCandle.open;
         }
         throw new Error(`Unknown action ${action}`);
     }
@@ -424,22 +424,22 @@ export class RobotPosition {
         return null;
     }
 
-    public buyAtMarket(price = +this._candle.open) {
+    public buyAtMarket(price = +this._candle.close) {
         this._checkOpen();
         this._addAlert(TradeAction.long, price, OrderType.market);
     }
 
-    public sellAtMarket(price = +this._candle.open) {
+    public sellAtMarket(price = +this._candle.close) {
         this._checkClose();
         this._addAlert(TradeAction.closeLong, price, OrderType.market);
     }
 
-    public shortAtMarket(price = +this._candle.open) {
+    public shortAtMarket(price = +this._candle.close) {
         this._checkOpen();
         this._addAlert(TradeAction.short, price, OrderType.market);
     }
 
-    public coverAtMarket(price = +this._candle.open) {
+    public coverAtMarket(price = +this._candle.close) {
         this._checkClose();
         this._addAlert(TradeAction.closeShort, price, OrderType.market);
     }
