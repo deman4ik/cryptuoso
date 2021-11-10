@@ -662,7 +662,7 @@ class BacktesterWorker {
                 ),
                 { maxParallel: 1 }
             )
-                .flatMap((i) => i)
+                .flatten()
                 .each(async (candle: Candle) => {
                     await this.backtester.handleCandle(candle);
                     const percentUpdated = this.backtester.incrementProgress();
