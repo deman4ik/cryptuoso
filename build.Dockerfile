@@ -1,6 +1,6 @@
-FROM node:14-alpine as build
+FROM node:17-alpine as build
 
-RUN apk add --no-cache python build-base git openssh-client
+RUN apk add --no-cache python3 build-base git openssh-client
 
 ARG GITHUB_SSH_KEY
 RUN \
