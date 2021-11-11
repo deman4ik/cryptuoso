@@ -1,6 +1,7 @@
 /* from https://github.com/askmike/gekko/ */
 import tulind from "tulind";
 import { CandleProps } from "@cryptuoso/market";
+import logger from "@cryptuoso/logger";
 
 function isNumeric(obj: any) {
     return !Array.isArray(obj) && obj - parseFloat(obj) + 1 >= 0;
@@ -14,6 +15,7 @@ const methods: {
 // Wrapper that executes a tulip indicator
 async function execute(params: {
     indicator: {
+        name: string;
         indicator: (inputs: number[][], options: number[]) => { [key: string]: number | number[] };
     };
     inputs: number[][];
@@ -35,7 +37,8 @@ async function execute(params: {
         }
         return results;
     } catch (error) {
-        throw new Error(`Failed to execute Tulip indicator ${params.indicator.indicator}`);
+        logger.error(error);
+        throw new Error(`Failed to execute Tulip indicator ${params.indicator.name} - ${JSON.stringify(error)}`);
     }
 }
 
@@ -46,12 +49,14 @@ const verifyParams = (methodName: string, params: { [key: string]: number }) => 
 
     requiredParams.forEach((paramName) => {
         if (!Object.prototype.hasOwnProperty.call(params, paramName)) {
+            logger.error(`Can't configure tulip ${methodName} requires ${paramName}`);
             throw new Error(`Can't configure tulip ${methodName} requires ${paramName}`);
         }
 
         const val = params[paramName];
 
         if (!isNumeric(val)) {
+            logger.error(`Can't configure tulip ${methodName} - ${paramName} needs to be a number`);
             throw new Error(`Can't configure tulip ${methodName} - ${paramName} needs to be a number`);
         }
     });
@@ -750,7 +755,7 @@ methods.rsi = {
 methods.rsiLow = {
     requires: ["optInTimePeriod"],
     create: (params: { [key: string]: number }) => {
-        verifyParams("rsi", params);
+        verifyParams("rsiLow", params);
 
         return (data: CandleProps) =>
             execute({
