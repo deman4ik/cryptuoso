@@ -144,7 +144,6 @@ export default class RobotRunnerService extends HTTPService {
     }
 
     async create({ entities }: RobotRunnerCreate): Promise<{ result: string }> {
-        //TODO: check market
         const strategiesList = await this.db.pg.many<{ id: string; code: string }>(sql`
         SELECT id, code FROM strategies;
         `);
@@ -154,6 +153,7 @@ export default class RobotRunnerService extends HTTPService {
         });
 
         let importedCount = 0;
+        const errors = [];
         for (const {
             exchange,
             asset,
@@ -167,13 +167,19 @@ export default class RobotRunnerService extends HTTPService {
             strategySettings,
             robotSettings
         } of entities) {
-            let mode = mod || "1";
-            const robotsExists = await this.db.pg.any<{
-                id: string;
-                mod: string;
-                createdAt: string;
-                strategySettings: StrategySettings;
-            }>(sql`
+            try {
+                const market = await this.db.pg.maybeOne(sql`
+            SELECT code from markets where exchange = ${exchange} and asset = ${asset}
+            and currency = ${currency};
+            `);
+                if (!market) throw new Error(`Market ${exchange} ${asset}/${currency} not exists!`);
+                let mode = mod || "1";
+                const robotsExists = await this.db.pg.any<{
+                    id: string;
+                    mod: string;
+                    createdAt: string;
+                    strategySettings: StrategySettings;
+                }>(sql`
             SELECT r.id, r.mod, r.created_at, rs.strategy_settings 
             FROM robots r, v_robot_settings rs 
             WHERE rs.robot_id = r.id 
@@ -185,19 +191,18 @@ export default class RobotRunnerService extends HTTPService {
             ORDER BY r.created_at DESC
             `);
 
-            if (robotsExists && Array.isArray(robotsExists) && robotsExists.length > 0) {
-                const haveSameSettings = robotsExists.find((r) => equals(strategySettings, r.strategySettings));
-                this.log.debug(haveSameSettings);
-                if (haveSameSettings) continue;
-                const lastRobot = [...robotsExists].sort((a, b) => sortDesc(+a.mod, +b.mod))[0];
-                this.log.debug(lastRobot?.mod);
-                const tryNumMod = +lastRobot?.mod;
-                mode = (tryNumMod && `${tryNumMod + 1}`) || `${lastRobot.mod}-1`;
-                this.log.debug(mode);
-            }
-            const id = uuid();
-            await this.db.pg.transaction(async (t) => {
-                await t.query(sql`
+                if (robotsExists && Array.isArray(robotsExists) && robotsExists.length > 0) {
+                    const haveSameSettings = robotsExists.find((r) => equals(strategySettings, r.strategySettings));
+
+                    if (haveSameSettings) throw new Error(`Robot exists!`);
+                    const lastRobot = [...robotsExists].sort((a, b) => sortDesc(+a.mod, +b.mod))[0];
+
+                    const tryNumMod = +lastRobot?.mod;
+                    mode = (tryNumMod && `${tryNumMod + 1}`) || `${lastRobot.mod}-1`;
+                }
+                const id = uuid();
+                await this.db.pg.transaction(async (t) => {
+                    await t.query(sql`
                 INSERT INTO robots (
                     id,
                     code, 
@@ -227,7 +232,7 @@ export default class RobotRunnerService extends HTTPService {
                     ${trading}
                 );`);
 
-                await t.query(sql`
+                    await t.query(sql`
               INSERT INTO robot_settings (
                   robot_id,
                   strategy_settings,
@@ -241,12 +246,21 @@ export default class RobotRunnerService extends HTTPService {
                   ${dayjs.utc("01.01.2016").toISOString()}
               )
               `);
-            });
+                });
 
-            importedCount += 1;
+                importedCount += 1;
+            } catch (error) {
+                this.log.error(error);
+                errors.push(error.message);
+                continue;
+            }
         }
 
-        return { result: `Created ${importedCount} of ${entities.length} robots` };
+        return {
+            result: `Created ${importedCount} of ${entities.length} robots. ${
+                errors.length ? JSON.stringify(errors) : ""
+            }`
+        };
     }
 
     async start({ robotId, dateFrom }: RobotRunnerStart): Promise<{ result: string }> {
