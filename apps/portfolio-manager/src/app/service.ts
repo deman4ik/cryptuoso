@@ -34,7 +34,8 @@ import {
     PortfolioManagerOutEvents,
     PortfolioManagerUserPortfolioBuildError,
     PortfolioManagerPortfolioBuilded,
-    PortfolioManagerUserPortfolioBuilded
+    PortfolioManagerUserPortfolioBuilded,
+    PotrfolioManagerRebuildPortfolios
 } from "@cryptuoso/portfolio-events";
 import { Timeframe } from "@cryptuoso/market";
 
@@ -73,6 +74,11 @@ export default class PortfolioManagerService extends HTTPService {
                     inputSchema: PortfolioManagerInSchema[PortfolioManagerInEvents.BUILD_PORTFOLIOS],
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.buildPortfolios.bind(this))
+                },
+                rebuildPortfolios: {
+                    inputSchema: PortfolioManagerInSchema[PortfolioManagerInEvents.REBUILD_PORTFOLIOS],
+                    roles: [UserRoles.admin, UserRoles.manager],
+                    handler: this.HTTPHandler.bind(this, this.rebuildPortfolios.bind(this))
                 },
                 createUserPortfolio: {
                     inputSchema: {
@@ -710,6 +716,31 @@ export default class PortfolioManagerService extends HTTPService {
         SELECT id FROM portfolios where exchange = ${exchange} and status = 'stopped';
         `);
         if (!portfolios || !Array.isArray(portfolios) || !portfolios.length) return { result: "No stopped portfolios" };
+        for (const { id } of portfolios) {
+            await this.addJob<PortfolioBuilderJob>(
+                "portfolioBuilder",
+                "build",
+                { portfolioId: id, type: "portfolio" },
+                {
+                    jobId: id,
+                    removeOnComplete: true,
+                    removeOnFail: 10
+                }
+            );
+        }
+    }
+
+    async rebuildPortfolios({ exchange, checkDate }: PotrfolioManagerRebuildPortfolios) {
+        const dateCondition = checkDate
+            ? sql`and (builded_at is null OR builded_at < ${dayjs.utc().startOf("day").add(-1, "month").toISOString()})`
+            : sql``;
+        const portfolios = await this.db.pg.any<{ id: PortfolioDB["id"] }>(sql`
+        SELECT id FROM portfolios where exchange = ${exchange} 
+        and status = 'started' 
+        ${dateCondition}
+        ;
+        `);
+        if (!portfolios || !Array.isArray(portfolios) || !portfolios.length) return { result: "No portfolios" };
         for (const { id } of portfolios) {
             await this.addJob<PortfolioBuilderJob>(
                 "portfolioBuilder",

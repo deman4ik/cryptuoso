@@ -4,6 +4,7 @@ export const OUT_PORTFOLIO_MANAGER_TOPIC = "out-portfolio-manager";
 export const enum PortfolioManagerInEvents {
     BUILD_PORTFOLIO = "in-portfolio-manager.build-portfolio",
     BUILD_PORTFOLIOS = "in-portfolio-manager.build-portfolios",
+    REBUILD_PORTFOLIOS = "in-portfolio-manager.rebuild-portfolios",
     BUILD_USER_PORTFOLIO = "in-portfolio-manager.build-user-portfolio",
     BUILD_USER_PORTFOLIOS = "in-portfolio-manager.build-user-portfolios"
 }
@@ -22,6 +23,10 @@ export const PortfolioManagerInSchema = {
     },
     [PortfolioManagerInEvents.BUILD_PORTFOLIOS]: {
         exchange: "string"
+    },
+    [PortfolioManagerInEvents.REBUILD_PORTFOLIOS]: {
+        exchange: "string",
+        checkDate: { type: "boolean", optional: true }
     },
     [PortfolioManagerInEvents.BUILD_USER_PORTFOLIO]: {
         userPortfolioId: "uuid"
@@ -52,6 +57,11 @@ export interface PortfolioManagerBuildPortfolio {
 
 export interface PotrfolioManagerBuildPortfolios {
     exchange: string;
+}
+
+export interface PotrfolioManagerRebuildPortfolios {
+    exchange: string;
+    checkDate?: boolean;
 }
 
 export interface PortfolioManagerBuildUserPortfolio {
