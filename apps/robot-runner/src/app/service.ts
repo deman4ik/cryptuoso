@@ -169,7 +169,9 @@ export default class RobotRunnerService extends HTTPService {
         } of entities) {
             try {
                 const market = await this.db.pg.maybeOne(sql`
-            SELECT code from markets where exchange = ${exchange} and asset = ${asset}
+            SELECT available from markets 
+            where exchange = ${exchange} 
+            and asset = ${asset}
             and currency = ${currency};
             `);
                 if (!market) throw new Error(`Market ${exchange} ${asset}/${currency} not exists!`);
