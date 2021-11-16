@@ -798,7 +798,7 @@ export class PrivateConnector {
             if (!exId) return null;
             let orders: ccxt.Order[] = [];
             const creationDate = dayjs.utc(order.createdAt).valueOf();
-            if (this.connector.has["fetchOrders"]) {
+            if (this.connector.has["fetchOrders"] && exchange !== "bitfinex") {
                 const call = async (bail: (e: Error) => void) => {
                     try {
                         return await this.connector.fetchOrders(this.getSymbol(asset, currency), creationDate);
@@ -1094,7 +1094,7 @@ export class PrivateConnector {
             ) {
                 const timeout =
                     message.includes("no such order found") && order.exchange === "bitfinex"
-                        ? this.#orderCheckTimeout * 15
+                        ? this.#orderCheckTimeout * 30
                         : this.#orderCheckTimeout * 5;
                 return {
                     order: {

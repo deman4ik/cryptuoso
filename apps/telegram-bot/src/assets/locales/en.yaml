@@ -333,7 +333,7 @@ dialogs:
             You choosed: \n\n
             ${options} \n\n
             You can choose more options or press ✅ <b>Done</b>
-        optionsChange: >
+        optionsChanged: >
             📈 Configuring your trading portfolio
 
 

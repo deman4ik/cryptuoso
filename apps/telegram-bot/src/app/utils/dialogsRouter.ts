@@ -53,6 +53,7 @@ export class DialogsRouter {
                     };
                 },
                 reset: () => {
+                    ctx.session.dialog.current = null;
                     ctx.session.dialog.move = {
                         type: "reset"
                     };
@@ -163,7 +164,6 @@ export class DialogsRouter {
                             break;
                         }
                         case "reset": {
-                            ctx.session.dialog.current = null;
                             await this.menuHandler(ctx, next);
                             break;
                         }

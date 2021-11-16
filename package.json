@@ -112,7 +112,7 @@
     "bcrypt": "^5.0.0",
     "body-parser": "^1.19.0",
     "bullmq": "^1.52.0",
-    "ccxt": "^1.60.89",
+    "ccxt": "^1.61.34",
     "ccxt.pro": "git+ssh://git@github.com/deman4ik/ccxt.pro.git",
     "cloudevents": "^5.0.0",
     "coinbase-commerce-node": "^1.0.4",
