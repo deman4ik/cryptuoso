@@ -294,8 +294,8 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
         let skip = false;
 
         if (profit === true) {
-            const prevNetProfit = prevPortfolio.tradeStats.fullStats.netProfit;
-            const currentNetProfit = currentPortfolio.tradeStats.fullStats.netProfit;
+            const prevNetProfit = prevPortfolio.tradeStats.fullStats.percentNetProfit;
+            const currentNetProfit = currentPortfolio.tradeStats.fullStats.percentNetProfit;
 
             if (currentNetProfit < 0) skip = true;
 
@@ -385,7 +385,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
         try {
             this.log.debug(`Portfolio #${this.portfolio.id} - Building portfolio`);
             await this.calculateRobotsStats();
-            const robotsList = await this.sortRobots(this.robots); // сортировка от худших к лучшим
+            const robotsList = Object.freeze(await this.sortRobots(this.robots)); // сортировка от лучших к худшим
             const steps: {
                 prevPortfolioRobots: string[];
                 currentPortfolioRobots: string[];
@@ -406,7 +406,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
             if (!prevPortfolio) throw new Error("Failed to build portfolio");
             let currentPortfolio: PortfolioCalculated | false;
             let currentRobot = robotsCount;
-            for (const robotId of robotsList.splice(robotsCount)) {
+            for (const robotId of [...robotsList].splice(robotsCount)) {
                 currentRobot += 1;
 
                 const list = [...currentRobotsList, robotId];

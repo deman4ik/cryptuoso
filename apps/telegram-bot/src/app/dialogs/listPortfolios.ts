@@ -356,10 +356,13 @@ const portfolioActions = async (ctx: BotContext) => {
             if (ctx.session.dialog.current.data.subscribed) {
                 await ctx.reply(ctx.i18n.t("dialogs.listPortfolios.alreadySubscribed"));
                 ctx.dialog.reset();
-            } else
+                return;
+            } else {
                 ctx.dialog.enter(editPortfolioActions.optionsChosen, {
                     selectedOptions
                 });
+                return;
+            }
         } else
             ctx.dialog.enter(addPortfolioActions.enter, {
                 edit: true,
@@ -367,8 +370,10 @@ const portfolioActions = async (ctx: BotContext) => {
                 selectedOptions,
                 minBalance: loadedPortfolios[portfolioCode].limits.minBalance
             });
+        return;
     } else if (action === "back") {
         ctx.dialog.enter(listPortfoliosActions.options, { ...ctx.session.dialog.current.data });
+        return;
     }
 };
 router.set(listPortfoliosActions.enter, chooseExchange);

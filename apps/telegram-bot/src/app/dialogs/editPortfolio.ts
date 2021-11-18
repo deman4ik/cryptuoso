@@ -190,9 +190,10 @@ const optionsChosen = async (ctx: BotContext) => {
     }
     if (error) {
         await ctx.reply(ctx.i18n.t("failed", { error }));
+    } else {
+        await ctx.dialog.edit();
+        await ctx.reply(ctx.i18n.t("dialogs.editPortfolio.optionsChanged"));
     }
-    await ctx.dialog.edit();
-    await ctx.reply(ctx.i18n.t("dialogs.editPortfolio.optionsChanged"));
     ctx.dialog.reset();
 };
 const router: Router = new Map();
