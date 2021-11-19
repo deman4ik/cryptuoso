@@ -70,39 +70,45 @@ export default class RobotWorkerService extends BaseService {
     }
 
     async loadCode() {
-        const strategies = await this.db.pg.many<CodeFilesInDB>(sql`
+        try {
+            const strategies = await this.db.pg.many<CodeFilesInDB>(sql`
          SELECT * FROM strategies WHERE available >= 5;`);
-
-        const baseIndicators = await this.db.pg.many<CodeFilesInDB>(sql`
+            this.log.debug(`Loaded ${strategies.length} strategies`);
+            const baseIndicators = await this.db.pg.many<CodeFilesInDB>(sql`
          SELECT * FROM indicators WHERE available >= 5;`);
+            this.log.debug(`Loaded ${baseIndicators.length} base indicators`);
+            if (process.env.CODE_FILES_LOCATION === "local") {
+                this.log.warn("Loading local strategy and indicators files");
 
-        if (process.env.CODE_FILES_LOCATION === "local") {
-            this.log.warn("Loading local strategy and indicators files");
+                strategies.forEach(async ({ id }) => {
+                    this.strategiesCode[id] = await import(`../../../../strategies/${id}`);
+                });
 
-            strategies.forEach(async ({ id }) => {
-                this.strategiesCode[id] = await import(`../../../../strategies/${id}`);
-            });
+                baseIndicators.forEach(async ({ id }) => {
+                    this.baseIndicatorsCode[id] = await import(`../../../../indicators/${id}`);
+                });
+            } else {
+                this.log.info("Loading remote strategy and indicator files");
 
-            baseIndicators.forEach(async ({ id }) => {
-                this.baseIndicatorsCode[id] = await import(`../../../../indicators/${id}`);
-            });
-        } else {
-            this.log.info("Loading remote strategy and indicator files");
+                strategies.forEach(({ id, file }) => {
+                    this.strategiesCode[id] = requireFromString(file);
+                });
 
-            strategies.forEach(({ id, file }) => {
-                this.strategiesCode[id] = requireFromString(file);
-            });
+                baseIndicators.forEach(async ({ id, file }) => {
+                    this.baseIndicatorsCode[id] = requireFromString(file);
+                });
+            }
 
-            baseIndicators.forEach(async ({ id, file }) => {
-                this.baseIndicatorsCode[id] = requireFromString(file);
-            });
+            this.log.info(
+                `Loaded ${Object.keys(this.strategiesCode).length} strategies and ${
+                    Object.keys(this.baseIndicatorsCode).length
+                } indicators`
+            );
+        } catch (err) {
+            this.log.error(`Failed to load strategies and indicators ${err.message}`);
+            this.log.error(err);
+            throw err;
         }
-
-        this.log.info(
-            `Loaded ${Object.keys(this.strategiesCode).length} strategies and ${
-                Object.keys(this.baseIndicatorsCode).length
-            } indicators`
-        );
     }
 
     #getNextJob = (robotId: string): Promise<RobotJob> =>

@@ -456,7 +456,7 @@ export default class ConnectorRunnerService extends BaseService {
                     const balances: UserExchangeAccBalances = await this.connectors[userExAccId].getBalances();
 
                     await this.db.pg.query(sql`
-                UPDATE user_exchange_accs SET balances = ${JSON.stringify(balances) || null},
+                UPDATE user_exchange_accs SET balances = ${JSON.stringify(balances) || null}
                 WHERE id = ${userExAccId};
                 `);
                     order.meta = { ...order.meta, currentBalance: balances.totalUSD };

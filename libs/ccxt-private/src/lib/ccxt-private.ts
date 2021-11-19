@@ -528,6 +528,7 @@ export class PrivateConnector {
         };
     }> {
         const creationDate = dayjs.utc().valueOf();
+
         try {
             const { exchange, asset, currency, direction } = order;
 
@@ -672,7 +673,10 @@ export class PrivateConnector {
                     priority: Priority.low,
                     nextJobAt: dayjs
                         .utc()
-                        .add(this.#orderCheckTimeout, "second")
+                        .add(
+                            order.exchange === "bitfinex" ? this.#orderCheckTimeout * 10 : this.#orderCheckTimeout,
+                            "second"
+                        )
                         .toISOString()
                 }
             };
