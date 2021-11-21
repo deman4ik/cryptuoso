@@ -1096,7 +1096,7 @@ export default class UserRobotRunnerService extends HTTPService {
                 robots: UserPortfolioState["robots"];
                 robotsCount: number;
             }>(sql`
-        SELECT p.id, p.status, ups.robots, (select count(1) from user_robots ur where ur.user_portfolio_id = p.id and ur.status = ${event.status} ) as robots_count
+        SELECT p.id, p.status, ups.robots, (select count(1) from user_robots ur where ur.user_portfolio_id = p.id and ur.status != ${event.status} ) as robots_count
            FROM user_portfolios p
            LEFT JOIN v_user_portfolio_settings ups
                  ON  ups.user_portfolio_id = p.id
@@ -1106,8 +1106,7 @@ export default class UserRobotRunnerService extends HTTPService {
             if (
                 userPortfolio &&
                 (userPortfolio.status === "starting" || userPortfolio.status === "stopping") &&
-                userPortfolio.robots &&
-                userPortfolio.robots.length === userPortfolio.robotsCount
+                userPortfolio.robotsCount === 0
             ) {
                 await this.db.pg.query(sql`
                 UPDATE user_portfolios
