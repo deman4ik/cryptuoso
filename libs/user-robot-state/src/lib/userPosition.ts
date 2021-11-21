@@ -358,26 +358,30 @@ export class UserPosition {
 
     _calcStats() {
         const entryBalance = +round(
-            sum(
-                ...this._entryOrders
-                    .filter((o) => o.status === OrderStatus.closed)
-                    .map((o) => +o.price * +o.executed - (o.fee && +o.fee) || 0)
-            ),
+            sum(...this._entryOrders.filter((o) => o.status === OrderStatus.closed).map((o) => +o.price * +o.executed)),
             6
         );
+        const entryFee = sum(
+            ...this._entryOrders.filter((o) => o.status === OrderStatus.closed).map((o) => (o.fee && +o.fee) || 0)
+        );
+
         const exitBalance = +round(
-            sum(
-                ...this._exitOrders
-                    .filter((o) => o.status === OrderStatus.closed)
-                    .map((o) => +o.price * +o.executed - (o.fee && +o.fee) || 0)
-            ),
+            sum(...this._exitOrders.filter((o) => o.status === OrderStatus.closed).map((o) => +o.price * +o.executed)),
             6
         );
+        const exitFee = sum(
+            ...this._exitOrders.filter((o) => o.status === OrderStatus.closed).map((o) => (o.fee && +o.fee) || 0)
+        );
+
+        const fee = entryFee + exitFee;
+
         if (this._direction === "long") {
             this._profit = +round(exitBalance - entryBalance, 6);
         } else {
             this._profit = +round(entryBalance - exitBalance, 6);
         }
+
+        this._profit = this._profit - fee;
 
         this._barsHeld = +round(
             dayjs.utc(this._exitCandleTimestamp).diff(dayjs.utc(this._entryCandleTimestamp), "minute") / this._timeframe
