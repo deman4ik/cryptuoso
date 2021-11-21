@@ -325,11 +325,16 @@ const onEnter = async (ctx: BotContext) => {
 
     await ctx.dialog.edit();
     if (portfolio.stats?.equityAvg && Array.isArray(portfolio.stats?.equityAvg) && portfolio.stats?.equityAvg.length) {
-        await ctx.replyWithPhoto(await getEquityChartUrl(portfolio.stats.equityAvg), {
-            caption: text,
-            parse_mode: "HTML",
-            reply_markup: getTradingButtons(ctx)
-        });
+        try {
+            await ctx.replyWithPhoto(await getEquityChartUrl(portfolio.stats.equityAvg), {
+                caption: text,
+                parse_mode: "HTML",
+                reply_markup: getTradingButtons(ctx)
+            });
+        } catch (err) {
+            logger.error(err);
+            await ctx.reply(text, { reply_markup: getTradingButtons(ctx) });
+        }
     } else await ctx.reply(text, { reply_markup: getTradingButtons(ctx) });
 
     ctx.session.dialog.current.data.edit = true;
@@ -563,10 +568,17 @@ const stats = async (ctx: BotContext) => {
     )}`;
 
     await ctx.dialog.edit();
-    await ctx.replyWithPhoto(await getEquityChartUrl(portfolio.stats.equityAvg), {
-        caption: text,
-        reply_markup: getTradingButtons(ctx)
-    });
+    try {
+        await ctx.replyWithPhoto(await getEquityChartUrl(portfolio.stats.equityAvg), {
+            caption: text,
+            parse_mode: "HTML",
+            reply_markup: getTradingButtons(ctx)
+        });
+    } catch (err) {
+        logger.error(err);
+        await ctx.reply(text, { reply_markup: getTradingButtons(ctx) });
+    }
+
     ctx.session.dialog.current.data.edit = true;
 };
 
