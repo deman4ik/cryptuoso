@@ -8,6 +8,7 @@ import {
     PortfolioManagerUserPortfolioBuildError
 } from "@cryptuoso/portfolio-events";
 import { UserPortfolioStatus } from "@cryptuoso/user-robot-events";
+import { round } from "@cryptuoso/helpers";
 
 export function handleUserTrade(notification: Notification<any> & { telegramId: number }) {
     const {
@@ -47,7 +48,7 @@ export function handleUserTrade(notification: Notification<any> & { telegramId: 
             exitAction: this.i18n.t(LANG, `tradeAction.${exitAction}`),
             exitPrice: +exitPrice,
             exitDate: dayjs.utc(exitDate).format("YYYY-MM-DD HH:mm UTC"),
-            profit
+            profit: round(profit, 2)
         });
     }
 

@@ -381,7 +381,7 @@ export class UserPosition {
             this._profit = +round(entryBalance - exitBalance, 6);
         }
 
-        this._profit = this._profit - fee;
+        this._profit = +round(this._profit - fee, 6);
 
         this._barsHeld = +round(
             dayjs.utc(this._exitCandleTimestamp).diff(dayjs.utc(this._entryCandleTimestamp), "minute") / this._timeframe

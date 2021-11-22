@@ -1,5 +1,5 @@
 import dayjs from "@cryptuoso/dayjs";
-import { chunkArray, plusNum } from "@cryptuoso/helpers";
+import { chunkArray, plusNum, round } from "@cryptuoso/helpers";
 import logger from "@cryptuoso/logger";
 import { ClosedPosition, OpenPosition, UserPortfolioInfo } from "@cryptuoso/portfolio-state";
 import { getEquityChartUrl } from "@cryptuoso/quickchart";
@@ -315,9 +315,9 @@ const onEnter = async (ctx: BotContext) => {
             amount: amountText,
             amountType: amountTypeText,
             netProfit: portfolio.stats?.netProfit
-                ? `${plusNum(portfolio.stats.netProfit)} $ (${plusNum(portfolio.stats.percentNetProfit)}%)`
+                ? `${plusNum(round(portfolio.stats.netProfit, 2))} $ (${plusNum(portfolio.stats.percentNetProfit)}%)`
                 : `0 $`,
-            unrealizedProfit: portfolio.unrealizedProfit ? `${plusNum(portfolio.unrealizedProfit)} $` : `0 $`,
+            unrealizedProfit: portfolio.unrealizedProfit ? `${plusNum(round(portfolio.unrealizedProfit, 2))} $` : `0 $`,
             tradesCount: portfolio.stats?.tradesCount ? portfolio.stats?.tradesCount : 0,
             openTradeCount: portfolio.openTradesCount
         }
