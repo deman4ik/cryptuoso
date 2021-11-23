@@ -419,6 +419,9 @@ export default class RobotWorkerService extends BaseService {
                     }
                 }
             } else if (type === RobotJobType.candle) {
+                if (!this.strategiesCode[robot.strategy]) {
+                    await this.loadCode();
+                }
                 robot.setStrategy(this.strategiesCode[robot.strategy]);
                 if (robot.hasBaseIndicators) {
                     robot.setBaseIndicatorsCode(
