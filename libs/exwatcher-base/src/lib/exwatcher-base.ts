@@ -600,7 +600,7 @@ export class ExwatcherBaseService extends BaseService {
 
                         Timeframe.validArray.map((timeframe) => {
                             try {
-                                if (this.candlesCurrent[id][timeframe]) {
+                                if (this.candlesCurrent[id] && this.candlesCurrent[id][timeframe]) {
                                     const candleTime = dayjs
                                         .utc(Timeframe.validTimeframeDatePrev(date.toISOString(), timeframe))
                                         .valueOf();
@@ -646,6 +646,7 @@ export class ExwatcherBaseService extends BaseService {
                                                 : CandleType.loaded;
                                     }
                                 } else {
+                                    if (!this.candlesCurrent[id]) this.candlesCurrent[id] = {};
                                     const candles: [number, number, number, number, number, number][] =
                                         this.connector.ohlcvs[symbol][Timeframe.get(timeframe).str].filter(
                                             (c: any) => c[0] < date.valueOf()
