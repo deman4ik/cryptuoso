@@ -95,7 +95,7 @@ export class Timeframe {
 
     public static get(timeframe: ValidTimeframe): TimeframeInfo {
         if (!this.exists(timeframe)) throw new Error("Invalid timeframe");
-        return this.timeframes[timeframe];
+        return this._timeframes[timeframe];
     }
 
     public static get validArray(): ValidTimeframe[] {

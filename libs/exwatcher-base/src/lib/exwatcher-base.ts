@@ -605,45 +605,50 @@ export class ExwatcherBaseService extends BaseService {
                                         .utc(Timeframe.validTimeframeDatePrev(date.toISOString(), timeframe))
                                         .valueOf();
 
-                                    const candle: [number, number, number, number, number, number] =
-                                        this.connector.ohlcvs[symbol][Timeframe.get(timeframe).str].find(
-                                            (c: any) => c[0] === candleTime
-                                        );
-                                    if (candle) {
-                                        if (this.candlesCurrent[id][timeframe].time != candleTime) {
-                                            const prevCandle: [number, number, number, number, number, number] =
-                                                this.connector.ohlcvs[symbol][Timeframe.get(timeframe).str].find(
-                                                    (c: any) => c[0] === this.candlesCurrent[id][timeframe].time
-                                                );
-                                            if (prevCandle) {
-                                                this.candlesCurrent[id][timeframe].open = prevCandle[1];
-                                                this.candlesCurrent[id][timeframe].high = prevCandle[2];
-                                                this.candlesCurrent[id][timeframe].low = prevCandle[3];
-                                                this.candlesCurrent[id][timeframe].close = prevCandle[4];
-                                                this.candlesCurrent[id][timeframe].volume = prevCandle[5];
-                                                this.candlesCurrent[id][timeframe].type =
-                                                    this.candlesCurrent[id][timeframe].volume === 0
-                                                        ? CandleType.previous
-                                                        : CandleType.loaded;
+                                    if (
+                                        this.connector.ohlcvs[symbol] &&
+                                        this.connector.ohlcvs[symbol][Timeframe.get(timeframe).str]
+                                    ) {
+                                        const candle: [number, number, number, number, number, number] =
+                                            this.connector.ohlcvs[symbol][Timeframe.get(timeframe).str].find(
+                                                (c: any) => c[0] === candleTime
+                                            );
+                                        if (candle) {
+                                            if (this.candlesCurrent[id][timeframe].time != candleTime) {
+                                                const prevCandle: [number, number, number, number, number, number] =
+                                                    this.connector.ohlcvs[symbol][Timeframe.get(timeframe).str].find(
+                                                        (c: any) => c[0] === this.candlesCurrent[id][timeframe].time
+                                                    );
+                                                if (prevCandle) {
+                                                    this.candlesCurrent[id][timeframe].open = prevCandle[1];
+                                                    this.candlesCurrent[id][timeframe].high = prevCandle[2];
+                                                    this.candlesCurrent[id][timeframe].low = prevCandle[3];
+                                                    this.candlesCurrent[id][timeframe].close = prevCandle[4];
+                                                    this.candlesCurrent[id][timeframe].volume = prevCandle[5];
+                                                    this.candlesCurrent[id][timeframe].type =
+                                                        this.candlesCurrent[id][timeframe].volume === 0
+                                                            ? CandleType.previous
+                                                            : CandleType.loaded;
+                                                }
+                                                const closedCandle = { ...this.candlesCurrent[id][timeframe] };
+                                                this.log.debug("Closing", closedCandle);
+                                                closedCandles.set(`${id}.${timeframe}`, closedCandle);
+                                                this.candlesCurrent[id][timeframe].time = candle[0];
+                                                this.candlesCurrent[id][timeframe].timestamp = dayjs
+                                                    .utc(candle[0])
+                                                    .toISOString();
                                             }
-                                            const closedCandle = { ...this.candlesCurrent[id][timeframe] };
-                                            this.log.debug("Closing", closedCandle);
-                                            closedCandles.set(`${id}.${timeframe}`, closedCandle);
-                                            this.candlesCurrent[id][timeframe].time = candle[0];
-                                            this.candlesCurrent[id][timeframe].timestamp = dayjs
-                                                .utc(candle[0])
-                                                .toISOString();
-                                        }
 
-                                        this.candlesCurrent[id][timeframe].open = candle[1];
-                                        this.candlesCurrent[id][timeframe].high = candle[2];
-                                        this.candlesCurrent[id][timeframe].low = candle[3];
-                                        this.candlesCurrent[id][timeframe].close = candle[4];
-                                        this.candlesCurrent[id][timeframe].volume = candle[5];
-                                        this.candlesCurrent[id][timeframe].type =
-                                            this.candlesCurrent[id][timeframe].volume === 0
-                                                ? CandleType.previous
-                                                : CandleType.loaded;
+                                            this.candlesCurrent[id][timeframe].open = candle[1];
+                                            this.candlesCurrent[id][timeframe].high = candle[2];
+                                            this.candlesCurrent[id][timeframe].low = candle[3];
+                                            this.candlesCurrent[id][timeframe].close = candle[4];
+                                            this.candlesCurrent[id][timeframe].volume = candle[5];
+                                            this.candlesCurrent[id][timeframe].type =
+                                                this.candlesCurrent[id][timeframe].volume === 0
+                                                    ? CandleType.previous
+                                                    : CandleType.loaded;
+                                        }
                                     }
                                 } else {
                                     if (!this.candlesCurrent[id]) this.candlesCurrent[id] = {};
