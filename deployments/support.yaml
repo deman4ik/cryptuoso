@@ -86,11 +86,11 @@ spec:
                         protocol: TCP
                   resources:
                       requests:
-                          memory: 128Mi
+                          memory: 64Mi
                           cpu: "20m"
                       limits:
-                          memory: 256Mi
-                          cpu: "128m"
+                          memory: 128Mi
+                          cpu: "100m"
 ---
 apiVersion: v1
 kind: Service

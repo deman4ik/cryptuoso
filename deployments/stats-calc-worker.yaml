@@ -81,11 +81,11 @@ spec:
                         protocol: TCP
                   resources:
                       requests:
-                          memory: 256Mi
-                          cpu: "50m"
+                          memory: 64Mi
+                          cpu: "20m"
                       limits:
                           memory: 512Mi
-                          cpu: "500m"
+                          cpu: "300m"
 ---
 apiVersion: v1
 kind: Service

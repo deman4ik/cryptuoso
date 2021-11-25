@@ -85,10 +85,10 @@ spec:
                   resources:
                       requests:
                           memory: 128Mi
-                          cpu: "400m"
+                          cpu: "250m"
                       limits:
                           memory: 256Mi
-                          cpu: "700m"
+                          cpu: "500m"
 ---
 apiVersion: v1
 kind: Service
@@ -108,24 +108,64 @@ spec:
         env: <ENV>
     type: ClusterIP
 ---
-kind: HorizontalPodAutoscaler
-apiVersion: autoscaling/v2beta1
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
 metadata:
-    name: <APP>
-    namespace: <ENV>
+    name: robot-worker-dev
+    namespace: dev
+    labels:
+        app: robot-worker-dev
+        env: dev
 spec:
     scaleTargetRef:
-        kind: Deployment
-        name: <APP>
-        apiVersion: apps/v1
-    minReplicas: 1
-    maxReplicas: 20
-    metrics:
-        - type: Resource
-          resource:
-              name: cpu
-              targetAverageUtilization: 110
-        - type: Resource
-          resource:
-              name: memory
-              targetAverageUtilization: 110
+        name: robot-worker-dev
+    pollingInterval: 30
+    cooldownPeriod: 300
+    minReplicaCount: 1
+    maxReplicaCount: 3
+    triggers:
+        - type: cpu
+          metadata:
+              type: Utilization
+              value: "150"
+        - type: memory
+          metadata:
+              type: Utilization
+              value: "150"
+        - type: cron
+          metadata:
+              timezone: Etc/UTC
+              start: 55 * * * *
+              end: 5 * * * *
+              desiredReplicas: "3"
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+    name: robot-worker-prod
+    namespace: prod
+    labels:
+        app: robot-worker-prod
+        env: prod
+spec:
+    scaleTargetRef:
+        name: robot-worker-prod
+    pollingInterval: 30
+    cooldownPeriod: 300
+    minReplicaCount: 4
+    maxReplicaCount: 15
+    triggers:
+        - type: cpu
+          metadata:
+              type: Utilization
+              value: "120"
+        - type: memory
+          metadata:
+              type: Utilization
+              value: "120"
+        - type: cron
+          metadata:
+              timezone: Etc/UTC
+              start: 55 * * * *
+              end: 5 * * * *
+              desiredReplicas: "10"

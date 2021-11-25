@@ -81,10 +81,10 @@ spec:
                         protocol: TCP
                   resources:
                       requests:
-                          memory: 128Mi
+                          memory: 64Mi
                           cpu: "20m"
                       limits:
-                          memory: 512Mi
+                          memory: 356Mi
                           cpu: "200m"
 ---
 apiVersion: v1

@@ -121,11 +121,11 @@ spec:
                         protocol: TCP
                   resources:
                       requests:
-                          memory: 128Mi
-                          cpu: "100m"
+                          memory: 64Mi
+                          cpu: "20m"
                       limits:
-                          memory: 512Mi
-                          cpu: "300m"
+                          memory: 256Mi
+                          cpu: "200m"
 ---
 apiVersion: v1
 kind: Service
