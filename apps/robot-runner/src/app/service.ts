@@ -59,18 +59,18 @@ export default class RobotRunnerService extends HTTPService {
 
     async onServiceStart() {
         this.createQueue(Queues.robot);
-        this.createQueue(Queues.alerts);
+        // this.createQueue(Queues.alerts);
         this.createQueue(Queues.robotRunner);
         this.createWorker(Queues.robotRunner, this.process);
 
-        await this.addJob(Queues.robotRunner, RobotRunnerJobType.alerts, null, {
+        /*  await this.addJob(Queues.robotRunner, RobotRunnerJobType.alerts, null, {
             jobId: RobotRunnerJobType.alerts,
             repeat: {
                 every: 1000
             },
             removeOnComplete: 1,
             removeOnFail: 10
-        });
+        });*/
         await this.addJob(Queues.robotRunner, RobotRunnerJobType.newCandles, null, {
             jobId: RobotRunnerJobType.newCandles,
             repeat: {
@@ -370,7 +370,7 @@ export default class RobotRunnerService extends HTTPService {
     async process(job: Job) {
         switch (job.name) {
             case RobotRunnerJobType.alerts:
-                await this.scheduleAlerts();
+                // await this.scheduleAlerts();
                 break;
             case RobotRunnerJobType.newCandles:
                 await this.handleNewCandles();

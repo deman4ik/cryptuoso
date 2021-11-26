@@ -347,7 +347,8 @@ export class BaseService {
             failed?: boolean;
             stalled?: boolean;
             progress?: boolean;
-        }
+        },
+        light = false
     ) => {
         if (this.#queues[name]) throw new Error(`Queue ${name} already exists`);
         this.#queues[name] = {
@@ -356,33 +357,45 @@ export class BaseService {
                 connection: this.redis.duplicate(),
                 streams: { events: { maxLen: 1000 } }
             }),
-            scheduler: new QueueScheduler(name, {
-                stalledInterval: 60000,
-                ...schedulerOpts,
-                connection: this.redis.duplicate()
-            }),
-            events: new QueueEvents(name, {
-                ...eventsOpts,
-                connection: this.redis.duplicate()
-            })
+            scheduler: light
+                ? null
+                : new QueueScheduler(name, {
+                      stalledInterval: 60000,
+                      ...schedulerOpts,
+                      connection: this.redis.duplicate()
+                  }),
+            events: light
+                ? null
+                : new QueueEvents(name, {
+                      ...eventsOpts,
+                      connection: this.redis.duplicate()
+                  })
         };
-        if (logOpts?.completed !== false)
+        if (!light || logOpts?.completed !== false)
             this.#queues[name].events.on("completed", ({ jobId, returnvalue }) =>
                 this.#jobCompletedLogger(name, jobId, returnvalue)
             );
-        if (logOpts?.failed !== false)
+        if (!light || logOpts?.failed !== false)
             this.#queues[name].events.on("failed", ({ jobId, failedReason }) =>
                 this.#jobErrorLogger(name, jobId, failedReason)
             );
-        if (logOpts?.stalled !== false)
+        if (!light || logOpts?.stalled !== false)
             this.#queues[name].events.on("stalled", ({ jobId }) => this.#jobStalledLogger(name, jobId));
-        if (logOpts?.progress !== false)
+        if (!light || logOpts?.progress !== false)
             this.#queues[name].events.on("progress", ({ jobId, data }) => this.#jobProgressLogger(name, jobId, data));
-        this.#queuesClean.start();
+        if (!light) this.#queuesClean.start();
     };
 
     get createQueue() {
         return this.#createQueue;
+    }
+
+    #createLightQueue = (name: string) => {
+        return this.#createQueue(name, null, null, null, null, true);
+    };
+
+    get createLightQueue() {
+        return this.#createLightQueue;
     }
 
     #jobCompletedLogger = (name: string, jobId: string, returnvalue: string) => {

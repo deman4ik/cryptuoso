@@ -57,12 +57,12 @@ export default class RobotWorkerService extends BaseService {
         await this.loadCode();
         this.log.debug(`Creating queue ${Queues.robot}`);
         this.createQueue(Queues.robot);
-        this.log.debug(`Creating queue ${Queues.alerts}`);
-        this.createQueue(Queues.alerts);
+        //  this.log.debug(`Creating queue ${Queues.alerts}`);
+        // this.createQueue(Queues.alerts);
         this.log.debug(`Creating worker ${Queues.robot}`);
         this.createWorker(Queues.robot, this.processRobot);
-        this.log.debug(`Creating worker ${Queues.alerts}`);
-        this.createWorker(Queues.alerts, this.processAlerts);
+        //  this.log.debug(`Creating worker ${Queues.alerts}`);
+        //  this.createWorker(Queues.alerts, this.processAlerts);
     }
 
     async onServiceStop(): Promise<void> {
@@ -494,8 +494,10 @@ export default class RobotWorkerService extends BaseService {
             await this.db.pg.transaction(async (t) => {
                 if (robot.positionsToSave.length) await this.#saveRobotPositions(t, robot.positionsToSave);
 
-                if (robot.signalsToSave.length) {
+                if (robot.signalsToSave.length || type === RobotJobType.stop) {
                     await t.query(sql`DELETE FROM robot_active_alerts WHERE robot_id = ${robot.id}`);
+                }
+                if (robot.signalsToSave.length) {
                     await this.#saveRobotSignals(
                         t,
                         robot.signalsToSave.map(({ data }) => data)

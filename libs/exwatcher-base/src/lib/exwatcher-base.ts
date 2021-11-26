@@ -4,7 +4,7 @@ import cron from "node-cron";
 import { v4 as uuid } from "uuid";
 import dayjs from "@cryptuoso/dayjs";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
-import { Timeframe, CandleType, ExchangePrice, ExchangeCandle } from "@cryptuoso/market";
+import { Timeframe, CandleType, ExchangePrice, ExchangeCandle, OrderType } from "@cryptuoso/market";
 import { sleep } from "@cryptuoso/helpers";
 import {
     ImporterRunnerEvents,
@@ -26,6 +26,8 @@ import {
     // ExwatcherTick,
     // MarketEvents
 } from "@cryptuoso/exwatcher-events";
+import { Queues, RobotJobType, RobotPosition } from "@cryptuoso/robot-state";
+import { Signal, SignalEvents, SignalSchema } from "@cryptuoso/robot-events";
 import { sql } from "@cryptuoso/postgres";
 import { ImporterState, Status } from "@cryptuoso/importer-state";
 import logger from "@cryptuoso/logger";
@@ -69,6 +71,7 @@ export class ExwatcherBaseService extends BaseService {
     candlesCurrent: { [id: string]: { [timeframe: string]: ExchangeCandle } } = {};
     candlesToSave: Map<string, ExchangeCandle> = new Map();
     candlesSaveTimer: NodeJS.Timer;
+    checkAlertsTimer: NodeJS.Timer;
     // ticksToPublish: Map<string, ExchangePrice> = new Map();
     // ticksPublishTimer: NodeJS.Timer;
     lastTick: { [key: string]: ExchangePrice } = {};
@@ -77,6 +80,13 @@ export class ExwatcherBaseService extends BaseService {
     });
     cronHandleChanges: cron.ScheduledTask;
     lastDate: number;
+    robotAlerts: {
+        [key: string]: Signal & {
+            activeFrom: string;
+            activeTo: string;
+            processed: boolean;
+        };
+    };
 
     constructor(config?: ExwatcherBaseServiceConfig) {
         super(config);
@@ -108,8 +118,13 @@ export class ExwatcherBaseService extends BaseService {
                     status: "string"
                 },
                 handler: this.handleImporterStatusEvent.bind(this)
+            },
+            [SignalEvents.ALERT]: {
+                handler: this.handleSignalAlertEvents.bind(this),
+                schema: SignalSchema[SignalEvents.ALERT]
             }
         });
+
         this.addOnStartHandler(this.onServiceStart);
         this.addOnStartedHandler(this.onServiceStarted);
         this.addOnStopHandler(this.onServiceStop);
@@ -182,10 +197,13 @@ export class ExwatcherBaseService extends BaseService {
     }
 
     async onServiceStarted() {
+        this.createLightQueue(Queues.robot);
         await this.resubscribe();
         this.cronHandleChanges.start();
         this.cronCheck.start();
         this.candlesSaveTimer = setTimeout(this.handleCandlesToSave.bind(this), 0);
+        await this.getActiveRobotAlerts();
+        this.checkAlertsTimer = setTimeout(this.checkRobotAlerts.bind(this), 0);
         // this.ticksPublishTimer = setTimeout(this.handleTicksToPublish.bind(this), 0);
     }
 
@@ -375,9 +393,13 @@ export class ExwatcherBaseService extends BaseService {
         }
     }
 
+    createExwatcherId(asset: string, currency: string) {
+        return `${this.exchange}.${asset}.${currency}`;
+    }
+
     async addSubscription({ exchange, asset, currency }: ExwatcherSubscribe): Promise<void> {
         if (exchange !== this.exchange) return;
-        const id = `${this.exchange}.${asset}.${currency}`;
+        const id = this.createExwatcherId(asset, currency);
         try {
             if (
                 !this.subscriptions[id] ||
@@ -415,7 +437,7 @@ export class ExwatcherBaseService extends BaseService {
     }
 
     async removeSubscription(asset: string, currency: string): Promise<void> {
-        const id = `${this.exchange}.${asset}.${currency}`;
+        const id = this.createExwatcherId(asset, currency);
         try {
             if (this.subscriptions[id]) {
                 //TODO unwatch when implemented in ccxt.pro
@@ -1025,6 +1047,122 @@ export class ExwatcherBaseService extends BaseService {
         } finally {
             if (!this.lightship.isServerShuttingDown()) {
                 this.candlesSaveTimer = setTimeout(this.handleCandlesToSave.bind(this), 1000);
+            }
+        }
+    }
+
+    async getActiveRobotAlerts() {
+        const currentDate = dayjs.utc().toISOString();
+        const alerts = await this.db.pg.any<Signal & { activeFrom: string; activeTo: string; processed: boolean }>(sql`
+        SELECT * 
+        FROM robot_active_alerts 
+        WHERE exchange = ${this.exchange}
+        AND processed = false 
+        AND active_from <= ${currentDate}
+        AND active_to >= ${currentDate}
+        ORDER BY robot_id, timeframe;
+        `);
+        for (const alert of alerts) {
+            this.robotAlerts[alert.id] = alert;
+        }
+    }
+
+    async handleSignalAlertEvents(signal: Signal) {
+        if (this.robotAlerts[signal.id]) return;
+        const { amountInUnit, unit } = Timeframe.get(signal.timeframe);
+        this.robotAlerts[signal.id] = {
+            ...signal,
+            activeFrom: dayjs.utc(signal.candleTimestamp).add(amountInUnit, unit).toISOString(),
+            activeTo: dayjs
+                .utc(signal.candleTimestamp)
+                .add(amountInUnit * 2, unit)
+                .add(-1, "millisecond")
+                .toISOString(),
+            processed: false
+        };
+    }
+
+    get activeRobotAlerts() {
+        return Object.values(this.robotAlerts).filter(({ processed }) => processed === false);
+    }
+
+    async checkRobotAlerts() {
+        try {
+            const results = await Promise.all(
+                this.activeRobotAlerts.map(async (alert) => {
+                    this.log.debug(`Checking alert #${alert.id}`, alert);
+                    const { id, asset, robotId, currency, timeframe, orderType, action, price, activeFrom } = alert;
+                    const exwatcherId = this.createExwatcherId(asset, currency);
+                    if (this.candlesCurrent[exwatcherId]) {
+                        const candle = this.candlesCurrent[exwatcherId][timeframe];
+                        if (candle && candle.timestamp === activeFrom) {
+                            this.log.debug(`Checking #${alert.id} - current candle`);
+                            let nextPrice = null;
+                            switch (orderType) {
+                                case OrderType.stop: {
+                                    nextPrice = RobotPosition.checkStop(action, price, candle);
+                                    break;
+                                }
+                                case OrderType.limit: {
+                                    nextPrice = RobotPosition.checkLimit(action, price, candle);
+                                    break;
+                                }
+                                case OrderType.market: {
+                                    nextPrice = RobotPosition.checkMarket(action, price, candle);
+                                    break;
+                                }
+                                default:
+                                    throw new Error(`Unknown order type ${orderType}`);
+                            }
+                            if (nextPrice) {
+                                this.log.debug(`Checking #${alert.id} - Trade!`);
+                                await this.db.pg.transaction(async (t) => {
+                                    await t.query(sql`
+                                INSERT INTO robot_jobs
+                                (
+                                    robot_id,
+                                    type
+                                ) VALUES (
+                                    ${robotId},
+                                    ${RobotJobType.tick}
+                                )
+                                ON CONFLICT ON CONSTRAINT robot_jobs_robot_id_type_key 
+                                 DO UPDATE SET updated_at = now(),
+                                 retries = null,
+                                 error = null;
+                                `);
+                                    await t.query(sql`
+                                UPDATE robot_active_alerts 
+                                SET processed = true 
+                                WHERE id = ${id};
+                                `);
+                                });
+                                await this.addJob(
+                                    Queues.robot,
+                                    "job",
+                                    { robotId },
+                                    {
+                                        jobId: robotId,
+                                        removeOnComplete: true,
+                                        removeOnFail: 100
+                                    }
+                                );
+                                return id;
+                            }
+                        }
+                    }
+                    return null;
+                })
+            );
+
+            for (const id of results.filter((processed) => processed)) {
+                delete this.robotAlerts[id];
+            }
+        } catch (error) {
+            this.log.error(`Failed to check robot alerts`, error);
+        } finally {
+            if (!this.lightship.isServerShuttingDown()) {
+                this.checkAlertsTimer = setTimeout(this.checkRobotAlerts.bind(this), 1000);
             }
         }
     }
