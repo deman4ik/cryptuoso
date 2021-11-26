@@ -349,7 +349,6 @@ export default class RobotWorkerService extends BaseService {
     #saveRobotActiveAlerts = async (
         transaction: DatabaseTransactionConnectionType,
         signals: (Signal & {
-            timeframe: number;
             activeFrom: string;
             activeTo: string;
         })[]
@@ -364,15 +363,22 @@ export default class RobotWorkerService extends BaseService {
                 positionId,
                 candleTimestamp,
                 timeframe,
+                exchange,
+                asset,
+                currency,
                 activeFrom,
                 activeTo
             } = signal;
             await transaction.query(sql`
                 INSERT INTO robot_active_alerts
-                (id, robot_id, action, order_type, price, position_id, timeframe,
+                (id, robot_id, action, order_type, price, position_id, 
+                exchange, asset, currency,
+                timeframe,
                 candle_timestamp, active_from, active_to)
                 VALUES (${id}, ${robotId}, ${action}, ${orderType}, ${price},
-                ${positionId}, ${timeframe}, ${candleTimestamp},
+                ${positionId}, 
+                ${exchange}, ${asset}, ${currency},
+                ${timeframe}, ${candleTimestamp},
                 ${activeFrom}, ${activeTo})
             `);
         }

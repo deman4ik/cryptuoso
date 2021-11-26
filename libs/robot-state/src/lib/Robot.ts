@@ -141,7 +141,6 @@ export class Robot {
             .filter(({ type }) => type === SignalEvents.ALERT)
             .map(({ data }) => ({
                 ...data,
-                timeframe: this._timeframe,
                 activeFrom: dayjs.utc(data.candleTimestamp).add(amountInUnit, unit).toISOString(),
                 activeTo: dayjs
                     .utc(data.candleTimestamp)
