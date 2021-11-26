@@ -1,6 +1,13 @@
 import dayjs from "@cryptuoso/dayjs";
 import { BaseIndicator, TulipIndicator, IndicatorCode, IndicatorType } from "@cryptuoso/robot-indicators";
-import { ValidTimeframe, CandleProps, RobotPositionStatus, Candle, calcPositionProfit } from "@cryptuoso/market";
+import {
+    ValidTimeframe,
+    CandleProps,
+    RobotPositionStatus,
+    Candle,
+    calcPositionProfit,
+    Timeframe
+} from "@cryptuoso/market";
 import { RobotWorkerEvents, SignalEvents } from "@cryptuoso/robot-events";
 import { NewEvent } from "@cryptuoso/events";
 import { CANDLES_RECENT_AMOUNT, equals, nvl, sortAsc } from "@cryptuoso/helpers";
@@ -126,6 +133,22 @@ export class Robot {
         return this._eventsToSend.filter(({ type }) =>
             [SignalEvents.ALERT, SignalEvents.TRADE].includes(type as SignalEvents)
         );
+    }
+
+    get alertsToSave() {
+        const { amountInUnit, unit } = Timeframe.get(this._timeframe);
+        return this._eventsToSend
+            .filter(({ type }) => type === SignalEvents.ALERT)
+            .map(({ data }) => ({
+                ...data,
+                timeframe: this._timeframe,
+                activeFrom: dayjs.utc(data.candleTimestamp).add(amountInUnit, unit).toISOString(),
+                activeTo: dayjs
+                    .utc(data.candleTimestamp)
+                    .add(amountInUnit * 2, unit)
+                    .add(-1, "millisecond")
+                    .toISOString()
+            }));
     }
 
     get hasClosedPositions() {

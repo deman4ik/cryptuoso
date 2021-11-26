@@ -334,7 +334,7 @@ export default class RobotWorkerService extends BaseService {
                 timestamp,
                 emulated
             } = signal;
-            await this.db.pg.query(sql`
+            await transaction.query(sql`
                 INSERT INTO robot_signals
                 (id, robot_id, action, order_type, price, type, position_id,
                 position_prefix, position_code, position_parent_id,
@@ -345,19 +345,50 @@ export default class RobotWorkerService extends BaseService {
             `);
         }
     };
+
+    #saveRobotActiveAlerts = async (
+        transaction: DatabaseTransactionConnectionType,
+        signals: (Signal & {
+            timeframe: number;
+            activeFrom: string;
+            activeTo: string;
+        })[]
+    ) => {
+        for (const signal of signals) {
+            const {
+                id,
+                robotId,
+                action,
+                orderType,
+                price,
+                positionId,
+                candleTimestamp,
+                timeframe,
+                activeFrom,
+                activeTo
+            } = signal;
+            await transaction.query(sql`
+                INSERT INTO robot_active_alerts
+                (id, robot_id, action, order_type, price, position_id, timeframe,
+                candle_timestamp, active_from, active_to)
+                VALUES (${id}, ${robotId}, ${action}, ${orderType}, ${price},
+                ${positionId}, ${timeframe}, ${candleTimestamp},
+                ${activeFrom}, ${activeTo})
+            `);
+        }
+    };
     #saveRobotState = async (transaction: DatabaseTransactionConnectionType, state: RobotState) =>
         transaction.query(sql`
             UPDATE robots 
             SET state = ${JSON.stringify(state.state)}, 
             last_candle = ${JSON.stringify(state.lastCandle)}, 
-            has_alerts = ${state.hasAlerts},
-            full_stats = ${JSON.stringify(state.fullStats) || null},
-            period_stats = ${JSON.stringify(state.periodStats) || null},
-            emulated_full_stats = ${JSON.stringify(state.emulatedFullStats) || null},
-            emulated_period_stats = ${JSON.stringify(state.emulatedPeriodStats) || null}
+            has_alerts = ${state.hasAlerts}
             WHERE id = ${state.id};
             `);
-
+    /* TODO full_stats = ${JSON.stringify(state.fullStats) || null},
+ period_stats = ${JSON.stringify(state.periodStats) || null},
+ emulated_full_stats = ${JSON.stringify(state.emulatedFullStats) || null},
+ emulated_period_stats = ${JSON.stringify(state.emulatedPeriodStats) || null}*/
     async run(job: RobotJob): Promise<RobotStatus> {
         const { id, robotId, type } = job;
         this.log.info(`Robot #${robotId} - Processing ${type} job...`);
@@ -445,7 +476,7 @@ export default class RobotWorkerService extends BaseService {
                 if (success) {
                     await robot.calcIndicators();
                     robot.runStrategy();
-                    // TODO: await robot.calcStats();
+                    // TODO: await robot.calcStats(); don't forget to save state
                     robot.finalize();
                 } else {
                     this.log.error(error);
@@ -462,6 +493,11 @@ export default class RobotWorkerService extends BaseService {
                         t,
                         robot.signalsToSave.map(({ data }) => data)
                     );
+
+                if (robot.alertsToSave.length) {
+                    await t.query(sql`DELETE FROM robot_active_alerts WHERE robot_id = ${job.id}`);
+                    await this.#saveRobotActiveAlerts(t, robot.alertsToSave);
+                }
 
                 await this.#saveRobotState(t, robot.robotState);
 
