@@ -494,12 +494,13 @@ export default class RobotWorkerService extends BaseService {
             await this.db.pg.transaction(async (t) => {
                 if (robot.positionsToSave.length) await this.#saveRobotPositions(t, robot.positionsToSave);
 
-                if (robot.signalsToSave.length)
-                    await t.query(sql`DELETE FROM robot_active_alerts WHERE robot_id = ${job.id}`);
-                await this.#saveRobotSignals(
-                    t,
-                    robot.signalsToSave.map(({ data }) => data)
-                );
+                if (robot.signalsToSave.length) {
+                    await t.query(sql`DELETE FROM robot_active_alerts WHERE robot_id = ${robot.id}`);
+                    await this.#saveRobotSignals(
+                        t,
+                        robot.signalsToSave.map(({ data }) => data)
+                    );
+                }
 
                 if (robot.alertsToSave.length) {
                     await this.#saveRobotActiveAlerts(t, robot.alertsToSave);
