@@ -1096,13 +1096,11 @@ export class ExwatcherBaseService extends BaseService {
         try {
             const results = await Promise.all(
                 this.activeRobotAlerts.map(async (alert) => {
-                    this.log.debug(`Checking alert #${alert.id}`, alert);
                     const { id, asset, robotId, currency, timeframe, orderType, action, price, activeFrom } = alert;
                     const exwatcherId = this.createExwatcherId(asset, currency);
                     if (this.candlesCurrent[exwatcherId]) {
                         const candle = this.candlesCurrent[exwatcherId][timeframe];
                         if (candle && candle.time === dayjs.utc(activeFrom).valueOf()) {
-                            this.log.debug(`Checking #${alert.id} - current candle`);
                             let nextPrice = null;
                             switch (orderType) {
                                 case OrderType.stop: {
@@ -1121,7 +1119,9 @@ export class ExwatcherBaseService extends BaseService {
                                     throw new Error(`Unknown order type ${orderType}`);
                             }
                             if (nextPrice) {
-                                this.log.debug(`Checking #${alert.id} - Trade!`);
+                                this.log.debug(
+                                    `Alert #${alert.id} (${action} ${orderType} ${price} ${asset}/${currency}) - Processed!`
+                                );
                                 await this.db.pg.transaction(async (t) => {
                                     await t.query(sql`
                                 INSERT INTO robot_jobs
