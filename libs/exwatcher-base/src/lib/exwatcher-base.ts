@@ -86,7 +86,7 @@ export class ExwatcherBaseService extends BaseService {
             activeTo: string;
             processed: boolean;
         };
-    };
+    } = {};
 
     constructor(config?: ExwatcherBaseServiceConfig) {
         super(config);
@@ -1068,7 +1068,7 @@ export class ExwatcherBaseService extends BaseService {
     }
 
     async handleSignalAlertEvents(signal: Signal) {
-        if (this.robotAlerts[signal.id]) return;
+        if (signal.exchange !== this.exchange || this.robotAlerts[signal.id]) return;
         const { amountInUnit, unit } = Timeframe.get(signal.timeframe);
         this.robotAlerts[signal.id] = {
             ...signal,
@@ -1083,7 +1083,13 @@ export class ExwatcherBaseService extends BaseService {
     }
 
     get activeRobotAlerts() {
-        return Object.values(this.robotAlerts).filter(({ processed }) => processed === false);
+        const currentDate = dayjs.utc().valueOf();
+        return Object.values(this.robotAlerts).filter(
+            ({ processed, activeFrom, activeTo }) =>
+                processed === false &&
+                dayjs.utc(activeFrom).valueOf() < currentDate &&
+                dayjs.utc(activeTo).valueOf() > currentDate
+        );
     }
 
     async checkRobotAlerts() {
@@ -1095,7 +1101,7 @@ export class ExwatcherBaseService extends BaseService {
                     const exwatcherId = this.createExwatcherId(asset, currency);
                     if (this.candlesCurrent[exwatcherId]) {
                         const candle = this.candlesCurrent[exwatcherId][timeframe];
-                        if (candle && candle.timestamp === activeFrom) {
+                        if (candle && candle.time === dayjs.utc(activeFrom).valueOf()) {
                             this.log.debug(`Checking #${alert.id} - current candle`);
                             let nextPrice = null;
                             switch (orderType) {

@@ -222,7 +222,7 @@ export class BaseService {
                 Object.values(this.#queues).map(async ({ instance, scheduler }) => {
                     try {
                         await instance.close();
-                        await scheduler.close();
+                        if (scheduler) await scheduler.close();
                     } catch (err) {
                         this.log.error(`Failed to correctly close queues while stopping ${this.#name} service`, err);
                     }
@@ -371,17 +371,17 @@ export class BaseService {
                       connection: this.redis.duplicate()
                   })
         };
-        if (!light || logOpts?.completed !== false)
+        if (!light && logOpts?.completed !== false)
             this.#queues[name].events.on("completed", ({ jobId, returnvalue }) =>
                 this.#jobCompletedLogger(name, jobId, returnvalue)
             );
-        if (!light || logOpts?.failed !== false)
+        if (!light && logOpts?.failed !== false)
             this.#queues[name].events.on("failed", ({ jobId, failedReason }) =>
                 this.#jobErrorLogger(name, jobId, failedReason)
             );
-        if (!light || logOpts?.stalled !== false)
+        if (!light && logOpts?.stalled !== false)
             this.#queues[name].events.on("stalled", ({ jobId }) => this.#jobStalledLogger(name, jobId));
-        if (!light || logOpts?.progress !== false)
+        if (!light && logOpts?.progress !== false)
             this.#queues[name].events.on("progress", ({ jobId, data }) => this.#jobProgressLogger(name, jobId, data));
         if (!light) this.#queuesClean.start();
     };
