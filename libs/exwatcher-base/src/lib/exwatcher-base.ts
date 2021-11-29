@@ -84,7 +84,6 @@ export class ExwatcherBaseService extends BaseService {
         [key: string]: Signal & {
             activeFrom: string;
             activeTo: string;
-            processed: boolean;
         };
     } = {};
 
@@ -1053,11 +1052,10 @@ export class ExwatcherBaseService extends BaseService {
 
     async getActiveRobotAlerts() {
         const currentDate = dayjs.utc().toISOString();
-        const alerts = await this.db.pg.any<Signal & { activeFrom: string; activeTo: string; processed: boolean }>(sql`
+        const alerts = await this.db.pg.any<Signal & { activeFrom: string; activeTo: string }>(sql`
         SELECT * 
         FROM robot_active_alerts 
         WHERE exchange = ${this.exchange}
-        AND processed = false 
         AND active_from <= ${currentDate}
         AND active_to >= ${currentDate}
         ORDER BY robot_id, timeframe;
@@ -1070,26 +1068,36 @@ export class ExwatcherBaseService extends BaseService {
     async handleSignalAlertEvents(signal: Signal) {
         if (signal.exchange !== this.exchange || this.robotAlerts[signal.id]) return;
         const { amountInUnit, unit } = Timeframe.get(signal.timeframe);
+        const activeFrom = dayjs.utc(signal.candleTimestamp).add(amountInUnit, unit);
+        const activeTo = dayjs
+            .utc(signal.candleTimestamp)
+            .add(amountInUnit * 2, unit)
+            .add(-1, "millisecond");
+        const currentDate = dayjs.utc().valueOf();
+        if (activeTo.valueOf() < currentDate) return;
         this.robotAlerts[signal.id] = {
             ...signal,
-            activeFrom: dayjs.utc(signal.candleTimestamp).add(amountInUnit, unit).toISOString(),
-            activeTo: dayjs
-                .utc(signal.candleTimestamp)
-                .add(amountInUnit * 2, unit)
-                .add(-1, "millisecond")
-                .toISOString(),
-            processed: false
+            activeFrom: activeFrom.toISOString(),
+            activeTo: activeTo.toISOString()
         };
     }
 
     get activeRobotAlerts() {
         const currentDate = dayjs.utc().valueOf();
         return Object.values(this.robotAlerts).filter(
-            ({ processed, activeFrom, activeTo }) =>
-                processed === false &&
-                dayjs.utc(activeFrom).valueOf() < currentDate &&
-                dayjs.utc(activeTo).valueOf() > currentDate
+            ({ activeFrom, activeTo }) =>
+                dayjs.utc(activeFrom).valueOf() < currentDate && dayjs.utc(activeTo).valueOf() > currentDate
         );
+    }
+
+    cleanOutdatedSignals() {
+        const currentDate = dayjs.utc().valueOf();
+        const alerts = Object.values(this.robotAlerts)
+            .filter(({ activeTo }) => dayjs.utc(activeTo).valueOf() < currentDate)
+            .map((a) => a.id);
+        for (const id of alerts) {
+            delete this.robotAlerts[id];
+        }
     }
 
     async checkRobotAlerts() {
@@ -1120,10 +1128,10 @@ export class ExwatcherBaseService extends BaseService {
                             }
                             if (nextPrice) {
                                 this.log.debug(
-                                    `Alert #${alert.id} (${action} ${orderType} ${price} ${asset}/${currency}) - Processed!`
+                                    `Alert #${alert.id} (${action} ${orderType} ${price} ${asset}/${currency}) - Triggered!`
                                 );
-                                await this.db.pg.transaction(async (t) => {
-                                    await t.query(sql`
+
+                                await this.db.pg.query(sql`
                                 INSERT INTO robot_jobs
                                 (
                                     robot_id,
@@ -1137,12 +1145,7 @@ export class ExwatcherBaseService extends BaseService {
                                  retries = null,
                                  error = null;
                                 `);
-                                    await t.query(sql`
-                                UPDATE robot_active_alerts 
-                                SET processed = true 
-                                WHERE id = ${id};
-                                `);
-                                });
+
                                 await this.addJob(
                                     Queues.robot,
                                     "job",
@@ -1161,8 +1164,14 @@ export class ExwatcherBaseService extends BaseService {
                 })
             );
 
+            const totalAlertsCount = Object.keys(this.robotAlerts).length;
+
             for (const id of results.filter((processed) => processed)) {
                 delete this.robotAlerts[id];
+            }
+
+            if (results.length < totalAlertsCount) {
+                this.cleanOutdatedSignals();
             }
         } catch (error) {
             this.log.error(`Failed to check robot alerts`, error);
