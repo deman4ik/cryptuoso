@@ -63,11 +63,11 @@ export default class RobotWorkerService extends BaseService {
         this.log.debug(`Creating queue ${Queues.robot}`);
         this.createQueue(Queues.robot);
         //  this.log.debug(`Creating queue ${Queues.alerts}`);
-        // this.createQueue(Queues.alerts);
+        this.createQueue(Queues.alerts);
         this.log.debug(`Creating worker ${Queues.robot}`);
         this.createWorker(Queues.robot, this.processRobot);
         //  this.log.debug(`Creating worker ${Queues.alerts}`);
-        //  this.createWorker(Queues.alerts, this.processAlerts);
+        this.createWorker(Queues.alerts, this.processAlerts);
     }
 
     async onServiceStop(): Promise<void> {
