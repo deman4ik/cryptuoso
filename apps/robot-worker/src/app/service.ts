@@ -19,7 +19,11 @@ import { RobotWorkerError, RobotWorkerEvents, Signal } from "@cryptuoso/robot-ev
 import dayjs from "dayjs";
 import { BaseError } from "@cryptuoso/errors";
 import { Utils } from "./utils";
-import { TradeStatsRunnerEvents, TradeStatsRunnerPortfolioRobot } from "@cryptuoso/trade-stats-events";
+import {
+    TradeStatsRunnerEvents,
+    TradeStatsRunnerPortfolioRobot,
+    TradeStatsRunnerRobot
+} from "@cryptuoso/trade-stats-events";
 
 export type RobotWorkerServiceConfig = BaseServiceConfig;
 
@@ -48,6 +52,7 @@ export default class RobotWorkerService extends BaseService {
     }
 
     async onServiceStart(): Promise<void> {
+        this.initCache();
         this.log.debug("Creating pool");
         this.pool = Pool(() => spawn<Utils>(new ThreadsWorker("./utils")), {
             name: "utils",
@@ -247,7 +252,10 @@ export default class RobotWorkerService extends BaseService {
         limit: number
     ): Promise<Candle[]> => {
         try {
-            const requiredCandles = <DBCandle[]>await this.db.pg.many<DBCandle>(sql`
+            const requiredCandles = await this.cache.cache(
+                `cache:candles:${exchange}:${asset}:${currency}:${timeframe}:${limit}`,
+                () =>
+                    this.db.pg.many<DBCandle>(sql`
             SELECT *
             FROM candles
             WHERE exchange = ${exchange}
@@ -256,8 +264,10 @@ export default class RobotWorkerService extends BaseService {
               AND timeframe = ${timeframe}
               AND timestamp <= ${dayjs.utc(Timeframe.getPrevSince(dayjs.utc().toISOString(), timeframe)).toISOString()}
             ORDER BY timestamp DESC
-            LIMIT ${limit};`);
-            return requiredCandles
+            LIMIT ${limit};`),
+                60 * 2
+            );
+            return [...requiredCandles]
                 .sort((a, b) => sortAsc(a.time, b.time))
                 .map((candle: DBCandle) => ({ ...candle, timeframe, id: candle.id }));
         } catch (err) {
@@ -395,32 +405,43 @@ export default class RobotWorkerService extends BaseService {
  period_stats = ${JSON.stringify(state.periodStats) || null},
  emulated_full_stats = ${JSON.stringify(state.emulatedFullStats) || null},
  emulated_period_stats = ${JSON.stringify(state.emulatedPeriodStats) || null}*/
+
+    #getRobotState = async (robotId: string): Promise<RobotState> => {
+        try {
+            return await this.cache.cache(
+                `cache:robot:${robotId}`,
+                () =>
+                    this.db.pg.one<RobotState>(sql`
+                SELECT r.id, 
+                       r.exchange, 
+                       r.asset, 
+                       r.currency, 
+                       r.timeframe, 
+                       r.strategy, 
+                       json_build_object('strategySettings', rs.strategy_settings,
+                                         'robotSettings', rs.robot_settings,
+                                         'activeFrom', rs.active_from) as settings,
+                       r.last_candle, 
+                       r.state, 
+                       r.has_alerts, 
+                       r.status,
+                       r.started_at, 
+                       r.stopped_at
+                FROM robots r, v_robot_settings rs 
+                WHERE rs.robot_id = r.id AND id = ${robotId};`),
+                600
+            );
+        } catch (err) {
+            this.log.error("Failed to load robot state", err);
+            throw err;
+        }
+    };
+
     async run(job: RobotJob): Promise<RobotStatus> {
         const { id, robotId, type } = job;
         this.log.info(`Robot #${robotId} - Processing ${type} job...`);
         try {
-            const robotState = await this.db.pg.one<RobotState>(sql`
-             SELECT r.id, 
-                    r.exchange, 
-                    r.asset, 
-                    r.currency, 
-                    r.timeframe, 
-                    r.strategy, 
-                    json_build_object('strategySettings', rs.strategy_settings,
-                                      'robotSettings', rs.robot_settings,
-                                      'activeFrom', rs.active_from) as settings,
-                    r.last_candle, 
-                    r.state, 
-                    r.has_alerts, 
-                    r.status,
-                    r.started_at, 
-                    r.stopped_at,
-                    r.full_stats,
-                    r.period_stats,
-                    r.emulated_full_stats,
-                    r.emulated_period_stats
-            FROM robots r, v_robot_settings rs 
-            WHERE rs.robot_id = r.id AND id = ${robotId};`);
+            const robotState = await this.#getRobotState(robotId);
 
             const robot = new Robot(robotState);
 
@@ -513,6 +534,13 @@ export default class RobotWorkerService extends BaseService {
                 await t.query(sql`DELETE FROM robot_jobs WHERE id = ${job.id};`);
             });
 
+            if (robot.eventsToSend.length)
+                await Promise.all(
+                    robot.eventsToSend.map(async (event) => {
+                        await this.events.emit(event);
+                    })
+                );
+
             if (robot.hasClosedPositions) {
                 // <StatsCalcRunnerRobot>
                 await this.events.emit<any>({
@@ -522,6 +550,13 @@ export default class RobotWorkerService extends BaseService {
                     }
                 }); //TODO: deprecate
 
+                await this.events.emit<TradeStatsRunnerRobot>({
+                    type: TradeStatsRunnerEvents.ROBOT,
+                    data: {
+                        robotId
+                    }
+                });
+
                 await this.events.emit<TradeStatsRunnerPortfolioRobot>({
                     type: TradeStatsRunnerEvents.PORTFOLIO_ROBOT,
                     data: {
@@ -530,9 +565,7 @@ export default class RobotWorkerService extends BaseService {
                 });
             }
 
-            for (const event of robot.eventsToSend) {
-                await this.events.emit(event);
-            }
+            await this.cache.setCache(`cache:robot:${robotId}`, robot.robotState, robot.timeframe * 60 + 600);
             this.log.info(`Robot #${robotId} - Processed ${type} job (${id})`);
             return robot.status;
         } catch (err) {

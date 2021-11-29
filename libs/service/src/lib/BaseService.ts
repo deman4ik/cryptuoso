@@ -13,6 +13,7 @@ import {
     WorkerOptions
 } from "bullmq";
 import Redis from "ioredis";
+import Cache from "ioredis-cache";
 import RedLock from "redlock";
 import logger, { Logger } from "@cryptuoso/logger";
 import { sql, pg, pgUtil } from "@cryptuoso/postgres";
@@ -33,6 +34,7 @@ export class BaseService {
     #onServiceStarted: { (): Promise<void> }[] = [];
     #onServiceStop: { (): Promise<void> }[] = [];
     #redisConnection: Redis.Redis;
+    #cache: Cache;
     #redLock: RedLock;
     #db: { sql: typeof sql; pg: typeof pg; util: typeof pgUtil };
     #events: Events;
@@ -238,6 +240,19 @@ export class BaseService {
             process.exit(1);
         }
     };
+
+    #initCache = () => {
+        this.#cache = new Cache(this.redis.duplicate());
+    };
+
+    get initCache() {
+        return this.#initCache;
+    }
+
+    get cache() {
+        if (!this.#cache) throw new Error("Cache not inited");
+        return this.#cache;
+    }
 
     #makeLocker: {
         (resource: null, ttl: number, extensionStep?: number): {
