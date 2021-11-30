@@ -3,7 +3,7 @@ module.exports = function (config, context) {
         ...config,
         entry: {
             ...config.entry,
-            utils: `${context.options.root}/${context.options.sourceRoot}/app/utils.ts`
+            worker: `${context.options.root}/${context.options.sourceRoot}/app/worker.ts`
         },
         output: {
             ...config.output,
