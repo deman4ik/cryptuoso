@@ -38,10 +38,7 @@ const config: ClientConfigurationInputType = {
     idleTimeout: 3000,
     maximumPoolSize: 10,
     interceptors,
-    typeParsers,
-    ssl: {
-        rejectUnauthorized: false
-    }
+    typeParsers
 };
 
 const pg = createPool(process.env.PGCS, config);
