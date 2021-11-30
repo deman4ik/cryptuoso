@@ -78,22 +78,26 @@ class RobotJobWorker {
     async loadCode() {
         this.log.debug("Loading strategy and indicators code");
         try {
-            const strategies = await this.cache.cache(
+            /*const strategies = await this.cache.cache(
                 `cache:strategies`,
                 () =>
                     this.db.pg.many<CodeFilesInDB>(sql`
                 SELECT * FROM strategies WHERE available >= 5;`),
                 24 * 60 * 60
             );
-            this.log.debug(`Loaded ${strategies.length} strategies`);
+           
             const baseIndicators = await this.cache.cache(
                 `cache:strategies`,
                 () =>
                     this.db.pg.many<CodeFilesInDB>(sql`
                 SELECT * FROM indicators WHERE available >= 5;`),
                 24 * 60 * 60
-            );
-
+            ); */
+            const strategies = await this.db.pg.many<CodeFilesInDB>(sql`
+            SELECT * FROM strategies WHERE available >= 5;`);
+            const baseIndicators = await this.db.pg.many<CodeFilesInDB>(sql`
+             SELECT * FROM indicators WHERE available >= 5;`);
+            this.log.debug(`Loaded ${strategies.length} strategies`);
             this.log.debug(`Loaded ${baseIndicators.length} base indicators`);
             if (process.env.CODE_FILES_LOCATION === "local") {
                 this.log.warn("Loading local strategy and indicators files");
