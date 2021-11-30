@@ -51,7 +51,7 @@ export default class RobotWorkerService extends BaseService {
                 this.log.error(job);
                 break;
         }
-        this.log.debug(`Finished processing job ${job.name} #${job.id}`);
+        this.log.debug(`Finished processing ${job.name} #${job.id}`);
         return { result: "ok" };
     }
 

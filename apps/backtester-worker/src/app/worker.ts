@@ -18,6 +18,7 @@ import { sortAsc, chunkArray } from "@cryptuoso/helpers";
 import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 import logger, { Logger } from "@cryptuoso/logger";
 import { sql, pg, pgUtil, makeChunksGenerator } from "@cryptuoso/postgres";
+import { Signal } from "@cryptuoso/robot-events";
 
 const subject = new Subject();
 let backtesterWorker: BacktesterWorker;
@@ -497,6 +498,45 @@ class BacktesterWorker {
         }
     };
 
+    #saveRobotActiveAlerts = async (
+        robotId: string,
+        signals: (Signal & {
+            activeFrom: string;
+            activeTo: string;
+        })[]
+    ) => {
+        await this.db.pg.query(sql`DELETE FROM robot_active_alerts WHERE robot_id = ${robotId}`);
+        for (const signal of signals) {
+            const {
+                id,
+                robotId,
+                action,
+                orderType,
+                price,
+                positionId,
+                candleTimestamp,
+                timeframe,
+                exchange,
+                asset,
+                currency,
+                activeFrom,
+                activeTo
+            } = signal;
+            await this.db.pg.query(sql`
+            INSERT INTO robot_active_alerts
+            (id, robot_id, action, order_type, price, position_id, 
+            exchange, asset, currency,
+            timeframe,
+            candle_timestamp, active_from, active_to)
+            VALUES (${id}, ${robotId}, ${action}, ${orderType}, ${price},
+            ${positionId}, 
+            ${exchange}, ${asset}, ${currency},
+            ${timeframe}, ${candleTimestamp},
+            ${activeFrom}, ${activeTo})
+        `);
+        }
+    };
+
     #saveRobotPositions = async (robotId: string, positions: RobotPositionState[]) => {
         try {
             this.log.info(`Robot #${robotId} - Saving positions`);
@@ -684,6 +724,8 @@ class BacktesterWorker {
                     this.backtester.robotId,
                     robot.data.trades.sort((a, b) => sortAsc(a.candleTimestamp, b.candleTimestamp))
                 );
+                if (robot.instance.alertsToSave.length)
+                    await this.#saveRobotActiveAlerts(this.backtester.robotId, robot.instance.alertsToSave);
                 await this.#saveRobotPositions(this.backtester.robotId, Object.values(robot.data.positions));
 
                 await this.#startRobot(this.backtester.robotId, this.backtester.dateFrom);
