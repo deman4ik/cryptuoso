@@ -1128,7 +1128,8 @@ export class ExwatcherBaseService extends BaseService {
                                     `Alert #${alert.id} (${action} ${orderType} ${price} ${asset}/${currency}) - Triggered!`
                                 );
 
-                                await this.db.pg.query(sql`
+                                await this.db.pg.transaction(async (t) => {
+                                    await t.query(sql`
                                 INSERT INTO robot_jobs
                                 (
                                     robot_id,
@@ -1146,6 +1147,31 @@ export class ExwatcherBaseService extends BaseService {
                                  error = null;
                                 `);
 
+                                    await t.query(sql`
+                                insert into candles
+                                (exchange, asset, currency, timeframe, open, high, low, close, volume, time, timestamp, type)
+                                VALUES (
+                                    ${candle.exchange},
+                                    ${candle.asset},
+                                    ${candle.currency},
+                                    ${candle.timeframe},
+                                    ${candle.open},
+                                    ${candle.high},
+                                    ${candle.low},
+                                    ${candle.close},
+                                    ${candle.volume},
+                                    ${candle.time}, 
+                                    ${candle.timestamp},
+                                    ${candle.type}
+                                )
+                                ON CONFLICT (timestamp, exchange, asset, currency, timeframe)
+                                DO UPDATE SET open = excluded.open,
+                                high = excluded.high,
+                                low = excluded.low,
+                                close = excluded.close,
+                                volume = excluded.volume,
+                                type = excluded.type;`);
+                                });
                                 await this.addJob(
                                     Queues.robot,
                                     "job",
