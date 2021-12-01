@@ -188,6 +188,11 @@ export interface Signal extends SignalInfo {
     timestamp: string;
 }
 
+export interface ActiveAlert extends Signal {
+    activeFrom: string;
+    activeTo: string;
+}
+
 export interface RobotWorkerError {
     [key: string]: any;
     robotId: string;

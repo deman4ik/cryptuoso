@@ -44,8 +44,6 @@ export default class RobotWorkerService extends BaseService {
             case "job":
                 await this.robotJob(job);
                 break;
-            case "checkAlerts": //TODO: deprecate
-                break;
             default:
                 this.log.error(`Unknow job ${job.name}`);
                 this.log.error(job);

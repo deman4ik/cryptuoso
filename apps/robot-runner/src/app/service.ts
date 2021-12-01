@@ -59,18 +59,9 @@ export default class RobotRunnerService extends HTTPService {
 
     async onServiceStart() {
         this.createQueue(Queues.robot);
-        // this.createQueue(Queues.alerts);
         this.createQueue(Queues.robotRunner);
         this.createWorker(Queues.robotRunner, this.process);
 
-        /*  await this.addJob(Queues.robotRunner, RobotRunnerJobType.alerts, null, {
-            jobId: RobotRunnerJobType.alerts,
-            repeat: {
-                every: 1000
-            },
-            removeOnComplete: 1,
-            removeOnFail: 10
-        });*/
         await this.addJob(Queues.robotRunner, RobotRunnerJobType.newCandles, null, {
             jobId: RobotRunnerJobType.newCandles,
             repeat: {
@@ -369,9 +360,6 @@ export default class RobotRunnerService extends HTTPService {
 
     async process(job: Job) {
         switch (job.name) {
-            case RobotRunnerJobType.alerts:
-                // await this.scheduleAlerts();
-                break;
             case RobotRunnerJobType.newCandles:
                 await this.handleNewCandles();
                 break;
@@ -382,40 +370,6 @@ export default class RobotRunnerService extends HTTPService {
                 this.log.error(`Unknow job ${job.name}`);
         }
         return { result: "ok" };
-    }
-
-    async scheduleAlerts() {
-        try {
-            const entities = await this.db.pg.any<{
-                exchange: string;
-                asset: string;
-                currency: string;
-                timeframe: ValidTimeframe;
-            }>(sql`
-            SELECT distinct r.exchange, r.asset, r.currency, r.timeframe
-            FROM robots r
-            WHERE r.has_alerts = true
-            AND r.status = ${RobotStatus.started};`);
-
-            if (entities && Array.isArray(entities) && entities.length > 0) {
-                await Promise.all(
-                    entities.map(async ({ exchange, asset, currency, timeframe }) => {
-                        await this.addJob(
-                            Queues.alerts,
-                            "checkAlerts",
-                            { exchange, asset, currency, timeframe },
-                            {
-                                jobId: `${exchange}.${asset}.${currency}.${timeframe}`,
-                                removeOnComplete: true,
-                                removeOnFail: 100
-                            }
-                        );
-                    })
-                );
-            }
-        } catch (err) {
-            this.log.error("Failed to schedule alerts check", err);
-        }
     }
 
     async handleNewCandles() {

@@ -18,7 +18,7 @@ import { sortAsc, chunkArray } from "@cryptuoso/helpers";
 import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 import logger, { Logger } from "@cryptuoso/logger";
 import { sql, pg, pgUtil, makeChunksGenerator } from "@cryptuoso/postgres";
-import { Signal } from "@cryptuoso/robot-events";
+import { ActiveAlert, Signal } from "@cryptuoso/robot-events";
 
 const subject = new Subject();
 let backtesterWorker: BacktesterWorker;
@@ -498,13 +498,7 @@ class BacktesterWorker {
         }
     };
 
-    #saveRobotActiveAlerts = async (
-        robotId: string,
-        signals: (Signal & {
-            activeFrom: string;
-            activeTo: string;
-        })[]
-    ) => {
+    #saveRobotActiveAlerts = async (robotId: string, signals: ActiveAlert[]) => {
         await this.db.pg.query(sql`DELETE FROM robot_active_alerts WHERE robot_id = ${robotId}`);
         for (const signal of signals) {
             const {

@@ -27,7 +27,7 @@ import {
     // MarketEvents
 } from "@cryptuoso/exwatcher-events";
 import { Queues, RobotJobType, RobotPosition } from "@cryptuoso/robot-state";
-import { Signal, SignalEvents, SignalSchema } from "@cryptuoso/robot-events";
+import { ActiveAlert, Signal, SignalEvents, SignalSchema } from "@cryptuoso/robot-events";
 import { sql } from "@cryptuoso/postgres";
 import { ImporterState, Status } from "@cryptuoso/importer-state";
 import logger from "@cryptuoso/logger";
@@ -81,10 +81,7 @@ export class ExwatcherBaseService extends BaseService {
     cronHandleChanges: cron.ScheduledTask;
     lastDate: number;
     robotAlerts: {
-        [key: string]: Signal & {
-            activeFrom: string;
-            activeTo: string;
-        };
+        [key: string]: ActiveAlert;
     } = {};
 
     constructor(config?: ExwatcherBaseServiceConfig) {
@@ -1135,13 +1132,16 @@ export class ExwatcherBaseService extends BaseService {
                                 INSERT INTO robot_jobs
                                 (
                                     robot_id,
-                                    type
+                                    type,
+                                    data
                                 ) VALUES (
                                     ${robotId},
-                                    ${RobotJobType.tick}
+                                    ${RobotJobType.tick},
+                                    ${JSON.stringify(alert)}
                                 )
                                 ON CONFLICT ON CONSTRAINT robot_jobs_robot_id_type_key 
                                  DO UPDATE SET updated_at = now(),
+                                 data = excluded.data,
                                  retries = null,
                                  error = null;
                                 `);

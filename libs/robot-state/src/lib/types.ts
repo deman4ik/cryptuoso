@@ -14,6 +14,7 @@ import {
 import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 import { IndicatorState } from "@cryptuoso/robot-indicators";
 import { BaseStats, FullStats, PeriodStats } from "@cryptuoso/trade-stats";
+import { ActiveAlert } from "@cryptuoso/robot-events";
 
 export const enum RobotStatus {
     starting = "starting",
@@ -99,7 +100,7 @@ export interface RobotJob {
     id?: string;
     robotId: string;
     type: RobotJobType;
-    data?: ExchangeCandle | ExchangePrice | { robotId: string };
+    data?: ExchangeCandle | ActiveAlert;
     retries?: number;
     error?: string;
 }

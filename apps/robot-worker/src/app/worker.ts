@@ -8,7 +8,7 @@ import { DatabaseTransactionConnectionType } from "slonik";
 import { Candle, DBCandle, Timeframe, ValidTimeframe } from "@cryptuoso/market";
 import { sleep, sortAsc } from "@cryptuoso/helpers";
 import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
-import { RobotWorkerError, RobotWorkerEvents, Signal } from "@cryptuoso/robot-events";
+import { ActiveAlert, RobotWorkerError, RobotWorkerEvents, Signal } from "@cryptuoso/robot-events";
 import dayjs from "dayjs";
 import { BaseError } from "@cryptuoso/errors";
 import { Events } from "@cryptuoso/events";
@@ -250,13 +250,7 @@ class RobotJobWorker {
         }
     };
 
-    #saveRobotActiveAlerts = async (
-        transaction: DatabaseTransactionConnectionType,
-        signals: (Signal & {
-            activeFrom: string;
-            activeTo: string;
-        })[]
-    ) => {
+    #saveRobotActiveAlerts = async (transaction: DatabaseTransactionConnectionType, signals: ActiveAlert[]) => {
         for (const signal of signals) {
             const {
                 id,
@@ -340,33 +334,40 @@ emulated_period_stats = ${JSON.stringify(state.emulatedPeriodStats) || null}*/
 
             if (type === RobotJobType.tick) {
                 if (robot.hasAlerts) {
-                    const currentTime = dayjs.utc(Timeframe.getCurrentSince(1, robot.timeframe)).toISOString();
-                    const currentCandle: DBCandle = await this.db.pg.maybeOne(sql`
-                SELECT * 
-                FROM candles
-                WHERE exchange = ${robot.exchange}
-                AND asset = ${robot.asset}
-                AND currency = ${robot.currency}
-                AND timeframe = ${robot.timeframe}
-                and timestamp = ${currentTime};`);
-                    if (!currentCandle) {
-                        this.log.error(
-                            `Robot #${robotId} - Failed to load ${robot.exchange}-${robot.asset}-${robot.currency}-${robot.timeframe}-${currentTime} current candle`
-                        );
-                        return robot.status;
-                    }
-                    robot.setStrategy(null);
-                    const { success, error } = robot.handleCurrentCandle({
-                        ...currentCandle,
-                        timeframe: robot.timeframe,
-                        id: currentCandle.id
-                    });
+                    const alert = job.data as ActiveAlert;
 
-                    if (success) {
-                        robot.checkAlerts();
-                        robot.calcStats();
-                    } else {
-                        this.log.error(error);
+                    const currentTime = dayjs.utc(Timeframe.getCurrentSince(1, robot.timeframe)).toISOString();
+
+                    if (!alert || (alert && dayjs.utc(alert.activeTo).valueOf() > dayjs.utc().valueOf())) {
+                        //TODO: remove backward compatibility
+                        const currentCandle: DBCandle = await this.db.pg.maybeOne(sql`
+                                    SELECT * 
+                                    FROM candles
+                                    WHERE exchange = ${robot.exchange}
+                                    AND asset = ${robot.asset}
+                                    AND currency = ${robot.currency}
+                                    AND timeframe = ${robot.timeframe}
+                                    and timestamp = ${currentTime};`);
+
+                        if (!currentCandle) {
+                            throw new Error(
+                                `Robot #${robotId} - Failed to load ${robot.exchange}-${robot.asset}-${robot.currency}-${robot.timeframe}-${currentTime} current candle`
+                            );
+                        }
+
+                        robot.setStrategy(null);
+                        const { success, error } = robot.handleCurrentCandle({
+                            ...currentCandle,
+                            timeframe: robot.timeframe,
+                            id: currentCandle.id
+                        });
+
+                        if (success) {
+                            robot.checkAlerts();
+                            robot.calcStats();
+                        } else {
+                            this.log.error(error);
+                        }
                     }
                 }
             } else if (type === RobotJobType.candle) {
