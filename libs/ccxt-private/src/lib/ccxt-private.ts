@@ -617,10 +617,7 @@ export class PrivateConnector {
                                 nextJob: {
                                     type: OrderJobType.create,
                                     priority: Priority.high,
-                                    nextJobAt: dayjs
-                                        .utc()
-                                        .add(this.#orderCheckTimeout, "second")
-                                        .toISOString()
+                                    nextJobAt: dayjs.utc().add(this.#orderCheckTimeout, "second").toISOString()
                                 }
                             };
                     }
@@ -1076,10 +1073,7 @@ export class PrivateConnector {
                         : {
                               type: OrderJobType.check,
                               priority: Priority.low,
-                              nextJobAt: dayjs
-                                  .utc()
-                                  .add(this.#orderCheckTimeout, "second")
-                                  .toISOString()
+                              nextJobAt: dayjs.utc().add(this.#orderCheckTimeout, "second").toISOString()
                           }
             };
         } catch (err) {
@@ -1179,10 +1173,7 @@ export class PrivateConnector {
                     nextJob: {
                         type: OrderJobType.cancel,
                         priority: Priority.high,
-                        nextJobAt: dayjs
-                            .utc()
-                            .add(this.#orderCheckTimeout, "second")
-                            .toISOString()
+                        nextJobAt: dayjs.utc().add(this.#orderCheckTimeout, "second").toISOString()
                     }
                 };
             }
