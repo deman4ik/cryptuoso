@@ -165,6 +165,7 @@ class RobotJobWorker {
             return [...requiredCandles]
                 .sort((a, b) => sortAsc(a.time, b.time))
                 .filter((c) => c.time <= time)
+                .slice(-limit)
                 .map((candle: DBCandle) => ({ ...candle, id: candle.id }));
         } catch (err) {
             this.log.error("Failed to load history candles", err);

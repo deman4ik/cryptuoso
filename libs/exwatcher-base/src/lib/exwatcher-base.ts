@@ -1036,14 +1036,13 @@ export class ExwatcherBaseService extends BaseService {
     }
 
     async saveCandlesHistory(candle: ExchangeCandle) {
-        if (candle.time > Timeframe.getPrevSince(dayjs.utc().toISOString(), candle.timeframe)) return;
         const id = this.createExwatcherId(candle.asset, candle.currency);
 
         if (!this.candlesHistory[id] || !this.candlesHistory[id][candle.timeframe]) return;
 
         const otherCandles = this.candlesHistory[id][candle.timeframe].filter(({ time }) => time !== candle.time);
 
-        this.candlesHistory[id][candle.timeframe] = [...otherCandles, candle].slice(-300);
+        this.candlesHistory[id][candle.timeframe] = [...otherCandles, candle].slice(-301);
 
         await this.cache.setCache(
             `cache:candles:${this.exchange}:${candle.asset}:${candle.currency}:${candle.timeframe}:${300}`,
