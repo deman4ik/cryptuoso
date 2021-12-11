@@ -4,8 +4,17 @@ import cron from "node-cron";
 import { v4 as uuid } from "uuid";
 import dayjs from "@cryptuoso/dayjs";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
-import { Timeframe, CandleType, ExchangePrice, ExchangeCandle, OrderType } from "@cryptuoso/market";
-import { sleep } from "@cryptuoso/helpers";
+import {
+    Timeframe,
+    CandleType,
+    ExchangePrice,
+    ExchangeCandle,
+    OrderType,
+    ValidTimeframe,
+    Candle,
+    DBCandle
+} from "@cryptuoso/market";
+import { round, sleep, sortAsc } from "@cryptuoso/helpers";
 import {
     ImporterRunnerEvents,
     ImporterRunnerStart,
@@ -69,6 +78,7 @@ export class ExwatcherBaseService extends BaseService {
     publicConnector: PublicConnector;
     subscriptions: { [key: string]: Exwatcher } = {};
     candlesCurrent: { [id: string]: { [timeframe: string]: ExchangeCandle } } = {};
+    candlesHistory: { [key: string]: { [timeframe: string]: DBCandle[] } } = {};
     candlesToSave: Map<string, ExchangeCandle> = new Map();
     candlesSaveTimer: NodeJS.Timer;
     checkAlertsTimer: NodeJS.Timer;
@@ -193,6 +203,7 @@ export class ExwatcherBaseService extends BaseService {
     }
 
     async onServiceStarted() {
+        this.initCache();
         this.createLightQueue(Queues.robot);
         await this.resubscribe();
         this.cronHandleChanges.start();
@@ -447,6 +458,45 @@ export class ExwatcherBaseService extends BaseService {
         }
     }
 
+    async loadCandlesHistory(
+        asset: string,
+        currency: string,
+        timeframe: ValidTimeframe,
+        limit: number
+    ): Promise<DBCandle[]> {
+        try {
+            const requiredCandles = await this.cache.cache(
+                `cache:candles:${this.exchange}:${asset}:${currency}:${timeframe}:${limit}`,
+                () =>
+                    this.db.pg.many<DBCandle>(sql`
+        SELECT *
+        FROM candles
+        WHERE exchange = ${this.exchange}
+          AND asset = ${asset}
+          AND currency = ${currency}
+          AND timeframe = ${timeframe}
+          AND timestamp <= ${dayjs.utc(Timeframe.getPrevSince(dayjs.utc().toISOString(), timeframe)).toISOString()}
+        ORDER BY timestamp DESC
+        LIMIT ${limit};`),
+                round(60 * (timeframe / 2))
+            );
+            return [...requiredCandles].sort((a, b) => sortAsc(a.time, b.time));
+        } catch (err) {
+            this.log.error("Failed to load history candles", err);
+            throw err;
+        }
+    }
+
+    async initCandlesHistory(subscription: Exwatcher) {
+        const { id, asset, currency } = subscription;
+        this.candlesHistory[id] = {};
+        await Promise.all(
+            Timeframe.validArray.map(async (timeframe) => {
+                this.candlesHistory[id][timeframe] = await this.loadCandlesHistory(asset, currency, timeframe, 300);
+            })
+        );
+    }
+
     async subscribe(subscription: Exwatcher) {
         this.log.debug(subscription);
         try {
@@ -463,6 +513,8 @@ export class ExwatcherBaseService extends BaseService {
                         this.log.info(`Subscribed ${id}`);
 
                         await this.saveSubscription(this.subscriptions[id]);
+
+                        await this.initCandlesHistory(this.subscriptions[id]);
                     } catch (e) {
                         this.log.error(e);
                         this.subscriptions[id].status = ExwatcherStatus.failed;
@@ -983,6 +1035,21 @@ export class ExwatcherBaseService extends BaseService {
         });
     }
 
+    async saveCandlesHistory(candle: ExchangeCandle) {
+        const id = this.createExwatcherId(candle.asset, candle.currency);
+
+        if (!this.candlesHistory[id] || !this.candlesHistory[id][candle.timeframe]) return;
+        const otherCandles = this.candlesHistory[id][candle.timeframe].filter(({ time }) => time !== candle.time);
+
+        this.candlesHistory[id][candle.timeframe] = [...otherCandles, candle].slice(-300);
+
+        await this.cache.setCache(
+            `cache:candles:${this.exchange}:${candle.asset}:${candle.currency}:${candle.timeframe}:${300}`,
+            this.candlesHistory[id][candle.timeframe],
+            round(60 * (candle.timeframe / 2))
+        );
+    }
+
     async handleCandlesToSave() {
         try {
             if (this.candlesToSave.size > 0) {
@@ -1030,6 +1097,8 @@ export class ExwatcherBaseService extends BaseService {
                     close = excluded.close,
                     volume = excluded.volume,
                     type = excluded.type;`);
+
+                    await Promise.all(candles.map((candle) => this.saveCandlesHistory(candle)));
 
                     candles.forEach((candle) => {
                         this.candlesToSave.delete(this.getCandleMapKey(candle));

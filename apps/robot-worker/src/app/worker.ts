@@ -6,7 +6,7 @@ import logger, { Logger, Tracer } from "@cryptuoso/logger";
 import { Robot, RobotJob, RobotJobType, RobotPositionState, RobotState, RobotStatus } from "@cryptuoso/robot-state";
 import { DatabaseTransactionConnectionType } from "slonik";
 import { Candle, DBCandle, Timeframe, ValidTimeframe } from "@cryptuoso/market";
-import { sleep, sortAsc } from "@cryptuoso/helpers";
+import { round, sleep, sortAsc } from "@cryptuoso/helpers";
 import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
 import { ActiveAlert, RobotWorkerError, RobotWorkerEvents, Signal } from "@cryptuoso/robot-events";
 import dayjs from "dayjs";
@@ -159,7 +159,7 @@ class RobotJobWorker {
           AND timestamp <= ${dayjs.utc(Timeframe.getPrevSince(dayjs.utc().toISOString(), timeframe)).toISOString()}
         ORDER BY timestamp DESC
         LIMIT ${limit};`),
-                60 * 2
+                round(60 * (timeframe / 2))
             );
             return [...requiredCandles]
                 .sort((a, b) => sortAsc(a.time, b.time))

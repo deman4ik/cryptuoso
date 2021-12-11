@@ -29,6 +29,7 @@ export interface DBCandle {
     exchange: string;
     asset: string;
     currency: string;
+    timeframe: number;
     id?: string;
     time: number;
     timestamp: string;
@@ -42,7 +43,6 @@ export interface DBCandle {
 
 export interface Candle extends DBCandle {
     id: string;
-    timeframe: number;
 }
 
 export interface CandleProps {
