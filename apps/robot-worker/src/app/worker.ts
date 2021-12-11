@@ -146,6 +146,7 @@ class RobotJobWorker {
         limit: number
     ): Promise<Candle[]> => {
         try {
+            const time = Timeframe.getPrevSince(dayjs.utc().toISOString(), timeframe);
             const requiredCandles = await this.cache.cache(
                 `cache:candles:${exchange}:${asset}:${currency}:${timeframe}:${limit}`,
                 () =>
@@ -156,14 +157,15 @@ class RobotJobWorker {
           AND asset = ${asset}
           AND currency = ${currency}
           AND timeframe = ${timeframe}
-          AND timestamp <= ${dayjs.utc(Timeframe.getPrevSince(dayjs.utc().toISOString(), timeframe)).toISOString()}
+          AND timestamp <= ${dayjs.utc(time).toISOString()}
         ORDER BY timestamp DESC
         LIMIT ${limit};`),
                 round(60 * (timeframe / 2))
             );
             return [...requiredCandles]
                 .sort((a, b) => sortAsc(a.time, b.time))
-                .map((candle: DBCandle) => ({ ...candle, timeframe, id: candle.id }));
+                .filter((c) => c.time <= time)
+                .map((candle: DBCandle) => ({ ...candle, id: candle.id }));
         } catch (err) {
             this.log.error("Failed to load history candles", err);
             throw err;
