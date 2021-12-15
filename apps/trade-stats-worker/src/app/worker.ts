@@ -19,7 +19,7 @@ import {
 } from "@cryptuoso/trade-stats";
 import logger, { Logger } from "@cryptuoso/logger";
 import { sql, pg, pgUtil, makeChunksGenerator } from "@cryptuoso/postgres";
-import { PortfolioSettings } from "@cryptuoso/portfolio-state";
+import { PortfolioDB, PortfolioSettings } from "@cryptuoso/portfolio-state";
 import { equals } from "@cryptuoso/helpers";
 
 class StatsCalcWorker {
@@ -199,17 +199,21 @@ class StatsCalcWorker {
             };
 
             const portfolio = await this.db.pg.maybeOne<{
+                status: PortfolioDB["status"];
                 fullStats: TradeStats["fullStats"];
                 settings: PortfolioSettings;
                 feeRate: number;
             }>(sql`
-            SELECT r.full_stats, r.settings, m.fee_rate
+            SELECT r.status, r.full_stats, r.settings, m.fee_rate
             FROM portfolios r, mv_exchange_info m
             WHERE r.exchange = m.exchange
             AND r.id = ${portfolioId};
         `);
             if (!portfolio) throw new Error(`The portfolio doesn't exists (portfolioId: ${portfolioId})`);
-
+            if (portfolio.status !== "started") {
+                this.log.warn(`Portfolio #${portfolioId} is ${portfolio.status}. Skipping stats calc.`);
+                return;
+            }
             if (!recalc) {
                 if (!portfolio.fullStats) recalc = true;
                 else {

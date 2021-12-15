@@ -113,7 +113,7 @@ const worker = {
             UPDATE portfolios SET full_stats = ${JSON.stringify(result.portfolio.fullStats)},
             settings = ${JSON.stringify(result.portfolio.settings)},
             variables = ${JSON.stringify(result.portfolio.variables)},
-            status = 'started',
+            status = ${portfolio.settings.dateTo ? "stopped" : "started"},
             builded_at = ${dayjs.utc().toISOString()}
             WHERE id = ${result.portfolio.id}
             `);
