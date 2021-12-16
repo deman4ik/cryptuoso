@@ -135,7 +135,11 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
                 const tradeStatsCalc = new TradeStatsCalc(
                     positions,
                     {
-                        job: { type: "robot", robotId, recalc: true },
+                        job: {
+                            type: "robot",
+                            robotId,
+                            recalc: true
+                        },
                         initialBalance: this.portfolio.settings.initialBalance
                     },
                     null
@@ -293,13 +297,14 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
         } = {};
         let skip = false;
 
+        if (currentPortfolio.tradeStats.fullStats.percentNetProfit < 0) skip = true;
+
         if (profit === true) {
             const prevNetProfit = prevPortfolio.tradeStats.fullStats.percentNetProfit;
             const currentNetProfit = currentPortfolio.tradeStats.fullStats.percentNetProfit;
 
-            if (currentNetProfit < 0) skip = true;
-
             const diff = percentBetween(prevNetProfit, currentNetProfit);
+
             comparison.profit = {
                 prev: prevNetProfit,
                 current: currentNetProfit,
@@ -312,6 +317,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
             const currentMaxDrawdown = currentPortfolio.tradeStats.fullStats.percentMaxDrawdown;
 
             const diff = -percentBetween(prevMaxDrawdown, currentMaxDrawdown);
+
             comparison.risk = {
                 prev: prevMaxDrawdown,
                 current: currentMaxDrawdown,
@@ -324,6 +330,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
             const currentPayoffRatio = currentPortfolio.tradeStats.fullStats.payoffRatio;
 
             const diff = percentBetween(prevPayoffRatio, currentPayoffRatio);
+
             comparison.moneyManagement = {
                 prev: prevPayoffRatio,
                 current: currentPayoffRatio,
@@ -336,6 +343,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
             const currentWinRate = currentPortfolio.tradeStats.fullStats.winRate;
 
             const diff = percentBetween(prevWinRate, currentWinRate);
+
             comparison.winRate = {
                 prev: prevWinRate,
                 current: currentWinRate,
@@ -348,6 +356,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
             const currentSharpeRatio = currentPortfolio.tradeStats.fullStats.sharpeRatio;
 
             const diff = percentBetween(prevSharpeRatio, currentSharpeRatio);
+
             comparison.efficiency = {
                 prev: prevSharpeRatio,
                 current: currentSharpeRatio,
@@ -406,6 +415,8 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
             if (!prevPortfolio) throw new Error("Failed to build portfolio");
             let currentPortfolio: PortfolioCalculated | false;
             let currentRobot = robotsCount;
+            let progress = 0;
+
             for (const robotId of [...robotsList].splice(robotsCount)) {
                 currentRobot += 1;
 
@@ -419,23 +430,29 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
                     currentRobotsList = [...list];
                 }
                 steps.push(result);
-                this.progress(round((currentRobot / robotsList.length) * 100));
+                progress = round(((currentRobot / robotsList.length) * 100) / 2);
+                this.progress(progress);
             }
 
             if (currentRobotsList.length > robotsCount) {
-                const bestRobots = [...robotsList.slice(0, robotsCount)];
+                const preRunPortfolio = Object.freeze({ ...prevPortfolio });
+                const preRunRobots = Object.freeze([...currentRobotsList]);
 
-                for (const robotId of bestRobots) {
+                currentRobot = 0;
+                for (const robotId of preRunRobots) {
+                    currentRobot += 1;
                     const list = currentRobotsList.filter((r) => r !== robotId);
 
                     currentPortfolio = await this.calcPortfolio(list, robotId);
                     if (!currentPortfolio) continue;
-                    const result = await this.comparePortfolios(prevPortfolio, currentPortfolio);
+                    const result = await this.comparePortfolios(preRunPortfolio, currentPortfolio);
                     if (result.approve) {
                         prevPortfolio = Object.freeze({ ...currentPortfolio });
                         currentRobotsList = [...list];
                     }
                     steps.push(result);
+
+                    this.progress(progress + round(((currentRobot / preRunRobots.length) * 100) / 2));
                     if (currentRobotsList.length <= robotsCount) break;
                 }
             }

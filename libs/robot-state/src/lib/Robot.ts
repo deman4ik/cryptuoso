@@ -81,7 +81,8 @@ export class Robot {
                 )
             },
             robotSettings: state.settings.robotSettings,
-            activeFrom: nvl(state.settings.activeFrom, state.startedAt)
+            activeFrom: nvl(state.settings.activeFrom, state.startedAt),
+            feeRate: state.settings.feeRate
         };
 
         /* Последняя свеча */
