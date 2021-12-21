@@ -332,11 +332,11 @@ emulated_period_stats = ${JSON.stringify(state.emulatedPeriodStats) || null}*/
         this.log.info(`Robot #${robotId} - Processing ${type} job...`);
 
         try {
-            const tracer = new Tracer();
-            const runJobTrace = tracer.start("Start job");
-            const getRobotStateTrace = tracer.start("Get robot state");
+            // const tracer = new Tracer();
+            //  const runJobTrace = tracer.start("Start job");
+            //  const getRobotStateTrace = tracer.start("Get robot state");
             const robotState = await this.#getRobotState(robotId);
-            tracer.end(getRobotStateTrace);
+            //  tracer.end(getRobotStateTrace);
 
             const robot = new Robot(robotState);
 
@@ -346,9 +346,8 @@ emulated_period_stats = ${JSON.stringify(state.emulatedPeriodStats) || null}*/
 
                     const currentTime = dayjs.utc(Timeframe.getCurrentSince(1, robot.timeframe)).toISOString();
 
-                    if (!alert || (alert && dayjs.utc(alert.activeTo).valueOf() > dayjs.utc().valueOf())) {
-                        //TODO: remove backward compatibility
-                        const loadCurrentCandleTrace = tracer.start("Load current candle");
+                    if (alert && dayjs.utc(alert.activeTo).valueOf() > dayjs.utc().valueOf()) {
+                        //   const loadCurrentCandleTrace = tracer.start("Load current candle");
                         const currentCandle: DBCandle = await this.db.pg.maybeOne(sql`
                                     SELECT * 
                                     FROM candles
@@ -357,13 +356,13 @@ emulated_period_stats = ${JSON.stringify(state.emulatedPeriodStats) || null}*/
                                     AND currency = ${robot.currency}
                                     AND timeframe = ${robot.timeframe}
                                     and timestamp = ${currentTime};`);
-                        tracer.end(loadCurrentCandleTrace);
+                        //   tracer.end(loadCurrentCandleTrace);
                         if (!currentCandle) {
                             throw new Error(
                                 `Robot #${robotId} - Failed to load ${robot.exchange}-${robot.asset}-${robot.currency}-${robot.timeframe}-${currentTime} current candle`
                             );
                         }
-                        const robotMethodsTrace = tracer.start("Robot methods");
+                        //  const robotMethodsTrace = tracer.start("Robot methods");
                         robot.setStrategy(null);
                         const { success, error } = robot.handleCurrentCandle({
                             ...currentCandle,
@@ -377,14 +376,14 @@ emulated_period_stats = ${JSON.stringify(state.emulatedPeriodStats) || null}*/
                         } else {
                             this.log.error(error);
                         }
-                        tracer.end(robotMethodsTrace);
+                        //   tracer.end(robotMethodsTrace);
                     }
                 }
             } else if (type === RobotJobType.candle) {
                 if (!this.strategiesCode[robot.strategy]) {
                     await this.loadCode();
                 }
-                const setStrIndTrace = tracer.start("Set strategies and inds");
+                //  const setStrIndTrace = tracer.start("Set strategies and inds");
                 robot.setStrategy(this.strategiesCode[robot.strategy]);
                 if (robot.hasBaseIndicators) {
                     robot.setBaseIndicatorsCode(
@@ -396,9 +395,9 @@ emulated_period_stats = ${JSON.stringify(state.emulatedPeriodStats) || null}*/
                 }
                 robot.setIndicators();
 
-                tracer.end(setStrIndTrace);
+                //  tracer.end(setStrIndTrace);
 
-                const loadHistoryCandlesTrace = tracer.start("Load history candles");
+                //  const loadHistoryCandlesTrace = tracer.start("Load history candles");
                 const historyCandles: Candle[] = await this.#loadHistoryCandles(
                     robot.exchange,
                     robot.asset,
@@ -406,28 +405,25 @@ emulated_period_stats = ${JSON.stringify(state.emulatedPeriodStats) || null}*/
                     robot.timeframe,
                     robot.strategySettings.requiredHistoryMaxBars
                 );
-                tracer.end(loadHistoryCandlesTrace);
-                const handleCandlesTrace = tracer.start("Handle candles");
+                // tracer.end(loadHistoryCandlesTrace);
+                //  const handleCandlesTrace = tracer.start("Handle candles");
                 robot.handleHistoryCandles(historyCandles);
-                const { success, error } = robot.handleCandle(historyCandles[historyCandles.length - 1]);
-                tracer.end(handleCandlesTrace);
-                if (success) {
-                    const calcIndTrace = tracer.start("Calc indicators");
-                    await robot.calcIndicators();
-                    tracer.end(calcIndTrace);
-                    const runStrTrace = tracer.start("Run Strategy");
-                    robot.runStrategy();
-                    tracer.end(runStrTrace);
-                    // TODO: await robot.calcStats(); don't forget to save state
-                    robot.finalize();
-                } else {
-                    this.log.error(error);
-                }
+                robot.handleCandle(historyCandles[historyCandles.length - 1]);
+                // tracer.end(handleCandlesTrace);
+
+                //  const calcIndTrace = tracer.start("Calc indicators");
+                await robot.calcIndicators();
+                //  tracer.end(calcIndTrace);
+                //  const runStrTrace = tracer.start("Run Strategy");
+                robot.runStrategy();
+                //   tracer.end(runStrTrace);
+                // TODO: await robot.calcStats(); don't forget to save state
+                robot.finalize();
             } else if (type === RobotJobType.stop) {
                 robot.stop();
             } else throw new BaseError(`Unknown robot job type "${type}"`, job);
 
-            const saveTrace = tracer.start("Save state");
+            // const saveTrace = tracer.start("Save state");
             await this.db.pg.transaction(async (t) => {
                 if (robot.positionsToSave.length) await this.#saveRobotPositions(t, robot.positionsToSave);
 
@@ -449,9 +445,9 @@ emulated_period_stats = ${JSON.stringify(state.emulatedPeriodStats) || null}*/
 
                 await t.query(sql`DELETE FROM robot_jobs WHERE id = ${job.id};`);
             });
-            tracer.end(saveTrace);
+            //  tracer.end(saveTrace);
 
-            const sendEventsTrace = tracer.start("Send events");
+            //  const sendEventsTrace = tracer.start("Send events");
             if (robot.eventsToSend.length)
                 await Promise.all(
                     robot.eventsToSend.map(async (event) => {
@@ -482,20 +478,20 @@ emulated_period_stats = ${JSON.stringify(state.emulatedPeriodStats) || null}*/
                     }
                 });
             }
-            tracer.end(sendEventsTrace);
+            //  tracer.end(sendEventsTrace);
 
             await this.cache.setCache(`cache:robot:${robotId}`, robot.robotState, robot.timeframe * 60 + 600);
             this.log.info(`Robot #${robotId} - Processed ${type} job (${id})`);
-            tracer.end(runJobTrace);
+            //   tracer.end(runJobTrace);
 
-            await this.events.emit({
+            /* await this.events.emit({
                 type: RobotWorkerEvents.LOG,
                 data: {
                     traces: tracer.state,
                     robotId,
                     jobType: type
                 }
-            });
+            });*/
 
             return robot.status;
         } catch (err) {

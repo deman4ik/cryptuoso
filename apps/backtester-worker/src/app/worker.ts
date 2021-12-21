@@ -719,6 +719,8 @@ class BacktesterWorker {
                 })
                 .whenEnd();
 
+            await this.backtester.calcStats();
+
             if (this.backtester.settings.populateHistory) {
                 const robot = this.backtester.robots[this.backtester.robotId];
 

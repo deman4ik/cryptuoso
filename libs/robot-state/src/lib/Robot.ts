@@ -573,10 +573,7 @@ export class Robot {
     handleCandle(candle: Candle) {
         //logger.debug(`Robot #${this._id} - New candle ${candle.timestamp}`);
         if (this._lastCandle && candle.time <= this._lastCandle.time) {
-            return {
-                success: false,
-                error: `Robot #${this._id} candle ${candle.timestamp} already processed`
-            };
+            throw new Error(`Robot #${this._id} candle ${candle.timestamp} already processed`);
         }
         if (!this._candles.find(({ time }) => time === candle.time)) {
             this._candles = [...this._candles, candle].sort((a, b) => sortAsc(a.time, b.time));
@@ -593,12 +590,7 @@ export class Robot {
             this._candles.length === 0 ||
             Object.keys(this._candlesProps).length === 0
         )
-            return {
-                success: false,
-                error: `Robot #${this._id} wrong input candles`
-            };
-
-        return { success: true };
+            throw new Error(`Robot #${this._id} wrong input candles`);
     }
 
     handleCurrentCandle(candle: Candle) {

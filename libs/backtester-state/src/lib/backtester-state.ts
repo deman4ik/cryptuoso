@@ -5,6 +5,7 @@ import { round, nvl } from "@cryptuoso/helpers";
 import logger from "@cryptuoso/logger";
 import { IndicatorCode } from "@cryptuoso/robot-indicators";
 import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
+import { TradeStatsCalc } from "@cryptuoso/trade-stats";
 
 export const enum Status {
     queued = "queued",
@@ -409,7 +410,7 @@ export class Backtester {
 
             robot.instance.clearEvents();
             robot.instance.checkAlerts();
-            await robot.instance.calcStats();
+            //await robot.instance.calcStats();
             this.#saveLogs(id);
             this.#saveSignals(id);
             this.#savePositions(id);
@@ -417,10 +418,30 @@ export class Backtester {
             await robot.instance.calcIndicators();
             robot.instance.runStrategy();
             robot.instance.finalize();
-            await robot.instance.calcStats();
+            //await robot.instance.calcStats();
             this.#saveLogs(id);
             this.#saveSignals(id);
             this.#savePositions(id);
+        }
+    }
+
+    async calcStats() {
+        logger.info(`Backtester #${this.id} - Calculating stats`);
+
+        for (const id of Object.keys(this.#robots)) {
+            const robot = this.#robots[id];
+            const tradeStatsCalc = new TradeStatsCalc(robot.instance.positionsToSave, {
+                job: {
+                    type: "robot",
+                    robotId: id,
+                    recalc: false,
+                    SMAWindow: robot.instance._settings.robotSettings.SMAWindow,
+                    margin: robot.instance._settings.robotSettings.margin
+                },
+                initialBalance: robot.instance._settings.robotSettings.initialBalance
+            });
+            robot.instance._emulatedStats = await tradeStatsCalc.calculate();
+            robot.instance._stats = robot.instance._emulatedStats;
         }
     }
 
