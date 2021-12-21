@@ -19,6 +19,8 @@ import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 import logger, { Logger } from "@cryptuoso/logger";
 import { sql, pg, pgUtil, makeChunksGenerator } from "@cryptuoso/postgres";
 import { ActiveAlert, Signal } from "@cryptuoso/robot-events";
+import Redis from "ioredis";
+import Cache from "ioredis-cache";
 
 const subject = new Subject();
 let backtesterWorker: BacktesterWorker;
@@ -27,6 +29,8 @@ class BacktesterWorker {
     #log: Logger;
     #backtester: Backtester;
     #db: { sql: typeof sql; pg: typeof pg; util: typeof pgUtil };
+    #cache: Cache;
+
     defaultChunkSize = 10000;
     defaultInsertChunkSize = 10000;
     constructor(state: BacktesterState) {
@@ -37,6 +41,13 @@ class BacktesterWorker {
             util: pgUtil
         };
         this.#backtester = new Backtester(state);
+        this.#cache = new Cache(
+            new Redis(process.env.REDISCS, {
+                maxRetriesPerRequest: null,
+                enableReadyCheck: false,
+                connectTimeout: 60000
+            })
+        );
     }
 
     get log() {
@@ -721,7 +732,7 @@ class BacktesterWorker {
                 if (robot.instance.alertsToSave.length)
                     await this.#saveRobotActiveAlerts(this.backtester.robotId, robot.instance.alertsToSave);
                 await this.#saveRobotPositions(this.backtester.robotId, Object.values(robot.data.positions));
-
+                await this.#cache.deleteCache(`cache:robot:${this.backtester.robotId}`);
                 await this.#startRobot(this.backtester.robotId, this.backtester.dateFrom);
             } else {
                 for (const robot of Object.values(this.backtester.robots)) {
