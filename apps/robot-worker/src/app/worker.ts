@@ -408,17 +408,19 @@ emulated_period_stats = ${JSON.stringify(state.emulatedPeriodStats) || null}*/
                 // tracer.end(loadHistoryCandlesTrace);
                 //  const handleCandlesTrace = tracer.start("Handle candles");
                 robot.handleHistoryCandles(historyCandles);
-                robot.handleCandle(historyCandles[historyCandles.length - 1]);
+                const processed = robot.handleCandle(historyCandles[historyCandles.length - 1]);
                 // tracer.end(handleCandlesTrace);
 
-                //  const calcIndTrace = tracer.start("Calc indicators");
-                await robot.calcIndicators();
-                //  tracer.end(calcIndTrace);
-                //  const runStrTrace = tracer.start("Run Strategy");
-                robot.runStrategy();
-                //   tracer.end(runStrTrace);
-                // TODO: await robot.calcStats(); don't forget to save state
-                robot.finalize();
+                if (processed) {
+                    //  const calcIndTrace = tracer.start("Calc indicators");
+                    await robot.calcIndicators();
+                    //  tracer.end(calcIndTrace);
+                    //  const runStrTrace = tracer.start("Run Strategy");
+                    robot.runStrategy();
+                    //   tracer.end(runStrTrace);
+                    // TODO: await robot.calcStats(); don't forget to save state
+                    robot.finalize();
+                }
             } else if (type === RobotJobType.stop) {
                 robot.stop();
             } else throw new BaseError(`Unknown robot job type "${type}"`, job);
