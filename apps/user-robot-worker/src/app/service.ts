@@ -420,7 +420,9 @@ export default class UserRobotWorkerService extends BaseService {
 
                 await this.#saveState(t, userRobot.state);
 
-                await t.query(sql`DELETE FROM user_robot_jobs WHERE id = ${job.id};`);
+                if (userRobot.status === UserRobotStatus.stopped)
+                    await t.query(sql`DELETE FROM user_robot_jobs WHERE user_robot_id = ${userRobotId};`);
+                else await t.query(sql`DELETE FROM user_robot_jobs WHERE id = ${job.id};`);
             });
 
             if (eventsToSend.length) {
