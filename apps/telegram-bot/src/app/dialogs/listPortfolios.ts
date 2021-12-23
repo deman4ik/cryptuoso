@@ -358,6 +358,7 @@ const portfolioActions = async (ctx: BotContext) => {
                 ctx.dialog.reset();
                 return;
             } else {
+                ctx.dialog.reset();
                 ctx.dialog.enter(editPortfolioActions.optionsChosen, {
                     selectedOptions
                 });
