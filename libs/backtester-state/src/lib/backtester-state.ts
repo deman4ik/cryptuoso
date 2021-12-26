@@ -393,12 +393,10 @@ export class Backtester {
     };
 
     #savePositions = (id: string) => {
-        if (this.#settings.savePositions || this.#settings.populateHistory) {
-            const robot = this.#robots[id];
-            robot.instance.positionsToSave.forEach((pos) => {
-                robot.data.positions[pos.id] = { ...pos, backtestId: this.#id };
-            });
-        }
+        const robot = this.#robots[id];
+        robot.instance.positionsToSave.forEach((pos) => {
+            robot.data.positions[pos.id] = { ...pos, backtestId: this.#id };
+        });
     };
 
     async handleCandle(candle: Candle) {
@@ -430,16 +428,19 @@ export class Backtester {
 
         for (const id of Object.keys(this.#robots)) {
             const robot = this.#robots[id];
-            const tradeStatsCalc = new TradeStatsCalc(robot.instance.positionsToSave, {
-                job: {
-                    type: "robot",
-                    robotId: id,
-                    recalc: false,
-                    SMAWindow: robot.instance._settings.robotSettings.SMAWindow,
-                    margin: robot.instance._settings.robotSettings.margin
-                },
-                initialBalance: robot.instance._settings.robotSettings.initialBalance
-            });
+            const tradeStatsCalc = new TradeStatsCalc(
+                Object.values(robot.data.positions).filter(({ status }) => status === "closed"),
+                {
+                    job: {
+                        type: "robot",
+                        robotId: id,
+                        recalc: false,
+                        SMAWindow: robot.instance._settings.robotSettings.SMAWindow,
+                        margin: robot.instance._settings.robotSettings.margin
+                    },
+                    initialBalance: robot.instance._settings.robotSettings.initialBalance
+                }
+            );
             robot.instance._emulatedStats = await tradeStatsCalc.calculate();
             robot.instance._stats = robot.instance._emulatedStats;
         }
