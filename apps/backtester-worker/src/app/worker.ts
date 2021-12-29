@@ -699,7 +699,7 @@ class BacktesterWorker {
                SELECT COUNT(1) ${query}`));
             this.backtester.init(candlesCount);
 
-            await DataStream.from(
+            /*   await DataStream.from(
                 makeChunksGenerator(
                     this.db.pg,
                     sql`SELECT * ${query} ORDER BY timestamp`,
@@ -717,7 +717,17 @@ class BacktesterWorker {
                     this.log.error(`Backtester #${this.backtester.id} - Error`, err.message);
                     throw new BaseError(err.message, err);
                 })
-                .whenEnd();
+                .whenEnd(); */
+
+            const candles = await this.db.pg.many<Candle>(
+                sql`SELECT time, timestamp, open, high, low, close ${query} ORDER BY timestamp`
+            );
+
+            for (let i = 0; i < candles.length; i += 1) {
+                await this.backtester.handleCandle(candles[i]);
+                const percentUpdated = this.backtester.incrementProgress();
+                if (percentUpdated) subject.next(this.backtester.completedPercent);
+            }
 
             await this.backtester.calcStats();
 
@@ -727,10 +737,7 @@ class BacktesterWorker {
                 await this.#checkRobotStatus(this.backtester.robotId);
                 await this.#saveRobotState(robot.instance.robotState);
                 //await this.#saveRobotSettings(backtester.robotId, Object.values(robot.data.settings));
-                await this.#saveRobotTrades(
-                    this.backtester.robotId,
-                    robot.data.trades.sort((a, b) => sortAsc(a.candleTimestamp, b.candleTimestamp))
-                );
+                await this.#saveRobotTrades(this.backtester.robotId, robot.data.trades);
                 if (robot.instance.alertsToSave.length)
                     await this.#saveRobotActiveAlerts(this.backtester.robotId, robot.instance.alertsToSave);
                 await this.#saveRobotPositions(this.backtester.robotId, Object.values(robot.data.positions));
@@ -739,11 +746,7 @@ class BacktesterWorker {
             } else {
                 for (const robot of Object.values(this.backtester.robots)) {
                     if (this.backtester.settings.saveSignals) {
-                        await this.#saveSignals(
-                            [...robot.data.alerts, ...robot.data.trades].sort((a, b) =>
-                                sortAsc(a.candleTimestamp, b.candleTimestamp)
-                            )
-                        );
+                        await this.#saveSignals([...robot.data.alerts, ...robot.data.trades]);
                     }
 
                     if (this.backtester.settings.savePositions) {

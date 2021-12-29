@@ -492,6 +492,7 @@ export default class PortfolioManagerService extends HTTPService {
         },
         user: User
     ) {
+        //TODO: LOCK
         const userPortfolio = await this.db.pg.one<UserPortfolioState>(sql`
         SELECT p.id, p.type, p.user_id, p.user_ex_acc_id, p.exchange, p.status, 
               ups.id as user_portfolio_settings_id, 

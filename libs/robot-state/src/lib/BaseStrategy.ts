@@ -105,8 +105,8 @@ export class BaseStrategy {
             });
         }
         if (state.strategyFunctions) {
-            Object.entries(state.strategyFunctions).forEach(([key, value]) => {
-                this[key] = value;
+            Object.keys(state.strategyFunctions).forEach((key) => {
+                this[key] = state.strategyFunctions[key];
             });
         }
     }

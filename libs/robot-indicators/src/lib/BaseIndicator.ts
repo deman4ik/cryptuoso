@@ -138,13 +138,13 @@ export class BaseIndicator {
             close: [],
             volume: []
         };
-        candles.forEach((candle) => {
-            candlesProps.open.push(candle.open);
-            candlesProps.high.push(candle.high);
-            candlesProps.low.push(candle.low);
-            candlesProps.close.push(candle.close);
-            candlesProps.volume.push(candle.volume);
-        });
+        for (let i = 0; i < candles.length; i += 1) {
+            candlesProps.open.push(candles[i].open);
+            candlesProps.high.push(candles[i].high);
+            candlesProps.low.push(candles[i].low);
+            candlesProps.close.push(candles[i].close);
+            candlesProps.volume.push(candles[i].volume);
+        }
         return candlesProps;
     }
 
@@ -163,13 +163,18 @@ export class BaseIndicator {
     candlesChunks(chunkSize: number, chunkQuantity: number) {
         const candlesArr = chunkArrayIncrEnd(this._candles, chunkSize);
         return candlesArr.splice(-chunkQuantity);
-    }
+    } //TODO: deprecate ?
 
     candlesPropsChunks(chunkSize: number, chunkQuantity: number) {
         const candlesArr = this.candlesChunks(chunkSize, chunkQuantity);
-        const candlesPropsArr = candlesArr.map((candles) => this.prepareCandles(candles));
+        const candlesPropsArr = [];
+
+        for (let i = 0; i < candlesArr.length; i += 1) {
+            candlesPropsArr.push(this.prepareCandles(candlesArr[i]));
+        }
+
         return candlesPropsArr;
-    }
+    } //TODO: deprecate ?
 
     candlePropsLatestChunks(chunkQuantity: number) {
         let candlesArr = [];
@@ -183,7 +188,11 @@ export class BaseIndicator {
 
         candlesArr = candlesArr.reverse();
 
-        const candlesPropsArr = candlesArr.map((candles) => this.prepareCandles(candles));
+        const candlesPropsArr = [];
+
+        for (let i = 0; i < candlesArr.length; i += 1) {
+            candlesPropsArr.push(this.prepareCandles(candlesArr[i]));
+        }
         return candlesPropsArr;
     }
 
@@ -201,16 +210,59 @@ export class BaseIndicator {
         return result.result ? result.result : result;
     }
 
-    async calcTulipSeries(name: string, options: { [key: string]: number }, candlesChunksQuantity: number) {
-        const calculate = tulip[name].create(options);
-        const candlesPropsChunks = this.candlePropsLatestChunks(candlesChunksQuantity);
-        const results = await Promise.all(
-            candlesPropsChunks.map(async (candlesProps) => {
-                const result = await calculate(candlesProps);
-                return result.result ? result.result : result;
-            })
-        );
-        return results;
+    async calcTulipSeries(
+        name: string,
+        indicatorName: string,
+        options: { [key: string]: number },
+        candlesChunksQuantity: number
+    ) {
+        const calculate = tulip[indicatorName].create(options);
+        if (
+            this[`tulip_${name}_series`] &&
+            Array.isArray(this[`tulip_${name}_series`]?.results) &&
+            this[`tulip_${name}_series`]?.results?.length &&
+            this[`tulip_${name}_series`]?.lastCandleTime === this.candles[this.candles.length - 2].time
+        ) {
+            const candlesPropsChunks = this.candlePropsLatestChunks(1);
+            const calcResult = await calculate(candlesPropsChunks[0]);
+            const result = calcResult.result ? calcResult.result : calcResult;
+
+            this[`tulip_${name}_series`].lastCandleTime = this.candle.time;
+            this[`tulip_${name}_series`].results = [...this[`tulip_${name}_series`].results.splice(1), result];
+        } else {
+            const candlesPropsChunks = this.candlePropsLatestChunks(candlesChunksQuantity);
+            const results = await Promise.all(
+                candlesPropsChunks.map(async (candlesProps) => {
+                    const result = await calculate(candlesProps);
+                    return result.result ? result.result : result;
+                })
+            );
+            this[`tulip_${name}_series`] = {
+                lastCandleTime: this.candle.time,
+                results
+            };
+        }
+        return this[`tulip_${name}_series`].results;
+    }
+
+    standardDeviation(arr: number[]): number {
+        let sum = 0;
+        for (let i = 0; i < arr.length; i += 1) {
+            sum += arr[i];
+        }
+        const mean = sum / arr.length;
+
+        const concat = [];
+        for (let i = 0; i < arr.length; i += 1) {
+            concat.push((arr[i] - mean) ** 2);
+        }
+
+        let concatSum = 0;
+        for (let i = 0; i < concat.length; i += 1) {
+            concatSum += concat[i];
+        }
+
+        return Math.sqrt(concatSum / arr.length);
     }
 
     /*

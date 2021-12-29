@@ -193,6 +193,7 @@ export default class RobotRunnerService extends HTTPService {
                     const tryNumMod = +lastRobot?.mod;
                     mode = (tryNumMod && `${tryNumMod + 1}`) || `${lastRobot.mod}-1`;
                 }
+                //TODO: check strategy settings
                 const id = uuid();
                 await this.db.pg.transaction(async (t) => {
                     await t.query(sql`

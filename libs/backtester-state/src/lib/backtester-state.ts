@@ -154,6 +154,10 @@ export class Backtester {
         };
     }
 
+    get completedPercent() {
+        return this.#completedPercent;
+    }
+
     get allRobotsSettings() {
         const robots: BacktesterState["robots"] = {};
         for (const [id, { robotSettings, strategySettings }] of Object.entries(this.#robots)) {
@@ -402,7 +406,8 @@ export class Backtester {
     async handleCandle(candle: Candle) {
         logger.info(`Backtester #${this.id} - Handling ${this.#processedBars + 1} bar of ${this.#totalBars}`);
 
-        for (const id of Object.keys(this.#robots)) {
+        const robots = Object.keys(this.#robots);
+        for (const id of robots) {
             const robot = this.#robots[id];
             robot.instance.handleCandle(candle);
 
@@ -425,24 +430,26 @@ export class Backtester {
 
     async calcStats() {
         logger.info(`Backtester #${this.id} - Calculating stats`);
-
-        for (const id of Object.keys(this.#robots)) {
+        const robots = Object.keys(this.#robots);
+        for (const id of robots) {
             const robot = this.#robots[id];
-            const tradeStatsCalc = new TradeStatsCalc(
-                Object.values(robot.data.positions).filter(({ status }) => status === "closed"),
-                {
-                    job: {
-                        type: "robot",
-                        robotId: id,
-                        recalc: false,
-                        SMAWindow: robot.instance._settings.robotSettings.SMAWindow,
-                        margin: robot.instance._settings.robotSettings.margin
-                    },
-                    initialBalance: robot.instance._settings.robotSettings.initialBalance
-                }
-            );
-            robot.instance._emulatedStats = await tradeStatsCalc.calculate();
-            robot.instance._stats = robot.instance._emulatedStats;
+            if (robot.data.positions.length) {
+                const tradeStatsCalc = new TradeStatsCalc(
+                    Object.values(robot.data.positions).filter(({ status }) => status === "closed"),
+                    {
+                        job: {
+                            type: "robot",
+                            robotId: id,
+                            recalc: false,
+                            SMAWindow: robot.instance._settings.robotSettings.SMAWindow,
+                            margin: robot.instance._settings.robotSettings.margin
+                        },
+                        initialBalance: robot.instance._settings.robotSettings.initialBalance
+                    }
+                );
+                robot.instance._emulatedStats = await tradeStatsCalc.calculate();
+                robot.instance._stats = robot.instance._emulatedStats;
+            }
         }
     }
 

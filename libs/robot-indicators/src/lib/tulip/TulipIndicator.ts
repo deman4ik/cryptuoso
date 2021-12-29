@@ -34,9 +34,9 @@ export class TulipIndicator extends BaseIndicator {
         const result = await this.calculate(candlesProps);
         const resultKeys = Object.keys(result);
         if (resultKeys.length > 0) {
-            resultKeys.forEach((key: string) => {
+            for (const key of resultKeys) {
                 this[key] = result[key];
-            });
+            }
         } else {
             this.result = null;
         }

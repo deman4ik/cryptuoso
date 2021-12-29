@@ -98,11 +98,10 @@ export default class BacktesterWorkerService extends BaseService {
             try {
                 let backtester = new Backtester(job.data);
                 backtester.start();
-                backtesterWorker.progress().subscribe(async (state: BacktesterState) => {
-                    await job.updateProgress(state.completedPercent);
+                backtesterWorker.progress().subscribe(async (percent: number) => {
+                    await job.updateProgress(percent);
 
                     if (this.abort[backtester.id]) {
-                        backtester = new Backtester(state);
                         backtester.finish(true);
                         await this.#saveState(backtester.state);
                         delete this.abort[backtester.id];
