@@ -179,3 +179,23 @@ export interface UserPortfolioInfo {
     openPositions: OpenPosition[];
     closedPositions: ClosedPosition[];
 }
+
+export interface SignalSubcriptionDB {
+    id: string;
+    exchange: string;
+    type: "zignaly";
+    status: "started" | "stopped";
+    fullStats?: FullStats;
+    periodStats?: PeriodStats<BaseStats>[];
+    url: string;
+    token: string;
+}
+
+export interface SignalSubscriptionState extends SignalSubcriptionDB {
+    userPortfolioSettingsId?: string;
+    userPortfolioSettingsActiveFrom?: string;
+    settings: PortfolioSettings;
+    context: PortfolioContext;
+    robots?: PortfolioRobotDB[];
+    currentExchangeBalance?: number;
+}

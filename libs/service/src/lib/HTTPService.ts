@@ -63,7 +63,8 @@ export class HTTPService extends BaseService {
             this._server.use(bodyParser.json());
 
             if (config?.enableActions) {
-                this._server.use(this._checkApiKey.bind(this));
+                if (config?.enableWebhooks) this._server.use("/actions", this._checkApiKey.bind(this));
+                else this._server.use(this._checkApiKey.bind(this));
                 this._server.use(
                     "/actions",
                     this._iu(this._checkValidation.bind(this)).iff(
