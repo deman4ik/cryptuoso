@@ -576,8 +576,8 @@ AND active = true;`);
              AND ss.id = sss.signal_subscription_id
              AND ssr.robot_id = r.id
              AND ss.status = 'started'
-             AND ((state->'latestSignal'->>'timestamp')::timestamp is null 
-              OR (state->'latestSignal'->>'timestamp')::timestamp < ${timestamp})
+             AND ((ssr.state->'latestSignal'->>'timestamp')::timestamp is null 
+              OR (ssr.state->'latestSignal'->>'timestamp')::timestamp < ${timestamp})
               ORDER BY sss.active_from DESC LIMIT 1;
             `
         );
