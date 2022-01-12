@@ -37,10 +37,9 @@ async function fetchZignaly(url: string, data: ZignalySignal | ZignalyStart | Zi
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
     });
-    logger.debug(response);
-    logger.debug(await response.json());
+    logger.debug(await response.text());
     if (response.ok) return;
-    else throw new Error(`Failed to send signal to Zignaly ${JSON.stringify(await response.json())}`);
+    else throw new Error(`Failed to send signal to Zignaly ${JSON.stringify(await response.text())}`);
 }
 
 export async function openZignalyPosition(
