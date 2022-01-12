@@ -134,7 +134,7 @@
     "mailgun.js": "^4.1.4",
     "middleware-if-unless": "^1.2.5",
     "node-cron": "^3.0.0",
-    "node-fetch": "^3.1.0",
+    "node-fetch": "^2.6.6",
     "npm": "^8.1.4",
     "parse-mode": "^0.1.2",
     "quickchart-js": "^1.4.2",
