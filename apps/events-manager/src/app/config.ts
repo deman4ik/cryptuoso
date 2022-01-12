@@ -11,7 +11,7 @@ import { EXCHANGES, IN_EXWATCHER_TOPIC, OUT_EXWATCHER_TOPIC } from "@cryptuoso/e
 import { IMPORTER_RUNNER_TOPIC, IN_IMPORTER_WORKER_TOPIC, OUT_IMPORTER_WORKER_TOPIC } from "@cryptuoso/importer-events";
 import { USER_ROBOT_RUNNER_TOPIC, USER_ROBOT_WORKER_TOPIC, USER_TRADE_TOPIC } from "@cryptuoso/user-robot-events";
 import { IN_USER_SUB_TOPIC, OUT_USER_SUB_TOPIC } from "@cryptuoso/user-sub-events";
-
+import { IN_PORTFOLIO_MANAGER_TOPIC, OUT_PORTFOLIO_MANAGER_TOPIC } from "@cryptuoso/portfolio-events";
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
 const HOUR = 60 * MINUTE;
@@ -69,7 +69,9 @@ export const eventsManagementConfig: {
             [`${USER_ROBOT_WORKER_TOPIC}.*`]: new TopicConfig(),
             [`${USER_TRADE_TOPIC}.*`]: new TopicConfig(),
             [`${IN_USER_SUB_TOPIC}.*`]: new TopicConfig(),
-            [`${OUT_USER_SUB_TOPIC}.*`]: new TopicConfig()
+            [`${OUT_USER_SUB_TOPIC}.*`]: new TopicConfig(),
+            [`${IN_PORTFOLIO_MANAGER_TOPIC}.*`]: new TopicConfig(),
+            [`${OUT_PORTFOLIO_MANAGER_TOPIC}.*`]: new TopicConfig()
         })
     }
 };

@@ -64,45 +64,45 @@ export default class UserRobotRunnerService extends HTTPService {
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.START],
-                    handler: this._httpHandler.bind(this, this.start.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.start.bind(this))
                 },
                 userRobotStop: {
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.STOP],
-                    handler: this._httpHandler.bind(this, this.stop.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.stop.bind(this))
                 },
                 userRobotPause: {
                     roles: [UserRoles.admin, UserRoles.manager],
                     inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.PAUSE],
-                    handler: this._httpHandler.bind(this, this.pause.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.pause.bind(this))
                 },
                 userRobotResume: {
                     roles: [UserRoles.admin, UserRoles.manager],
                     inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.RESUME],
-                    handler: this._httpHandler.bind(this, this.resume.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.resume.bind(this))
                 },
                 userPortfolioStart: {
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.START_PORTFOLIO],
-                    handler: this._httpHandler.bind(this, this.startPortfolio.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.startPortfolio.bind(this))
                 },
                 userPortfolioStop: {
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.STOP_PORTFOLIO],
-                    handler: this._httpHandler.bind(this, this.stopPortfolio.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.stopPortfolio.bind(this))
                 },
                 syncPortfolioRobots: {
                     roles: [UserRoles.admin, UserRoles.manager],
                     inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.SYNC_PORTFOLIO_ROBOTS],
-                    handler: this._httpHandler.bind(this, this.syncPortfolioRobots.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.syncPortfolioRobots.bind(this))
                 },
                 syncUserPortfolioRobots: {
                     roles: [UserRoles.admin, UserRoles.manager],
                     inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.SYNC_USER_PORTFOLIO_ROBOTS],
-                    handler: this._httpHandler.bind(this, this.syncUserPortfolioRobots.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.syncUserPortfolioRobots.bind(this))
                 }
             });
             this.events.subscribe({
@@ -217,17 +217,6 @@ export default class UserRobotRunnerService extends HTTPService {
          error = null;
         `);
         if (status === UserRobotStatus.started) await this.queueUserRobotJob(userRobotId);
-    }
-
-    async _httpHandler(
-        handler: (user: User, params: GenericObject<any>) => Promise<GenericObject<any>>,
-        req: RequestExtended,
-        res: any
-    ) {
-        const result = await handler(req.body.input, req.meta.user);
-
-        res.send({ result: result || "OK" });
-        res.end();
     }
 
     async start({ id, message }: UserRobotRunnerStart, user: User) {

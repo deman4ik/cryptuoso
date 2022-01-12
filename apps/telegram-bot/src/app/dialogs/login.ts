@@ -26,7 +26,7 @@ const getLoginButtons = (ctx: BotContext) => {
         })
         .row()
         .add({
-            text: ctx.i18n.t("dialogs..login.anotherEmail"),
+            text: ctx.i18n.t("dialogs.login.anotherEmail"),
             callback_data: JSON.stringify({
                 d: ctx.session.dialog.current?.id || null,
                 a: loginActions.anotherEmail,

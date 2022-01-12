@@ -12,8 +12,11 @@ export const enum PortfolioManagerInEvents {
 export const enum PortfolioManagerOutEvents {
     PORTFOLIO_BUILDED = "out-portfolio-manager.portfolio-builded",
     USER_PORTFOLIO_BUILDED = "out-portfolio-manager.user-portfolio-builded",
+    SIGNAL_SUBSCRIPTION_BUILDED = "out-portfolio-manager.signal-subscription-builded",
     PORTFOLIO_BUILD_ERROR = "out-portfolio-manager.portfolio-build-error",
-    USER_PORTFOLIO_BUILD_ERROR = "out-portfolio-manager.user-portfolio-build-error"
+    USER_PORTFOLIO_BUILD_ERROR = "out-portfolio-manager.user-portfolio-build-error",
+    SIGNAL_SUBSCRIPTION_BUILD_ERROR = "out-portfolio-manager.signal-subscription-build-error",
+    SIGNAL_SUBSCRIPTION_ERROR = "out-portfolio-manager.signal-subscription-error"
 }
 
 export const PortfolioManagerInSchema = {
@@ -40,6 +43,9 @@ export const PortfolioManagerOutSchema = {
     [PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED]: {
         userPortfolioId: "uuid"
     },
+    [PortfolioManagerOutEvents.SIGNAL_SUBSCRIPTION_BUILDED]: {
+        signalSubcriptionId: "uuid"
+    },
     [PortfolioManagerOutEvents.PORTFOLIO_BUILD_ERROR]: {
         portfolioId: "uuid",
         error: "string"
@@ -47,6 +53,15 @@ export const PortfolioManagerOutSchema = {
     [PortfolioManagerOutEvents.USER_PORTFOLIO_BUILD_ERROR]: {
         userPortfolioId: "uuid",
         error: "string"
+    },
+    [PortfolioManagerOutEvents.SIGNAL_SUBSCRIPTION_BUILD_ERROR]: {
+        signalSubcriptionId: "uuid",
+        error: "string"
+    },
+    [PortfolioManagerOutEvents.SIGNAL_SUBSCRIPTION_ERROR]: {
+        signalSubcriptionId: "uuid",
+        error: "string",
+        data: { type: "object", optional: true }
     }
 };
 
@@ -76,6 +91,10 @@ export interface PortfolioManagerUserPortfolioBuilded {
     userPortfolioId: string;
 }
 
+export interface PortfolioManagerSignalSubcriptionBuilded {
+    signalSubcriptionId: string;
+}
+
 export interface PortfolioManagerPortfolioBuildError {
     portfolioId: string;
     error: string;
@@ -84,4 +103,15 @@ export interface PortfolioManagerPortfolioBuildError {
 export interface PortfolioManagerUserPortfolioBuildError {
     userPortfolioId: string;
     error: string;
+}
+
+export interface PortfolioManagerSignalSubcriptionBuildError {
+    signalSubcriptionId: string;
+    error: string;
+}
+
+export interface PortfolioManagerSignalSubcriptionError {
+    signalSubcriptionId: string;
+    error: string;
+    data?: any;
 }

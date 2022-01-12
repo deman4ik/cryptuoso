@@ -97,7 +97,15 @@ export default class EventsManager extends HTTPService {
                 passFullEvent: true,
                 handler: this.#errorHandler.bind(this)
             },
+            [PortfolioManagerOutEvents.SIGNAL_SUBSCRIPTION_BUILD_ERROR]: {
+                passFullEvent: true,
+                handler: this.#errorHandler.bind(this)
+            },
             [PortfolioManagerOutEvents.USER_PORTFOLIO_BUILD_ERROR]: {
+                passFullEvent: true,
+                handler: this.#errorHandler.bind(this)
+            },
+            [PortfolioManagerOutEvents.SIGNAL_SUBSCRIPTION_ERROR]: {
                 passFullEvent: true,
                 handler: this.#errorHandler.bind(this)
             }

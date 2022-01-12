@@ -19,7 +19,9 @@ export const enum UserRobotRunnerEvents {
     START_PORTFOLIO = "in-user-robot-runner.start-portfolio",
     STOP_PORTFOLIO = "in-user-robot-runner.stop-portfolio",
     SYNC_PORTFOLIO_ROBOTS = "in-user-robot-runner.sync-portfolio-robots",
-    SYNC_USER_PORTFOLIO_ROBOTS = "in-user-robot-runner.sync-user-portfolio-robots"
+    SYNC_SIGNAL_PORTFOLIO_ROBOTS = "in-user-robot-runner.sync-signal-portfolio-robots", //TODO: replace
+    SYNC_USER_PORTFOLIO_ROBOTS = "in-user-robot-runner.sync-user-portfolio-robots",
+    SYNC_SIGNAL_SUBSCRIPTION_ROBOTS = "in-user-robot-runner.sync-signal-subscription-robots" //TODO: replace
 }
 
 export const USER_ROBOT_WORKER_TOPIC = "out-user-robot-worker";
@@ -67,8 +69,16 @@ export const UserRobotRunnerSchema = {
     [UserRobotRunnerEvents.SYNC_PORTFOLIO_ROBOTS]: {
         exchange: { type: "string", optional: true }
     },
+    [UserRobotRunnerEvents.SYNC_SIGNAL_PORTFOLIO_ROBOTS]: {
+        //TODO: replace
+        exchange: { type: "string", optional: true }
+    },
     [UserRobotRunnerEvents.SYNC_USER_PORTFOLIO_ROBOTS]: {
         userPortfolioId: "uuid"
+    },
+    [UserRobotRunnerEvents.SYNC_SIGNAL_SUBSCRIPTION_ROBOTS]: {
+        //TODO: replace
+        signalSubcriptionId: "uuid"
     }
 };
 

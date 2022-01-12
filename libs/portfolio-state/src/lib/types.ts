@@ -1,4 +1,4 @@
-import { BasePosition, PositionDirection, TradeAction } from "@cryptuoso/market";
+import { BasePosition, PositionDirection, SignalEvent, TradeAction } from "@cryptuoso/market";
 import { BaseStats, FullStats, PerformanceVals, PeriodStats } from "@cryptuoso/trade-stats";
 
 export interface PortfolioOptions {
@@ -15,7 +15,7 @@ export type PortfolioOptionWeights = { [Weight in keyof PortfolioOptions]: numbe
 export interface PortfolioSettings {
     options: PortfolioOptions;
     optionWeights?: PortfolioOptionWeights;
-    tradingAmountType: "currencyFixed" | "balancePercent";
+    tradingAmountType?: "currencyFixed" | "balancePercent";
     balancePercent?: number;
     tradingAmountCurrency?: number;
     initialBalance: number;
@@ -197,5 +197,40 @@ export interface SignalSubscriptionState extends SignalSubcriptionDB {
     settings: PortfolioSettings;
     context: PortfolioContext;
     robots?: PortfolioRobotDB[];
-    currentExchangeBalance?: number;
+    currentBalance?: number;
+}
+
+export interface SignalRobotDB {
+    id: string;
+    signalSubscriptionId: string;
+    robotId: string;
+    active: boolean;
+    share: number;
+    state?: {
+        latestSignal?: SignalEvent;
+    };
+}
+
+export interface SignalSubscriptionPosition {
+    id: string;
+    signalSubscriptionId: string;
+    subscriptionRobotId: string;
+    robotId: string;
+    exchange: string;
+    asset: string;
+    currency: string;
+    direction: PositionDirection;
+    entryPrice: number;
+    entryDate: string;
+    entryOrderType: "limit" | "market";
+    exitPrice?: number;
+    exitDate?: string;
+    exitOrderType?: "limit" | "market";
+    leverage: number;
+    volume?: number;
+    status?: "open" | "canceled" | "closed" | "closedAuto";
+    profit?: number;
+    providerPositionId?: string;
+    share?: number;
+    error?: string;
 }
