@@ -1,7 +1,7 @@
 import { SignalSubscriptionPosition } from "@cryptuoso/portfolio-state";
-import dayjs from "@cryptuoso/dayjs";
 import fetch from "node-fetch";
 import logger from "@cryptuoso/logger";
+
 interface ZignalySignal {
     key: string;
     exchange: "binance";

@@ -243,7 +243,7 @@ export default class WebhooksService extends HTTPService {
             id: uuid(),
             exchange,
             type,
-            status: "stopped",
+            status: "started",
             url,
             token
         };
@@ -525,7 +525,7 @@ AND active = true;`);
                 await this.events.emit<PortfolioManagerSignalSubcriptionBuildError>({
                     type: PortfolioManagerOutEvents.SIGNAL_SUBSCRIPTION_BUILD_ERROR,
                     data: {
-                        signalSubcriptionId: signalSubscription.id,
+                        signalSubscriptionId: signalSubscription.id,
                         error: error.message
                     }
                 });
@@ -539,6 +539,7 @@ AND active = true;`);
     }
 
     async handleSignalTradeEvents(signal: Signal) {
+        if (signal.exchange !== "binance_futures") return;
         this.log.debug("Handling signal", signal);
         const { id, robotId, timestamp, emulated } = signal;
         if (emulated) return;
@@ -631,7 +632,7 @@ AND active = true;`);
                     await this.events.emit<PortfolioManagerSignalSubcriptionError>({
                         type: PortfolioManagerOutEvents.SIGNAL_SUBSCRIPTION_ERROR,
                         data: {
-                            signalSubcriptionId: r.signalSubscriptionId,
+                            signalSubscriptionId: r.signalSubscriptionId,
                             error: err.message,
                             data: signal
                         }

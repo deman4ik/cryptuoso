@@ -78,7 +78,7 @@ export const UserRobotRunnerSchema = {
     },
     [UserRobotRunnerEvents.SYNC_SIGNAL_SUBSCRIPTION_ROBOTS]: {
         //TODO: replace
-        signalSubcriptionId: "uuid"
+        signalSubscriptionId: "uuid"
     }
 };
 

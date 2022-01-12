@@ -44,7 +44,7 @@ export const PortfolioManagerOutSchema = {
         userPortfolioId: "uuid"
     },
     [PortfolioManagerOutEvents.SIGNAL_SUBSCRIPTION_BUILDED]: {
-        signalSubcriptionId: "uuid"
+        signalSubscriptionId: "uuid"
     },
     [PortfolioManagerOutEvents.PORTFOLIO_BUILD_ERROR]: {
         portfolioId: "uuid",
@@ -55,11 +55,11 @@ export const PortfolioManagerOutSchema = {
         error: "string"
     },
     [PortfolioManagerOutEvents.SIGNAL_SUBSCRIPTION_BUILD_ERROR]: {
-        signalSubcriptionId: "uuid",
+        signalSubscriptionId: "uuid",
         error: "string"
     },
     [PortfolioManagerOutEvents.SIGNAL_SUBSCRIPTION_ERROR]: {
-        signalSubcriptionId: "uuid",
+        signalSubscriptionId: "uuid",
         error: "string",
         data: { type: "object", optional: true }
     }
@@ -92,7 +92,7 @@ export interface PortfolioManagerUserPortfolioBuilded {
 }
 
 export interface PortfolioManagerSignalSubcriptionBuilded {
-    signalSubcriptionId: string;
+    signalSubscriptionId: string;
 }
 
 export interface PortfolioManagerPortfolioBuildError {
@@ -106,12 +106,12 @@ export interface PortfolioManagerUserPortfolioBuildError {
 }
 
 export interface PortfolioManagerSignalSubcriptionBuildError {
-    signalSubcriptionId: string;
+    signalSubscriptionId: string;
     error: string;
 }
 
 export interface PortfolioManagerSignalSubcriptionError {
-    signalSubcriptionId: string;
+    signalSubscriptionId: string;
     error: string;
     data?: any;
 }
