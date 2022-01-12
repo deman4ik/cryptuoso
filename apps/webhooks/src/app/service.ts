@@ -10,7 +10,7 @@ import {
     PortfolioRobotDB,
     PortfolioSettings,
     SignalRobotDB,
-    SignalSubcriptionDB,
+    SignalSubscriptionDB,
     SignalSubscriptionPosition,
     SignalSubscriptionState
 } from "@cryptuoso/portfolio-state";
@@ -22,8 +22,8 @@ import {
     PortfolioManagerOutEvents,
     PortfolioManagerOutSchema,
     PortfolioManagerPortfolioBuilded,
-    PortfolioManagerSignalSubcriptionBuildError,
-    PortfolioManagerSignalSubcriptionError
+    PortfolioManagerSignalSubscriptionBuildError,
+    PortfolioManagerSignalSubscriptionError
 } from "@cryptuoso/portfolio-events";
 import { Signal, SignalEvents, SignalSchema } from "@cryptuoso/robot-events";
 import {
@@ -198,10 +198,10 @@ export default class WebhooksService extends HTTPService {
         url,
         token
     }: PortfolioSettings & {
-        exchange: SignalSubcriptionDB["exchange"];
-        type: SignalSubcriptionDB["type"];
-        url: SignalSubcriptionDB["url"];
-        token: SignalSubcriptionDB["token"];
+        exchange: SignalSubscriptionDB["exchange"];
+        type: SignalSubscriptionDB["type"];
+        url: SignalSubscriptionDB["url"];
+        token: SignalSubscriptionDB["token"];
     }) {
         const {
             portfolioId,
@@ -239,7 +239,7 @@ export default class WebhooksService extends HTTPService {
         const signalSubscriptionLeverage =
             leverage || calcUserLeverage(recommendedBalance, defaultLeverage, maxLeverage, initialBalance);
 
-        const signalSubscription: SignalSubcriptionDB = {
+        const signalSubscription: SignalSubscriptionDB = {
             id: uuid(),
             exchange,
             type,
@@ -283,7 +283,7 @@ export default class WebhooksService extends HTTPService {
         leverage,
         options
     }: PortfolioSettings & {
-        signalSubscriptionId: SignalSubcriptionDB["id"];
+        signalSubscriptionId: SignalSubscriptionDB["id"];
     }) {
         const signalSubscription = await this.db.pg.one<SignalSubscriptionState>(sql`
         SELECT s.id, s.type, s.exchange, s.status, 
@@ -351,7 +351,7 @@ AND active = true;`);
     }
 
     async deleteSignalSubscription({ signalSubscriptionId }: { signalSubscriptionId: string }) {
-        const { status } = await this.db.pg.one<{ status: SignalSubcriptionDB["status"] }>(sql`
+        const { status } = await this.db.pg.one<{ status: SignalSubscriptionDB["status"] }>(sql`
        SELECT  status 
        FROM sisgnal_subscriptions
        WHERE id = ${signalSubscriptionId};
@@ -366,7 +366,7 @@ AND active = true;`);
     }
 
     async startSignalSubscription({ signalSubscriptionId }: { signalSubscriptionId: string }) {
-        const { status } = await this.db.pg.one<{ status: SignalSubcriptionDB["status"] }>(sql`
+        const { status } = await this.db.pg.one<{ status: SignalSubscriptionDB["status"] }>(sql`
        SELECT  status 
        FROM sisgnal_subscriptions
        WHERE id = ${signalSubscriptionId};
@@ -384,7 +384,7 @@ AND active = true;`);
     }
 
     async stopSignalSubscription({ signalSubscriptionId }: { signalSubscriptionId: string }) {
-        const { status } = await this.db.pg.one<{ status: SignalSubcriptionDB["status"] }>(sql`
+        const { status } = await this.db.pg.one<{ status: SignalSubscriptionDB["status"] }>(sql`
        SELECT  status 
        FROM sisgnal_subscriptions
        WHERE id = ${signalSubscriptionId};
@@ -430,7 +430,7 @@ AND active = true;`);
             if (!portfolio.base || portfolio.status !== "started") return;
 
             const { options } = portfolio.settings;
-            const signalSubscriptions = await this.db.pg.any<{ id: SignalSubcriptionDB["id"] }>(sql`
+            const signalSubscriptions = await this.db.pg.any<{ id: SignalSubscriptionDB["id"] }>(sql`
             SELECT p.id
             FROM v_signal_subscriptions p
             WHERE p.exchange = ${portfolio.exchange}
@@ -474,13 +474,13 @@ AND active = true;`);
     }
 
     async syncSignalSubscriptionRobots({ signalSubscriptionId }: { signalSubscriptionId: string }) {
-        this.log.info(`Syncing Signal Subcription #${signalSubscriptionId} robots`);
+        this.log.info(`Syncing Signal Subscription #${signalSubscriptionId} robots`);
         const signalSubscription = await this.db.pg.one<SignalSubscriptionState>(sql`
         SELECT p.id, p.type, p.exchange, p.status, 
-              p.active_from as signal_subcription_settings_active_from,
-              p.signal_subcription_settings as settings,
+              p.active_from as signal_subscription_settings_active_from,
+              p.signal_subscription_settings as settings,
               p.robots 
-           FROM v_signal_subcriptions p
+           FROM v_signal_subscriptions p
            WHERE p.id = ${signalSubscriptionId}; 
        `);
         if (signalSubscription.status !== "started") return;
@@ -522,7 +522,7 @@ AND active = true;`);
                 });
             } catch (error) {
                 this.log.error(error);
-                await this.events.emit<PortfolioManagerSignalSubcriptionBuildError>({
+                await this.events.emit<PortfolioManagerSignalSubscriptionBuildError>({
                     type: PortfolioManagerOutEvents.SIGNAL_SUBSCRIPTION_BUILD_ERROR,
                     data: {
                         signalSubscriptionId: signalSubscription.id,
@@ -550,10 +550,10 @@ AND active = true;`);
             active: SignalRobotDB["active"];
             share: SignalRobotDB["share"];
             state: SignalRobotDB["state"];
-            exchange: SignalSubcriptionDB["exchange"];
-            type: SignalSubcriptionDB["type"];
-            url: SignalSubcriptionDB["url"];
-            token: SignalSubcriptionDB["token"];
+            exchange: SignalSubscriptionDB["exchange"];
+            type: SignalSubscriptionDB["type"];
+            url: SignalSubscriptionDB["url"];
+            token: SignalSubscriptionDB["token"];
             settings: SignalSubscriptionState["settings"];
             currentPrice: number;
         }>(
@@ -570,7 +570,7 @@ AND active = true;`);
             ss.token,
             sss.signal_subscription_settings as settings,
             f_current_price(r.exchange, r.asset, r.currency) AS current_price
-             FROM signal_subscription_robots ssr, signal_subscriptions ss, v_signal_subcription_settings sss, robots r
+             FROM signal_subscription_robots ssr, signal_subscriptions ss, v_signal_subscription_settings sss, robots r
             WHERE ssr.robot_id = ${robotId}
              AND ssr.signal_subscription_id = ss.id
              AND ss.id = sss.signal_subscription_id
@@ -629,7 +629,7 @@ AND active = true;`);
                     }
                 } catch (err) {
                     this.log.error(`Failed to handle signal ${err.message}`);
-                    await this.events.emit<PortfolioManagerSignalSubcriptionError>({
+                    await this.events.emit<PortfolioManagerSignalSubscriptionError>({
                         type: PortfolioManagerOutEvents.SIGNAL_SUBSCRIPTION_ERROR,
                         data: {
                             signalSubscriptionId: r.signalSubscriptionId,

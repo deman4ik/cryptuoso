@@ -91,7 +91,7 @@ export interface PortfolioManagerUserPortfolioBuilded {
     userPortfolioId: string;
 }
 
-export interface PortfolioManagerSignalSubcriptionBuilded {
+export interface PortfolioManagerSignalSubscriptionBuilded {
     signalSubscriptionId: string;
 }
 
@@ -105,12 +105,12 @@ export interface PortfolioManagerUserPortfolioBuildError {
     error: string;
 }
 
-export interface PortfolioManagerSignalSubcriptionBuildError {
+export interface PortfolioManagerSignalSubscriptionBuildError {
     signalSubscriptionId: string;
     error: string;
 }
 
-export interface PortfolioManagerSignalSubcriptionError {
+export interface PortfolioManagerSignalSubscriptionError {
     signalSubscriptionId: string;
     error: string;
     data?: any;

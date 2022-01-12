@@ -180,7 +180,7 @@ export interface UserPortfolioInfo {
     closedPositions: ClosedPosition[];
 }
 
-export interface SignalSubcriptionDB {
+export interface SignalSubscriptionDB {
     id: string;
     exchange: string;
     type: "zignaly";
@@ -191,7 +191,7 @@ export interface SignalSubcriptionDB {
     token: string;
 }
 
-export interface SignalSubscriptionState extends SignalSubcriptionDB {
+export interface SignalSubscriptionState extends SignalSubscriptionDB {
     userPortfolioSettingsId?: string;
     userPortfolioSettingsActiveFrom?: string;
     settings: PortfolioSettings;

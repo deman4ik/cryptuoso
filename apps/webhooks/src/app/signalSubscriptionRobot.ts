@@ -2,7 +2,7 @@ import dayjs from "@cryptuoso/dayjs";
 import { OrderType, TradeAction } from "@cryptuoso/market";
 import {
     SignalRobotDB,
-    SignalSubcriptionDB,
+    SignalSubscriptionDB,
     SignalSubscriptionPosition,
     SignalSubscriptionState
 } from "@cryptuoso/portfolio-state";
@@ -18,10 +18,10 @@ export class SignalSubscriptionRobot {
         active: SignalRobotDB["active"];
         share: SignalRobotDB["share"];
         state: SignalRobotDB["state"];
-        exchange: SignalSubcriptionDB["exchange"];
-        type: SignalSubcriptionDB["type"];
-        url: SignalSubcriptionDB["url"];
-        token: SignalSubcriptionDB["token"];
+        exchange: SignalSubscriptionDB["exchange"];
+        type: SignalSubscriptionDB["type"];
+        url: SignalSubscriptionDB["url"];
+        token: SignalSubscriptionDB["token"];
         settings: SignalSubscriptionState["settings"];
         currentPrice: number;
     };
@@ -35,10 +35,10 @@ export class SignalSubscriptionRobot {
         active: SignalRobotDB["active"];
         share: SignalRobotDB["share"];
         state: SignalRobotDB["state"];
-        exchange: SignalSubcriptionDB["exchange"];
-        type: SignalSubcriptionDB["type"];
-        url: SignalSubcriptionDB["url"];
-        token: SignalSubcriptionDB["token"];
+        exchange: SignalSubscriptionDB["exchange"];
+        type: SignalSubscriptionDB["type"];
+        url: SignalSubscriptionDB["url"];
+        token: SignalSubscriptionDB["token"];
         settings: SignalSubscriptionState["settings"];
         currentPrice: number;
     }) {
