@@ -192,12 +192,8 @@ export interface SignalSubscriptionDB {
 }
 
 export interface SignalSubscriptionState extends SignalSubscriptionDB {
-    userPortfolioSettingsId?: string;
-    userPortfolioSettingsActiveFrom?: string;
     settings: PortfolioSettings;
-    context: PortfolioContext;
     robots?: PortfolioRobotDB[];
-    currentBalance?: number;
 }
 
 export interface SignalRobotDB {

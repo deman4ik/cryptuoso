@@ -477,7 +477,6 @@ AND active = true;`);
         this.log.info(`Syncing Signal Subscription #${signalSubscriptionId} robots`);
         const signalSubscription = await this.db.pg.one<SignalSubscriptionState>(sql`
         SELECT p.id, p.type, p.exchange, p.status, 
-              p.active_from as signal_subscription_settings_active_from,
               p.signal_subscription_settings as settings,
               p.robots 
            FROM v_signal_subscriptions p
@@ -494,7 +493,7 @@ AND active = true;`);
 
                     await t.query(sql`
             INSERT INTO signal_subscription_robots 
-            (signal_subscription_id, robot_id, active, share, status)
+            (signal_subscription_id, robot_id, active, share)
             SELECT *
                 FROM ${sql.unnest(
                     this.db.util.prepareUnnest(
@@ -502,15 +501,14 @@ AND active = true;`);
                             signalSubscriptionId: signalSubscription.id,
                             robotId: r.robotId,
                             active: r.active,
-                            share: r.share,
-                            status: "started"
+                            share: r.share
                         })),
-                        ["signalSubscriptionId", "robotId", "active", "share", "status"]
+                        ["signalSubscriptionId", "robotId", "active", "share"]
                     ),
-                    ["uuid", "uuid", "boolean", "numeric", "varchar"]
+                    ["uuid", "uuid", "boolean", "numeric"]
                 )}
                 ON CONFLICT ON CONSTRAINT signal_subscription_robots_signal_subscription_id_robot_id_key
-                DO UPDATE SET active = excluded.active, share = excluded.share, status = excluded.status;
+                DO UPDATE SET active = excluded.active, share = excluded.share;
             `);
 
                     await t.query(sql`
