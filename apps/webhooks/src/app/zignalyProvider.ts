@@ -8,12 +8,12 @@ interface ZignalySignal {
     exchangeAccountType: "futures";
     type: "entry" | "exit";
     pair: string;
-    side: "long" | "short";
+    side?: "long" | "short";
     orderType: "limit" | "market";
-    positionSizePercentage: string;
+    positionSizePercentage?: string;
     signalId: string;
     price: string;
-    leverage: string;
+    leverage?: string;
 }
 
 interface ZignalyStart {
@@ -80,14 +80,14 @@ export async function closeZignalyPosition(
         key: token,
         exchange: "binance", //ONLY binance supported
         exchangeAccountType: "futures",
-        type: "entry",
+        type: "exit",
         pair: `${position.asset}${position.currency}`.toLowerCase(),
-        side: position.direction,
-        orderType: position.entryOrderType,
-        positionSizePercentage: `${position.share}`,
+        //side: position.direction,
+        orderType: position.exitOrderType,
+        // positionSizePercentage: `${position.share}`,
         signalId: `${position.id}`,
-        price: `${position.entryPrice}`,
-        leverage: `${position.leverage}`
+        price: `${position.exitPrice}`
+        // leverage: `${position.leverage}`
     };
     let error;
     try {
