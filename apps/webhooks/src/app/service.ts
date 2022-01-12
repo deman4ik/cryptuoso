@@ -505,7 +505,7 @@ AND active = true;`);
                         })),
                         ["signalSubscriptionId", "robotId", "active", "share"]
                     ),
-                    ["uuid", "uuid", "boolean", "numeric"]
+                    ["uuid", "uuid", "bool", "numeric"]
                 )}
                 ON CONFLICT ON CONSTRAINT signal_subscription_robots_signal_subscription_id_robot_id_key
                 DO UPDATE SET active = excluded.active, share = excluded.share;
@@ -527,6 +527,7 @@ AND active = true;`);
                         error: error.message
                     }
                 });
+                return error.message;
             }
             this.log.info(
                 `Added ${signalSubscription.robots.length} robots to Signal Subscription #${signalSubscriptionId}`
