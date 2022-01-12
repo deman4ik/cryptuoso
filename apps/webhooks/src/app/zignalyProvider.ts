@@ -31,11 +31,13 @@ interface ZignalyStop {
 }
 
 async function fetchZignaly(url: string, data: ZignalySignal | ZignalyStart | ZignalyStop) {
+    logger.debug(`Fetch Zignaly ${url}`, data);
     const response = await fetch(url, {
         method: "post",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
     });
+    logger.debug(`Fetch Zignaly Response`, response);
     if (response.ok) return;
     else throw new Error(`Failed to send signal to Zignaly ${JSON.stringify(await response.json())}`);
 }

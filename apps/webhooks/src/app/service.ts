@@ -613,9 +613,9 @@ AND active = true;`);
                     ) VALUES (
                        ${pos.id}, ${pos.signalSubscriptionId}, ${pos.subscriptionRobotId}, ${pos.robotId},
                        ${pos.exchange}, ${pos.asset}, ${pos.currency}, ${pos.leverage}, ${pos.direction},
-                       ${pos.entryPrice}, ${pos.entryDate}, ${pos.entryOrderType},
-                       ${pos.exitPrice}, ${pos.exitDate}, ${pos.exitOrderType},
-                       ${pos.share}, ${pos.status}, ${pos.error} 
+                       ${pos.entryPrice || null}, ${pos.entryDate || null}, ${pos.entryOrderType || null},
+                       ${pos.exitPrice || null}, ${pos.exitDate || null}, ${pos.exitOrderType || null},
+                       ${pos.share}, ${pos.status}, ${pos.error || null} 
                     )
                     ON CONFLICT ON CONSTRAINT signal_subscription_positions_pkey
                     DO UPDATE SET exit_price = excluded.exit_price,
@@ -626,6 +626,7 @@ AND active = true;`);
                     `);
                         }
                     }
+                    //TODO: save latest signal to state
                 } catch (err) {
                     this.log.error(`Failed to handle signal ${err.message}`);
                     await this.events.emit<PortfolioManagerSignalSubscriptionError>({
