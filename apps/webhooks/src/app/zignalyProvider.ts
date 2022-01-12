@@ -37,7 +37,8 @@ async function fetchZignaly(url: string, data: ZignalySignal | ZignalyStart | Zi
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
     });
-    logger.debug(`Fetch Zignaly Response`, response);
+    logger.debug(response);
+    logger.debug(await response.json());
     if (response.ok) return;
     else throw new Error(`Failed to send signal to Zignaly ${JSON.stringify(await response.json())}`);
 }
