@@ -53,7 +53,7 @@ export async function openZignalyPosition(
         exchange: "binance", //ONLY binance supported
         exchangeAccountType: "futures",
         type: "entry",
-        pair: `${position.asset}${position.currency}`,
+        pair: `${position.asset}${position.currency}`.toLowerCase(),
         side: position.direction,
         orderType: position.entryOrderType,
         positionSizePercentage: `${position.share}`,
@@ -82,7 +82,7 @@ export async function closeZignalyPosition(
         exchange: "binance", //ONLY binance supported
         exchangeAccountType: "futures",
         type: "entry",
-        pair: `${position.asset}${position.currency}`,
+        pair: `${position.asset}${position.currency}`.toLowerCase(),
         side: position.direction,
         orderType: position.entryOrderType,
         positionSizePercentage: `${position.share}`,
