@@ -98,6 +98,7 @@ export class SignalSubscriptionRobot {
                 await this.#closePosition(position, signal);
             }
         }
+        this.#robot.state.latestSignal = signal;
     }
 
     #openPosition = async (signal: Signal) => {
@@ -137,5 +138,9 @@ export class SignalSubscriptionRobot {
 
     get positionsToSave() {
         return this.#positionsToSave;
+    }
+
+    get state() {
+        return this.#robot.state;
     }
 }

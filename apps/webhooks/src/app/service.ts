@@ -585,11 +585,14 @@ AND active = true;`);
 
         await Promise.all(
             signalSubscriptionRobots.map(async (r) => {
-                try {
-                    const robot = new SignalSubscriptionRobot(r);
-                    //TODO: Lock
+                await this.redlock.using([`signalSub-${r.id}`], 5000, async (redlockSignal) => {
+                    try {
+                        if (redlockSignal.aborted) {
+                            throw redlockSignal.error;
+                        }
+                        const robot = new SignalSubscriptionRobot(r);
 
-                    const openPositions = await this.db.pg.any<SignalSubscriptionPosition>(sql`
+                        const openPositions = await this.db.pg.any<SignalSubscriptionPosition>(sql`
                 SELECT * 
                 FROM  signal_subscription_positions
                 WHERE signal_subscription_id = ${r.signalSubscriptionId}
@@ -597,13 +600,14 @@ AND active = true;`);
                 AND status = 'open';
                 `);
 
-                    robot.handleOpenPositions([...openPositions]);
-                    await robot.handleSignal(signal);
+                        robot.handleOpenPositions([...openPositions]);
+                        await robot.handleSignal(signal);
 
-                    if (robot.positionsToSave.length) {
-                        this.log.debug(`Saving robots #${r.id} positions`);
-                        for (const pos of robot.positionsToSave) {
-                            await this.db.pg.query(sql`
+                        await this.db.pg.transaction(async (t) => {
+                            if (robot.positionsToSave.length) {
+                                this.log.debug(`Saving robots #${r.id} positions`);
+                                for (const pos of robot.positionsToSave) {
+                                    await t.query(sql`
                     INSERT INTO signal_subscription_positions
                     (id, signal_subscription_id, subscription_robot_id, robot_id, 
                     exchange, asset, currency, leverage, direction, 
@@ -624,20 +628,27 @@ AND active = true;`);
                     status = excluded.status,
                     error = excluded.error;
                     `);
-                        }
+                                }
+                            }
+
+                            await t.query(sql`
+                        UPDATE signal_subscription_robots 
+                        SET state = ${JSON.stringify(robot.state)}
+                        WHERE id = ${r.id};
+                        `);
+                        });
+                    } catch (err) {
+                        this.log.error(`Failed to handle signal ${err.message}`);
+                        await this.events.emit<PortfolioManagerSignalSubscriptionError>({
+                            type: PortfolioManagerOutEvents.SIGNAL_SUBSCRIPTION_ERROR,
+                            data: {
+                                signalSubscriptionId: r.signalSubscriptionId,
+                                error: err.message,
+                                data: signal
+                            }
+                        });
                     }
-                    //TODO: save latest signal to state
-                } catch (err) {
-                    this.log.error(`Failed to handle signal ${err.message}`);
-                    await this.events.emit<PortfolioManagerSignalSubscriptionError>({
-                        type: PortfolioManagerOutEvents.SIGNAL_SUBSCRIPTION_ERROR,
-                        data: {
-                            signalSubscriptionId: r.signalSubscriptionId,
-                            error: err.message,
-                            data: signal
-                        }
-                    });
-                }
+                });
             })
         );
     }

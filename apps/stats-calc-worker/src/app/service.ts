@@ -587,21 +587,21 @@ export default class StatisticCalcWorkerService extends BaseService {
     }
 
     private async _calcDownloadedUserSignal(userSignal: UserSignalStats, calcAll = false) {
-        const locker = this.makeLocker(
-            `lock:stats-calc-worker:_innerUserSignal(${userSignal.userId}, ${userSignal.robotId})`,
-            5000
-        );
+        return await this.redlock.using(
+            [`lock:stats-calc-worker:_innerUserSignal(${userSignal.userId}, ${userSignal.robotId})`],
+            5000,
+            async (signal) => {
+                try {
+                    if (signal.aborted) {
+                        throw signal.error;
+                    }
+                    const { calcFrom, initStats } = getCalcFromAndInitStats(userSignal, calcAll);
 
-        try {
-            await locker.lock();
-
-            const { calcFrom, initStats } = getCalcFromAndInitStats(userSignal, calcAll);
-
-            const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
-            const querySelectPart = sql`
+                    const conditionExitDate = !calcFrom ? sql`` : sql`AND exit_date > ${calcFrom}`;
+                    const querySelectPart = sql`
                 SELECT id, direction, entry_date, exit_date, profit, bars_held
             `;
-            const queryFromAndConditionPart = sql`
+                    const queryFromAndConditionPart = sql`
                 FROM v_user_signal_positions
                 WHERE user_id = ${userSignal.userId}
                     AND robot_id = ${userSignal.robotId}
@@ -609,50 +609,50 @@ export default class StatisticCalcWorkerService extends BaseService {
                     AND entry_date >= ${userSignal.subscribedAt}
                     ${conditionExitDate}
             `;
-            const queryCommonPart = sql`
+                    const queryCommonPart = sql`
                 ${querySelectPart}
                 ${queryFromAndConditionPart}
                 ORDER BY exit_date
             `;
 
-            const positionsCount = await this.db.pg.oneFirst<number>(sql`
+                    const positionsCount = await this.db.pg.oneFirst<number>(sql`
                 SELECT COUNT(1)
                 ${queryFromAndConditionPart};
             `);
 
-            if (positionsCount == 0) {
-                await locker.unlock();
-                return false;
+                    if (positionsCount == 0) {
+                        return false;
+                    }
+
+                    const newStats = await DataStream.from(
+                        this.makeChunksGenerator(
+                            queryCommonPart,
+                            positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
+                        )
+                    ).reduce(
+                        async (prevStats: TradeStats, chunk: BasePosition[]) =>
+                            await this.calcStatistics(prevStats, chunk),
+                        initStats
+                    );
+
+                    await this.upsertStats(
+                        {
+                            table: sql`user_signal_stats`,
+                            constraint: sql`user_signals_stats_pkey`,
+                            addFields: sql`user_signal_id`,
+                            addFieldsValues: sql`${userSignal.id}`
+                        },
+                        newStats
+                    );
+
+                    return true;
+                } catch (err) {
+                    this.log.error("Failed to _calcDownloadedUserSignal", err);
+
+                    throw err;
+                }
             }
-
-            const newStats = await DataStream.from(
-                this.makeChunksGenerator(
-                    queryCommonPart,
-                    positionsCount > this.maxSingleQueryPosCount ? this.defaultChunkSize : positionsCount
-                )
-            ).reduce(
-                async (prevStats: TradeStats, chunk: BasePosition[]) => await this.calcStatistics(prevStats, chunk),
-                initStats
-            );
-
-            await this.upsertStats(
-                {
-                    table: sql`user_signal_stats`,
-                    constraint: sql`user_signals_stats_pkey`,
-                    addFields: sql`user_signal_id`,
-                    addFieldsValues: sql`${userSignal.id}`
-                },
-                newStats
-            );
-
-            await locker.unlock();
-
-            return true;
-        } catch (err) {
-            this.log.error("Failed to _calcDownloadedUserSignal", err);
-            await locker.unlock();
-            throw err;
-        }
+        );
     }
 
     async calcUserSignal({ userId, robotId, calcAll = false }: { userId: string; robotId: string; calcAll?: boolean }) {

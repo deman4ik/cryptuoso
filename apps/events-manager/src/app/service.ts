@@ -264,27 +264,27 @@ export default class EventsManager extends HTTPService {
         if (!deadLetters?.length) return;
 
         for (const dl of deadLetters) {
-            const locker = this.makeLocker(`lock:${this.name}:re-emit.${dl.eventId}`, 3000);
+            await this.redlock.using([`lock:${this.name}:re-emit.${dl.eventId}`], 3000, async (signal) => {
+                try {
+                    await this.events.emitRaw(`${BASE_REDIS_PREFIX}${dl.topic}`, {
+                        ...dl.data,
+                        time: dayjs.utc().toISOString()
+                    });
 
-            try {
-                await locker.lock();
-                await this.events.emitRaw(`${BASE_REDIS_PREFIX}${dl.topic}`, {
-                    ...dl.data,
-                    time: dayjs.utc().toISOString()
-                });
+                    this.log.info(`Dead letter event: #${dl.eventId} ${dl.type} resend`);
 
-                this.log.info(`Dead letter event: #${dl.eventId} ${dl.type} resend`);
-
-                await this.db.pg.query(sql`
+                    await this.db.pg.query(sql`
                     UPDATE dead_letters
                     SET processed = true
                     WHERE id = ${dl.id};
                 `);
-                await locker.unlock();
-            } catch (err) {
-                this.log.error(err);
-                await locker.unlock();
-            }
+                    if (signal.aborted) {
+                        throw signal.error;
+                    }
+                } catch (err) {
+                    this.log.error(err);
+                }
+            });
         }
     }
 

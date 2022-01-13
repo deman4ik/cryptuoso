@@ -14,12 +14,12 @@ import {
 } from "bullmq";
 import Redis from "ioredis";
 import Cache from "ioredis-cache";
-import RedLock from "redlock";
 import logger, { Logger } from "@cryptuoso/logger";
 import { sql, pg, pgUtil } from "@cryptuoso/postgres";
 import { Events, EventsConfig } from "@cryptuoso/events";
 import { GenericObject, sleep } from "@cryptuoso/helpers";
 import cron from "node-cron";
+import Redlock from "redlock";
 
 export interface BaseServiceConfig {
     name?: string;
@@ -34,8 +34,8 @@ export class BaseService {
     #onServiceStarted: { (): Promise<void> }[] = [];
     #onServiceStop: { (): Promise<void> }[] = [];
     #redisConnection: Redis.Redis;
+    #redlock: Redlock;
     #cache: Cache;
-    #redLock: RedLock;
     #db: { sql: typeof sql; pg: typeof pg; util: typeof pgUtil };
     #events: Events;
     #queues: { [key: string]: { instance: Queue<any>; scheduler: QueueScheduler; events?: QueueEvents } } = {};
@@ -82,12 +82,9 @@ export class BaseService {
             });
             this.#redisConnection.on("error", this.#hanleRedisError.bind(this));
 
-            this.#redLock = new RedLock([this.#redisConnection], {
-                retryCount: 0,
-                driftFactor: 0.01
-            });
-
             this.#events = new Events(this.#redisConnection, this.#lightship, config?.eventsConfig);
+
+            this.#redlock = new Redlock([this.#redisConnection]);
         } catch (err) {
             console.error(err);
             process.exit(1);
@@ -254,88 +251,6 @@ export class BaseService {
         return this.#cache;
     }
 
-    #makeLocker: {
-        (resource: null, ttl: number, extensionStep?: number): {
-            lock: (resource: string) => Promise<void>;
-            unlock: () => Promise<void>;
-        };
-        (resource: string, ttl: number, extensionStep?: number): {
-            lock: () => Promise<void>;
-            unlock: () => Promise<void>;
-        };
-    } = (resource: string, ttl: number, extensionStep = 0.5) => {
-        if (!resource && resource !== null) throw new Error(`"resource" argument must be non-empty string or null`);
-
-        let lockName: string = resource;
-        let ended = false;
-        let redlock: RedLock.Lock;
-
-        const getNextTTL = (cnt: number) => (1 + cnt * extensionStep) * ttl;
-
-        const getCheckDt = () => 0.8 * (redlock.expiration - Date.now());
-
-        const extendUntilEnded = async () => {
-            let checksCount = 0;
-            await sleep(getCheckDt());
-            try {
-                while (!ended) {
-                    ++checksCount;
-                    redlock = await redlock.extend(getNextTTL(checksCount));
-                    await sleep(getCheckDt());
-                }
-            } catch (err) {
-                this.log.error(`Failed to extend lock (${lockName})`, err);
-            }
-        };
-
-        const locker = {
-            lock: async (resource?: string) => {
-                try {
-                    if (!lockName) {
-                        if (!resource) throw new Error(`"resource" argument must be non-empty string`);
-                        lockName = resource;
-                    }
-
-                    if (this.#lockers.has(lockName)) throw new Error("Locked locally");
-
-                    this.#lockers.set(lockName, locker);
-                    redlock = await this.#redLock.lock(lockName, ttl);
-                    extendUntilEnded();
-                } catch (err) {
-                    //if (this.#lockers.get(lockName) === locker) this.#lockers.delete(lockName);
-                    await locker.unlock();
-
-                    this.log.error(`Failed to lock (${lockName}).` /* , err */);
-                    throw err;
-                }
-            },
-            unlock: async () => {
-                ended = true;
-
-                if (this.#lockers.get(lockName) === locker) this.#lockers.delete(lockName);
-
-                if (redlock) {
-                    try {
-                        await redlock.unlock();
-                    } catch (err) {
-                        if (!err.message.includes("Unable to fully release the lock on resource"))
-                            this.log.error(`Failed to unlock (${lockName})`, err);
-                    }
-                }
-            }
-        };
-
-        return locker;
-    };
-
-    get makeLocker() {
-        return this.#makeLocker;
-    }
-
-    get redLock() {
-        return this.#redLock;
-    }
-
     get redis() {
         return this.#redisConnection;
     }
@@ -470,5 +385,9 @@ export class BaseService {
 
     get workerConcurrency() {
         return this.#workerConcurrency;
+    }
+
+    get redlock() {
+        return this.#redlock;
     }
 }

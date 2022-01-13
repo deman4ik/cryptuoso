@@ -138,7 +138,7 @@
     "npm": "^8.1.4",
     "parse-mode": "^0.1.2",
     "quickchart-js": "^1.4.2",
-    "redlock": "^4.2.0",
+    "redlock": "^5.0.0-beta.1",
     "require-from-string": "^2.0.2",
     "restana": "^4.9.2",
     "restify": "^8.5.1",
