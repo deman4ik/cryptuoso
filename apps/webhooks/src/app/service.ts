@@ -585,8 +585,8 @@ AND active = true;`);
 
         await Promise.all(
             signalSubscriptionRobots.map(async (r) => {
-                await this.redlock.using([`signalSub-${r.id}`], 5000, async (redlockSignal) => {
-                    try {
+                try {
+                    await this.redlock.using([`signalSub-${r.id}`], 5000, async (redlockSignal) => {
                         if (redlockSignal.aborted) {
                             throw redlockSignal.error;
                         }
@@ -637,18 +637,18 @@ AND active = true;`);
                         WHERE id = ${r.id};
                         `);
                         });
-                    } catch (err) {
-                        this.log.error(`Failed to handle signal ${err.message}`);
-                        await this.events.emit<PortfolioManagerSignalSubscriptionError>({
-                            type: PortfolioManagerOutEvents.SIGNAL_SUBSCRIPTION_ERROR,
-                            data: {
-                                signalSubscriptionId: r.signalSubscriptionId,
-                                error: err.message,
-                                data: signal
-                            }
-                        });
-                    }
-                });
+                    });
+                } catch (err) {
+                    this.log.error(`Failed to handle signal ${err.message}`);
+                    await this.events.emit<PortfolioManagerSignalSubscriptionError>({
+                        type: PortfolioManagerOutEvents.SIGNAL_SUBSCRIPTION_ERROR,
+                        data: {
+                            signalSubscriptionId: r.signalSubscriptionId,
+                            error: err.message,
+                            data: signal
+                        }
+                    });
+                }
             })
         );
     }

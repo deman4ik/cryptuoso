@@ -43,6 +43,7 @@ export class SignalSubscriptionRobot {
         currentPrice: number;
     }) {
         this.#robot = robot;
+        this.#robot.state = this.#robot.state || {};
         this.#openPositions = [];
     }
 
