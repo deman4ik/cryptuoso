@@ -28,7 +28,7 @@ export class TradeStatsCalc implements TradeStats {
             }
         };
         let portfolioPositions: BasePosition[], maxLeverage: FullStats["maxLeverage"];
-        if (this.meta.job.type === "portfolio") {
+        if (this.meta.job.type === "portfolio" || this.meta.job.type === "signalSubscription") {
             ({ positions: portfolioPositions, maxLeverage } = this.preparePortfolioPositions(
                 this.positions,
                 prevStats?.fullStats
@@ -98,7 +98,7 @@ export class TradeStatsCalc implements TradeStats {
                 newPosition.worstProfit = calcPositionProfit(
                     direction,
                     entryPrice,
-                    maxPrice,
+                    maxPrice || exitPrice,
                     newPosition.volume,
                     feeRate
                 );

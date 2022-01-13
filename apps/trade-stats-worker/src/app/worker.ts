@@ -1,6 +1,6 @@
 import { expose } from "threads/worker";
 import { DataStream } from "scramjet";
-import { BasePosition } from "@cryptuoso/market";
+import { BasePosition, Timeframe } from "@cryptuoso/market";
 import {
     PeriodStats,
     TradeStatsJob,
@@ -15,12 +15,14 @@ import {
     periodStatsFromArray,
     periodStatsToArray,
     FullStats,
-    BaseStats
+    BaseStats,
+    TradeStatsSignalSubscription
 } from "@cryptuoso/trade-stats";
 import logger, { Logger } from "@cryptuoso/logger";
 import { sql, pg, pgUtil, makeChunksGenerator } from "@cryptuoso/postgres";
 import { PortfolioDB, PortfolioSettings } from "@cryptuoso/portfolio-state";
-import { equals } from "@cryptuoso/helpers";
+import { equals, round } from "@cryptuoso/helpers";
+import dayjs from "@cryptuoso/dayjs";
 
 class StatsCalcWorker {
     #log: Logger;
@@ -56,6 +58,9 @@ class StatsCalcWorker {
                 break;
             case "userPortfolio":
                 await this.calcUserPortfolio(job as TradeStatsUserPortfolio);
+                break;
+            case "signalSubscription":
+                await this.calcSignalSubscription(job as TradeStatsSignalSubscription);
                 break;
             default:
                 this.log.error(`Unsupported stats calc type`);
@@ -449,7 +454,7 @@ class StatsCalcWorker {
             const queryFromAndConditionPart = sql`
             FROM v_user_positions p
             WHERE p.user_robot_id = ${userRobotId}
-                AND p.status = 'closed'
+                AND p.status in ('closed','closedAuto')
                 ${conditionExitDate}
         `;
             const queryCommonPart = sql`
@@ -548,7 +553,7 @@ class StatsCalcWorker {
             const queryFromAndConditionPart = sql`
             FROM v_user_positions p
             WHERE p.user_portfolio_id = ${userPortfolioId}
-                AND p.status = 'closed'
+                AND p.status in ('closed','closedAuto')
                 ${conditionExitDate}
         `;
             const queryCommonPart = sql`
@@ -644,6 +649,211 @@ class StatsCalcWorker {
             });
         } catch (err) {
             this.log.error("Failed to calcUserPorfolio stats", err);
+            this.log.debug(job);
+            throw err;
+        }
+    }
+
+    async calcSignalSubscription(job: TradeStatsSignalSubscription) {
+        try {
+            let { recalc = false } = job;
+            const { signalSubscriptionId } = job;
+
+            let initialStats: TradeStats = {
+                fullStats: null,
+                periodStats: {
+                    year: null,
+                    quarter: null,
+                    month: null
+                }
+            };
+
+            const signalSubscription = await this.db.pg.maybeOne<{
+                fullStats: TradeStats["fullStats"];
+                settings: PortfolioSettings;
+                feeRate: number;
+            }>(sql`
+            SELECT r.full_stats,  r.signal_subscription_settings as settings,
+            m.fee_rate
+            FROM v_signal_subscriptions r,  mv_exchange_info m
+            WHERE r.id = ${signalSubscriptionId} 
+            AND  r.exchange = m.exchange;
+        `);
+            if (!signalSubscription)
+                throw new Error(
+                    `The signal subscription doesn't exists (signalSubscriptionId: ${signalSubscriptionId})`
+                );
+
+            if (!recalc) {
+                if (!signalSubscription.fullStats) recalc = true;
+                else {
+                    let periodStats;
+                    if (signalSubscription.fullStats && signalSubscription.fullStats?.lastPosition) {
+                        periodStats = await this.db.pg.any<PeriodStats<BaseStats>>(sql`
+                        SELECT period, year, quarter, month, date_from, date_to, stats
+                        FROM signal_subscription_period_stats
+                        WHERE signal_subscription_id = ${signalSubscriptionId}
+                        AND date_from <= ${signalSubscription.fullStats.lastPosition.exitDate}
+                        AND date_to >= ${signalSubscription.fullStats.lastPosition.exitDate};
+                    `);
+                    }
+                    initialStats = {
+                        fullStats: signalSubscription.fullStats,
+                        periodStats: periodStatsFromArray(
+                            periodStats && Array.isArray(periodStats) ? [...periodStats] : []
+                        )
+                    };
+                }
+            }
+
+            let calcFrom;
+            if (!recalc && initialStats?.fullStats) {
+                calcFrom = initialStats.fullStats.lastPosition.exitDate;
+            }
+            if (calcFrom)
+                logger.debug(`Calculating Signal Subscription #${signalSubscriptionId} stats from ${calcFrom}`);
+            else logger.debug(`Calculating Signal Subscription #${signalSubscriptionId} stats full`);
+
+            const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
+            const querySelectPart = sql`
+            SELECT p.id, p.direction, p.entry_date, p.entry_price, p.exit_date, p.exit_price, p.share, r.timeframe
+        `;
+            const queryFromAndConditionPart = sql`
+            FROM signal_subscription_positions p, robots r
+            WHERE p.signal_subscription_id = ${signalSubscriptionId}
+                AND p.status in ('closed','closedAuto')
+                AND r.id = p.robot_id
+                ${conditionExitDate}
+        `;
+            const queryCommonPart = sql`
+            ${querySelectPart}
+            ${queryFromAndConditionPart}
+            ORDER BY p.exit_date
+        `;
+
+            const positionsCount = await this.db.pg.oneFirst<number>(sql`
+            SELECT COUNT(1)
+            ${queryFromAndConditionPart};
+        `);
+
+            if (positionsCount == 0) return false;
+
+            const loadedPositions: BasePosition & { share: number; timeframe: number }[] = await DataStream.from(
+                makeChunksGenerator(
+                    this.db.pg,
+                    queryCommonPart,
+                    positionsCount > this.defaultChunkSize ? this.defaultChunkSize : positionsCount
+                )
+            ).reduce(async (accum: BasePosition[], chunk: BasePosition[]) => [...accum, ...chunk], []);
+
+            const positions: BasePosition[] = loadedPositions.map((pos) => {
+                const position = {
+                    ...pos,
+                    barsHeld: +round(
+                        dayjs
+                            .utc(Timeframe.validTimeframeDatePrev((pos as BasePosition).exitDate, pos.timeframe))
+                            .diff(
+                                dayjs.utc(
+                                    Timeframe.validTimeframeDatePrev((pos as BasePosition).entryDate, pos.timeframe)
+                                ),
+                                "minute"
+                            ) / pos.timeframe
+                    ),
+                    meta: {
+                        portfolioShare: pos.share
+                    }
+                };
+
+                return position as BasePosition;
+            });
+
+            const newStats: TradeStats = await this.calcStats(
+                positions,
+                {
+                    job: { ...job, feeRate: signalSubscription.feeRate, savePositions: true },
+                    initialBalance: signalSubscription.settings.initialBalance,
+                    leverage: signalSubscription.settings.leverage
+                },
+                initialStats
+            );
+
+            await this.db.pg.transaction(async (t) => {
+                await t.query(sql`
+                UPDATE signal_subscriptions
+                SET full_stats = ${JSON.stringify(newStats.fullStats)}
+                WHERE id = ${signalSubscriptionId};`);
+
+                const periodStatsArray = periodStatsToArray(newStats.periodStats);
+                if (recalc) {
+                    await t.query(
+                        sql`DELETE FROM signal_subscription_period_stats WHERE signal_subscription_id = ${signalSubscriptionId}`
+                    );
+
+                    await t.query(sql`
+                INSERT INTO signal_subscription_period_stats
+                (signal_subscription_id,
+                    period,
+                    year,
+                    quarter,
+                    month,
+                    date_from,
+                    date_to,
+                    stats )
+                SELECT * FROM
+                ${sql.unnest(
+                    this.db.util.prepareUnnest(
+                        periodStatsArray.map((s) => ({
+                            ...s,
+                            signalSubscriptionId,
+                            quarter: s.quarter || undefined,
+                            month: s.month || undefined,
+                            stats: JSON.stringify(s.stats)
+                        })),
+                        ["signalSubscriptionId", "period", "year", "quarter", "month", "dateFrom", "dateTo", "stats"]
+                    ),
+                    ["uuid", "varchar", "int8", "int8", "int8", "timestamp", "timestamp", "jsonb"]
+                )}
+
+                `);
+                } else {
+                    for (const s of periodStatsArray) {
+                        await t.query(sql`
+                    INSERT INTO signal_subscription_period_stats
+                    (signal_subscription_id,
+                    period,
+                    year,
+                    quarter,
+                    month,
+                    date_from,
+                    date_to,
+                    stats )
+                    VALUES (${signalSubscriptionId},
+                    ${s.period},
+                    ${s.year},
+                    ${s.quarter || null},
+                    ${s.month || null},
+                    ${s.dateFrom},
+                    ${s.dateTo},
+                    ${JSON.stringify(s.stats)} )
+                    ON CONFLICT ON CONSTRAINT signal_subscription_period_stats_pkey
+                DO UPDATE SET stats = excluded.stats;
+                        `);
+                    }
+                }
+            });
+
+            if (newStats.positions && newStats.positions.length) {
+                for (const pos of newStats.positions) {
+                    this.db.pg.query(sql`
+                    UPDATE signal_subscription_positions 
+                    SET volume = ${pos.volume},
+                    profit = ${pos.profit}
+                    WHERE id = ${pos.id};
+                    `);
+                }
+            }
+        } catch (err) {
+            this.log.error("Failed to calcSignalSubscription stats", err);
             this.log.debug(job);
             throw err;
         }

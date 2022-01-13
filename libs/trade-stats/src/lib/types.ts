@@ -153,12 +153,14 @@ export type TradeStatsType =
     | "userSignal"
     | "userRobot"
     | "userPortfolio"
+    | "signalSubscription"
     | "userSignalsAggr"
     | "userRobotsAggr"
     | "allRobotsAggr"
     | "allUserRobotsAggr"
     | "allPortfoliosAggr"
-    | "allUserPortfoliosAggr";
+    | "allUserPortfoliosAggr"
+    | "allSignalSubscriptionsAggr";
 
 interface BaseTradeStatsJob {
     type: TradeStatsType;
@@ -190,6 +192,12 @@ export interface TradeStatsUserPortfolio extends BaseTradeStatsJob {
     userPortfolioId: string;
 }
 
+export interface TradeStatsSignalSubscription extends BaseTradeStatsJob {
+    type: "signalSubscription";
+    signalSubscriptionId: string;
+    feeRate?: number;
+}
+
 export interface TradeStatsAllRobotsAggr extends BaseTradeStatsJob {
     type: "allRobotsAggr";
     exchange?: string;
@@ -212,21 +220,29 @@ export interface TradeStatsAllUserPortfoliosAggr extends BaseTradeStatsJob {
     exchange?: string;
 }
 
+export interface TradeStatsAllSignalSubscriptionsAggr extends BaseTradeStatsJob {
+    type: "allSignalSubscriptionsAggr";
+    exchange?: string;
+}
+
 export type TradeStatsJob =
     | TradeStatsRobot
     | TradeStatsPortfolio
     | TradeStatsUserRobot
     | TradeStatsUserPortfolio
+    | TradeStatsSignalSubscription
     | TradeStatsAllRobotsAggr
     | TradeStatsAllUserRobotsAggr
     | TradeStatsAllPortfoliosAggr
-    | TradeStatsAllUserPortfoliosAggr;
+    | TradeStatsAllUserPortfoliosAggr
+    | TradeStatsAllSignalSubscriptionsAggr;
 
 export type TradeStatsAggrJob =
     | TradeStatsAllRobotsAggr
     | TradeStatsAllUserRobotsAggr
     | TradeStatsAllPortfoliosAggr
-    | TradeStatsAllUserPortfoliosAggr;
+    | TradeStatsAllUserPortfoliosAggr
+    | TradeStatsAllSignalSubscriptionsAggr;
 
 export interface StatsMeta {
     job: TradeStatsJob;

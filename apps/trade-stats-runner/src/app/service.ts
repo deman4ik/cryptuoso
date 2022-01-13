@@ -5,10 +5,12 @@ import {
     TradeStatsRunnerPortfolioRobot,
     TradeStatsRunnerRecalcAllPortfolios,
     TradeStatsRunnerRecalcAllRobots,
+    TradeStatsRunnerRecalcAllSignalSubscriptions,
     TradeStatsRunnerRecalcAllUserPortfolios,
     TradeStatsRunnerRecalcAllUserRobots,
     TradeStatsRunnerRobot,
     TradeStatsRunnerSchema,
+    TradeStatsRunnerSignalSubscription,
     TradeStatsRunnerUserPortfolio,
     TradeStatsRunnerUserRobot
 } from "@cryptuoso/trade-stats-events";
@@ -50,6 +52,11 @@ export default class StatisticCalcRunnerService extends HTTPService {
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.handleStatsCalcUserPortfolioEvent.bind(this))
                 },
+                calcSignalSubscription: {
+                    inputSchema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.SIGNAL_SUBSCRIPTION],
+                    roles: [UserRoles.admin, UserRoles.manager],
+                    handler: this.HTTPHandler.bind(this, this.handleStatsCalcSignalSubscriptionEvent.bind(this))
+                },
                 recalcStatsAllRobots: {
                     inputSchema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.RECALC_ALL_ROBOTS],
                     roles: [UserRoles.admin, UserRoles.manager],
@@ -69,6 +76,11 @@ export default class StatisticCalcRunnerService extends HTTPService {
                     inputSchema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.RECALC_ALL_USER_PORTFOLIOS],
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.handleRecalcAllUserPortfoliosEvent.bind(this))
+                },
+                recalcStatsAllSignalSubscriptions: {
+                    inputSchema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.RECALC_ALL_USER_PORTFOLIOS],
+                    roles: [UserRoles.admin, UserRoles.manager],
+                    handler: this.HTTPHandler.bind(this, this.handleRecalcAllSignalSubscriptionsEvent.bind(this))
                 }
             });
             this.events.subscribe({
@@ -83,6 +95,10 @@ export default class StatisticCalcRunnerService extends HTTPService {
                 [TradeStatsRunnerEvents.USER_ROBOT]: {
                     schema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.USER_ROBOT],
                     handler: this.handleStatsCalcUserRobotEvent.bind(this)
+                },
+                [TradeStatsRunnerEvents.SIGNAL_SUBSCRIPTION]: {
+                    schema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.SIGNAL_SUBSCRIPTION],
+                    handler: this.handleStatsCalcSignalSubscriptionEvent.bind(this)
                 }
             });
             this.addOnStartHandler(this.onServiceStart);
@@ -192,6 +208,14 @@ export default class StatisticCalcRunnerService extends HTTPService {
         await this.queueJob({ type: "userPortfolio", recalc, userPortfolioId });
     }
 
+    async handleStatsCalcSignalSubscriptionEvent(params: TradeStatsRunnerSignalSubscription) {
+        const { recalc, signalSubscriptionId } = params;
+
+        this.log.info(`New ${TradeStatsRunnerEvents.SIGNAL_SUBSCRIPTION} event - ${signalSubscriptionId}`);
+
+        await this.queueJob({ type: "signalSubscription", recalc, signalSubscriptionId });
+    }
+
     async handleRecalcAllRobotsEvent(params: TradeStatsRunnerRecalcAllRobots) {
         const { exchange, asset } = params;
 
@@ -275,6 +299,25 @@ export default class StatisticCalcRunnerService extends HTTPService {
 
         for (const { userPortfolioId } of userPortfolios) {
             await this.queueJob({ type: "userPortfolio", recalc: true, userPortfolioId });
+        }
+    }
+
+    async handleRecalcAllSignalSubscriptionsEvent(params: TradeStatsRunnerRecalcAllSignalSubscriptions) {
+        const { exchange } = params;
+
+        const conditionExchange = !exchange ? this.db.sql`` : this.db.sql`AND ss.exchange=${exchange}`;
+
+        const signalSubscriptions = await this.db.pg.any<{ signalSubscriptionId: string }>(
+            sql`
+        SELECT ss.id as signal_subscription_id
+        FROM signal_subscriptions ss
+        WHERE ss.status = 'started'
+        ${conditionExchange};
+        `
+        );
+
+        for (const { signalSubscriptionId } of signalSubscriptions) {
+            await this.queueJob({ type: "signalSubscription", recalc: true, signalSubscriptionId });
         }
     }
 }

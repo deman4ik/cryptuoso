@@ -16,9 +16,8 @@ import {
 } from "@cryptuoso/portfolio-state";
 import { v4 as uuid } from "uuid";
 import dayjs from "@cryptuoso/dayjs";
-import { equals, nvl } from "@cryptuoso/helpers";
+import { equals } from "@cryptuoso/helpers";
 import {
-    PortfolioManagerInEvents,
     PortfolioManagerOutEvents,
     PortfolioManagerOutSchema,
     PortfolioManagerPortfolioBuilded,
@@ -26,21 +25,8 @@ import {
     PortfolioManagerSignalSubscriptionError
 } from "@cryptuoso/portfolio-events";
 import { Signal, SignalEvents, SignalSchema } from "@cryptuoso/robot-events";
-import {
-    UserPortfolioStatus,
-    UserRobotRunnerEvents,
-    UserRobotRunnerPause,
-    UserRobotRunnerResume,
-    UserRobotRunnerSchema,
-    UserRobotRunnerStart,
-    UserRobotRunnerStartPortfolio,
-    UserRobotRunnerStop,
-    UserRobotRunnerStopPortfolio,
-    UserRobotWorkerEvents,
-    UserRobotWorkerStatus,
-    USER_ROBOT_WORKER_TOPIC
-} from "@cryptuoso/user-robot-events";
-import { TradeAction } from "@cryptuoso/market";
+import { UserRobotRunnerEvents, UserRobotRunnerSchema } from "@cryptuoso/user-robot-events";
+import { TradeStatsRunnerEvents, TradeStatsRunnerSignalSubscription } from "@cryptuoso/trade-stats-events";
 import { SignalSubscriptionRobot } from "./signalSubscriptionRobot";
 
 export type WebhooksServiceConfig = HTTPServiceConfig;
@@ -203,6 +189,9 @@ export default class WebhooksService extends HTTPService {
         url: SignalSubscriptionDB["url"];
         token: SignalSubscriptionDB["token"];
     }) {
+        if (type === "zignaly" && exchange !== "binance_futures")
+            throw new Error("Only Binance futures is supported for Zignaly");
+
         const {
             portfolioId,
             limits: { recommendedBalance },
@@ -637,6 +626,15 @@ AND active = true;`);
                         WHERE id = ${r.id};
                         `);
                         });
+
+                        if (robot.hasClosedPositions) {
+                            await this.events.emit<TradeStatsRunnerSignalSubscription>({
+                                type: TradeStatsRunnerEvents.SIGNAL_SUBSCRIPTION,
+                                data: {
+                                    signalSubscriptionId: r.signalSubscriptionId
+                                }
+                            });
+                        }
                     });
                 } catch (err) {
                     this.log.error(`Failed to handle signal ${err.message}`);

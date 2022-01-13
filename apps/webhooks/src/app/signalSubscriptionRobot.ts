@@ -119,7 +119,9 @@ export class SignalSubscriptionRobot {
             share: this.#robot.share
         };
 
-        position = await openZignalyPosition(this.#robot.url, this.#robot.token, position);
+        if (this.#robot.type === "zignaly")
+            position = await openZignalyPosition(this.#robot.url, this.#robot.token, position);
+        else throw new Error("Not supported"); //TODO universal webhook
 
         this.#positionsToSave = [...this.#positionsToSave, position];
     };
@@ -131,14 +133,18 @@ export class SignalSubscriptionRobot {
             exitDate: dayjs.utc().toISOString(),
             exitOrderType: signal ? "limit" : "market"
         };
-
-        position = await closeZignalyPosition(this.#robot.url, this.#robot.token, position, !signal);
-
+        if (this.#robot.type === "zignaly")
+            position = await closeZignalyPosition(this.#robot.url, this.#robot.token, position, !signal);
+        else throw new Error("Not supported"); //TODO universal webhook
         this.#positionsToSave = [...this.#positionsToSave, position];
     };
 
     get positionsToSave() {
         return this.#positionsToSave;
+    }
+
+    get hasClosedPositions() {
+        return this.#positionsToSave.filter((pos) => pos.status === "closed" || pos.status === "closedAuto").length > 0;
     }
 
     get state() {

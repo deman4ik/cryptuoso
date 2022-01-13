@@ -12,7 +12,7 @@ interface ZignalySignal {
     orderType: "limit" | "market";
     positionSizePercentage?: string;
     signalId: string;
-    price: string;
+    price?: string;
     leverage?: string;
 }
 
@@ -57,9 +57,12 @@ export async function openZignalyPosition(
         orderType: position.entryOrderType,
         positionSizePercentage: `${position.share}`,
         signalId: `${position.id}`,
-        price: `${position.entryPrice}`,
         leverage: `${position.leverage}`
     };
+
+    if (signal.orderType === "limit") {
+        signal.price = `${position.entryPrice}`;
+    }
     let error;
     try {
         await fetchZignaly(url, signal);
@@ -82,13 +85,13 @@ export async function closeZignalyPosition(
         exchangeAccountType: "futures",
         type: "exit",
         pair: `${position.asset}${position.currency}`.toLowerCase(),
-        //side: position.direction,
         orderType: position.exitOrderType,
-        // positionSizePercentage: `${position.share}`,
-        signalId: `${position.id}`,
-        price: `${position.exitPrice}`
-        // leverage: `${position.leverage}`
+        signalId: `${position.id}`
     };
+
+    if (signal.orderType === "limit") {
+        signal.price = `${position.exitPrice}`;
+    }
     let error;
     try {
         await fetchZignaly(url, signal);

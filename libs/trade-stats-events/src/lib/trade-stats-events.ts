@@ -8,10 +8,12 @@ export const enum TradeStatsRunnerEvents {
     PORTFOLIO_ROBOT = `stats-calc.portfolio-robot`,
     USER_ROBOT = `stats-calc.user-robot`,
     USER_PORTFOLIO = `stats-calc.user-portfolio`,
+    SIGNAL_SUBSCRIPTION = `stats-calc.signal-subscription`,
     RECALC_ALL_ROBOTS = `stats-calc.recalc-all-robots`,
     RECALC_ALL_PORTFOLIOS = `stats-calc.recalc-all-portfolios`,
     RECALC_ALL_USER_ROBOTS = `stats-calc.recalc-all-user-robots`,
-    RECALC_ALL_USER_PORTFOLIOS = `stats-calc.recalc-all-user-portfolios`
+    RECALC_ALL_USER_PORTFOLIOS = `stats-calc.recalc-all-user-portfolios`,
+    RECALC_ALL_SIGNAL_SUBSCRIPTIONS = `stats-calc.recalc-all-signal-subscriptions`
 }
 
 export const OUR_TRADE_STATS_TOPIC = "out-trade-stats-worker";
@@ -76,6 +78,16 @@ export const TradeStatsRunnerSchema = {
             type: "uuid"
         }
     },
+    [TradeStatsRunnerEvents.SIGNAL_SUBSCRIPTION]: {
+        recalc: {
+            type: "boolean",
+            optional: true,
+            default: false
+        },
+        signalSubscriptionId: {
+            type: "uuid"
+        }
+    },
     [TradeStatsRunnerEvents.RECALC_ALL_ROBOTS]: {
         exchange: {
             type: "string",
@@ -128,6 +140,13 @@ export const TradeStatsRunnerSchema = {
             optional: true,
             default: null as string
         }
+    },
+    [TradeStatsRunnerEvents.RECALC_ALL_SIGNAL_SUBSCRIPTIONS]: {
+        exchange: {
+            type: "string",
+            optional: true,
+            default: null as string
+        }
     }
 };
 
@@ -155,6 +174,11 @@ export interface TradeStatsRunnerUserPortfolio {
     userPortfolioId: string;
 }
 
+export interface TradeStatsRunnerSignalSubscription {
+    recalc?: boolean;
+    signalSubscriptionId: string;
+}
+
 export interface TradeStatsRunnerRecalcAllRobots {
     exchange?: string;
     asset?: string;
@@ -176,15 +200,21 @@ export interface TradeStatsRunnerRecalcAllUserPortfolios {
     userId?: string;
 }
 
+export interface TradeStatsRunnerRecalcAllSignalSubscriptions {
+    exchange?: string;
+}
+
 export type TradeStatsRunnerEvent =
     | TradeStatsRunnerRobot
     | TradeStatsRunnerPortfolio
     | TradeStatsRunnerUserRobot
     | TradeStatsRunnerUserPortfolio
+    | TradeStatsRunnerSignalSubscription
     | TradeStatsRunnerRecalcAllRobots
     | TradeStatsRunnerRecalcAllPortfolios
     | TradeStatsRunnerRecalcAllUserRobots
-    | TradeStatsRunnerRecalcAllUserPortfolios;
+    | TradeStatsRunnerRecalcAllUserPortfolios
+    | TradeStatsRunnerRecalcAllSignalSubscriptions;
 
 export interface TradeStatsWorkerErrorEvent {
     job: TradeStatsJob;
