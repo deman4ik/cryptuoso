@@ -343,7 +343,7 @@ AND active = true;`);
     async deleteSignalSubscription({ signalSubscriptionId }: { signalSubscriptionId: string }) {
         const { status } = await this.db.pg.one<{ status: SignalSubscriptionDB["status"] }>(sql`
        SELECT  status 
-       FROM sisgnal_subscriptions
+       FROM signal_subscriptions
        WHERE id = ${signalSubscriptionId};
        `);
 
@@ -363,7 +363,7 @@ AND active = true;`);
             type: SignalSubscriptionDB["type"];
         }>(sql`
        SELECT  status, url, token, type
-       FROM sisgnal_subscriptions
+       FROM signal_subscriptions
        WHERE id = ${signalSubscriptionId};
        `);
 
@@ -388,7 +388,7 @@ AND active = true;`);
             type: SignalSubscriptionDB["type"];
         }>(sql`
        SELECT  status, url, token, type
-       FROM sisgnal_subscriptions
+       FROM signal_subscriptions
        WHERE id = ${signalSubscriptionId};
        `);
 
