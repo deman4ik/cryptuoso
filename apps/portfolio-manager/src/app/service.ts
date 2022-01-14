@@ -492,8 +492,12 @@ export default class PortfolioManagerService extends HTTPService {
         },
         user: User
     ) {
-        //TODO: LOCK
-        const userPortfolio = await this.db.pg.one<UserPortfolioState>(sql`
+        await this.redlock.using([`userPortfolioEdit:${userPortfolioId}`], 5000, async (signal) => {
+            if (signal.aborted) {
+                throw signal.error;
+            }
+
+            const userPortfolio = await this.db.pg.one<UserPortfolioState>(sql`
         SELECT p.id, p.type, p.user_id, p.user_ex_acc_id, p.exchange, p.status, 
               ups.id as user_portfolio_settings_id, 
               ups.active_from as user_portfolio_settings_active_from,
@@ -515,22 +519,22 @@ export default class PortfolioManagerService extends HTTPService {
              ORDER BY ups.active_from DESC NULLS FIRST LIMIT 1; 
        `);
 
-        const custom = userPortfolio.settings.custom;
-        if (userPortfolio.userId !== user.id)
-            throw new ActionsHandlerError(
-                "Current user isn't owner of this User Portfolio",
-                { userPortfolioId: userPortfolio.id },
-                "FORBIDDEN",
-                403
-            );
+            const custom = userPortfolio.settings.custom;
+            if (userPortfolio.userId !== user.id)
+                throw new ActionsHandlerError(
+                    "Current user isn't owner of this User Portfolio",
+                    { userPortfolioId: userPortfolio.id },
+                    "FORBIDDEN",
+                    403
+                );
 
-        const newOptions = { ...userPortfolio.settings.options, ...options };
-        let portfolioId;
-        let robots: PortfolioRobotDB[];
-        if (!custom) {
-            ({ portfolioId } = await this.db.pg.one<{
-                portfolioId: string;
-            }>(sql`
+            const newOptions = { ...userPortfolio.settings.options, ...options };
+            let portfolioId;
+            let robots: PortfolioRobotDB[];
+            if (!custom) {
+                ({ portfolioId } = await this.db.pg.one<{
+                    portfolioId: string;
+                }>(sql`
         SELECT  p.id as portfolio_id from v_portfolios p where
         p.exchange = ${userPortfolio.exchange} 
         AND p.base = true
@@ -542,119 +546,120 @@ export default class PortfolioManagerService extends HTTPService {
         AND p.option_money_management = ${newOptions.moneyManagement};
         `));
 
-            const portfolioRobots = await this.db.pg.any<PortfolioRobotDB>(sql`
+                const portfolioRobots = await this.db.pg.any<PortfolioRobotDB>(sql`
         SELECT robot_id, active, share, priority
         FROM portfolio_robots
         WHERE portfolio_id = ${portfolioId}
         AND active = true;`);
-            robots = [...portfolioRobots];
-        }
+                robots = [...portfolioRobots];
+            }
 
-        if (tradingAmountType) {
-            let initialBalance = userPortfolio.settings.initialBalance;
+            if (tradingAmountType) {
+                let initialBalance = userPortfolio.settings.initialBalance;
 
-            const userExAcc = await this.db.pg.maybeOne<{
-                exchange: UserExchangeAccountInfo["exchange"];
-                balance: UserExchangeAccountInfo["balance"];
-            }>(sql`
+                const userExAcc = await this.db.pg.maybeOne<{
+                    exchange: UserExchangeAccountInfo["exchange"];
+                    balance: UserExchangeAccountInfo["balance"];
+                }>(sql`
                 SELECT exchange, ((ea.balances ->> 'totalUSD'::text))::numeric as balance
                 FROM user_exchange_accs ea
                 WHERE ea.id = ${userPortfolio.userExAccId};
                 `);
-            initialBalance = userExAcc.balance;
+                initialBalance = userExAcc.balance;
 
-            const portfolioBalance = getPortfolioBalance(
-                initialBalance,
-                tradingAmountType,
-                balancePercent,
-                tradingAmountCurrency
-            );
+                const portfolioBalance = getPortfolioBalance(
+                    initialBalance,
+                    tradingAmountType,
+                    balancePercent,
+                    tradingAmountCurrency
+                );
 
-            if (!custom) {
-                const {
-                    limits: { recommendedBalance },
-                    settings: { leverage: defaultLeverage },
-                    maxLeverage
-                } = await this.db.pg.one<{
-                    limits: {
-                        recommendedBalance: number;
-                    };
-                    settings: PortfolioSettings;
-                    maxLeverage: number;
-                }>(sql`
+                if (!custom) {
+                    const {
+                        limits: { recommendedBalance },
+                        settings: { leverage: defaultLeverage },
+                        maxLeverage
+                    } = await this.db.pg.one<{
+                        limits: {
+                            recommendedBalance: number;
+                        };
+                        settings: PortfolioSettings;
+                        maxLeverage: number;
+                    }>(sql`
             SELECT p.limits, p.settings, e.max_leverage from v_portfolios p, exchanges e where 
             e.code = ${userPortfolio.exchange}
             and p.id = ${portfolioId};
             `);
 
-                leverage = calcUserLeverage(recommendedBalance, defaultLeverage, maxLeverage, portfolioBalance);
+                    leverage = calcUserLeverage(recommendedBalance, defaultLeverage, maxLeverage, portfolioBalance);
+                }
             }
-        }
 
-        const userPortfolioSettings: PortfolioSettings = {
-            ...userPortfolio.settings,
-            options: newOptions,
-            tradingAmountType: nvl(tradingAmountType, userPortfolio.settings.tradingAmountType),
-            balancePercent: nvl(balancePercent, userPortfolio.settings.balancePercent),
-            tradingAmountCurrency: nvl(tradingAmountCurrency, userPortfolio.settings.tradingAmountCurrency)
-        };
+            const userPortfolioSettings: PortfolioSettings = {
+                ...userPortfolio.settings,
+                options: newOptions,
+                tradingAmountType: nvl(tradingAmountType, userPortfolio.settings.tradingAmountType),
+                balancePercent: nvl(balancePercent, userPortfolio.settings.balancePercent),
+                tradingAmountCurrency: nvl(tradingAmountCurrency, userPortfolio.settings.tradingAmountCurrency)
+            };
 
-        if (custom) {
-            userPortfolioSettings.leverage = leverage ?? userPortfolioSettings.leverage;
-            userPortfolioSettings.maxRobotsCount = maxRobotsCount ?? userPortfolioSettings.maxRobotsCount;
-            userPortfolioSettings.minRobotsCount = minRobotsCount ?? userPortfolioSettings.minRobotsCount;
-            userPortfolioSettings.includeAssets = includeAssets ?? userPortfolioSettings.includeAssets;
-            userPortfolioSettings.excludeAssets = excludeAssets ?? userPortfolioSettings.excludeAssets;
-            userPortfolioSettings.includeTimeframes = includeTimeframes ?? userPortfolioSettings.includeTimeframes;
-            userPortfolioSettings.excludeTimeframes = excludeTimeframes ?? userPortfolioSettings.excludeTimeframes;
-        }
+            if (custom) {
+                userPortfolioSettings.leverage = leverage ?? userPortfolioSettings.leverage;
+                userPortfolioSettings.maxRobotsCount = maxRobotsCount ?? userPortfolioSettings.maxRobotsCount;
+                userPortfolioSettings.minRobotsCount = minRobotsCount ?? userPortfolioSettings.minRobotsCount;
+                userPortfolioSettings.includeAssets = includeAssets ?? userPortfolioSettings.includeAssets;
+                userPortfolioSettings.excludeAssets = excludeAssets ?? userPortfolioSettings.excludeAssets;
+                userPortfolioSettings.includeTimeframes = includeTimeframes ?? userPortfolioSettings.includeTimeframes;
+                userPortfolioSettings.excludeTimeframes = excludeTimeframes ?? userPortfolioSettings.excludeTimeframes;
+            }
 
-        if (!equals(userPortfolioSettings, userPortfolio.settings)) {
-            await this.db.pg.transaction(async (t) => {
-                if (!custom) {
-                    await t.query(sql`UPDATE user_portfolio_settings 
+            if (!equals(userPortfolioSettings, userPortfolio.settings)) {
+                await this.db.pg.transaction(async (t) => {
+                    if (!custom) {
+                        await t.query(sql`UPDATE user_portfolio_settings 
                     SET active = ${false}
                     WHERE user_portfolio_id = ${userPortfolio.id};
                     `);
-                    await t.query(sql`
+                        await t.query(sql`
                     insert into user_portfolio_settings (user_portfolio_id, active_from, user_portfolio_settings, robots, active)
                     values (${userPortfolio.id}, ${dayjs.utc().toISOString()}, ${JSON.stringify(
-                        userPortfolioSettings
-                    )}, ${JSON.stringify(robots) || null}, ${true}); 
+                            userPortfolioSettings
+                        )}, ${JSON.stringify(robots) || null}, ${true}); 
                     `);
-                } else {
-                    const settingsExists = await t.maybeOne(sql`
+                    } else {
+                        const settingsExists = await t.maybeOne(sql`
                         SELECT id 
                         FROM user_portfolio_settings 
                         WHERE user_portfolio_id = ${userPortfolio.id}
                         AND active_from is null;
             `);
 
-                    if (settingsExists) {
-                        await t.query(sql`
+                        if (settingsExists) {
+                            await t.query(sql`
                         UPDATE user_portfolio_settings 
                         set user_portfolio_settings = ${JSON.stringify(userPortfolioSettings)}
                         WHERE id = ${settingsExists.id};
                 `);
-                    } else {
-                        await t.query(sql`
+                        } else {
+                            await t.query(sql`
                 INSERT INTO user_portfolio_settings (user_portfolio_id, active_from, user_portfolio_settings)
                 VALUES(${userPortfolio.id}, ${null}, ${JSON.stringify(userPortfolioSettings)} );`);
+                        }
                     }
-                }
-            });
-        }
+                });
+            }
 
-        if (!custom) {
-            await this.events.emit<PortfolioManagerUserPortfolioBuilded>({
-                type: PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED,
-                data: {
-                    userPortfolioId: userPortfolio.id
-                }
-            });
-        } else {
-            await this.buildUserPortfolio({ userPortfolioId: userPortfolio.id });
-        }
+            if (!custom) {
+                await this.events.emit<PortfolioManagerUserPortfolioBuilded>({
+                    type: PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED,
+                    data: {
+                        userPortfolioId: userPortfolio.id
+                    }
+                });
+            } else {
+                await this.buildUserPortfolio({ userPortfolioId: userPortfolio.id });
+            }
+        });
     }
 
     async deleteUserPortfolio(
