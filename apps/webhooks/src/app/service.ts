@@ -397,7 +397,7 @@ AND active = true;`);
         const openPositions = await this.db.pg.oneFirst<number>(sql`SELECT COUNT(1) FROM
         signal_subscription_positions where signal_subscription_id = ${signalSubscriptionId} and status = 'open'`);
 
-        let newStatus = openPositions > 0 ? "stopping" : "stopped";
+        const newStatus = openPositions > 0 ? "stopping" : "stopped";
 
         await this.db.pg.transaction(async (t) => {
             await t.query(sql`
