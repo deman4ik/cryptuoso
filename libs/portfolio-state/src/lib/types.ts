@@ -184,7 +184,7 @@ export interface SignalSubscriptionDB {
     id: string;
     exchange: string;
     type: "zignaly";
-    status: "started" | "stopped";
+    status: "started" | "stopped" | "stopping";
     fullStats?: FullStats;
     periodStats?: PeriodStats<BaseStats>[];
     url: string;

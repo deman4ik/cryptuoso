@@ -28,6 +28,7 @@ import { Signal, SignalEvents, SignalSchema } from "@cryptuoso/robot-events";
 import { UserRobotRunnerEvents, UserRobotRunnerSchema } from "@cryptuoso/user-robot-events";
 import { TradeStatsRunnerEvents, TradeStatsRunnerSignalSubscription } from "@cryptuoso/trade-stats-events";
 import { SignalSubscriptionRobot } from "./signalSubscriptionRobot";
+import { startZignaly, stopZignaly } from "./zignalyProvider";
 
 export type WebhooksServiceConfig = HTTPServiceConfig;
 
@@ -232,7 +233,7 @@ export default class WebhooksService extends HTTPService {
             id: uuid(),
             exchange,
             type,
-            status: "started",
+            status: "stopped",
             url,
             token
         };
@@ -355,8 +356,13 @@ AND active = true;`);
     }
 
     async startSignalSubscription({ signalSubscriptionId }: { signalSubscriptionId: string }) {
-        const { status } = await this.db.pg.one<{ status: SignalSubscriptionDB["status"] }>(sql`
-       SELECT  status 
+        const { status, url, token, type } = await this.db.pg.one<{
+            status: SignalSubscriptionDB["status"];
+            url: SignalSubscriptionDB["url"];
+            token: SignalSubscriptionDB["token"];
+            type: SignalSubscriptionDB["type"];
+        }>(sql`
+       SELECT  status, url, token, type
        FROM sisgnal_subscriptions
        WHERE id = ${signalSubscriptionId};
        `);
@@ -369,25 +375,47 @@ AND active = true;`);
        WHERE id = ${signalSubscriptionId};
        `);
 
+        await this.syncSignalSubscriptionRobots({ signalSubscriptionId });
+        if (type === "zignaly") await startZignaly(url, token);
         return "started";
     }
 
     async stopSignalSubscription({ signalSubscriptionId }: { signalSubscriptionId: string }) {
-        const { status } = await this.db.pg.one<{ status: SignalSubscriptionDB["status"] }>(sql`
-       SELECT  status 
+        const { status, url, token, type } = await this.db.pg.one<{
+            status: SignalSubscriptionDB["status"];
+            url: SignalSubscriptionDB["url"];
+            token: SignalSubscriptionDB["token"];
+            type: SignalSubscriptionDB["type"];
+        }>(sql`
+       SELECT  status, url, token, type
        FROM sisgnal_subscriptions
        WHERE id = ${signalSubscriptionId};
        `);
 
         if (status === "stopped") return status;
 
-        await this.db.pg.query(sql`
-       UPDATE signal_subscriptions 
-       SET status = 'stopped'
-       WHERE id = ${signalSubscriptionId};
-       `);
+        const openPositions = await this.db.pg.oneFirst<number>(sql`SELECT COUNT(1) FROM
+        signal_subscription_positions where signal_subscription_id = ${signalSubscriptionId} and status = 'open'`);
 
-        return "stopped";
+        let newStatus = openPositions > 0 ? "stopping" : "stopped";
+
+        await this.db.pg.transaction(async (t) => {
+            await t.query(sql`
+            UPDATE signal_subscription_robots 
+            SET active = false 
+            WHERE signal_subscription_id = ${signalSubscriptionId};
+            `);
+
+            await t.query(sql`
+            UPDATE signal_subscriptions 
+            SET status = ${newStatus}
+            WHERE id = ${signalSubscriptionId};
+            `);
+        });
+
+        if (type === "zignaly") await stopZignaly(url, token);
+
+        return newStatus;
     }
 
     async syncSignalPortfolioRobots({ exchange }: { exchange: string }) {
@@ -542,6 +570,7 @@ AND active = true;`);
             type: SignalSubscriptionDB["type"];
             url: SignalSubscriptionDB["url"];
             token: SignalSubscriptionDB["token"];
+            signalSubscriptionStatus: SignalSubscriptionDB["status"];
             settings: SignalSubscriptionState["settings"];
             currentPrice: number;
         }>(
@@ -556,6 +585,7 @@ AND active = true;`);
             ss.type, 
             ss.url,
             ss.token,
+            ss.status as signal_subscription_status,
             sss.signal_subscription_settings as settings,
             f_current_price(r.exchange, r.asset, r.currency) AS current_price
              FROM signal_subscription_robots ssr, signal_subscriptions ss, v_signal_subscription_settings sss, robots r
@@ -563,7 +593,7 @@ AND active = true;`);
              AND ssr.signal_subscription_id = ss.id
              AND ss.id = sss.signal_subscription_id
              AND ssr.robot_id = r.id
-             AND ss.status = 'started'
+             AND ss.status in ('started','stopping')
              AND ((ssr.state->'latestSignal'->>'timestamp')::timestamp is null 
               OR (ssr.state->'latestSignal'->>'timestamp')::timestamp < ${timestamp})
               ORDER BY sss.active_from DESC LIMIT 1;
@@ -636,6 +666,10 @@ AND active = true;`);
                             });
                         }
                     });
+
+                    if (r.signalSubscriptionStatus === "stopping") {
+                        await this.stopSignalSubscription({ signalSubscriptionId: r.signalSubscriptionId });
+                    }
                 } catch (err) {
                     this.log.error(`Failed to handle signal ${err.message}`);
                     await this.events.emit<PortfolioManagerSignalSubscriptionError>({
