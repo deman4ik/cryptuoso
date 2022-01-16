@@ -158,7 +158,7 @@ export default class ConnectorRunnerService extends BaseService {
                 ${order.exId || null}, ${order.exTimestamp || null}, ${order.exLastTradeAt || null},
                 ${order.remaining || null}, ${order.executed || null}, ${order.fee || null},
                 ${order.lastCheckedAt || null}, ${JSON.stringify(order.params) || null},
-                ${order.error || null}, ${JSON.stringify(order.nextJob) || null}.
+                ${order.error || null}, ${JSON.stringify(order.nextJob) || null},
                 ${JSON.stringify(order.meta) || null}
             );
             `);
