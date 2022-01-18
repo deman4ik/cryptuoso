@@ -586,7 +586,8 @@ export default class UserRobotRunnerService extends HTTPService {
     async startPortfolio({ id, message }: UserRobotRunnerStartPortfolio, user: User) {
         GA.event(user.id, "portfolio", "start");
         const userPortfolio = await this.db.pg.one<UserPortfolioState>(sql`
-        SELECT p.id, p.type, p.user_id, p.user_ex_acc_id, p.exchange, p.status, 
+        SELECT  p.id, p.type, p.user_id, p.user_ex_acc_id, p.exchange, p.status, 
+                p.started_at,
               p.active_from as user_portfolio_settings_active_from,
               p.user_portfolio_settings as settings,
               p.robots 
