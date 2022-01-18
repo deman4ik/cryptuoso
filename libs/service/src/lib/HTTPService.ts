@@ -321,8 +321,13 @@ export class HTTPService extends BaseService {
     ) {
         const result = await handler(req.body.input);
 
-        res.send(result || { result: "OK" });
-
+        if (!result) res.send({ result: "OK" });
+        else {
+            const type = typeof result;
+            if (type === "object") res.send(JSON.stringify(result));
+            else if (type === "string" || type === "number" || type === "boolean") res.send({ result });
+            else res.send({ result: "OK" });
+        }
         res.end();
     }
 
@@ -335,8 +340,13 @@ export class HTTPService extends BaseService {
     ) {
         const result = await handler(req.body.input, req.meta?.user);
 
-        res.send(result || { result: "OK" });
-
+        if (!result) res.send({ result: "OK" });
+        else {
+            const type = typeof result;
+            if (type === "object") res.send(JSON.stringify(result));
+            else if (type === "string" || type === "number" || type === "boolean") res.send({ result });
+            else res.send({ result: "OK" });
+        }
         res.end();
     }
 }
