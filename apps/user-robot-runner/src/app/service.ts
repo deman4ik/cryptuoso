@@ -587,12 +587,10 @@ export default class UserRobotRunnerService extends HTTPService {
         GA.event(user.id, "portfolio", "start");
         const userPortfolio = await this.db.pg.one<UserPortfolioState>(sql`
         SELECT p.id, p.type, p.user_id, p.user_ex_acc_id, p.exchange, p.status, 
-                p.started_at,
-              ups.active_from as user_portfolio_settings_active_from,
-              ups.user_portfolio_settings as settings
-           FROM user_portfolios p
-           LEFT JOIN v_user_portfolio_settings ups
-                 ON  ups.user_portfolio_id = p.id
+              p.active_from as user_portfolio_settings_active_from,
+              p.user_portfolio_settings as settings,
+              p.robots 
+           FROM v_user_portfolios p
            WHERE p.id = ${id}; 
        `);
 
