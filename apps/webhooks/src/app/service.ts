@@ -455,7 +455,8 @@ AND active = true;`);
             AND p.option_profit = ${options.profit}
             AND p.option_win_rate = ${options.winRate}
             AND p.option_efficiency = ${options.efficiency}
-            AND p.option_money_management = ${options.moneyManagement};`);
+            AND p.option_money_management = ${options.moneyManagement}
+            AND p.custom = false;`);
 
             if (!signalSubscriptions || !Array.isArray(signalSubscriptions) || !signalSubscriptions.length) return;
 
