@@ -151,8 +151,6 @@ export class Events {
     async _receiveMessagesTick(topic: string) {
         const beacon = this.#lightship.createBeacon();
         try {
-            //FIXME: must be [string, [string, string[]][]][]
-            // but in ioredis it is [string, string[]][] 🤷
             const rawData = await this.#state[topic].unbalanced.redis.xread(
                 "BLOCK",
                 this.#blockTimeout,
@@ -235,9 +233,7 @@ export class Events {
     async _receiveGroupMessagesTick(topic: string, group: string) {
         const beacon = this.#lightship.createBeacon();
         try {
-            //FIXME: must be [string, [string, string[]][]][]
-            // but in ioredis it is [string, string[]][] 🤷
-            const rawData: any = await this.#state[`${topic}-${group}`].grouped.redis.xreadgroup(
+            const rawData = await this.#state[`${topic}-${group}`].grouped.redis.xreadgroup(
                 "GROUP",
                 group,
                 this.#consumerId,
@@ -533,20 +529,20 @@ export class Events {
         }
     }
 
-    closeConnections() {
+    async closeConnections() {
         try {
             logger.info("Closing connection redis...");
-            this.#redis.quit();
+            await this.#redis.quit();
             this.#catalog.groups.map(async ({ topic, group }) => {
                 logger.info(`Closing connection "${topic}" group "${group}" ...`);
-                this.#state[`${topic}-${group}`].grouped.redis.quit();
                 clearInterval(this.#state[`${topic}-${group}`].grouped.timerId);
+                await this.#state[`${topic}-${group}`].grouped.redis.quit();
             });
 
             this.#catalog.unbalancedTopics.map(async (topic) => {
                 logger.info(`Closing connection "${topic}" unbalanced ...`);
-                this.#state[topic].unbalanced.redis.quit();
                 clearInterval(this.#state[topic].unbalanced.timerId);
+                await this.#state[topic].unbalanced.redis.quit();
             });
         } catch (error) {
             logger.error(error.message);

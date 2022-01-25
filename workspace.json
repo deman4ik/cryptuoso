@@ -1590,6 +1590,82 @@
             },
             "tags": []
         },
+        "robot": {
+            "root": "libs/robot",
+            "sourceRoot": "libs/robot/src",
+            "projectType": "library",
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "outputs": ["{options.outputFile}"],
+                    "options": {
+                        "lintFilePatterns": ["libs/robot/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/libs/robot"],
+                    "options": {
+                        "jestConfig": "libs/robot/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            },
+            "tags": []
+        },
+        "robot-binance": {
+            "root": "apps/robot-binance",
+            "sourceRoot": "apps/robot-binance/src",
+            "projectType": "application",
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "outputs": ["{options.outputPath}"],
+                    "options": {
+                        "outputPath": "dist/apps/robot-binance",
+                        "main": "apps/robot-binance/src/main.ts",
+                        "tsConfig": "apps/robot-binance/tsconfig.app.json",
+                        "assets": ["apps/robot-binance/src/assets"],
+                        "webpackConfig": "apps/robot-binance/webpack.config.js"
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/robot-binance/src/environments/environment.ts",
+                                    "with": "apps/robot-binance/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "robot-binance:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "outputs": ["{options.outputFile}"],
+                    "options": {
+                        "lintFilePatterns": ["apps/robot-binance/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/apps/robot-binance"],
+                    "options": {
+                        "jestConfig": "apps/robot-binance/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            },
+            "tags": []
+        },
         "robot-events": {
             "root": "libs/robot-events",
             "sourceRoot": "libs/robot-events/src",
