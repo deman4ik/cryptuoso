@@ -1,5 +1,5 @@
 import dayjs from "@cryptuoso/dayjs";
-import { BaseIndicator, TulipIndicator, IndicatorCode, IndicatorType } from "@cryptuoso/robot-indicators";
+import { BaseIndicator, TulipIndicator, IndicatorCode, IndicatorType, indicators } from "@cryptuoso/robot-indicators";
 import {
     ValidTimeframe,
     CandleProps,
@@ -16,6 +16,7 @@ import { RobotPositionState, RobotState, RobotStatus, StrategyProps } from "./ty
 import logger from "@cryptuoso/logger";
 import { calcCurrencyDynamic, RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 import { periodStatsFromArray, periodStatsToArray, TradeStats, TradeStatsCalc } from "@cryptuoso/trade-stats";
+import { strategies } from "./strategies";
 
 export interface StrategyCode {
     [key: string]: any;
@@ -368,10 +369,29 @@ export class Robot {
         });
     }
 
+    setStrategyState(strategyState: StrategyProps = this._state) {
+        this._strategyInstance = new strategies[this._strategy]({
+            initialized: strategyState.initialized,
+            strategySettings: this._settings.strategySettings,
+            exchange: this._exchange,
+            asset: this._asset,
+            currency: this._currency,
+            timeframe: this._timeframe,
+            robotId: this._id,
+            backtest: this._backtest,
+            emulateNextPosition: this.emulateNextPosition,
+            marginNextPosition: this.marginNextPosition,
+            stats: this._emulatedStats,
+            posLastNumb: strategyState.posLastNumb,
+            positions: strategyState.positions,
+            ...strategyState // предыдущий стейт стратегии)
+        });
+    }
+
     /**
      *  Загрузка индикаторов
      *
-     * @memberof Adviser
+     * @memberof Robot
      */
     setIndicators() {
         // Идем по всем свойствам в объекте индикаторов
@@ -466,10 +486,89 @@ export class Robot {
         });
     }
 
+    setIndicatorsState() {
+        Object.keys(this._state.indicators).forEach((key) => {
+            const indicator = this._state.indicators[key];
+
+            switch (indicator.type) {
+                case IndicatorType.base: {
+                    // Если базовый индикатор
+
+                    // Считываем объект индикатора
+
+                    // Создаем новый инстанc базового индикатора
+                    this._indicatorInstances[key] = new indicators[key]({
+                        exchange: this._exchange,
+                        asset: this._asset,
+                        currency: this._currency,
+                        timeframe: this._timeframe,
+                        robotId: this._id,
+                        strategySettings: this._settings.strategySettings,
+                        ...indicator // стейт индикатора
+                    });
+                    break;
+                }
+                case IndicatorType.tulip: {
+                    // Если внешний индикатор Tulip
+
+                    // Создаем новый инстанc индикатора Tulip
+                    this._indicatorInstances[key] = new TulipIndicator({
+                        exchange: this._exchange,
+                        asset: this._asset,
+                        currency: this._currency,
+                        timeframe: this._timeframe,
+                        robotId: this._id,
+                        strategySettings: this._settings.strategySettings,
+                        parameters: indicator.parameters,
+                        ...indicator // стейт индикатора
+                    });
+                    break;
+                }
+                /* case INDICATORS_TALIB: {
+              // Если внешний индикатор Talib
+  
+              // Создаем новый инстанc индикатора Talib
+              this._indicatorInstances[key] = new TalibIndicatorClass({
+                exchange: this._exchange,
+                asset: this._asset,
+                currency: this._currency,
+                timeframe: this._timeframe,
+                robotId: this._id,
+                strategySettings: this._settings.strategySettings,
+                parameters: indicator.parameters,
+                ...indicator // стейт индикатора
+              });
+  
+              break;
+            }
+            case INDICATORS_TECH: {
+              // Если внешний индикатор Tech
+  
+              // Создаем новый инстанc индикатора Tech
+              this._indicatorInstances[key] = new TechInicatatorClass({
+                exchange: this._exchange,
+                asset: this._asset,
+                currency: this._currency,
+                timeframe: this._timeframe,
+                robotId: this._id,
+                strategySettings: this._settings.strategySettings,
+                parameters: indicator.parameters,
+                ...indicator // стейт индикатора
+              });
+  
+              break;
+            } */
+                default:
+                    // Неизвестный тип индикатора - ошибка
+                    throw new Error(`Unknown indicator type ${indicator.type}`);
+            }
+        });
+    }
+
     /**
      * Инициализация стратегии
      *
-     * @memberof Adviser
+     * @memberof Robot
      */
     initStrategy() {
         // Если стратегия еще не проинициализирована
@@ -487,7 +586,7 @@ export class Robot {
     /**
      * Инициализация индикаторов
      *
-     * @memberof Adviser
+     * @memberof Robot
      */
     initIndicators() {
         Object.keys(this._state.indicators).forEach((key) => {
@@ -503,7 +602,7 @@ export class Robot {
     /**
      * Пересчет индикаторов
      *
-     * @memberof Adviser
+     * @memberof Robot
      */
     async calcIndicators() {
         await Promise.all(
@@ -519,7 +618,7 @@ export class Robot {
     /**
      * Запуск основной функции стратегии
      *
-     * @memberof Adviser
+     * @memberof Robot
      */
     runStrategy() {
         // Передать свечу и значения индикаторов в инстанс стратегии
@@ -551,7 +650,7 @@ export class Robot {
     /**
      * Преобразование свечей для индикаторов
      *
-     * @memberof Adviser
+     * @memberof Robot
      */
     _prepareCandles() {
         this._candlesProps = {
@@ -685,7 +784,7 @@ export class Robot {
     /**
      * Запрос текущего состояния индикаторов
      *
-     * @memberof Adviser
+     * @memberof Robot
      */
     getIndicatorsState() {
         Object.keys(this._state.indicators).forEach((ind) => {
@@ -705,7 +804,7 @@ export class Robot {
     /**
      * Запрос текущего состояния стратегии
      *
-     * @memberof Adviser
+     * @memberof Robot
      */
     getStrategyState() {
         this._eventsToSend = [...this._eventsToSend, ...this._strategyInstance._eventsToSend];

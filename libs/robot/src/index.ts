@@ -1,2 +1,2 @@
-export * from "./lib/robot";
+export * from "./lib/robotBaseService";
 export * from "./lib/worker";

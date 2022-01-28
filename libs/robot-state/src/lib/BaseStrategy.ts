@@ -27,8 +27,8 @@ export interface StrategyState extends StrategyProps {
     currency: string;
     timeframe: number;
     robotId: string;
-    parametersSchema: ValidationSchema;
-    strategyFunctions: { [key: string]: () => any };
+    parametersSchema?: ValidationSchema;
+    strategyFunctions?: { [key: string]: () => any };
     backtest?: boolean;
     emulateNextPosition?: boolean;
     marginNextPosition?: number;
@@ -55,7 +55,7 @@ export class BaseStrategy {
     _candles: Candle[];
     _candlesProps: CandleProps;
     _indicators: {
-        [key: string]: IndicatorState;
+        [key: string]: IndicatorState; //TODO generic types
     };
     _consts: { [key: string]: string } = {
         LONG: TradeAction.long,
