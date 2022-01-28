@@ -5,7 +5,7 @@ import { Robot, RobotState } from "@cryptuoso/robot-state";
 import { Transfer, TransferDescriptor } from "threads";
 
 export const worker = {
-    async process(stateBuf: TransferDescriptor<ArrayBuffer>) {
+    async runStrategy(stateBuf: TransferDescriptor<ArrayBuffer>) {
         try {
             if (stateBuf instanceof ArrayBuffer) {
                 const robotState: { state: RobotState; candles: Candle[] } = loadObjectBuffer(stateBuf);

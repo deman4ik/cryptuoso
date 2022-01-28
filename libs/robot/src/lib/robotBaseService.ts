@@ -1,5 +1,6 @@
-import { groupBy, round, sleep, sortAsc } from "@cryptuoso/helpers";
+import { flattenArray, groupBy, round, sleep, sortAsc } from "@cryptuoso/helpers";
 import {
+    ActiveAlert,
     Candle,
     CandleType,
     DBCandle,
@@ -14,7 +15,14 @@ import { v4 as uuid } from "uuid";
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import { spawn, Pool, Worker as ThreadsWorker, Transfer, TransferDescriptor } from "threads";
 import { RobotWorker } from "./worker";
-import { Robot, RobotJobType, RobotPosition, RobotState, RobotStatus } from "@cryptuoso/robot-state";
+import {
+    Robot,
+    RobotJobType,
+    RobotPosition,
+    RobotPositionState,
+    RobotState,
+    RobotStatus
+} from "@cryptuoso/robot-state";
 import { Tracer } from "@cryptuoso/logger";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { createObjectBuffer, getUnderlyingArrayBuffer, loadObjectBuffer } from "@bnaya/objectbuffer";
@@ -22,9 +30,14 @@ import sizeof from "object-sizeof";
 import ccxtpro from "ccxt.pro";
 import cron from "node-cron";
 import dayjs from "@cryptuoso/dayjs";
+import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
+import {
+    TradeStatsRunnerEvents,
+    TradeStatsRunnerPortfolioRobot,
+    TradeStatsRunnerRobot
+} from "@cryptuoso/trade-stats-events";
 import { Exwatcher, ExwatcherStatus, Trade } from "./types";
 import {
-    ActiveAlert,
     getRobotCheckEventName,
     getRobotStatusEventName,
     RobotRunnerEvents,
@@ -45,9 +58,26 @@ import {
     getExwatcherImporterStatusEventName
 } from "@cryptuoso/exwatcher-events";
 import { ImporterState, Status } from "@cryptuoso/importer-state";
+import { DatabaseTransactionConnectionType } from "slonik";
 
 export interface RobotBaseServiceConfig extends HTTPServiceConfig {
     exchange: string;
+}
+
+interface RobotStateBuffer {
+    robotState: {
+        state: RobotState;
+        candles?: {
+            time: number;
+            timestamp: string;
+            open: number;
+            high: number;
+            low: number;
+            close: number;
+        }[];
+    };
+    buffer?: ArrayBuffer;
+    locked: boolean;
 }
 
 export class RobotBaseService extends HTTPService {
@@ -66,29 +96,15 @@ export class RobotBaseService extends HTTPService {
         scheduled: false
     });
     #cronHandleChanges: cron.ScheduledTask;
+    #cronRunRobots: cron.ScheduledTask = cron.schedule("0 */5 * * * *", this.runRobots.bind(this), {
+        scheduled: false
+    });
     #lastDate: number;
     #robotAlerts: {
         [key: string]: ActiveAlert;
     } = {};
     #robots: {
-        [key: string]: {
-            [timeframe: string]: {
-                [id: string]: {
-                    robotState: {
-                        state: RobotState;
-                        candles?: {
-                            time: number;
-                            timestamp: string;
-                            open: number;
-                            high: number;
-                            low: number;
-                            close: number;
-                        }[];
-                    };
-                    buffer?: ArrayBuffer;
-                };
-            };
-        };
+        [id: string]: RobotStateBuffer;
     } = {};
 
     constructor(config: RobotBaseServiceConfig) {
@@ -139,12 +155,14 @@ export class RobotBaseService extends HTTPService {
         await this.resubscribe();
         this.#cronHandleChanges.start();
         this.#cronCheck.start();
+        this.#cronRunRobots.start();
         this.#candlesSaveTimer = setTimeout(this.handleCandlesToSave.bind(this), 0);
         this.#checkAlertsTimer = setTimeout(this.checkRobotAlerts.bind(this), 0);
     }
 
     async onServiceStop() {
         try {
+            this.#cronRunRobots.stop();
             this.#cronHandleChanges.stop();
             this.#cronCheck.stop();
             await this.unsubscribeAll();
@@ -217,6 +235,7 @@ export class RobotBaseService extends HTTPService {
     get allSubscriptionsIsActive() {
         return this.activeSubscriptions.length === Object.keys(this.#subscriptions).length;
     }
+
     // #endregion
 
     // #region exwatcher
@@ -991,12 +1010,13 @@ export class RobotBaseService extends HTTPService {
     }
 
     saveCandles(candles: ExchangeCandle[]) {
-        candles.forEach(({ ...props }) => {
+        for (const { ...props } of candles) {
             this.#candlesToSave.set(this.getCandleMapKey({ ...props }), { ...props });
-        });
+            this.saveCandlesHistory({ ...props });
+        }
     }
 
-    async saveCandlesHistory(candle: ExchangeCandle) {
+    saveCandlesHistory(candle: ExchangeCandle) {
         const id = this.createExwatcherId(candle.asset, candle.currency);
 
         if (!this.#candlesHistory[id] || !this.#candlesHistory[id][candle.timeframe]) return;
@@ -1012,6 +1032,8 @@ export class RobotBaseService extends HTTPService {
                 const candles = [...this.#candlesToSave.values()];
                 this.log.debug(`Saving ${candles.length} candles`);
                 try {
+                    //  await Promise.all(candles.map((candle) => this.saveCandlesHistory(candle)));
+
                     await this.db.pg.query(sql`
                     insert into candles
                     (exchange, asset, currency, timeframe, open, high, low, close, volume, time, timestamp, type)
@@ -1053,8 +1075,6 @@ export class RobotBaseService extends HTTPService {
                     close = excluded.close,
                     volume = excluded.volume,
                     type = excluded.type;`);
-
-                    await Promise.all(candles.map((candle) => this.saveCandlesHistory(candle)));
 
                     candles.forEach((candle) => {
                         this.#candlesToSave.delete(this.getCandleMapKey(candle));
@@ -1099,35 +1119,52 @@ export class RobotBaseService extends HTTPService {
         AND asset = ${subscription.asset}
         AND currency = ${subscription.currency}
         ;`);
-        if (robots.length) {
-            if (!this.#robots[market]) this.#robots[market] = {};
 
-            const groupedTimeframeRobots: { [key: string]: RobotState[] } = groupBy([...robots], (r) => r.timeframe);
-
-            for (const [timeframe, timeframeRobots] of Object.entries(groupedTimeframeRobots)) {
-                if (!this.#robots[market][timeframe]) this.#robots[market][timeframe] = {};
-
-                for (const robot of timeframeRobots) {
-                    this.#robots[market][timeframe][robot.id] = {
-                        robotState: createObjectBuffer(100000, {
-                            state: robot,
-                            candles: this.#candlesHistory[market][timeframe]
-                        })
-                    };
-                    this.#robots[market][timeframe][robot.id].buffer = getUnderlyingArrayBuffer(
-                        this.#robots[market][timeframe][robot.id].robotState
-                    );
-                }
-            }
+        for (const robot of robots) {
+            this.#robots[robot.id] = {
+                robotState: createObjectBuffer(100000, {
+                    state: robot,
+                    candles: this.#candlesHistory[market][robot.timeframe]
+                }),
+                locked: false
+            };
+            this.#robots[robot.id].buffer = getUnderlyingArrayBuffer(this.#robots[robot.id].robotState);
         }
     }
 
     async getActiveRobotAlerts() {
-        /*const currentDate = dayjs.utc().toISOString();
-        const alerts = []; //TODO: get alerts from robot state
+        const currentDate = dayjs.utc().valueOf();
+        const alerts = [];
+
+        for (const { robotState } of Object.values(this.#robots)) {
+            const { asset, currency, timeframe } = robotState.state;
+            const { amountInUnit, unit } = Timeframe.get(timeframe);
+            const positions = robotState.state.state.positions;
+            for (const pos of positions) {
+                for (const alert of Object.values(pos.alerts)) {
+                    const activeFrom = dayjs.utc(alert.candleTimestamp).add(amountInUnit, unit);
+                    const activeTo = dayjs
+                        .utc(alert.candleTimestamp)
+                        .add(amountInUnit * 2, unit)
+                        .add(-1, "millisecond");
+                    if (activeTo.valueOf() > currentDate) {
+                        alerts.push({
+                            ...alert,
+                            id: uuid(),
+                            robotId: robotState.state.id,
+                            asset,
+                            currency,
+                            timeframe: +timeframe,
+                            activeFrom: activeFrom.toISOString(),
+                            activeTo: activeTo.toISOString()
+                        });
+                    }
+                }
+            }
+        }
         for (const alert of alerts) {
             this.#robotAlerts[alert.id] = alert;
-        }*/
+        }
     }
 
     /*async handleSignalAlertEvents(signal: Signal) {
@@ -1166,6 +1203,7 @@ export class RobotBaseService extends HTTPService {
     }
 
     async checkRobotAlerts() {
+        const beacon = this.lightship.createBeacon();
         try {
             const results = await Promise.all(
                 this.activeRobotAlerts.map(async (alert) => {
@@ -1196,7 +1234,71 @@ export class RobotBaseService extends HTTPService {
                                     `Alert #${alert.id} (${action} ${orderType} ${price} ${asset}/${currency}) - Triggered!`
                                 );
 
-                                //TODO: schedule robot trade check alert job
+                                if (this.#robots[robotId].locked) return null;
+                                this.#robots[robotId].locked = true;
+                                try {
+                                    const robot = new Robot(this.#robots[robotId].robotState.state);
+                                    robot.setStrategyState();
+                                    const { success, error } = robot.handleCurrentCandle({
+                                        ...candle,
+                                        timeframe: robot.timeframe
+                                    });
+
+                                    if (success) {
+                                        robot.checkAlerts();
+                                    } else {
+                                        this.log.error(error);
+                                    }
+                                    this.#robots[robotId].robotState.state = { ...robot.robotState };
+                                    await this.db.pg.transaction(async (t) => {
+                                        if (robot.positionsToSave.length)
+                                            await this.#saveRobotPositions(t, robot.positionsToSave);
+
+                                        if (robot.signalsToSave.length) {
+                                            await this.#saveRobotSignals(
+                                                t,
+                                                robot.signalsToSave.map(({ data }) => data)
+                                            );
+                                        }
+
+                                        await this.#saveRobotState(t, robot.robotState);
+                                    });
+
+                                    if (robot.eventsToSend.length)
+                                        await Promise.all(
+                                            robot.eventsToSend.map(async (event) => {
+                                                await this.events.emit(event);
+                                            })
+                                        );
+
+                                    if (robot.hasClosedPositions) {
+                                        await this.events.emit<any>({
+                                            type: StatsCalcRunnerEvents.ROBOT,
+                                            data: {
+                                                robotId
+                                            }
+                                        }); //TODO: deprecate
+
+                                        await this.events.emit<TradeStatsRunnerRobot>({
+                                            type: TradeStatsRunnerEvents.ROBOT,
+                                            data: {
+                                                robotId
+                                            }
+                                        });
+
+                                        await this.events.emit<TradeStatsRunnerPortfolioRobot>({
+                                            type: TradeStatsRunnerEvents.PORTFOLIO_ROBOT,
+                                            data: {
+                                                robotId
+                                            }
+                                        });
+                                    }
+                                } catch (err) {
+                                    this.log.error(`Failed to check robot's #${robotId} alerts - ${err.message}`);
+                                    return null;
+                                } finally {
+                                    this.#robots[robotId].locked = false;
+                                }
 
                                 return id;
                             }
@@ -1218,13 +1320,55 @@ export class RobotBaseService extends HTTPService {
         } catch (error) {
             this.log.error(`Failed to check robot alerts`, error);
         } finally {
+            await beacon.die();
             if (!this.lightship.isServerShuttingDown()) {
                 this.#checkAlertsTimer = setTimeout(this.checkRobotAlerts.bind(this), 1000);
             }
         }
     }
 
-    async candleJob() {
+    async runRobots() {
+        const beacon = this.lightship.createBeacon();
+        try {
+            const currentDate = dayjs.utc().startOf("minute").toISOString();
+            const currentTimeframes = Timeframe.timeframesByDate(currentDate);
+
+            if (currentTimeframes.length) {
+                this.log.info(`Handling new ${currentTimeframes.join(", ")} candles`);
+                const robotIds = Object.values(this.#robots)
+                    .filter((r) => currentTimeframes.includes(r.robotState.state.timeframe))
+                    .map((r) => r.robotState.state.id);
+
+                await Promise.all(
+                    robotIds.map(async (robotId) => {
+                        try {
+                            while (this.#robots[robotId].locked) {
+                                await sleep(200);
+                            }
+                            this.#robots[robotId].locked = true;
+                            const { asset, currency, timeframe } = this.#robots[robotId].robotState.state;
+                            const prevTime = Timeframe.getPrevSince(currentDate, timeframe);
+                            const exwatcherId = this.createExwatcherId(asset, currency);
+                            this.#robots[robotId].robotState.candles = this.#candlesHistory[exwatcherId][
+                                timeframe
+                            ].filter((c) => c.time <= prevTime);
+                            //TODO: positionsToSave, alertsToSave, eventsToSend
+                            this.#robots[robotId].buffer = await this.robotWorker(this.#robots[robotId].buffer);
+                            this.#robots[robotId].robotState = loadObjectBuffer(this.#robots[robotId].buffer);
+                        } catch (error) {
+                        } finally {
+                            this.#robots[robotId].locked = false;
+                        }
+                    })
+                );
+            }
+        } catch (error) {
+        } finally {
+            await beacon.die();
+        }
+    }
+
+    /*async candleJob() {
         try {
             const robotState = await this.#getRobotState("df0f7f1a-5408-46f1-907d-fe493ced899d");
 
@@ -1263,37 +1407,98 @@ export class RobotBaseService extends HTTPService {
             this.log.error("Main thread error");
             this.log.error(err);
         }
+    }*/
+
+    async robotWorker(stateABuf: ArrayBuffer): Promise<any> {
+        return await this.#pool.queue(async (worker: RobotWorker) => worker.runStrategy(Transfer(stateABuf)));
     }
 
-    #getRobotState = async (robotId: string): Promise<RobotState> => {
-        try {
-            return await this.db.pg.one<RobotState>(sql`
-            SELECT r.id, 
-                   r.exchange, 
-                   r.asset, 
-                   r.currency, 
-                   r.timeframe, 
-                   r.strategy, 
-                   json_build_object('strategySettings', rs.strategy_settings,
-                                     'robotSettings', rs.robot_settings,
-                                     'activeFrom', rs.active_from) as settings,
-                   r.last_candle, 
-                   r.state, 
-                   r.has_alerts, 
-                   r.status,
-                   r.started_at, 
-                   r.stopped_at
-            FROM robots r, v_robot_settings rs 
-            WHERE rs.robot_id = r.id AND id = ${robotId};`);
-        } catch (err) {
-            this.log.error("Failed to load robot state", err);
-            throw err;
+    #saveRobotPositions = async (transaction: DatabaseTransactionConnectionType, positions: RobotPositionState[]) => {
+        for (const position of positions) {
+            await transaction.query(sql`
+    INSERT INTO robot_positions
+    ( id, robot_id, prefix, code, parent_id,
+     direction, status, 
+     entry_status, entry_price, entry_date,
+     entry_order_type, entry_action, 
+     entry_candle_timestamp,
+     exit_status, exit_price, exit_date, 
+     exit_order_type, exit_action, 
+     exit_candle_timestamp,
+     alerts,
+     bars_held,
+     internal_state, max_price
+    ) VALUES (
+        ${position.id},
+        ${position.robotId}, ${position.prefix}, ${position.code}, ${position.parentId || null},
+        ${position.direction || null}, ${position.status}, 
+        ${position.entryStatus || null},${position.entryPrice || null}, ${position.entryDate || null}, 
+        ${position.entryOrderType || null}, ${position.entryAction || null}, 
+        ${position.entryCandleTimestamp || null},
+        ${position.exitStatus || null},${position.exitPrice || null}, ${position.exitDate || null}, 
+        ${position.exitOrderType || null},${position.exitAction || null}, 
+        ${position.exitCandleTimestamp || null},
+        ${JSON.stringify(position.alerts)},
+        ${position.barsHeld || null},
+        ${JSON.stringify(position.internalState)}, ${position.maxPrice || null}
+    ) ON CONFLICT ON CONSTRAINT robot_positions_robot_id_code_key 
+     DO UPDATE SET updated_at = now(),
+     direction = excluded.direction,
+     status = excluded.status,
+     entry_status = excluded.entry_status,
+     entry_price = excluded.entry_price,
+     entry_date = excluded.entry_date,
+     entry_order_type = excluded.entry_order_type,
+     entry_action = excluded.entry_action,
+     entry_candle_timestamp = excluded.entry_candle_timestamp,
+     exit_status = excluded.exit_status,
+     exit_price = excluded.exit_price,
+     exit_date = excluded.exit_date,
+     exit_order_type = excluded.exit_order_type,
+     exit_action = excluded.exit_action,
+     exit_candle_timestamp = excluded.exit_candle_timestamp,
+     alerts = excluded.alerts,
+     bars_held = excluded.bars_held,
+     internal_state = excluded.internal_state,
+     max_price = excluded.max_price;`);
         }
     };
 
-    async robotWorker(stateABuf: ArrayBuffer): Promise<any> {
-        return await this.#pool.queue(async (worker: RobotWorker) => worker.process(Transfer(stateABuf)));
-    }
-
+    #saveRobotSignals = async (transaction: DatabaseTransactionConnectionType, signals: Signal[]) => {
+        for (const signal of signals) {
+            const {
+                id,
+                robotId,
+                action,
+                orderType,
+                price,
+                type,
+                positionId,
+                positionPrefix,
+                positionCode,
+                positionParentId,
+                candleTimestamp,
+                timestamp,
+                emulated
+            } = signal;
+            await transaction.query(sql`
+            INSERT INTO robot_signals
+            (id, robot_id, action, order_type, price, type, position_id,
+            position_prefix, position_code, position_parent_id,
+            candle_timestamp,timestamp, emulated)
+            VALUES (${id}, ${robotId}, ${action}, ${orderType}, ${price || null}, ${type},
+            ${positionId}, ${positionPrefix}, ${positionCode}, ${positionParentId || null}, ${candleTimestamp},
+            ${timestamp}, ${emulated || false})
+        `);
+        }
+    };
+    #saveRobotState = async (transaction: DatabaseTransactionConnectionType, state: RobotState) =>
+        transaction.query(sql`
+    UPDATE robots 
+    SET state = ${JSON.stringify(state.state)}, 
+    last_candle = ${JSON.stringify(state.lastCandle)}, 
+    has_alerts = ${state.hasAlerts}
+    WHERE id = ${state.id};
+    `);
     // #endregion
 }
