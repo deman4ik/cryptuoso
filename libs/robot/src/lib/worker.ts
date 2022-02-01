@@ -1,10 +1,23 @@
 import { loadObjectBuffer } from "@bnaya/objectbuffer";
+import { NewEvent } from "@cryptuoso/events";
 import logger from "@cryptuoso/logger";
 import { Candle } from "@cryptuoso/market";
-import { Robot, RobotState } from "@cryptuoso/robot-state";
+import { Robot, RobotPositionState, RobotState } from "@cryptuoso/robot-state";
 import { Transfer, TransferDescriptor } from "threads";
-import { RobotStateBuffer } from "./robotBaseService";
 
+export interface RobotStateBuffer {
+    state: RobotState;
+    candles?: {
+        time: number;
+        timestamp: string;
+        open: number;
+        high: number;
+        low: number;
+        close: number;
+    }[];
+    positionsToSave?: RobotPositionState[];
+    eventsToSend?: NewEvent<any>[];
+}
 export const worker = {
     async runStrategy(stateBuf: TransferDescriptor<ArrayBuffer>) {
         try {

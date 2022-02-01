@@ -15,7 +15,7 @@ import { v4 as uuid } from "uuid";
 import retry from "async-retry";
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import { spawn, Pool, Worker as ThreadsWorker, Transfer } from "threads";
-import { RobotWorker } from "./worker";
+import { RobotStateBuffer, RobotWorker } from "./worker";
 import { Robot, RobotPosition, RobotPositionState, RobotState, RobotStatus } from "@cryptuoso/robot-state";
 import { Tracer } from "@cryptuoso/logger";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
@@ -58,20 +58,6 @@ import { NewEvent } from "@cryptuoso/events";
 
 export interface RobotBaseServiceConfig extends HTTPServiceConfig {
     exchange: string;
-}
-
-export interface RobotStateBuffer {
-    state: RobotState;
-    candles?: {
-        time: number;
-        timestamp: string;
-        open: number;
-        high: number;
-        low: number;
-        close: number;
-    }[];
-    positionsToSave?: RobotPositionState[];
-    eventsToSend?: NewEvent<any>[];
 }
 
 export class RobotBaseService extends HTTPService {
@@ -149,11 +135,14 @@ export class RobotBaseService extends HTTPService {
 
     // #region Start/Stop
     async onServiceStart() {
-        this.#pool = await Pool(async () => await spawn<RobotWorker>(new ThreadsWorker("./worker")), {
-            name: "worker",
-            concurrency: this.workerConcurrency || 10,
-            size: this.workerConcurrency || 10
-        });
+        this.#pool = await Pool(
+            async () => await spawn<RobotWorker>(new ThreadsWorker("./worker"), { timeout: 60000 }),
+            {
+                name: "worker",
+                concurrency: this.workerConcurrency || 10,
+                size: this.workerConcurrency || 10
+            }
+        );
         await sleep(3000);
         await this.initConnector();
     }
