@@ -150,8 +150,9 @@ export class RobotBaseService extends HTTPService {
     async onServiceStart() {
         this.#pool = Pool(() => spawn<RobotWorker>(new ThreadsWorker("./worker")), {
             name: "worker",
-            concurrency: 10 || this.workerConcurrency
+            concurrency: this.workerConcurrency || 10
         });
+        await sleep(3000);
         await this.initConnector();
     }
 
