@@ -149,9 +149,10 @@ export class RobotBaseService extends HTTPService {
 
     // #region Start/Stop
     async onServiceStart() {
-        this.#pool = Pool(() => spawn<RobotWorker>(new ThreadsWorker("./worker")), {
+        this.#pool = await Pool(async () => await spawn<RobotWorker>(new ThreadsWorker("./worker")), {
             name: "worker",
-            concurrency: this.workerConcurrency || 10
+            concurrency: this.workerConcurrency || 10,
+            size: this.workerConcurrency || 10
         });
         await sleep(3000);
         await this.initConnector();
@@ -697,6 +698,7 @@ export class RobotBaseService extends HTTPService {
     }
 
     async saveSubscription(subscription: Exwatcher): Promise<void> {
+        if (!this.isDev) return;
         const { id, exchange, asset, currency, status, importerId, importStartedAt, error } = subscription;
         await this.db.pg.query(sql`INSERT INTO exwatchers 
         ( id, 
@@ -1085,7 +1087,8 @@ export class RobotBaseService extends HTTPService {
                 const candles = [...this.#candlesToSave.values()];
                 this.log.debug(`Saving ${candles.length} candles`);
                 try {
-                    await this.db.pg.query(sql`
+                    if (this.isDev) {
+                        await this.db.pg.query(sql`
                     insert into candles
                     (exchange, asset, currency, timeframe, open, high, low, close, volume, time, timestamp, type)
                     SELECT *
@@ -1126,7 +1129,7 @@ export class RobotBaseService extends HTTPService {
                     close = excluded.close,
                     volume = excluded.volume,
                     type = excluded.type;`);
-
+                    }
                     candles.forEach((candle) => {
                         this.#candlesToSave.delete(this.getCandleMapKey(candle));
                     });
@@ -1207,8 +1210,8 @@ export class RobotBaseService extends HTTPService {
 
     async subscribeRobot(robotId: string) {
         this.log.info(`Subscribing #${robotId} robot`);
-        if (!this.#robots[robotId]) {
-            const robot = await this.db.pg.one<RobotState>(sql`
+
+        const robot = await this.db.pg.one<RobotState>(sql`
         SELECT r.id, 
                r.exchange, 
                r.asset, 
@@ -1228,29 +1231,28 @@ export class RobotBaseService extends HTTPService {
         WHERE rs.robot_id = r.id AND r.exchange = ${this.#exchange}
         AND r.id = ${robotId};`);
 
-            try {
-                this.#robots[robot.id] = {
-                    robot: new Robot(robot),
-                    locked: true
-                };
-                this.getActiveRobotAlerts(robot.id);
-                if (this.#robots[robotId].robot.status !== RobotStatus.started) {
-                    this.#robots[robot.id].robot.start();
+        try {
+            this.#robots[robot.id] = {
+                robot: new Robot(robot),
+                locked: true
+            };
+            this.getActiveRobotAlerts(robot.id);
+            if (this.#robots[robotId].robot.status !== RobotStatus.started) {
+                this.#robots[robot.id].robot.start();
 
-                    await Promise.all(
-                        this.#robots[robot.id].robot.eventsToSend.map(async (event) => {
-                            await this.events.emit(event);
-                        })
-                    );
-                    this.#robots[robot.id].robot.clearEvents();
-                    await this.db.pg.query(sql`UPDATE robot SET status = 'started' WHERE id = ${robotId}`);
-                }
-                this.#robots[robot.id].locked = false;
-                this.log.info(`Robot #${robot.id} is subscribed!`);
-            } catch (err) {
-                this.log.error(`Failed to subscribe #${robot.id} robot ${err.message}`);
-                throw err;
+                await Promise.all(
+                    this.#robots[robot.id].robot.eventsToSend.map(async (event) => {
+                        await this.events.emit(event);
+                    })
+                );
+                this.#robots[robot.id].robot.clearEvents();
+                await this.db.pg.query(sql`UPDATE robot SET status = 'started' WHERE id = ${robotId}`);
             }
+            this.#robots[robot.id].locked = false;
+            this.log.info(`Robot #${robot.id} is subscribed!`);
+        } catch (err) {
+            this.log.error(`Failed to subscribe #${robot.id} robot ${err.message}`);
+            throw err;
         }
     }
 
@@ -1261,6 +1263,14 @@ export class RobotBaseService extends HTTPService {
         const { asset, currency, timeframe } = robot;
         const { amountInUnit, unit } = Timeframe.get(timeframe);
         const positions = robot.state.positions;
+
+        this.log.info(`Cleaning robot's #${robotId} alerts`);
+        const alerts = Object.values(this.#robotAlerts)
+            .filter(({ robotId: alertRobotId }) => alertRobotId === robotId)
+            .map((a) => a.id);
+        for (const id of alerts) {
+            delete this.#robotAlerts[id];
+        }
 
         if (positions && Array.isArray(positions) && positions.length) {
             for (const pos of positions) {
@@ -1358,48 +1368,50 @@ export class RobotBaseService extends HTTPService {
                                         this.log.error(error);
                                     }
 
-                                    if (robot.eventsToSend.length)
-                                        await Promise.all(
-                                            robot.eventsToSend.map(async (event) => {
-                                                await this.events.emit(event);
-                                            })
-                                        );
-
-                                    await this.db.pg.transaction(async (t) => {
-                                        if (robot.positionsToSave.length)
-                                            await this.#saveRobotPositions(t, robot.positionsToSave);
-
-                                        if (robot.signalsToSave.length) {
-                                            await this.#saveRobotSignals(
-                                                t,
-                                                robot.signalsToSave.map(({ data }) => data)
+                                    if (this.isDev) {
+                                        if (robot.eventsToSend.length)
+                                            await Promise.all(
+                                                robot.eventsToSend.map(async (event) => {
+                                                    await this.events.emit(event);
+                                                })
                                             );
+
+                                        await this.db.pg.transaction(async (t) => {
+                                            if (robot.positionsToSave.length)
+                                                await this.#saveRobotPositions(t, robot.positionsToSave);
+
+                                            if (robot.signalsToSave.length) {
+                                                await this.#saveRobotSignals(
+                                                    t,
+                                                    robot.signalsToSave.map(({ data }) => data)
+                                                );
+                                            }
+
+                                            await this.#saveRobotState(t, robot.robotState);
+                                        });
+
+                                        if (robot.hasClosedPositions) {
+                                            await this.events.emit<any>({
+                                                type: StatsCalcRunnerEvents.ROBOT,
+                                                data: {
+                                                    robotId
+                                                }
+                                            }); //TODO: deprecate
+
+                                            await this.events.emit<TradeStatsRunnerRobot>({
+                                                type: TradeStatsRunnerEvents.ROBOT,
+                                                data: {
+                                                    robotId
+                                                }
+                                            });
+
+                                            await this.events.emit<TradeStatsRunnerPortfolioRobot>({
+                                                type: TradeStatsRunnerEvents.PORTFOLIO_ROBOT,
+                                                data: {
+                                                    robotId
+                                                }
+                                            });
                                         }
-
-                                        await this.#saveRobotState(t, robot.robotState);
-                                    });
-
-                                    if (robot.hasClosedPositions) {
-                                        await this.events.emit<any>({
-                                            type: StatsCalcRunnerEvents.ROBOT,
-                                            data: {
-                                                robotId
-                                            }
-                                        }); //TODO: deprecate
-
-                                        await this.events.emit<TradeStatsRunnerRobot>({
-                                            type: TradeStatsRunnerEvents.ROBOT,
-                                            data: {
-                                                robotId
-                                            }
-                                        });
-
-                                        await this.events.emit<TradeStatsRunnerPortfolioRobot>({
-                                            type: TradeStatsRunnerEvents.PORTFOLIO_ROBOT,
-                                            data: {
-                                                robotId
-                                            }
-                                        });
                                     }
 
                                     robot.clearEvents();
@@ -1469,32 +1481,32 @@ export class RobotBaseService extends HTTPService {
                             const buffer = await this.robotWorker(getUnderlyingArrayBuffer(robotObjectBuffer)); //TODO: move all dirty stuff to robotWorker function
                             const { state, positionsToSave, eventsToSend } = loadObjectBuffer<RobotStateBuffer>(buffer);
                             this.#robots[robotId].robot = new Robot(state);
-
-                            if (eventsToSend && Array.isArray(eventsToSend) && eventsToSend.length) {
-                                await Promise.all(
-                                    eventsToSend.map(async (event) => {
-                                        await this.events.emit(event);
-                                    })
-                                );
-                            }
-
-                            await this.db.pg.transaction(async (t) => {
-                                if (positionsToSave && Array.isArray(positionsToSave) && positionsToSave.length)
-                                    await this.#saveRobotPositions(t, positionsToSave);
-
-                                const signals = eventsToSend?.filter(({ type }) =>
-                                    [SignalEvents.ALERT, SignalEvents.TRADE].includes(type as SignalEvents)
-                                );
-                                if (signals && signals.length) {
-                                    await this.#saveRobotSignals(
-                                        t,
-                                        signals.map(({ data }) => data)
+                            if (this.isDev) {
+                                if (eventsToSend && Array.isArray(eventsToSend) && eventsToSend.length) {
+                                    await Promise.all(
+                                        eventsToSend.map(async (event) => {
+                                            await this.events.emit(event);
+                                        })
                                     );
                                 }
 
-                                await this.#saveRobotState(t, state);
-                            });
+                                await this.db.pg.transaction(async (t) => {
+                                    if (positionsToSave && Array.isArray(positionsToSave) && positionsToSave.length)
+                                        await this.#saveRobotPositions(t, positionsToSave);
 
+                                    const signals = eventsToSend?.filter(({ type }) =>
+                                        [SignalEvents.ALERT, SignalEvents.TRADE].includes(type as SignalEvents)
+                                    );
+                                    if (signals && signals.length) {
+                                        await this.#saveRobotSignals(
+                                            t,
+                                            signals.map(({ data }) => data)
+                                        );
+                                    }
+
+                                    await this.#saveRobotState(t, state);
+                                });
+                            }
                             this.log.info(`Cleaning robot's #${robotId} alerts`);
                             const alerts = Object.values(this.#robotAlerts)
                                 .filter(({ robotId: alertRobotId }) => alertRobotId === robotId)
@@ -1519,32 +1531,34 @@ export class RobotBaseService extends HTTPService {
                                         .toISOString()
                                 };
                             }
+                            if (this.isDev) {
+                                if (
+                                    positionsToSave &&
+                                    Array.isArray(positionsToSave) &&
+                                    positionsToSave.filter(({ status }) => status === RobotPositionStatus.closed)
+                                        .length > 0
+                                ) {
+                                    await this.events.emit<any>({
+                                        type: StatsCalcRunnerEvents.ROBOT,
+                                        data: {
+                                            robotId
+                                        }
+                                    }); //TODO: deprecate
 
-                            if (
-                                positionsToSave &&
-                                Array.isArray(positionsToSave) &&
-                                positionsToSave.filter(({ status }) => status === RobotPositionStatus.closed).length > 0
-                            ) {
-                                await this.events.emit<any>({
-                                    type: StatsCalcRunnerEvents.ROBOT,
-                                    data: {
-                                        robotId
-                                    }
-                                }); //TODO: deprecate
+                                    await this.events.emit<TradeStatsRunnerRobot>({
+                                        type: TradeStatsRunnerEvents.ROBOT,
+                                        data: {
+                                            robotId
+                                        }
+                                    });
 
-                                await this.events.emit<TradeStatsRunnerRobot>({
-                                    type: TradeStatsRunnerEvents.ROBOT,
-                                    data: {
-                                        robotId
-                                    }
-                                });
-
-                                await this.events.emit<TradeStatsRunnerPortfolioRobot>({
-                                    type: TradeStatsRunnerEvents.PORTFOLIO_ROBOT,
-                                    data: {
-                                        robotId
-                                    }
-                                });
+                                    await this.events.emit<TradeStatsRunnerPortfolioRobot>({
+                                        type: TradeStatsRunnerEvents.PORTFOLIO_ROBOT,
+                                        data: {
+                                            robotId
+                                        }
+                                    });
+                                }
                             }
                         } catch (err) {
                             this.log.error(`Failed to run robot's #${robotId} strategy - ${err.message}`);
