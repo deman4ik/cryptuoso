@@ -6,6 +6,7 @@ import {
     ExchangeCandle,
     ExchangePrice,
     OrderType,
+    RobotPositionStatus,
     Timeframe,
     ValidTimeframe
 } from "@cryptuoso/market";
@@ -696,8 +697,6 @@ export class RobotBaseService extends HTTPService {
     }
 
     async saveSubscription(subscription: Exwatcher): Promise<void> {
-        //TODO: PROD
-        return;
         const { id, exchange, asset, currency, status, importerId, importStartedAt, error } = subscription;
         await this.db.pg.query(sql`INSERT INTO exwatchers 
         ( id, 
@@ -728,8 +727,6 @@ export class RobotBaseService extends HTTPService {
     }
 
     async deleteSubscription(id: string): Promise<void> {
-        //TODO: PROD
-        return;
         await this.db.pg.query(sql`DELETE FROM exwatchers WHERE id = ${id}`);
     }
 
@@ -1088,9 +1085,7 @@ export class RobotBaseService extends HTTPService {
                 const candles = [...this.#candlesToSave.values()];
                 this.log.debug(`Saving ${candles.length} candles`);
                 try {
-                    //  await Promise.all(candles.map((candle) => this.saveCandlesHistory(candle)));
-
-                    /*    await this.db.pg.query(sql`
+                    await this.db.pg.query(sql`
                     insert into candles
                     (exchange, asset, currency, timeframe, open, high, low, close, volume, time, timestamp, type)
                     SELECT *
@@ -1130,7 +1125,7 @@ export class RobotBaseService extends HTTPService {
                     low = excluded.low,
                     close = excluded.close,
                     volume = excluded.volume,
-                    type = excluded.type;`); */ //TODO: PROD
+                    type = excluded.type;`);
 
                     candles.forEach((candle) => {
                         this.#candlesToSave.delete(this.getCandleMapKey(candle));
@@ -1363,7 +1358,6 @@ export class RobotBaseService extends HTTPService {
                                         this.log.error(error);
                                     }
 
-                                    /*
                                     if (robot.eventsToSend.length)
                                         await Promise.all(
                                             robot.eventsToSend.map(async (event) => {
@@ -1406,7 +1400,7 @@ export class RobotBaseService extends HTTPService {
                                                 robotId
                                             }
                                         });
-                                    }*/ //TODO: TURN ON IN PROD
+                                    }
 
                                     robot.clearEvents();
                                 } catch (err) {
@@ -1476,13 +1470,13 @@ export class RobotBaseService extends HTTPService {
                             const { state, positionsToSave, eventsToSend } = loadObjectBuffer<RobotStateBuffer>(buffer);
                             this.#robots[robotId].robot = new Robot(state);
 
-                            /*  if (eventsToSend && Array.isArray(eventsToSend) && eventsToSend.length) {
+                            if (eventsToSend && Array.isArray(eventsToSend) && eventsToSend.length) {
                                 await Promise.all(
                                     eventsToSend.map(async (event) => {
                                         await this.events.emit(event);
                                     })
                                 );
-                            } 
+                            }
 
                             await this.db.pg.transaction(async (t) => {
                                 if (positionsToSave && Array.isArray(positionsToSave) && positionsToSave.length)
@@ -1499,7 +1493,7 @@ export class RobotBaseService extends HTTPService {
                                 }
 
                                 await this.#saveRobotState(t, state);
-                            }); */ //TODO: TURN ON IN PROD
+                            });
 
                             this.log.info(`Cleaning robot's #${robotId} alerts`);
                             const alerts = Object.values(this.#robotAlerts)
@@ -1526,7 +1520,6 @@ export class RobotBaseService extends HTTPService {
                                 };
                             }
 
-                            /*
                             if (
                                 positionsToSave &&
                                 Array.isArray(positionsToSave) &&
@@ -1552,7 +1545,7 @@ export class RobotBaseService extends HTTPService {
                                         robotId
                                     }
                                 });
-                            } */ //TODO: TURN ON IN PROD
+                            }
                         } catch (err) {
                             this.log.error(`Failed to run robot's #${robotId} strategy - ${err.message}`);
                             //TODO: send robot error event;
