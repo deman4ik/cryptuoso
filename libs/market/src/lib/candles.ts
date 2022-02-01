@@ -42,7 +42,7 @@ export interface DBCandle {
 }
 
 export interface Candle extends DBCandle {
-    id: string;
+    id?: string;
 }
 
 export interface CandleProps {

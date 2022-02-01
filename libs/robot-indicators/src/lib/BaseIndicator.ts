@@ -37,7 +37,7 @@ export class BaseIndicator {
     _indicatorName: string;
     _initialized: boolean;
     _parameters: {
-        [key: string]: number;
+        [key: string]: any;
     };
     _candle: DBCandle;
     _candles: DBCandle[];
@@ -47,7 +47,7 @@ export class BaseIndicator {
     };
     _parametersSchema: ValidationSchema;
     _eventsToSend: NewEvent<any>[];
-    result: number | number[];
+    //result: number | number[];
     _log = logger.debug.bind(logger);
     _strategySettings: StrategySettings;
     _utils: {
@@ -148,13 +148,13 @@ export class BaseIndicator {
         return candlesProps;
     }
 
-    highest(prop: "open" | "high" | "low" | "close" | "volume", size: number) {
+    getHighest(prop: "open" | "high" | "low" | "close" | "volume", size: number) {
         if (!["open", "high", "low", "close", "volume"].includes(prop)) throw new Error(`Invalid candle prop ${prop}`);
         const arr = this._candlesProps[prop].slice(-size);
         return Math.max(...arr);
     }
 
-    lowest(prop: "open" | "high" | "low" | "close" | "volume", size: number) {
+    getLowest(prop: "open" | "high" | "low" | "close" | "volume", size: number) {
         if (!["open", "high", "low", "close", "volume"].includes(prop)) throw new Error(`Invalid candle prop ${prop}`);
         const arr = this._candlesProps[prop].slice(-size);
         return Math.min(...arr);

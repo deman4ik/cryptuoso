@@ -2,14 +2,39 @@ import { Timeframe, ValidTimeframe, TradeAction, OrderType, SignalInfo, SignalTy
 import { CANDLES_RECENT_AMOUNT, ISO_DATE_REGEX } from "@cryptuoso/helpers";
 import { RobotSettings, RobotSettingsSchema, StrategySettings } from "@cryptuoso/robot-settings";
 
+export const EXCHANGES = {
+    binance_futures: "binance_futures",
+    bitfinex: "bitfinex",
+    huobipro: "huobipro",
+    kraken: "kraken",
+    kucoin: "kucoin"
+};
+
 export const ROBOT_RUNNER_TOPIC = "in-robot-runner";
 
 export const enum RobotRunnerEvents {
     CREATE = "in-robot-runner.create",
-    START = "in-robot-runner.start",
-    STOP = "in-robot-runner.stop",
-    PAUSE = "in-robot-runner.pause"
+    START = "in-robot-runner.start", //TODO: DEPRECATE
+    STOP = "in-robot-runner.stop", //TODO: DEPRECATE
+    PAUSE = "in-robot-runner.pause", //TODO: DEPRECATE
+    STATUS = "in-robot-runner.status",
+    CHECK = "in-robot-runner.check"
 }
+
+export const getRobotStatusEventName = (exchange: string) => {
+    if (!Object.values(EXCHANGES).includes(exchange)) throw new Error(`Exchange ${exchange} is not supported`);
+    return `in-robot-runner-${exchange}.status`;
+};
+
+export const getRobotCheckEventName = (exchange: string) => {
+    if (!Object.values(EXCHANGES).includes(exchange)) throw new Error(`Exchange ${exchange} is not supported`);
+    return `in-robot-runner-${exchange}.check`;
+};
+
+export const getMarketCheckEventName = (exchange: string) => {
+    if (!Object.values(EXCHANGES).includes(exchange)) throw new Error(`Exchange ${exchange} is not supported`);
+    return `in-robot-runner-${exchange}.check-market`;
+};
 
 export const ROBOT_WORKER_TOPIC = "out-robot-worker";
 
@@ -118,7 +143,8 @@ export const RobotRunnerSchema = {
         }
     },
     [RobotRunnerEvents.STOP]: RunnerSchema,
-    [RobotRunnerEvents.PAUSE]: RunnerSchema
+    [RobotRunnerEvents.PAUSE]: RunnerSchema,
+    [RobotRunnerEvents.STATUS]: StatusSchema
 };
 
 export const RobotWorkerSchema = {
@@ -176,6 +202,11 @@ export interface RobotRunnerStop {
 
 export interface RobotRunnerPause {
     robotId: string;
+}
+
+export interface RobotRunnerStatus {
+    robotId: string;
+    status: string;
 }
 
 export interface Signal extends SignalInfo {

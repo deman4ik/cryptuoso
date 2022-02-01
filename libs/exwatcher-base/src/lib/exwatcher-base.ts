@@ -1116,7 +1116,7 @@ export class ExwatcherBaseService extends BaseService {
             }
         }
     }
-
+    // --------------
     async getActiveRobotAlerts() {
         const currentDate = dayjs.utc().toISOString();
         const alerts = await this.db.pg.any<Signal & { activeFrom: string; activeTo: string }>(sql`
