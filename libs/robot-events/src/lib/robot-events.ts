@@ -31,6 +31,11 @@ export const getRobotCheckEventName = (exchange: string) => {
     return `in-robot-runner-${exchange}.check`;
 };
 
+export const getMarketCheckEventName = (exchange: string) => {
+    if (!Object.values(EXCHANGES).includes(exchange)) throw new Error(`Exchange ${exchange} is not supported`);
+    return `in-robot-runner-${exchange}.check-market`;
+};
+
 export const ROBOT_WORKER_TOPIC = "out-robot-worker";
 
 export const enum RobotWorkerEvents {

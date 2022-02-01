@@ -14,6 +14,7 @@ import {
 } from "@cryptuoso/backtester-events";
 import { sql } from "@cryptuoso/postgres";
 import { BacktestWorker } from "./worker";
+import { getRobotStatusEventName, RobotRunnerStatus } from "@cryptuoso/robot-events";
 
 export type BacktesterWorkerServiceConfig = BaseServiceConfig;
 
@@ -135,6 +136,15 @@ export default class BacktesterWorkerService extends BaseService {
                             status: backtester.status
                         }
                     });
+                    if (backtester.settings.populateHistory) {
+                        await this.events.emit<RobotRunnerStatus>({
+                            type: getRobotStatusEventName(backtester.exchange),
+                            data: {
+                                robotId: backtester.robotId,
+                                status: "starting"
+                            }
+                        });
+                    }
                     this.log.info(
                         `Backtester #${backtester.id} finished in ${dayjs
                             .utc(backtester.finishedAt)

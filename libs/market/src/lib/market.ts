@@ -27,8 +27,17 @@ export interface Market {
     exchange: string;
     asset: string;
     currency: string;
-    precision: { base: number; quote: number; amount: number; price: number };
-    limits: { amount: MinMax; amountCurrency: MinMax; price: MinMax; cost?: MinMax };
+    precision: {
+        amount: number | undefined;
+        price: number | undefined;
+    };
+    limits: {
+        amount?: MinMax;
+        amountCurrency: MinMax;
+        price?: MinMax;
+        cost?: MinMax;
+        leverage?: MinMax;
+    };
     feeRate: number;
     loadFrom: string;
     info: ccxt.Market;

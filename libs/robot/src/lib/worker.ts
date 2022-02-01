@@ -14,8 +14,9 @@ export const worker = {
                 const robot = new Robot(robotState.state);
                 robot.setStrategyState();
                 robot.setIndicatorsState();
-                robot.handleHistoryCandles(robotState.candles as Candle[]);
-                const processed = robot.handleCandle(robotState.candles[robotState.candles.length - 1] as Candle);
+                const candles = [...robotState.candles] as Candle[];
+                robot.handleHistoryCandles(candles);
+                const processed = robot.handleCandle(candles[candles.length - 1]);
                 if (processed) {
                     await robot.calcIndicators();
                     robot.runStrategy();
@@ -23,7 +24,7 @@ export const worker = {
                 }
                 robotState.positionsToSave = [...robot.positionsToSave];
                 robotState.eventsToSend = [...robot.eventsToSend];
-                robotState.state = { ...robotState.state, ...robot.robotState };
+                robotState.state = robot.robotState;
                 return Transfer(stateBuf);
             } else throw new Error("Unknown data from main thread");
         } catch (err) {

@@ -218,7 +218,6 @@ export class Robot {
 
     start() {
         this._status = RobotStatus.started;
-        this._startedAt = dayjs.utc().toISOString();
         this._stoppedAt = null;
         this._eventsToSend.push({
             type: RobotWorkerEvents.STARTED,
@@ -671,7 +670,7 @@ export class Robot {
     }
 
     handleCandle(candle: Candle) {
-        //logger.debug(`Robot #${this._id} - New candle ${candle.timestamp}`);
+        logger.debug(`Robot #${this._id} - New candle ${candle.timestamp}`);
         if (this._lastCandle && candle.time <= this._lastCandle.time) {
             logger.warn(`Robot #${this._id} candle ${candle.timestamp} already processed`);
             return false;

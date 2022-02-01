@@ -1,33 +1,24 @@
-import { flattenArray, groupBy, round, sleep, sortAsc } from "@cryptuoso/helpers";
+import { sleep, sortAsc } from "@cryptuoso/helpers";
 import {
     ActiveAlert,
-    Candle,
     CandleType,
     DBCandle,
     ExchangeCandle,
     ExchangePrice,
     OrderType,
-    RobotPositionStatus,
     Timeframe,
     ValidTimeframe
 } from "@cryptuoso/market";
 import { sql } from "@cryptuoso/postgres";
 import { v4 as uuid } from "uuid";
+import retry from "async-retry";
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
-import { spawn, Pool, Worker as ThreadsWorker, Transfer, TransferDescriptor } from "threads";
+import { spawn, Pool, Worker as ThreadsWorker, Transfer } from "threads";
 import { RobotWorker } from "./worker";
-import {
-    Robot,
-    RobotJobType,
-    RobotPosition,
-    RobotPositionState,
-    RobotState,
-    RobotStatus
-} from "@cryptuoso/robot-state";
+import { Robot, RobotPosition, RobotPositionState, RobotState, RobotStatus } from "@cryptuoso/robot-state";
 import { Tracer } from "@cryptuoso/logger";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { createObjectBuffer, getUnderlyingArrayBuffer, loadObjectBuffer } from "@bnaya/objectbuffer";
-import sizeof from "object-sizeof";
 import ccxtpro from "ccxt.pro";
 import cron from "node-cron";
 import dayjs from "@cryptuoso/dayjs";
@@ -39,6 +30,7 @@ import {
 } from "@cryptuoso/trade-stats-events";
 import { Exwatcher, ExwatcherStatus, Trade } from "./types";
 import {
+    getMarketCheckEventName,
     getRobotCheckEventName,
     getRobotStatusEventName,
     RobotRunnerEvents,
@@ -107,13 +99,21 @@ export class RobotBaseService extends HTTPService {
     #robots: {
         [id: string]: { robot: Robot; locked: boolean };
     } = {};
-
+    #retryOptions = {
+        retries: 10,
+        minTimeout: 500,
+        maxTimeout: 10000,
+        onRetry: (err: any, i: number) => {
+            if (err) {
+                this.log.warn(`Retry ${i} - ${err.message}`);
+            }
+        }
+    };
     constructor(config: RobotBaseServiceConfig) {
         super(config);
         this.#exchange = config.exchange;
         this.#publicConnector = new PublicConnector();
 
-        //TODO: HTTP Handlers
         this.events.subscribe({
             [getRobotStatusEventName(this.#exchange)]: {
                 schema: RobotRunnerSchema[RobotRunnerEvents.STATUS],
@@ -121,6 +121,9 @@ export class RobotBaseService extends HTTPService {
             },
             [getRobotCheckEventName(this.#exchange)]: {
                 handler: this.handleCheckSubscriptions.bind(this)
+            },
+            [getMarketCheckEventName(this.#exchange)]: {
+                handler: this.resubscribe.bind(this)
             },
             [getExwatcherImporterStatusEventName(this.#exchange)]: {
                 schema: {
@@ -180,11 +183,45 @@ export class RobotBaseService extends HTTPService {
 
     // #region event handlers
     async handleRobotStatus({ robotId, status }: RobotRunnerStatus) {
-        return; //TODO: implement
+        try {
+            if (status === RobotStatus.starting && !this.#robots[robotId]) {
+                await this.subscribeRobot(robotId);
+            } else if (status === RobotStatus.stopping && this.#robots[robotId]) {
+                while (this.#robots[robotId].locked) {
+                    await sleep(1000);
+                }
+                this.#robots[robotId].locked = true;
+                const alerts = Object.values(this.#robotAlerts)
+                    .filter(({ robotId: alertRobotId }) => alertRobotId === robotId)
+                    .map((a) => a.id);
+                for (const id of alerts) {
+                    delete this.#robotAlerts[id];
+                }
+                const robot = this.#robots[robotId].robot;
+                robot.stop();
+
+                await this.db.pg.transaction(async (t) => {
+                    await this.#saveRobotState(t, robot.robotState);
+                });
+
+                await Promise.all(
+                    robot.eventsToSend.map(async (event) => {
+                        await this.events.emit(event);
+                    })
+                );
+
+                robot.clearEvents();
+
+                delete this.#robots[robotId];
+            }
+        } catch (error) {
+            this.log.error(`Failed to change robot's #${robotId} status - ${error.message}`);
+            throw new error();
+        }
     }
 
     async handleCheckSubscriptions() {
-        return; //TODO: implement
+        await Promise.all(this.activeSubscriptions.map(async (sub) => this.subscribeRobots(sub)));
     }
 
     async handleImporterStatusEvent(event: ImporterWorkerFinished | ImporterWorkerFailed) {
@@ -245,6 +282,7 @@ export class RobotBaseService extends HTTPService {
         if (this.#exchange === "binance_futures") {
             this.#connector = new ccxtpro.binance({
                 enableRateLimit: true,
+                newUpdates: false,
                 //agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
                 options: { defaultType: "future", OHLCVLimit: 100, tradesLimit: 1000 }
             });
@@ -255,6 +293,7 @@ export class RobotBaseService extends HTTPService {
         } else if (this.#exchange === "bitfinex") {
             this.#connector = new ccxtpro.bitfinex({
                 enableRateLimit: true,
+                newUpdates: false,
                 //agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
                 options: { OHLCVLimit: 100, tradesLimit: 1000 }
             });
@@ -265,6 +304,7 @@ export class RobotBaseService extends HTTPService {
         } else if (this.#exchange === "kraken") {
             this.#connector = new ccxtpro.kraken({
                 enableRateLimit: true,
+                newUpdates: false,
                 //agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
                 options: { OHLCVLimit: 100, tradesLimit: 1000 }
             });
@@ -275,6 +315,7 @@ export class RobotBaseService extends HTTPService {
         } else if (this.#exchange === "kucoin") {
             this.#connector = new ccxtpro.kucoin({
                 enableRateLimit: true,
+                newUpdates: false,
                 //agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
                 options: { OHLCVLimit: 100, tradesLimit: 1000 }
             });
@@ -285,6 +326,7 @@ export class RobotBaseService extends HTTPService {
         } else if (this.#exchange === "huobipro") {
             this.#connector = new ccxtpro.huobipro({
                 enableRateLimit: true,
+                newUpdates: false,
                 //agent: createSocksProxyAgent(process.env.PROXY_ENDPOINT),
                 options: { OHLCVLimit: 100, tradesLimit: 1000 }
             });
@@ -342,9 +384,22 @@ export class RobotBaseService extends HTTPService {
                     await Promise.all(
                         Timeframe.validArray.map(async (timeframe) => {
                             try {
-                                await this.#connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
+                                const call = async (bail: (e: Error) => void) => {
+                                    try {
+                                        return await this.#connector.watchOHLCV(
+                                            symbol,
+                                            Timeframe.timeframes[timeframe].str
+                                        );
+                                    } catch (e) {
+                                        if (e instanceof ccxtpro.NetworkError) {
+                                            throw e;
+                                        }
+                                        bail(e);
+                                    }
+                                };
+                                await retry(call, this.#retryOptions);
                             } catch (e) {
-                                this.log.warn(e, { symbol, timeframe });
+                                this.log.warn(e.message);
                                 if (!e.message.includes("connection closed") && !e.message.includes("timed out"))
                                     await this.events.emit<ExwatcherErrorEvent>({
                                         type: ExwatcherEvents.ERROR,
@@ -357,7 +412,7 @@ export class RobotBaseService extends HTTPService {
                                             error: `${e.message}`
                                         }
                                     });
-                                await this.initConnector();
+                                //  await this.initConnector();
                             }
                         })
                     );
@@ -365,7 +420,7 @@ export class RobotBaseService extends HTTPService {
                     try {
                         await this.#connector.watchTrades(symbol);
                     } catch (e) {
-                        this.log.warn(e, { symbol });
+                        this.log.warn(e.message);
                         if (!e.message.includes("connection closed") && !e.message.includes("timed out"))
                             await this.events.emit<ExwatcherErrorEvent>({
                                 type: ExwatcherEvents.ERROR,
@@ -378,7 +433,7 @@ export class RobotBaseService extends HTTPService {
                                     error: `${e.message}`
                                 }
                             });
-                        await this.initConnector();
+                        //  await this.initConnector();
                     }
                 }
             })
@@ -534,7 +589,7 @@ export class RobotBaseService extends HTTPService {
                         await this.initCandlesHistory(this.#subscriptions[id]);
                         return true;
                     } catch (e) {
-                        this.log.error(e);
+                        // this.log.error(e);
                         this.#subscriptions[id].status = ExwatcherStatus.failed;
                         this.#subscriptions[id].importStartedAt = null;
                         this.#subscriptions[id].error = e.message;
@@ -564,20 +619,33 @@ export class RobotBaseService extends HTTPService {
         try {
             const symbol = this.getSymbol(this.#subscriptions[id].asset, this.#subscriptions[id].currency);
             if (["binance_futures"].includes(this.#exchange)) {
-                for (const timeframe of Timeframe.validArray) {
-                    await this.#connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
-                }
+                await Promise.all(
+                    Timeframe.validArray.map(async (timeframe) => {
+                        const call = async (bail: (e: Error) => void) => {
+                            try {
+                                return await this.#connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
+                            } catch (e) {
+                                if (e instanceof ccxtpro.NetworkError) {
+                                    throw e;
+                                }
+                                bail(e);
+                            }
+                        };
+                        await retry(call, this.#retryOptions);
+                    })
+                );
             } else if (["bitfinex", "kraken", "kucoin", "huobipro"].includes(this.#exchange)) {
                 await this.#connector.watchTrades(symbol);
+
                 await this.loadCurrentCandles(this.#subscriptions[id]);
             } else {
                 throw new Error("Exchange is not supported");
             }
         } catch (err) {
-            this.log.error(`CCXT Subscribe Error ${id}`, err);
-            if (err instanceof ccxtpro.NetworkError) {
+            this.log.error(`CCXT Subscribe Error ${id} - ${err.message}`);
+            /* if (err instanceof ccxtpro.NetworkError) {
                 await this.initConnector();
-            }
+            } */
             throw err;
         }
     }
@@ -671,7 +739,7 @@ export class RobotBaseService extends HTTPService {
         try {
             if (this.lightship.isServerShuttingDown()) return;
             // Текущие дата и время - минус одна секунда
-            const date = dayjs.utc().add(-1, "second").startOf("second"); //TODO: try with current date
+            const date = dayjs.utc().add(-1, "second").startOf("second");
             // Есть ли подходящие по времени таймфреймы
             const currentTimeframes = Timeframe.timeframesByDate(date.toISOString());
             const closedCandles: Map<string, ExchangeCandle> = new Map();
@@ -798,9 +866,6 @@ export class RobotBaseService extends HTTPService {
                         if (currentCandles.length > 0 && tick) {
                             this.saveCandles(currentCandles);
                         }
-                        /*  if (tick) {
-                            this.publishTick(tick);
-                        }*/
                     } catch (err) {
                         this.log.error(err);
                     }
@@ -843,12 +908,6 @@ export class RobotBaseService extends HTTPService {
                         .join("\n")} `
                 );
                 this.saveCandles(candles);
-
-                /*  await Promise.all(
-                    candles.map(async (candle) => {
-                        await this.publishCandle(candle);
-                    })
-                ); */
             }
 
             this.#lastDate = date.valueOf();
@@ -957,10 +1016,6 @@ export class RobotBaseService extends HTTPService {
                             if (currentCandles.length > 0 && tick) {
                                 this.saveCandles(currentCandles);
                             }
-
-                            /*  if (tick) {
-                                this.publishTick(tick);
-                            } */
                         }
                     }
                 })
@@ -1001,12 +1056,6 @@ export class RobotBaseService extends HTTPService {
                         .join("\n")} `
                 );
                 this.saveCandles(candles);
-
-                /*  await Promise.all(
-                    candles.map(async (candle) => {
-                        await this.publishCandle(candle);
-                    })
-                ); */
             }
 
             this.#lastDate = date.valueOf();
@@ -1104,7 +1153,9 @@ export class RobotBaseService extends HTTPService {
 
     async subscribeRobots(subscription: Exwatcher) {
         this.log.info(`Subscribing ${subscription.id} robots`);
-        const market = subscription.id;
+        const existedRobotsCondition = Object.keys(this.#robots).length
+            ? sql`AND r.id not in (${sql.join(Object.keys(this.#robots), sql`, `)})`
+            : sql``;
         const robots = await this.db.pg.any<RobotState>(sql`
         SELECT r.id, 
                r.exchange, 
@@ -1122,18 +1173,83 @@ export class RobotBaseService extends HTTPService {
                r.started_at, 
                r.stopped_at
         FROM robots r, v_robot_settings rs 
-        WHERE rs.robot_id = r.id AND exchange = ${this.#exchange}
-        AND asset = ${subscription.asset}
-        AND currency = ${subscription.currency}
-        AND status = 'started';`);
+        WHERE rs.robot_id = r.id AND r.exchange = ${this.#exchange}
+        AND r.asset = ${subscription.asset}
+        AND r.currency = ${subscription.currency}
+        AND r.status = 'started'
+        ${existedRobotsCondition};`);
 
-        for (const robot of robots) {
+        if (robots && Array.isArray(robots) && robots.length) {
+            for (const robot of robots) {
+                if (!this.#robots[robot.id]) {
+                    try {
+                        this.#robots[robot.id] = {
+                            robot: new Robot(robot),
+                            locked: false
+                        };
+                        this.getActiveRobotAlerts(robot.id);
+                        if (this.#robots[robot.id].robot.status !== RobotStatus.started) {
+                            this.#robots[robot.id].robot.start();
+
+                            await Promise.all(
+                                this.#robots[robot.id].robot.eventsToSend.map(async (event) => {
+                                    await this.events.emit(event);
+                                })
+                            );
+                            this.#robots[robot.id].robot.clearEvents();
+                            await this.db.pg.query(sql`UPDATE robot SET status = 'started' WHERE id = ${robot.id}`);
+                        }
+                        this.log.info(`Robot #${robot.id} is subscribed!`);
+                    } catch (err) {
+                        this.log.error(`Failed to subscribe #${robot.id} robot ${err.message}`);
+                        throw err;
+                    }
+                }
+            }
+        }
+    }
+
+    async subscribeRobot(robotId: string) {
+        this.log.info(`Subscribing #${robotId} robot`);
+        if (!this.#robots[robotId]) {
+            const robot = await this.db.pg.one<RobotState>(sql`
+        SELECT r.id, 
+               r.exchange, 
+               r.asset, 
+               r.currency, 
+               r.timeframe, 
+               r.strategy, 
+               json_build_object('strategySettings', rs.strategy_settings,
+                                 'robotSettings', rs.robot_settings,
+                                 'activeFrom', rs.active_from) as settings,
+               r.last_candle, 
+               r.state, 
+               r.has_alerts, 
+               r.status,
+               r.started_at, 
+               r.stopped_at
+        FROM robots r, v_robot_settings rs 
+        WHERE rs.robot_id = r.id AND r.exchange = ${this.#exchange}
+        AND r.id = ${robotId};`);
+
             try {
                 this.#robots[robot.id] = {
                     robot: new Robot(robot),
-                    locked: false
+                    locked: true
                 };
                 this.getActiveRobotAlerts(robot.id);
+                if (this.#robots[robotId].robot.status !== RobotStatus.started) {
+                    this.#robots[robot.id].robot.start();
+
+                    await Promise.all(
+                        this.#robots[robot.id].robot.eventsToSend.map(async (event) => {
+                            await this.events.emit(event);
+                        })
+                    );
+                    this.#robots[robot.id].robot.clearEvents();
+                    await this.db.pg.query(sql`UPDATE robot SET status = 'started' WHERE id = ${robotId}`);
+                }
+                this.#robots[robot.id].locked = false;
                 this.log.info(`Robot #${robot.id} is subscribed!`);
             } catch (err) {
                 this.log.error(`Failed to subscribe #${robot.id} robot ${err.message}`);
@@ -1290,6 +1406,8 @@ export class RobotBaseService extends HTTPService {
                                             }
                                         });
                                     }*/ //TODO: TURN ON IN PROD
+
+                                    robot.clearEvents();
                                 } catch (err) {
                                     this.log.error(`Failed to check robot's #${robotId} alerts - ${err.message}`);
                                     return null;
@@ -1349,7 +1467,7 @@ export class RobotBaseService extends HTTPService {
                             const prevTime = Timeframe.getPrevSince(currentDate, timeframe);
                             const exwatcherId = this.createExwatcherId(asset, currency);
 
-                            const robotObjectBuffer = createObjectBuffer(1048576, {
+                            const robotObjectBuffer = createObjectBuffer(524288, {
                                 state: robot.robotState,
                                 candles: this.#candlesHistory[exwatcherId][timeframe].filter((c) => c.time <= prevTime)
                             });
