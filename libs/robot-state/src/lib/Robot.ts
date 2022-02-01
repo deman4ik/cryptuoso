@@ -497,7 +497,8 @@ export class Robot {
                     // Считываем объект индикатора
 
                     // Создаем новый инстанc базового индикатора
-                    this._indicatorInstances[key] = new indicators[key]({
+
+                    this._indicatorInstances[key] = new indicators[indicator.indicatorName]({
                         exchange: this._exchange,
                         asset: this._asset,
                         currency: this._currency,

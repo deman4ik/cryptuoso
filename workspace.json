@@ -2729,7 +2729,8 @@
                         "outputPath": "dist/apps/utils",
                         "main": "apps/utils/src/main.ts",
                         "tsConfig": "apps/utils/tsconfig.app.json",
-                        "assets": ["apps/utils/src/assets"]
+                        "assets": ["apps/utils/src/assets"],
+                        "webpackConfig": "apps/utils/webpack.config.js"
                     },
                     "configurations": {
                         "production": {

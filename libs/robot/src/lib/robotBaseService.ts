@@ -7,6 +7,7 @@ import {
     ExchangeCandle,
     ExchangePrice,
     OrderType,
+    RobotPositionStatus,
     Timeframe,
     ValidTimeframe
 } from "@cryptuoso/market";
@@ -43,7 +44,8 @@ import {
     RobotRunnerEvents,
     RobotRunnerSchema,
     RobotRunnerStatus,
-    Signal
+    Signal,
+    SignalEvents
 } from "@cryptuoso/robot-events";
 import {
     ImporterRunnerEvents,
@@ -59,25 +61,24 @@ import {
 } from "@cryptuoso/exwatcher-events";
 import { ImporterState, Status } from "@cryptuoso/importer-state";
 import { DatabaseTransactionConnectionType } from "slonik";
+import { NewEvent } from "@cryptuoso/events";
 
 export interface RobotBaseServiceConfig extends HTTPServiceConfig {
     exchange: string;
 }
 
-interface RobotStateBuffer {
-    robotState: {
-        state: RobotState;
-        candles?: {
-            time: number;
-            timestamp: string;
-            open: number;
-            high: number;
-            low: number;
-            close: number;
-        }[];
-    };
-    buffer?: ArrayBuffer;
-    locked: boolean;
+export interface RobotStateBuffer {
+    state: RobotState;
+    candles?: {
+        time: number;
+        timestamp: string;
+        open: number;
+        high: number;
+        low: number;
+        close: number;
+    }[];
+    positionsToSave?: RobotPositionState[];
+    eventsToSend?: NewEvent<any>[];
 }
 
 export class RobotBaseService extends HTTPService {
@@ -104,7 +105,7 @@ export class RobotBaseService extends HTTPService {
         [key: string]: ActiveAlert;
     } = {};
     #robots: {
-        [id: string]: RobotStateBuffer;
+        [id: string]: { robot: Robot; locked: boolean };
     } = {};
 
     constructor(config: RobotBaseServiceConfig) {
@@ -112,6 +113,7 @@ export class RobotBaseService extends HTTPService {
         this.#exchange = config.exchange;
         this.#publicConnector = new PublicConnector();
 
+        //TODO: HTTP Handlers
         this.events.subscribe({
             [getRobotStatusEventName(this.#exchange)]: {
                 schema: RobotRunnerSchema[RobotRunnerEvents.STATUS],
@@ -625,6 +627,8 @@ export class RobotBaseService extends HTTPService {
     }
 
     async saveSubscription(subscription: Exwatcher): Promise<void> {
+        //TODO: PROD
+        return;
         const { id, exchange, asset, currency, status, importerId, importStartedAt, error } = subscription;
         await this.db.pg.query(sql`INSERT INTO exwatchers 
         ( id, 
@@ -655,6 +659,8 @@ export class RobotBaseService extends HTTPService {
     }
 
     async deleteSubscription(id: string): Promise<void> {
+        //TODO: PROD
+        return;
         await this.db.pg.query(sql`DELETE FROM exwatchers WHERE id = ${id}`);
     }
 
@@ -665,7 +671,7 @@ export class RobotBaseService extends HTTPService {
         try {
             if (this.lightship.isServerShuttingDown()) return;
             // Текущие дата и время - минус одна секунда
-            const date = dayjs.utc().add(-1, "second").startOf("second");
+            const date = dayjs.utc().add(-1, "second").startOf("second"); //TODO: try with current date
             // Есть ли подходящие по времени таймфреймы
             const currentTimeframes = Timeframe.timeframesByDate(date.toISOString());
             const closedCandles: Map<string, ExchangeCandle> = new Map();
@@ -1034,7 +1040,7 @@ export class RobotBaseService extends HTTPService {
                 try {
                     //  await Promise.all(candles.map((candle) => this.saveCandlesHistory(candle)));
 
-                    await this.db.pg.query(sql`
+                    /*    await this.db.pg.query(sql`
                     insert into candles
                     (exchange, asset, currency, timeframe, open, high, low, close, volume, time, timestamp, type)
                     SELECT *
@@ -1074,7 +1080,7 @@ export class RobotBaseService extends HTTPService {
                     low = excluded.low,
                     close = excluded.close,
                     volume = excluded.volume,
-                    type = excluded.type;`);
+                    type = excluded.type;`); */ //TODO: PROD
 
                     candles.forEach((candle) => {
                         this.#candlesToSave.delete(this.getCandleMapKey(candle));
@@ -1097,6 +1103,7 @@ export class RobotBaseService extends HTTPService {
     // #region Robot
 
     async subscribeRobots(subscription: Exwatcher) {
+        this.log.info(`Subscribing ${subscription.id} robots`);
         const market = subscription.id;
         const robots = await this.db.pg.any<RobotState>(sql`
         SELECT r.id, 
@@ -1118,71 +1125,59 @@ export class RobotBaseService extends HTTPService {
         WHERE rs.robot_id = r.id AND exchange = ${this.#exchange}
         AND asset = ${subscription.asset}
         AND currency = ${subscription.currency}
-        ;`);
+        AND status = 'started';`);
 
         for (const robot of robots) {
-            this.#robots[robot.id] = {
-                robotState: createObjectBuffer(100000, {
-                    state: robot,
-                    candles: this.#candlesHistory[market][robot.timeframe]
-                }),
-                locked: false
-            };
-            this.#robots[robot.id].buffer = getUnderlyingArrayBuffer(this.#robots[robot.id].robotState);
+            try {
+                this.#robots[robot.id] = {
+                    robot: new Robot(robot),
+                    locked: false
+                };
+                this.getActiveRobotAlerts(robot.id);
+                this.log.info(`Robot #${robot.id} is subscribed!`);
+            } catch (err) {
+                this.log.error(`Failed to subscribe #${robot.id} robot ${err.message}`);
+                throw err;
+            }
         }
     }
 
-    async getActiveRobotAlerts() {
+    async getActiveRobotAlerts(robotId: string) {
         const currentDate = dayjs.utc().valueOf();
-        const alerts = [];
 
-        for (const { robotState } of Object.values(this.#robots)) {
-            const { asset, currency, timeframe } = robotState.state;
-            const { amountInUnit, unit } = Timeframe.get(timeframe);
-            const positions = robotState.state.state.positions;
+        const robot = this.#robots[robotId].robot;
+        const { asset, currency, timeframe } = robot;
+        const { amountInUnit, unit } = Timeframe.get(timeframe);
+        const positions = robot.state.positions;
+
+        if (positions && Array.isArray(positions) && positions.length) {
             for (const pos of positions) {
-                for (const alert of Object.values(pos.alerts)) {
-                    const activeFrom = dayjs.utc(alert.candleTimestamp).add(amountInUnit, unit);
-                    const activeTo = dayjs
-                        .utc(alert.candleTimestamp)
-                        .add(amountInUnit * 2, unit)
-                        .add(-1, "millisecond");
-                    if (activeTo.valueOf() > currentDate) {
-                        alerts.push({
-                            ...alert,
-                            id: uuid(),
-                            robotId: robotState.state.id,
-                            asset,
-                            currency,
-                            timeframe: +timeframe,
-                            activeFrom: activeFrom.toISOString(),
-                            activeTo: activeTo.toISOString()
-                        });
+                if (pos.alerts) {
+                    for (const alert of Object.values(pos.alerts)) {
+                        this.log.info(`Saving robot's #${robotId} alert`);
+                        const activeFrom = dayjs.utc(alert.candleTimestamp).add(amountInUnit, unit);
+                        const activeTo = dayjs
+                            .utc(alert.candleTimestamp)
+                            .add(amountInUnit * 2, unit)
+                            .add(-1, "millisecond");
+                        if (activeTo.valueOf() > currentDate) {
+                            const id = uuid();
+                            this.#robotAlerts[id] = {
+                                ...alert,
+                                id,
+                                robotId: robot.id,
+                                asset,
+                                currency,
+                                timeframe: +timeframe,
+                                activeFrom: activeFrom.toISOString(),
+                                activeTo: activeTo.toISOString()
+                            };
+                        }
                     }
                 }
             }
         }
-        for (const alert of alerts) {
-            this.#robotAlerts[alert.id] = alert;
-        }
     }
-
-    /*async handleSignalAlertEvents(signal: Signal) {
-        if (signal.exchange !== this.exchange || this.robotAlerts[signal.id]) return;
-        const { amountInUnit, unit } = Timeframe.get(signal.timeframe);
-        const activeFrom = dayjs.utc(signal.candleTimestamp).add(amountInUnit, unit);
-        const activeTo = dayjs
-            .utc(signal.candleTimestamp)
-            .add(amountInUnit * 2, unit)
-            .add(-1, "millisecond");
-        const currentDate = dayjs.utc().valueOf();
-        if (activeTo.valueOf() < currentDate) return;
-        this.robotAlerts[signal.id] = {
-            ...signal,
-            activeFrom: activeFrom.toISOString(),
-            activeTo: activeTo.toISOString()
-        };
-    }*/ //TODO: handle new alers
 
     get activeRobotAlerts() {
         const currentDate = dayjs.utc().valueOf();
@@ -1192,7 +1187,7 @@ export class RobotBaseService extends HTTPService {
         );
     }
 
-    cleanOutdatedSignals() {
+    cleanOutdatedAlerts() {
         const currentDate = dayjs.utc().valueOf();
         const alerts = Object.values(this.#robotAlerts)
             .filter(({ activeTo }) => dayjs.utc(activeTo).valueOf() < currentDate)
@@ -1236,8 +1231,9 @@ export class RobotBaseService extends HTTPService {
 
                                 if (this.#robots[robotId].locked) return null;
                                 this.#robots[robotId].locked = true;
+                                this.log.debug(`Robot #${robotId} is LOCKED!`);
                                 try {
-                                    const robot = new Robot(this.#robots[robotId].robotState.state);
+                                    const robot = this.#robots[robotId].robot;
                                     robot.setStrategyState();
                                     const { success, error } = robot.handleCurrentCandle({
                                         ...candle,
@@ -1249,7 +1245,15 @@ export class RobotBaseService extends HTTPService {
                                     } else {
                                         this.log.error(error);
                                     }
-                                    this.#robots[robotId].robotState.state = { ...robot.robotState };
+
+                                    /*
+                                    if (robot.eventsToSend.length)
+                                        await Promise.all(
+                                            robot.eventsToSend.map(async (event) => {
+                                                await this.events.emit(event);
+                                            })
+                                        );
+
                                     await this.db.pg.transaction(async (t) => {
                                         if (robot.positionsToSave.length)
                                             await this.#saveRobotPositions(t, robot.positionsToSave);
@@ -1263,13 +1267,6 @@ export class RobotBaseService extends HTTPService {
 
                                         await this.#saveRobotState(t, robot.robotState);
                                     });
-
-                                    if (robot.eventsToSend.length)
-                                        await Promise.all(
-                                            robot.eventsToSend.map(async (event) => {
-                                                await this.events.emit(event);
-                                            })
-                                        );
 
                                     if (robot.hasClosedPositions) {
                                         await this.events.emit<any>({
@@ -1292,12 +1289,13 @@ export class RobotBaseService extends HTTPService {
                                                 robotId
                                             }
                                         });
-                                    }
+                                    }*/ //TODO: TURN ON IN PROD
                                 } catch (err) {
                                     this.log.error(`Failed to check robot's #${robotId} alerts - ${err.message}`);
                                     return null;
                                 } finally {
                                     this.#robots[robotId].locked = false;
+                                    this.log.debug(`Robot #${robotId} is UNLOCKED!`);
                                 }
 
                                 return id;
@@ -1315,7 +1313,7 @@ export class RobotBaseService extends HTTPService {
             }
 
             if (results.length < totalAlertsCount) {
-                this.cleanOutdatedSignals();
+                this.cleanOutdatedAlerts();
             }
         } catch (error) {
             this.log.error(`Failed to check robot alerts`, error);
@@ -1336,8 +1334,8 @@ export class RobotBaseService extends HTTPService {
             if (currentTimeframes.length) {
                 this.log.info(`Handling new ${currentTimeframes.join(", ")} candles`);
                 const robotIds = Object.values(this.#robots)
-                    .filter((r) => currentTimeframes.includes(r.robotState.state.timeframe))
-                    .map((r) => r.robotState.state.id);
+                    .filter(({ robot: { timeframe } }) => currentTimeframes.includes(timeframe))
+                    .map(({ robot: { id } }) => id);
 
                 await Promise.all(
                     robotIds.map(async (robotId) => {
@@ -1346,16 +1344,99 @@ export class RobotBaseService extends HTTPService {
                                 await sleep(200);
                             }
                             this.#robots[robotId].locked = true;
-                            const { asset, currency, timeframe } = this.#robots[robotId].robotState.state;
+                            const robot = this.#robots[robotId].robot;
+                            const { asset, currency, timeframe } = robot;
                             const prevTime = Timeframe.getPrevSince(currentDate, timeframe);
                             const exwatcherId = this.createExwatcherId(asset, currency);
-                            this.#robots[robotId].robotState.candles = this.#candlesHistory[exwatcherId][
-                                timeframe
-                            ].filter((c) => c.time <= prevTime);
-                            //TODO: positionsToSave, alertsToSave, eventsToSend
-                            this.#robots[robotId].buffer = await this.robotWorker(this.#robots[robotId].buffer);
-                            this.#robots[robotId].robotState = loadObjectBuffer(this.#robots[robotId].buffer);
-                        } catch (error) {
+
+                            const robotObjectBuffer = createObjectBuffer(1048576, {
+                                state: robot.robotState,
+                                candles: this.#candlesHistory[exwatcherId][timeframe].filter((c) => c.time <= prevTime)
+                            });
+                            const buffer = await this.robotWorker(getUnderlyingArrayBuffer(robotObjectBuffer)); //TODO: move all dirty stuff to robotWorker function
+                            const { state, positionsToSave, eventsToSend } = loadObjectBuffer<RobotStateBuffer>(buffer);
+                            this.#robots[robotId].robot = new Robot(state);
+
+                            /*  if (eventsToSend && Array.isArray(eventsToSend) && eventsToSend.length) {
+                                await Promise.all(
+                                    eventsToSend.map(async (event) => {
+                                        await this.events.emit(event);
+                                    })
+                                );
+                            } 
+
+                            await this.db.pg.transaction(async (t) => {
+                                if (positionsToSave && Array.isArray(positionsToSave) && positionsToSave.length)
+                                    await this.#saveRobotPositions(t, positionsToSave);
+
+                                const signals = eventsToSend?.filter(({ type }) =>
+                                    [SignalEvents.ALERT, SignalEvents.TRADE].includes(type as SignalEvents)
+                                );
+                                if (signals && signals.length) {
+                                    await this.#saveRobotSignals(
+                                        t,
+                                        signals.map(({ data }) => data)
+                                    );
+                                }
+
+                                await this.#saveRobotState(t, state);
+                            }); */ //TODO: TURN ON IN PROD
+
+                            this.log.info(`Cleaning robot's #${robotId} alerts`);
+                            const alerts = Object.values(this.#robotAlerts)
+                                .filter(({ robotId: alertRobotId }) => alertRobotId === robotId)
+                                .map((a) => a.id);
+                            for (const id of alerts) {
+                                delete this.#robotAlerts[id];
+                            }
+
+                            const alertsToSave = eventsToSend?.filter(({ type }) => type === SignalEvents.ALERT);
+
+                            const { amountInUnit, unit } = Timeframe.get(state.timeframe);
+                            for (const { data } of alertsToSave as { data: Signal }[]) {
+                                this.log.info(`Saving robot's #${robotId} alert`);
+
+                                this.#robotAlerts[data.id] = {
+                                    ...data,
+                                    activeFrom: dayjs.utc(data.candleTimestamp).add(amountInUnit, unit).toISOString(),
+                                    activeTo: dayjs
+                                        .utc(data.candleTimestamp)
+                                        .add(amountInUnit * 2, unit)
+                                        .add(-1, "millisecond")
+                                        .toISOString()
+                                };
+                            }
+
+                            /*
+                            if (
+                                positionsToSave &&
+                                Array.isArray(positionsToSave) &&
+                                positionsToSave.filter(({ status }) => status === RobotPositionStatus.closed).length > 0
+                            ) {
+                                await this.events.emit<any>({
+                                    type: StatsCalcRunnerEvents.ROBOT,
+                                    data: {
+                                        robotId
+                                    }
+                                }); //TODO: deprecate
+
+                                await this.events.emit<TradeStatsRunnerRobot>({
+                                    type: TradeStatsRunnerEvents.ROBOT,
+                                    data: {
+                                        robotId
+                                    }
+                                });
+
+                                await this.events.emit<TradeStatsRunnerPortfolioRobot>({
+                                    type: TradeStatsRunnerEvents.PORTFOLIO_ROBOT,
+                                    data: {
+                                        robotId
+                                    }
+                                });
+                            } */ //TODO: TURN ON IN PROD
+                        } catch (err) {
+                            this.log.error(`Failed to run robot's #${robotId} strategy - ${err.message}`);
+                            //TODO: send robot error event;
                         } finally {
                             this.#robots[robotId].locked = false;
                         }
@@ -1363,51 +1444,12 @@ export class RobotBaseService extends HTTPService {
                 );
             }
         } catch (error) {
+            this.log.error(error);
+            //TODO: send robot service error event;
         } finally {
             await beacon.die();
         }
     }
-
-    /*async candleJob() {
-        try {
-            const robotState = await this.#getRobotState("df0f7f1a-5408-46f1-907d-fe493ced899d");
-
-            let data: any = { state: robotState, candles: [] };
-            const dataSize = sizeof(data) * 8;
-            this.log.debug(dataSize);
-
-            const dataOBuff = createObjectBuffer<{ state: RobotState; candles: DBCandle[] }>(dataSize, data);
-
-            let dataABuff: ArrayBuffer = getUnderlyingArrayBuffer(dataOBuff);
-
-            const tracer = new Tracer();
-
-            const runJobTransfer = tracer.start("Transfer");
-
-            dataABuff = await this.robotWorker(dataABuff);
-
-            // data = loadObjectBuffer(dataABuff);
-            // this.log.warn(data.state.status);
-            //const robot = new Robot(data.state);
-            //robot._status = RobotStatus.paused;
-
-            //data.state = { ...data.state, ...robot.robotState };
-
-            dataOBuff.state.status = RobotStatus.paused;
-
-            dataABuff = await this.robotWorker(dataABuff);
-
-            data = loadObjectBuffer(dataABuff);
-            this.log.warn(data.state.status);
-
-            tracer.end(runJobTransfer);
-
-            this.log.info(tracer.state);
-        } catch (err) {
-            this.log.error("Main thread error");
-            this.log.error(err);
-        }
-    }*/
 
     async robotWorker(stateABuf: ArrayBuffer): Promise<any> {
         return await this.#pool.queue(async (worker: RobotWorker) => worker.runStrategy(Transfer(stateABuf)));

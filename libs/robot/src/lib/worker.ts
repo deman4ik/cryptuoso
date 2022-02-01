@@ -3,24 +3,26 @@ import logger from "@cryptuoso/logger";
 import { Candle } from "@cryptuoso/market";
 import { Robot, RobotState } from "@cryptuoso/robot-state";
 import { Transfer, TransferDescriptor } from "threads";
+import { RobotStateBuffer } from "./robotBaseService";
 
 export const worker = {
     async runStrategy(stateBuf: TransferDescriptor<ArrayBuffer>) {
         try {
             if (stateBuf instanceof ArrayBuffer) {
-                const robotState: { state: RobotState; candles: Candle[] } = loadObjectBuffer(stateBuf);
+                const robotState: RobotStateBuffer = loadObjectBuffer(stateBuf);
 
                 const robot = new Robot(robotState.state);
                 robot.setStrategyState();
                 robot.setIndicatorsState();
-                robot.handleHistoryCandles(robotState.candles);
-                const processed = robot.handleCandle(robotState.candles[robotState.candles.length - 1]);
+                robot.handleHistoryCandles(robotState.candles as Candle[]);
+                const processed = robot.handleCandle(robotState.candles[robotState.candles.length - 1] as Candle);
                 if (processed) {
                     await robot.calcIndicators();
                     robot.runStrategy();
                     robot.finalize();
                 }
-
+                robotState.positionsToSave = [...robot.positionsToSave];
+                robotState.eventsToSend = [...robot.eventsToSend];
                 robotState.state = { ...robotState.state, ...robot.robotState };
                 return Transfer(stateBuf);
             } else throw new Error("Unknown data from main thread");

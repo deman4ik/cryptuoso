@@ -213,4 +213,3 @@ export class TrendlineShort extends BaseStrategy {
         }
     }
 }
-module.exports = TrendlineShort;
