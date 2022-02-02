@@ -85,7 +85,7 @@ export class ExwatcherBaseService extends BaseService {
     // ticksToPublish: Map<string, ExchangePrice> = new Map();
     // ticksPublishTimer: NodeJS.Timer;
     lastTick: { [key: string]: ExchangePrice } = {};
-    cronCheck: cron.ScheduledTask = cron.schedule("*/30 * * * * *", this.check.bind(this), {
+    cronCheck: cron.ScheduledTask = cron.schedule("* */2 * * * *", this.check.bind(this), {
         scheduled: false
     });
     cronHandleChanges: cron.ScheduledTask;
@@ -289,37 +289,15 @@ export class ExwatcherBaseService extends BaseService {
     }
 
     async watch(): Promise<void> {
-        await Promise.all(
-            this.activeSubscriptions.map(async ({ id, exchange, asset, currency }: Exwatcher) => {
-                const symbol = this.getSymbol(asset, currency);
-                if (this.exchange === "binance_futures") {
-                    await Promise.all(
-                        Timeframe.validArray.map(async (timeframe) => {
-                            try {
-                                await this.connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
-                            } catch (e) {
-                                this.log.warn(e, { symbol, timeframe });
-                                if (!e.message.includes("connection closed") && !e.message.includes("timed out"))
-                                    await this.events.emit<ExwatcherErrorEvent>({
-                                        type: ExwatcherEvents.ERROR,
-                                        data: {
-                                            exchange,
-                                            asset,
-                                            currency,
-                                            exwatcherId: id,
-                                            timestamp: dayjs.utc().toISOString(),
-                                            error: `${e.message}`
-                                        }
-                                    });
-                                await this.initConnector();
-                            }
-                        })
-                    );
-                } else {
+        for (const { id, exchange, asset, currency } of this.activeSubscriptions) {
+            const symbol = this.getSymbol(asset, currency);
+            if (this.exchange === "binance_futures") {
+                for (const timeframe of Timeframe.validArray) {
                     try {
-                        await this.connector.watchTrades(symbol);
+                        await this.connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
+                        await sleep(500);
                     } catch (e) {
-                        this.log.warn(e, { symbol });
+                        this.log.warn(e, { symbol, timeframe });
                         if (!e.message.includes("connection closed") && !e.message.includes("timed out"))
                             await this.events.emit<ExwatcherErrorEvent>({
                                 type: ExwatcherEvents.ERROR,
@@ -332,11 +310,31 @@ export class ExwatcherBaseService extends BaseService {
                                     error: `${e.message}`
                                 }
                             });
-                        await this.initConnector();
+                        //  await this.initConnector();
                     }
                 }
-            })
-        );
+            } else {
+                try {
+                    await this.connector.watchTrades(symbol);
+                    await sleep(500);
+                } catch (e) {
+                    this.log.warn(e, { symbol });
+                    if (!e.message.includes("connection closed") && !e.message.includes("timed out"))
+                        await this.events.emit<ExwatcherErrorEvent>({
+                            type: ExwatcherEvents.ERROR,
+                            data: {
+                                exchange,
+                                asset,
+                                currency,
+                                exwatcherId: id,
+                                timestamp: dayjs.utc().toISOString(),
+                                error: `${e.message}`
+                            }
+                        });
+                    // await this.initConnector();
+                }
+            }
+        }
     }
 
     async resubscribe() {
@@ -551,10 +549,12 @@ export class ExwatcherBaseService extends BaseService {
             if (["binance_futures"].includes(this.exchange)) {
                 for (const timeframe of Timeframe.validArray) {
                     await this.connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
+                    await sleep(500);
                 }
             } else if (["bitfinex", "kraken", "kucoin", "huobipro"].includes(this.exchange)) {
                 await this.connector.watchTrades(symbol);
                 await this.loadCurrentCandles(this.subscriptions[id]);
+                await sleep(500);
             } else {
                 throw new Error("Exchange is not supported");
             }

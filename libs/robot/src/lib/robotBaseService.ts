@@ -644,8 +644,17 @@ export class RobotBaseService extends HTTPService {
                     await sleep(1000);
                 }
             } else if (["bitfinex", "kraken", "kucoin", "huobipro"].includes(this.#exchange)) {
-                await this.#connector.watchTrades(symbol);
-
+                const call = async (bail: (e: Error) => void) => {
+                    try {
+                        return await this.#connector.watchTrades(symbol);
+                    } catch (e) {
+                        if (e instanceof ccxtpro.NetworkError) {
+                            throw e;
+                        }
+                        bail(e);
+                    }
+                };
+                await retry(call, this.#retryOptions);
                 await this.loadCurrentCandles(this.#subscriptions[id]);
             } else {
                 throw new Error("Exchange is not supported");

@@ -270,17 +270,17 @@ export class RobotPosition {
             timestamp: dayjs.utc().toISOString()
         };
         this._alerts[this._nextAlertNumb] = alert;
-        if (orderType !== OrderType.market)
-            this._alertsToPublish.push({
-                ...alert,
-                type: SignalType.alert,
-                positionId: this._id,
-                positionPrefix: this._prefix,
-                positionCode: this._code,
-                positionParentId: this._parentId,
-                emulated: this._emulated,
-                margin: this._margin
-            });
+        //  if (orderType !== OrderType.market)
+        this._alertsToPublish.push({
+            ...alert,
+            type: SignalType.alert,
+            positionId: this._id,
+            positionPrefix: this._prefix,
+            positionCode: this._code,
+            positionParentId: this._parentId,
+            emulated: this._emulated,
+            margin: this._margin
+        });
     }
 
     _createTradeSignal(alert: AlertInfo) {
