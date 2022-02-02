@@ -136,7 +136,7 @@ export default class BacktesterWorkerService extends BaseService {
                             status: backtester.status
                         }
                     });
-                    if (backtester.settings.populateHistory) {
+                    /*  if (backtester.settings.populateHistory) {
                         await this.events.emit<RobotRunnerStatus>({
                             type: getRobotStatusEventName(backtester.exchange),
                             data: {
@@ -144,7 +144,7 @@ export default class BacktesterWorkerService extends BaseService {
                                 status: "starting"
                             }
                         });
-                    }
+                    }*/ //TODO: turn on
                     this.log.info(
                         `Backtester #${backtester.id} finished in ${dayjs
                             .utc(backtester.finishedAt)
