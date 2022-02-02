@@ -1829,6 +1829,29 @@
             },
             "tags": []
         },
+        "robot-thread": {
+            "root": "libs/robot-thread",
+            "sourceRoot": "libs/robot-thread/src",
+            "projectType": "library",
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "outputs": ["{options.outputFile}"],
+                    "options": {
+                        "lintFilePatterns": ["libs/robot-thread/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/libs/robot-thread"],
+                    "options": {
+                        "jestConfig": "libs/robot-thread/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            },
+            "tags": []
+        },
         "robot-worker": {
             "root": "apps/robot-worker",
             "sourceRoot": "apps/robot-worker/src",

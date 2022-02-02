@@ -40,7 +40,7 @@ export default class UtilsService extends HTTPService {
         super(config);
 
         try {
-            this.addOnStartedHandler(this.onStarted);
+            //    this.addOnStartedHandler(this.onStarted);
         } catch (err) {
             this.log.error("Error while constructing UtilsService", err);
         }

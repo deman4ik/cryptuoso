@@ -15,7 +15,7 @@ import { v4 as uuid } from "uuid";
 import retry from "async-retry";
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import { spawn, Pool, Worker as ThreadsWorker, Transfer } from "threads";
-import { RobotStateBuffer, RobotWorker } from "./worker";
+import { RobotStateBuffer, RobotWorker } from "@cryptuoso/robot-thread";
 import { Robot, RobotPosition, RobotPositionState, RobotState, RobotStatus } from "@cryptuoso/robot-state";
 import { Tracer } from "@cryptuoso/logger";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
@@ -73,6 +73,9 @@ export class RobotBaseService extends HTTPService {
     #checkAlertsTimer: NodeJS.Timer;
     #lastTick: { [key: string]: ExchangePrice } = {};
     #cronCheck: cron.ScheduledTask = cron.schedule("*/30 * * * * *", this.check.bind(this), {
+        scheduled: false
+    });
+    #cronWatch: cron.ScheduledTask = cron.schedule("0 */5 * * * *", this.watch.bind(this), {
         scheduled: false
     });
     #cronHandleChanges: cron.ScheduledTask;
@@ -153,6 +156,7 @@ export class RobotBaseService extends HTTPService {
         this.#cronHandleChanges.start();
         this.#cronCheck.start();
         this.#cronRunRobots.start();
+        this.#cronWatch.start();
         this.#candlesSaveTimer = setTimeout(this.handleCandlesToSave.bind(this), 0);
         this.#checkAlertsTimer = setTimeout(this.checkRobotAlerts.bind(this), 0);
     }
@@ -362,55 +366,66 @@ export class RobotBaseService extends HTTPService {
                     })
                 );
 
-            await this.watch();
+            if (this.allSubscriptionsIsActive) this.#cronCheck.stop();
+            //   await this.watch();
         } catch (e) {
             this.log.error(e);
         }
     }
 
     async watch(): Promise<void> {
-        await Promise.all(
-            this.activeSubscriptions.map(async ({ id, exchange, asset, currency }: Exwatcher) => {
+        try {
+            for (const { id, exchange, asset, currency } of this.activeSubscriptions) {
                 const symbol = this.getSymbol(asset, currency);
                 if (this.#exchange === "binance_futures") {
-                    await Promise.all(
-                        Timeframe.validArray.map(async (timeframe) => {
-                            try {
-                                const call = async (bail: (e: Error) => void) => {
-                                    try {
-                                        return await this.#connector.watchOHLCV(
-                                            symbol,
-                                            Timeframe.timeframes[timeframe].str
-                                        );
-                                    } catch (e) {
-                                        if (e instanceof ccxtpro.NetworkError) {
-                                            throw e;
-                                        }
-                                        bail(e);
+                    for (const timeframe of Timeframe.validArray) {
+                        try {
+                            const call = async (bail: (e: Error) => void) => {
+                                try {
+                                    return await this.#connector.watchOHLCV(
+                                        symbol,
+                                        Timeframe.timeframes[timeframe].str
+                                    );
+                                } catch (e) {
+                                    if (e instanceof ccxtpro.NetworkError) {
+                                        throw e;
                                     }
-                                };
-                                await retry(call, this.#retryOptions);
-                            } catch (e) {
-                                this.log.warn(e.message);
-                                if (!e.message.includes("connection closed") && !e.message.includes("timed out"))
-                                    await this.events.emit<ExwatcherErrorEvent>({
-                                        type: ExwatcherEvents.ERROR,
-                                        data: {
-                                            exchange,
-                                            asset,
-                                            currency,
-                                            exwatcherId: id,
-                                            timestamp: dayjs.utc().toISOString(),
-                                            error: `${e.message}`
-                                        }
-                                    });
-                                //  await this.initConnector();
-                            }
-                        })
-                    );
+                                    bail(e);
+                                }
+                            };
+                            await retry(call, this.#retryOptions);
+                            await sleep(1000);
+                        } catch (e) {
+                            this.log.warn(e.message);
+                            if (!e.message.includes("connection closed") && !e.message.includes("timed out"))
+                                await this.events.emit<ExwatcherErrorEvent>({
+                                    type: ExwatcherEvents.ERROR,
+                                    data: {
+                                        exchange,
+                                        asset,
+                                        currency,
+                                        exwatcherId: id,
+                                        timestamp: dayjs.utc().toISOString(),
+                                        error: `${e.message}`
+                                    }
+                                });
+                            //  await this.initConnector();
+                        }
+                    }
                 } else {
                     try {
-                        await this.#connector.watchTrades(symbol);
+                        const call = async (bail: (e: Error) => void) => {
+                            try {
+                                return await this.#connector.watchTrades(symbol);
+                            } catch (e) {
+                                if (e instanceof ccxtpro.NetworkError) {
+                                    throw e;
+                                }
+                                bail(e);
+                            }
+                        };
+                        await retry(call, this.#retryOptions);
+                        await sleep(1000);
                     } catch (e) {
                         this.log.warn(e.message);
                         if (!e.message.includes("connection closed") && !e.message.includes("timed out"))
@@ -428,8 +443,10 @@ export class RobotBaseService extends HTTPService {
                         //  await this.initConnector();
                     }
                 }
-            })
-        );
+            }
+        } catch (e) {
+            this.log.error(e);
+        }
     }
 
     async resubscribe() {
@@ -504,6 +521,7 @@ export class RobotBaseService extends HTTPService {
                     await this.saveSubscription(this.#subscriptions[id]);
                 }
             }
+            this.#cronCheck.start();
         } catch (e) {
             this.log.error(e);
             throw e;
@@ -562,7 +580,7 @@ export class RobotBaseService extends HTTPService {
     }
 
     async subscribe(subscription: Exwatcher) {
-        this.log.debug(subscription);
+        //this.log.debug(subscription);
         try {
             if (subscription) {
                 const { id, status } = subscription;
@@ -607,25 +625,24 @@ export class RobotBaseService extends HTTPService {
     }
 
     async subscribeCCXT(id: string) {
-        this.log.debug(id);
+        // this.log.debug(id);
         try {
             const symbol = this.getSymbol(this.#subscriptions[id].asset, this.#subscriptions[id].currency);
             if (["binance_futures"].includes(this.#exchange)) {
-                await Promise.all(
-                    Timeframe.validArray.map(async (timeframe) => {
-                        const call = async (bail: (e: Error) => void) => {
-                            try {
-                                return await this.#connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
-                            } catch (e) {
-                                if (e instanceof ccxtpro.NetworkError) {
-                                    throw e;
-                                }
-                                bail(e);
+                for (const timeframe of Timeframe.validArray) {
+                    const call = async (bail: (e: Error) => void) => {
+                        try {
+                            return await this.#connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
+                        } catch (e) {
+                            if (e instanceof ccxtpro.NetworkError) {
+                                throw e;
                             }
-                        };
-                        await retry(call, this.#retryOptions);
-                    })
-                );
+                            bail(e);
+                        }
+                    };
+                    await retry(call, this.#retryOptions);
+                    await sleep(1000);
+                }
             } else if (["bitfinex", "kraken", "kucoin", "huobipro"].includes(this.#exchange)) {
                 await this.#connector.watchTrades(symbol);
 
@@ -772,7 +789,7 @@ export class RobotBaseService extends HTTPService {
                                                             : CandleType.loaded;
                                                 }
                                                 const closedCandle = { ...this.#candlesCurrent[id][timeframe] };
-                                                this.log.debug("Closing", closedCandle);
+                                                // this.log.debug("Closing", closedCandle);
                                                 closedCandles.set(`${id}.${timeframe}`, closedCandle);
                                                 this.#candlesCurrent[id][timeframe].time = candle[0];
                                                 this.#candlesCurrent[id][timeframe].timestamp = dayjs
@@ -872,7 +889,7 @@ export class RobotBaseService extends HTTPService {
                         ) {
                             const candle = { ...this.#candlesCurrent[id][timeframe] };
                             closedCandles.set(`${id}.${timeframe}`, candle);
-                            this.log.debug("Closing by current timeframe", candle);
+                            //  this.log.debug("Closing by current timeframe", candle);
                             const { close } = candle;
                             this.#candlesCurrent[id][timeframe].time = date.startOf("minute").valueOf();
                             this.#candlesCurrent[id][timeframe].timestamp = date.startOf("minute").toISOString();
@@ -1341,8 +1358,9 @@ export class RobotBaseService extends HTTPService {
                                 );
 
                                 if (this.#robots[robotId].locked) return null;
+                                const beacon = this.lightship.createBeacon();
                                 this.#robots[robotId].locked = true;
-                                this.log.debug(`Robot #${robotId} is LOCKED!`);
+                                //   this.log.debug(`Robot #${robotId} is LOCKED!`);
                                 try {
                                     const robot = this.#robots[robotId].robot;
                                     robot.setStrategyState();
@@ -1409,7 +1427,8 @@ export class RobotBaseService extends HTTPService {
                                     return null;
                                 } finally {
                                     this.#robots[robotId].locked = false;
-                                    this.log.debug(`Robot #${robotId} is UNLOCKED!`);
+                                    await beacon.die();
+                                    // this.log.debug(`Robot #${robotId} is UNLOCKED!`);
                                 }
 
                                 return id;

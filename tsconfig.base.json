@@ -48,6 +48,7 @@
             "@cryptuoso/robot-indicators": ["libs/robot-indicators/src/index.ts"],
             "@cryptuoso/robot-settings": ["libs/robot-settings/src/index.ts"],
             "@cryptuoso/robot-state": ["libs/robot-state/src/index.ts"],
+            "@cryptuoso/robot-thread": ["libs/robot-thread/src/index.ts"],
             "@cryptuoso/service": ["libs/service/src/index.ts"],
             "@cryptuoso/stats-calc": ["libs/stats-calc/src/index.ts"],
             "@cryptuoso/stats-calc-events": ["libs/stats-calc-events/src/index.ts"],
