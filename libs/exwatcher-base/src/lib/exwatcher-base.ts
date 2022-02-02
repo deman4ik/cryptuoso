@@ -40,6 +40,7 @@ import { ActiveAlert, Signal, SignalEvents, SignalSchema } from "@cryptuoso/robo
 import { sql } from "@cryptuoso/postgres";
 import { ImporterState, Status } from "@cryptuoso/importer-state";
 import logger from "@cryptuoso/logger";
+import retry from "async-retry";
 
 // !FIXME: ccxt.pro typings
 
@@ -85,7 +86,10 @@ export class ExwatcherBaseService extends BaseService {
     // ticksToPublish: Map<string, ExchangePrice> = new Map();
     // ticksPublishTimer: NodeJS.Timer;
     lastTick: { [key: string]: ExchangePrice } = {};
-    cronCheck: cron.ScheduledTask = cron.schedule("* */2 * * * *", this.check.bind(this), {
+    cronCheck: cron.ScheduledTask = cron.schedule("*/30 * * * * *", this.check.bind(this), {
+        scheduled: false
+    });
+    cronWatch: cron.ScheduledTask = cron.schedule("0 */5 * * * *", this.watch.bind(this), {
         scheduled: false
     });
     cronHandleChanges: cron.ScheduledTask;
@@ -93,7 +97,16 @@ export class ExwatcherBaseService extends BaseService {
     robotAlerts: {
         [key: string]: ActiveAlert;
     } = {};
-
+    retryOptions = {
+        retries: 10,
+        minTimeout: 500,
+        maxTimeout: 10000,
+        onRetry: (err: any, i: number) => {
+            if (err) {
+                this.log.warn(`Retry ${i} - ${err.message}`);
+            }
+        }
+    };
     constructor(config?: ExwatcherBaseServiceConfig) {
         super(config);
         this.exchange = config.exchange;
@@ -142,6 +155,10 @@ export class ExwatcherBaseService extends BaseService {
 
     get activeSubscriptions() {
         return Object.values(this.subscriptions).filter(({ status }) => status === ExwatcherStatus.subscribed);
+    }
+
+    get allSubscriptionsIsActive() {
+        return this.activeSubscriptions.length === Object.keys(this.subscriptions).length;
     }
 
     async initConnector() {
@@ -208,6 +225,7 @@ export class ExwatcherBaseService extends BaseService {
         await this.resubscribe();
         this.cronHandleChanges.start();
         this.cronCheck.start();
+        this.cronWatch.start();
         this.candlesSaveTimer = setTimeout(this.handleCandlesToSave.bind(this), 0);
         await this.getActiveRobotAlerts();
         this.checkAlertsTimer = setTimeout(this.checkRobotAlerts.bind(this), 0);
@@ -281,8 +299,8 @@ export class ExwatcherBaseService extends BaseService {
                         await this.addSubscription({ exchange: this.exchange, asset, currency });
                     })
                 );
-
-            await this.watch();
+            if (this.allSubscriptionsIsActive) this.cronCheck.stop();
+            //  await this.watch();
         } catch (e) {
             this.log.error(e);
         }
@@ -294,8 +312,19 @@ export class ExwatcherBaseService extends BaseService {
             if (this.exchange === "binance_futures") {
                 for (const timeframe of Timeframe.validArray) {
                     try {
-                        await this.connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
-                        await sleep(500);
+                        const call = async (bail: (e: Error) => void) => {
+                            try {
+                                return await this.connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
+                            } catch (e) {
+                                if (e instanceof ccxtpro.NetworkError) {
+                                    throw e;
+                                }
+                                bail(e);
+                            }
+                        };
+                        await retry(call, this.retryOptions);
+
+                        await sleep(1000);
                     } catch (e) {
                         this.log.warn(e, { symbol, timeframe });
                         if (!e.message.includes("connection closed") && !e.message.includes("timed out"))
@@ -316,7 +345,7 @@ export class ExwatcherBaseService extends BaseService {
             } else {
                 try {
                     await this.connector.watchTrades(symbol);
-                    await sleep(500);
+                    await sleep(1000);
                 } catch (e) {
                     this.log.warn(e, { symbol });
                     if (!e.message.includes("connection closed") && !e.message.includes("timed out"))
@@ -435,6 +464,7 @@ export class ExwatcherBaseService extends BaseService {
                     await this.saveSubscription(this.subscriptions[id]);
                 }
             }
+            this.cronCheck.start();
         } catch (e) {
             this.log.error(e);
             throw e;
@@ -548,13 +578,23 @@ export class ExwatcherBaseService extends BaseService {
             const symbol = this.getSymbol(this.subscriptions[id].asset, this.subscriptions[id].currency);
             if (["binance_futures"].includes(this.exchange)) {
                 for (const timeframe of Timeframe.validArray) {
-                    await this.connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
-                    await sleep(500);
+                    const call = async (bail: (e: Error) => void) => {
+                        try {
+                            return await this.connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
+                        } catch (e) {
+                            if (e instanceof ccxtpro.NetworkError) {
+                                throw e;
+                            }
+                            bail(e);
+                        }
+                    };
+                    await retry(call, this.retryOptions);
+                    await sleep(1000);
                 }
             } else if (["bitfinex", "kraken", "kucoin", "huobipro"].includes(this.exchange)) {
                 await this.connector.watchTrades(symbol);
                 await this.loadCurrentCandles(this.subscriptions[id]);
-                await sleep(500);
+                await sleep(1000);
             } else {
                 throw new Error("Exchange is not supported");
             }
