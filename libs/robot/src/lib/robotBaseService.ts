@@ -14,12 +14,10 @@ import { sql } from "@cryptuoso/postgres";
 import { v4 as uuid } from "uuid";
 import retry from "async-retry";
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
-import { spawn, Pool, Worker as ThreadsWorker, Transfer } from "threads";
+import { spawn, Pool, Worker as ThreadsWorker } from "threads";
 import { RobotStateBuffer, RobotWorker } from "@cryptuoso/robot-thread";
 import { Robot, RobotPosition, RobotPositionState, RobotState, RobotStatus } from "@cryptuoso/robot-state";
-import { Tracer } from "@cryptuoso/logger";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
-import { createObjectBuffer, getUnderlyingArrayBuffer, loadObjectBuffer } from "@bnaya/objectbuffer";
 import ccxtpro from "ccxt.pro";
 import cron from "node-cron";
 import dayjs from "@cryptuoso/dayjs";
@@ -55,6 +53,7 @@ import {
 import { ImporterState, Status } from "@cryptuoso/importer-state";
 import { DatabaseTransactionConnectionType } from "slonik";
 import { NewEvent } from "@cryptuoso/events";
+import { Tracer } from "@cryptuoso/logger";
 
 export interface RobotBaseServiceConfig extends HTTPServiceConfig {
     exchange: string;
@@ -1100,7 +1099,7 @@ export class RobotBaseService extends HTTPService {
         try {
             if (this.#candlesToSave.size > 0) {
                 const candles = [...this.#candlesToSave.values()];
-                this.log.debug(`Saving ${candles.length} candles`);
+                //this.log.debug(`Saving ${candles.length} candles`);
                 try {
                     if (this.isDev) {
                         await this.db.pg.query(sql`
@@ -1469,6 +1468,8 @@ export class RobotBaseService extends HTTPService {
 
     async runRobots() {
         const beacon = this.lightship.createBeacon();
+        const tracer = new Tracer();
+        const trace = tracer.start("All jobs");
         try {
             const currentDate = dayjs.utc().startOf("minute").toISOString();
             const currentTimeframes = Timeframe.timeframesByDate(currentDate);
@@ -1491,12 +1492,11 @@ export class RobotBaseService extends HTTPService {
                             const prevTime = Timeframe.getPrevSince(currentDate, timeframe);
                             const exwatcherId = this.createExwatcherId(asset, currency);
 
-                            const robotObjectBuffer = createObjectBuffer(524288, {
+                            const robotState = await this.robotWorker({
                                 state: robot.robotState,
                                 candles: this.#candlesHistory[exwatcherId][timeframe].filter((c) => c.time <= prevTime)
                             });
-                            const buffer = await this.robotWorker(getUnderlyingArrayBuffer(robotObjectBuffer)); //TODO: move all dirty stuff to robotWorker function
-                            const { state, positionsToSave, eventsToSend } = loadObjectBuffer<RobotStateBuffer>(buffer);
+                            const { state, positionsToSave, eventsToSend } = robotState;
                             this.#robots[robotId].robot = new Robot(state);
                             if (this.isDev) {
                                 if (eventsToSend && Array.isArray(eventsToSend) && eventsToSend.length) {
@@ -1591,11 +1591,13 @@ export class RobotBaseService extends HTTPService {
             //TODO: send robot service error event;
         } finally {
             await beacon.die();
+            tracer.end(trace);
+            this.log.warn(tracer.state);
         }
     }
 
-    async robotWorker(stateABuf: ArrayBuffer): Promise<any> {
-        return await this.#pool.queue(async (worker: RobotWorker) => worker.runStrategy(Transfer(stateABuf)));
+    async robotWorker(robotState: RobotStateBuffer): Promise<RobotStateBuffer> {
+        return await this.#pool.queue(async (worker: RobotWorker) => worker.runStrategy(robotState));
     }
 
     #saveRobotPositions = async (transaction: DatabaseTransactionConnectionType, positions: RobotPositionState[]) => {

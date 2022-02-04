@@ -102,7 +102,6 @@
     },
     "private": true,
     "dependencies": {
-        "@bnaya/objectbuffer": "^0.31.2",
         "@edjopato/telegraf-i18n": "^0.1.1",
         "@grammyjs/hydrate": "^1.0.3",
         "@grammyjs/i18n": "^0.5.0",
