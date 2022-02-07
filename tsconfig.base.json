@@ -30,7 +30,6 @@
             "@cryptuoso/dayjs": ["libs/dayjs/src/index.ts"],
             "@cryptuoso/errors": ["libs/errors/src/index.ts"],
             "@cryptuoso/events": ["libs/events/src/index.ts"],
-            "@cryptuoso/exwatcher-base": ["libs/exwatcher-base/src/index.ts"],
             "@cryptuoso/exwatcher-events": ["libs/exwatcher-events/src/index.ts"],
             "@cryptuoso/graphql-client": ["libs/graphql-client/src/index.ts"],
             "@cryptuoso/helpers": ["libs/helpers/src/index.ts"],

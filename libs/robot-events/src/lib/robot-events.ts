@@ -1,6 +1,7 @@
 import { Timeframe, ValidTimeframe, TradeAction, OrderType, SignalInfo, SignalType, Candle } from "@cryptuoso/market";
 import { CANDLES_RECENT_AMOUNT, ISO_DATE_REGEX } from "@cryptuoso/helpers";
 import { RobotSettings, RobotSettingsSchema, StrategySettings } from "@cryptuoso/robot-settings";
+import { RobotStatusCommand } from "@cryptuoso/robot-state";
 
 export const EXCHANGES = {
     binance_futures: "binance_futures",
@@ -14,11 +15,11 @@ export const ROBOT_RUNNER_TOPIC = "in-robot-runner";
 
 export const enum RobotRunnerEvents {
     CREATE = "in-robot-runner.create",
-    START = "in-robot-runner.start", //TODO: DEPRECATE
-    STOP = "in-robot-runner.stop", //TODO: DEPRECATE
-    PAUSE = "in-robot-runner.pause", //TODO: DEPRECATE
+    START = "in-robot-runner.start",
+    STOP = "in-robot-runner.stop",
     STATUS = "in-robot-runner.status",
-    CHECK = "in-robot-runner.check"
+    ROBOTS_CHECK = "in-robot-runner.robots-check",
+    MARKETS_CHECK = "in-robot-runner.markets-check"
 }
 
 export const getRobotStatusEventName = (exchange: string) => {
@@ -26,14 +27,14 @@ export const getRobotStatusEventName = (exchange: string) => {
     return `in-robot-runner-${exchange}.status`;
 };
 
-export const getRobotCheckEventName = (exchange: string) => {
+export const getRobotsCheckEventName = (exchange: string) => {
     if (!Object.values(EXCHANGES).includes(exchange)) throw new Error(`Exchange ${exchange} is not supported`);
-    return `in-robot-runner-${exchange}.check`;
+    return `in-robot-runner-${exchange}.robots-check`;
 };
 
-export const getMarketCheckEventName = (exchange: string) => {
+export const getMarketsCheckEventName = (exchange: string) => {
     if (!Object.values(EXCHANGES).includes(exchange)) throw new Error(`Exchange ${exchange} is not supported`);
-    return `in-robot-runner-${exchange}.check-market`;
+    return `in-robot-runner-${exchange}.markets-check`;
 };
 
 export const ROBOT_WORKER_TOPIC = "out-robot-worker";
@@ -89,10 +90,6 @@ export const StatusSchema = {
     status: "string"
 };
 
-const RunnerSchema = {
-    robotId: "uuid"
-};
-
 export const RobotRunnerSchema = {
     [RobotRunnerEvents.CREATE]: {
         entities: {
@@ -142,9 +139,12 @@ export const RobotRunnerSchema = {
             optional: true
         }
     },
-    [RobotRunnerEvents.STOP]: RunnerSchema,
-    [RobotRunnerEvents.PAUSE]: RunnerSchema,
-    [RobotRunnerEvents.STATUS]: StatusSchema
+    [RobotRunnerEvents.STOP]: {
+        robotId: "uuid"
+    },
+    [RobotRunnerEvents.STATUS]: StatusSchema,
+    [RobotRunnerEvents.ROBOTS_CHECK]: { exchange: "string" },
+    [RobotRunnerEvents.MARKETS_CHECK]: { exchange: "string" }
 };
 
 export const RobotWorkerSchema = {
@@ -154,7 +154,6 @@ export const RobotWorkerSchema = {
     [RobotWorkerEvents.STARTED]: StatusSchema,
     [RobotWorkerEvents.STARTING]: StatusSchema,
     [RobotWorkerEvents.STOPPED]: StatusSchema,
-    [RobotWorkerEvents.PAUSED]: StatusSchema,
     [RobotWorkerEvents.ERROR]: { robotId: "uuid", error: "string" }
 };
 
@@ -206,8 +205,14 @@ export interface RobotRunnerPause {
 
 export interface RobotRunnerStatus {
     robotId: string;
-    status: string;
+    status: RobotStatusCommand;
 }
+
+export interface RobotRunnerMarketsCheck {
+    exchange: string;
+}
+
+export type RobotRunnerRobotsCheck = RobotRunnerMarketsCheck;
 
 export interface Signal extends SignalInfo {
     id: string;
@@ -240,4 +245,11 @@ export interface RobotWorkerStatus {
     [key: string]: any;
     robotId: string;
     status: string;
+}
+
+export interface AddMarket {
+    exchange: string;
+    asset: string;
+    currency: string;
+    available?: number;
 }

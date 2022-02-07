@@ -20,9 +20,10 @@ export const enum RobotStatus {
     starting = "starting",
     started = "started",
     stopping = "stopping",
-    stopped = "stopped",
-    paused = "paused"
+    stopped = "stopped"
 }
+
+export type RobotStatusCommand = "start" | "restart" | "stop";
 
 export interface StrategyProps {
     initialized: boolean;

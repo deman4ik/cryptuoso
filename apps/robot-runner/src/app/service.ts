@@ -1,6 +1,4 @@
-import { Job } from "bullmq";
 import { v4 as uuid } from "uuid";
-import { sql } from "slonik";
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import {
     RobotRunnerEvents,
@@ -9,22 +7,33 @@ import {
     RobotRunnerStart,
     RobotRunnerStop,
     RobotWorkerEvents,
-    ROBOT_WORKER_TOPIC
+    ROBOT_WORKER_TOPIC,
+    RobotRunnerStatus,
+    getRobotStatusEventName,
+    RobotRunnerMarketsCheck,
+    getMarketsCheckEventName,
+    getRobotsCheckEventName,
+    RobotRunnerRobotsCheck
 } from "@cryptuoso/robot-events";
+import { ExwatcherAddMarket } from "@cryptuoso/exwatcher-events";
 import { BacktesterRunnerEvents, BacktesterRunnerStart } from "@cryptuoso/backtester-events";
-import { Queues, RobotJob, RobotJobType, RobotRunnerJobType, RobotStatus } from "@cryptuoso/robot-state";
+import { RobotStatus } from "@cryptuoso/robot-state";
 import { StrategySettings } from "@cryptuoso/robot-settings";
-import { equals, robotExchangeName, sortDesc, uniqueElementsBy } from "@cryptuoso/helpers";
+import { equals, robotExchangeName, sleep, sortDesc } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
-import { CandleType, DBCandle, Timeframe, ValidTimeframe } from "@cryptuoso/market";
+import { CandleType, Timeframe, ValidTimeframe } from "@cryptuoso/market";
 import { BaseServiceError, BaseServiceEvents, Event } from "@cryptuoso/events";
 import { UserRoles } from "@cryptuoso/user-state";
+import { PublicConnector } from "@cryptuoso/ccxt-public";
+import { sql } from "@cryptuoso/postgres";
+
 export type RobotRunnerServiceConfig = HTTPServiceConfig;
 
 export default class RobotRunnerService extends HTTPService {
-    #robotJobRetries = 3;
+    connector: PublicConnector;
     constructor(config?: RobotRunnerServiceConfig) {
         super(config);
+        this.connector = new PublicConnector();
         try {
             this.createRoutes({
                 robotCreate: {
@@ -41,6 +50,30 @@ export default class RobotRunnerService extends HTTPService {
                     inputSchema: RobotRunnerSchema[RobotRunnerEvents.STOP],
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.stop.bind(this))
+                },
+                robotsCheck: {
+                    inputSchema: RobotRunnerSchema[RobotRunnerEvents.ROBOTS_CHECK],
+                    roles: [UserRoles.admin, UserRoles.manager],
+                    handler: this.HTTPHandler.bind(this, this.robotsCheck.bind(this))
+                },
+                marketsCheck: {
+                    inputSchema: RobotRunnerSchema[RobotRunnerEvents.MARKETS_CHECK],
+                    roles: [UserRoles.admin, UserRoles.manager],
+                    handler: this.HTTPHandler.bind(this, this.marketsCheck.bind(this))
+                },
+                addMarket: {
+                    inputSchema: {
+                        exchange: "string",
+                        asset: "string",
+                        currency: "string",
+                        available: { type: "number", integer: true, optional: true }
+                    },
+                    roles: [UserRoles.admin, UserRoles.manager],
+                    handler: this.HTTPHandler.bind(this, this.addMarket.bind(this))
+                },
+                updateMarkets: {
+                    roles: [UserRoles.admin, UserRoles.manager],
+                    handler: this.HTTPHandler.bind(this, this.updateMarkets.bind(this))
                 }
             });
 
@@ -58,24 +91,19 @@ export default class RobotRunnerService extends HTTPService {
     }
 
     async onServiceStart() {
-        this.createQueue(Queues.robot);
-        this.createQueue(Queues.robotRunner);
-        this.createWorker(Queues.robotRunner, this.process);
+        const queueKey = this.name;
 
-        await this.addJob(Queues.robotRunner, RobotRunnerJobType.newCandles, null, {
-            jobId: RobotRunnerJobType.newCandles,
-            repeat: {
-                cron: "0 */5 * * * *"
-            },
-            removeOnComplete: 1,
-            removeOnFail: 10
-        });
+        this.createQueue(queueKey);
 
-        await this.addJob(Queues.robotRunner, RobotRunnerJobType.idleRobotJobs, null, {
-            jobId: RobotRunnerJobType.idleRobotJobs,
+        this.createWorker(queueKey, this.updateMarkets);
+
+        await this.connector.initAllConnectors(true);
+        await this.addJob(queueKey, "updateMarkets", null, {
             repeat: {
-                cron: "*/30 * * * * *"
+                cron: "0 0 */12 * * *"
             },
+            attempts: 3,
+            backoff: { type: "exponential", delay: 60000 },
             removeOnComplete: 1,
             removeOnFail: 10
         });
@@ -98,41 +126,6 @@ export default class RobotRunnerService extends HTTPService {
         strategy: string,
         mod: string
     ) => `${strategy}-${mod} ${robotExchangeName(exchange)} ${asset}/${currency} ${Timeframe.toString(timeframe)}`;
-
-    async queueRobotJob(robotId: string) {
-        await this.addJob(
-            Queues.robot,
-            "job",
-            { robotId },
-            {
-                jobId: robotId,
-                removeOnComplete: true,
-                removeOnFail: 100
-            }
-        );
-    }
-
-    async addRobotJob({ robotId, type, data }: RobotJob, status: RobotStatus) {
-        await this.db.pg.query(sql`
-        INSERT INTO robot_jobs
-        (
-            robot_id,
-            type,
-            data
-        ) VALUES (
-            ${robotId},
-            ${type},
-            ${JSON.stringify(data) || null}
-        )
-        ON CONFLICT ON CONSTRAINT robot_jobs_robot_id_type_key 
-         DO UPDATE SET updated_at = now(),
-         type = excluded.type,
-         data = excluded.data,
-         retries = null,
-         error = null;
-        `);
-        if (status === RobotStatus.started) await this.queueRobotJob(robotId);
-    }
 
     async create({ entities }: RobotRunnerCreate): Promise<{ result: string }> {
         const strategiesList = await this.db.pg.many<{ id: string; code: string }>(sql`
@@ -273,13 +266,6 @@ export default class RobotRunnerService extends HTTPService {
         `);
 
         //TODO: check exwatcher
-        if (status === RobotStatus.paused) {
-            await this.db.pg.query(sql`
-            UPDATE robots 
-            SET status = ${RobotStatus.started}
-            WHERE id = ${robotId};
-            `);
-        }
 
         if (status === RobotStatus.started || status === RobotStatus.starting || status === RobotStatus.stopping)
             return { result: status };
@@ -349,142 +335,38 @@ export default class RobotRunnerService extends HTTPService {
     }
 
     async stop({ robotId }: RobotRunnerStop): Promise<{ result: string }> {
-        const { status } = await this.db.pg.one<{ status: RobotStatus }>(sql`
-        SELECT status 
+        const { status, exchange } = await this.db.pg.one<{ status: RobotStatus; exchange: string }>(sql`
+        SELECT status, exchange 
          FROM robots
         WHERE id = ${robotId}
         `);
         if (status === RobotStatus.stopping || status === RobotStatus.stopped) return { result: status };
-        await this.addRobotJob({ robotId, type: RobotJobType.stop, data: { robotId } }, status);
+        await this.events.emit<RobotRunnerStatus>({
+            type: getRobotStatusEventName(exchange),
+            data: {
+                robotId,
+                status: "stop"
+            }
+        });
         return { result: RobotStatus.stopping };
     }
 
-    async process(job: Job) {
-        switch (job.name) {
-            case RobotRunnerJobType.newCandles:
-                await this.handleNewCandles();
-                break;
-            case RobotRunnerJobType.idleRobotJobs:
-                await this.checkIdleRobotJobs();
-                break;
-            default:
-                this.log.error(`Unknow job ${job.name}`);
-        }
-        return { result: "ok" };
+    async marketsCheck({ exchange }: RobotRunnerMarketsCheck) {
+        await this.events.emit({
+            type: getMarketsCheckEventName(exchange),
+            data: {
+                exchange
+            }
+        });
     }
 
-    async handleNewCandles() {
-        try {
-            const currentDate = dayjs.utc().startOf("minute").toISOString();
-            this.log.debug(`handleNewCandles ${currentDate}`);
-            const currentTimeframes = Timeframe.timeframesByDate(currentDate);
-
-            if (currentTimeframes.length) {
-                this.log.info(`Handling new ${currentTimeframes.join(", ")} candles`);
-                const robots = await this.db.pg.any<{
-                    id: string;
-                    status: RobotStatus;
-                    exchange: string;
-                    asset: string;
-                    currency: string;
-                    timeframe: ValidTimeframe;
-                }>(sql`
-                SELECT id, status, exchange, asset, currency, timeframe 
-                  FROM robots
-                 WHERE timeframe in (${sql.join(currentTimeframes, sql`, `)}) 
-                   AND status in (${RobotStatus.started}, ${RobotStatus.starting}, ${RobotStatus.paused})
-                `);
-                if (!robots || !robots.length) return;
-                await Promise.all(
-                    currentTimeframes.map(async (timeframe) => {
-                        const robotsInTimeframe = robots.filter((r) => r.timeframe === timeframe);
-                        if (!robotsInTimeframe.length) return;
-                        const markets = uniqueElementsBy(
-                            robotsInTimeframe.map(({ exchange, asset, currency, timeframe }) => ({
-                                exchange,
-                                asset,
-                                currency,
-                                timeframe
-                            })),
-                            (a, b) =>
-                                a.exchange === b.exchange &&
-                                a.asset === b.asset &&
-                                a.currency === b.currency &&
-                                a.timeframe === b.timeframe
-                        );
-                        await Promise.all(
-                            markets.map(async ({ exchange, asset, currency, timeframe }) => {
-                                const prevTime = Timeframe.getPrevSince(currentDate, timeframe);
-                                const candle = await this.db.pg.maybeOne<DBCandle>(sql`
-                            SELECT * 
-                            FROM candles
-                            WHERE exchange = ${exchange}
-                            AND asset = ${asset}
-                            AND currency = ${currency}
-                            AND timeframe = ${timeframe}
-                            AND timestamp = ${dayjs.utc(prevTime).toISOString()};`);
-
-                                if (!candle) {
-                                    this.log.error(
-                                        `Failed to load ${exchange}-${asset}-${currency}-${timeframe}-${dayjs
-                                            .utc(prevTime)
-                                            .toISOString()} candle`
-                                    );
-                                    //TODO: send error event
-                                    return;
-                                }
-
-                                const robotsToSend = robotsInTimeframe.filter(
-                                    (r) =>
-                                        r.exchange === exchange &&
-                                        r.asset === asset &&
-                                        r.currency === currency &&
-                                        r.timeframe === timeframe
-                                );
-                                this.log.info(
-                                    `New candle ${exchange}.${asset}.${currency}.${timeframe} ${dayjs
-                                        .utc(prevTime)
-                                        .toISOString()} required by ${robotsToSend.length}`
-                                );
-                                await Promise.all(
-                                    robotsToSend.map(async ({ id, status }) =>
-                                        this.addRobotJob(
-                                            {
-                                                robotId: id,
-                                                type: RobotJobType.candle,
-                                                data: { ...candle, timeframe }
-                                            },
-                                            status
-                                        )
-                                    )
-                                );
-                            })
-                        );
-                    })
-                );
+    async robotsCheck({ exchange }: RobotRunnerRobotsCheck) {
+        await this.events.emit({
+            type: getRobotsCheckEventName(exchange),
+            data: {
+                exchange
             }
-        } catch (error) {
-            this.log.error("Failed to handle new candle", error);
-        }
-    }
-
-    async checkIdleRobotJobs() {
-        try {
-            const robotsWithJobs = await this.db.pg.any<{ robotId: string }>(sql`
-        SELECT distinct rj.robot_id 
-        FROM robot_jobs rj, robots r
-        WHERE rj.robot_id = r.id 
-        AND r.status = ${RobotStatus.started}
-        AND (rj.retries is null OR rj.retries < ${this.#robotJobRetries})
-        AND rj.updated_at < ${dayjs.utc().add(-1, "minute").toISOString()}
-        `);
-
-            if (robotsWithJobs && Array.isArray(robotsWithJobs) && robotsWithJobs.length) {
-                await Promise.all(robotsWithJobs.map(async ({ robotId }) => this.queueRobotJob(robotId)));
-            }
-        } catch (err) {
-            this.log.error("Failed to idle robot jobs", err);
-        }
+        });
     }
 
     #saveRobotHistory = async (robotId: string, type: string, data: { [key: string]: any }) =>
@@ -527,6 +409,127 @@ export default class RobotRunnerService extends HTTPService {
                 await this.#saveRobotLog(robotId, event.data);
                 break;
             }
+        }
+    }
+
+    async updateMarkets() {
+        try {
+            while (!this.connector.isInited()) {
+                this.log.info("Waiting for connectors to Initialize...");
+                await sleep(5000);
+            }
+            const markets = await this.db.pg.any<{ exchange: string; asset: string; currency: string }>(
+                sql`SELECT exchange, asset, currency FROM markets where available >= 5;`
+            );
+            this.log.info(`Updating ${markets.length} markets`);
+            const errors: { exchange: string; asset: string; currency: string; error: string }[] = [];
+            for (const market of markets) {
+                try {
+                    await this.updateMarket(market);
+                } catch (error) {
+                    this.log.error(
+                        `Failed to update market ${market.exchange}.${market.asset}.${market.currency}`,
+                        error
+                    );
+                    errors.push({ ...market, error: error.message });
+                }
+            }
+            if (errors.length > 0) {
+                await this.events.emit<BaseServiceError>({
+                    type: BaseServiceEvents.ERROR,
+                    data: {
+                        service: this.name,
+                        error: `Failed to update ${errors.length} markets of ${markets.length}`,
+                        data: errors
+                    }
+                });
+                throw new Error(`Failed to update ${errors.length} markets of ${markets.length}`);
+            }
+            await this.db.pg.query(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY mv_exchange_info;`);
+            await this.db.pg.query(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY mv_portfolio_limits;`);
+            this.log.info(`Updated ${markets.length} markets!`);
+        } catch (error) {
+            this.log.error("Failed to update markets", error);
+            throw error;
+        }
+    }
+
+    async updateMarket({
+        exchange,
+        asset,
+        currency,
+        available = 15
+    }: {
+        exchange: string;
+        asset: string;
+        currency: string;
+        available?: number;
+    }) {
+        this.log.debug(`Updating ${exchange}.${asset}.${currency} market...`);
+        const { precision, limits, feeRate, loadFrom, info } = await this.connector.getMarket(
+            exchange,
+            asset,
+            currency
+        );
+        await this.db.pg.query(sql`INSERT INTO markets (
+                exchange, asset, currency, precision, limits, fee_rate, load_from, available, info )
+                VALUES (
+                    ${exchange},
+                    ${asset},
+                    ${currency},
+                    ${JSON.stringify(precision)},
+                    ${JSON.stringify(limits)},
+                    ${feeRate},
+                    ${loadFrom || null},
+                    ${available},
+                    ${JSON.stringify(info)}
+                )
+                ON CONFLICT ON CONSTRAINT markets_exchange_asset_currency_key
+                DO UPDATE SET precision = excluded.precision, 
+                limits = excluded.limits,
+                fee_rate = excluded.fee_rate,
+                load_from = excluded.load_from,
+                info = excluded.info;
+            `);
+        this.log.debug(`${exchange}.${asset}.${currency} market updated!`);
+    }
+
+    async addMarket(
+        req: {
+            body: {
+                input: ExwatcherAddMarket;
+            };
+        },
+        res: any
+    ) {
+        try {
+            const { exchange, asset, currency, available } = req.body.input;
+
+            const assetExists = await this.db.pg.maybeOne(sql`
+            SELECT code from assets where code = ${asset};
+            `);
+            if (!assetExists)
+                await this.db.pg.query(sql`
+            INSERT INTO assets (code,name) VALUES (${asset},${asset});
+            `);
+            const currencyExists = await this.db.pg.maybeOne(sql`
+             SELECT code from currencies where code = ${currency};
+             `);
+            if (!currencyExists)
+                await this.db.pg.query(sql`
+             INSERT INTO currencies (code,name) VALUES (${currency},${currency});
+             `);
+            const marketExists = await this.db.pg.maybeOne(sql`
+            SELECT asset from markets where exchange = ${exchange}
+            AND asset = ${asset}
+            and currency = ${currency};
+            `);
+            if (!marketExists) await this.updateMarket({ ...req.body.input, available: available || 0 });
+            res.send({ result: "OK" });
+            res.end();
+        } catch (error) {
+            this.log.error(error);
+            throw error;
         }
     }
 }

@@ -29,12 +29,14 @@ import {
 } from "@cryptuoso/trade-stats-events";
 import { Exwatcher, ExwatcherStatus, Trade } from "./types";
 import {
-    getMarketCheckEventName,
-    getRobotCheckEventName,
+    getMarketsCheckEventName,
+    getRobotsCheckEventName,
     getRobotStatusEventName,
     RobotRunnerEvents,
     RobotRunnerSchema,
     RobotRunnerStatus,
+    RobotWorkerError,
+    RobotWorkerEvents,
     Signal,
     SignalEvents
 } from "@cryptuoso/robot-events";
@@ -52,7 +54,7 @@ import {
 } from "@cryptuoso/exwatcher-events";
 import { ImporterState, Status } from "@cryptuoso/importer-state";
 import { DatabaseTransactionConnectionType } from "slonik";
-import { NewEvent } from "@cryptuoso/events";
+import { BaseServiceError, BaseServiceEvents, NewEvent } from "@cryptuoso/events";
 import { Tracer } from "@cryptuoso/logger";
 
 export interface RobotBaseServiceConfig extends HTTPServiceConfig {
@@ -108,10 +110,10 @@ export class RobotBaseService extends HTTPService {
                 schema: RobotRunnerSchema[RobotRunnerEvents.STATUS],
                 handler: this.handleRobotStatus.bind(this)
             },
-            [getRobotCheckEventName(this.#exchange)]: {
+            [getRobotsCheckEventName(this.#exchange)]: {
                 handler: this.handleCheckSubscriptions.bind(this)
             },
-            [getMarketCheckEventName(this.#exchange)]: {
+            [getMarketsCheckEventName(this.#exchange)]: {
                 handler: this.resubscribe.bind(this)
             },
             [getExwatcherImporterStatusEventName(this.#exchange)]: {
@@ -141,8 +143,8 @@ export class RobotBaseService extends HTTPService {
             async () => await spawn<RobotWorker>(new ThreadsWorker("./worker"), { timeout: 60000 }),
             {
                 name: "worker",
-                concurrency: this.workerConcurrency || 10,
-                size: this.workerConcurrency || 10
+                concurrency: this.workerConcurrency || 12,
+                size: this.workerConcurrency || 12
             }
         );
         await sleep(3000);
@@ -179,9 +181,9 @@ export class RobotBaseService extends HTTPService {
     // #region event handlers
     async handleRobotStatus({ robotId, status }: RobotRunnerStatus) {
         try {
-            if (status === RobotStatus.starting && !this.#robots[robotId]) {
+            if ((status === "start" && !this.#robots[robotId]) || status === "restart") {
                 await this.subscribeRobot(robotId);
-            } else if (status === RobotStatus.stopping && this.#robots[robotId]) {
+            } else if (status === "stop" && this.#robots[robotId]) {
                 while (this.#robots[robotId].locked) {
                     await sleep(1000);
                 }
@@ -1431,7 +1433,15 @@ export class RobotBaseService extends HTTPService {
 
                                     robot.clearEvents();
                                 } catch (err) {
-                                    this.log.error(`Failed to check robot's #${robotId} alerts - ${err.message}`);
+                                    const error = `Failed to check robot's #${robotId} alerts - ${err.message}`;
+                                    this.log.error(error);
+                                    await this.events.emit<RobotWorkerError>({
+                                        type: RobotWorkerEvents.ERROR,
+                                        data: {
+                                            robotId,
+                                            error
+                                        }
+                                    });
                                     return null;
                                 } finally {
                                     this.#robots[robotId].locked = false;
@@ -1458,6 +1468,13 @@ export class RobotBaseService extends HTTPService {
             }
         } catch (error) {
             this.log.error(`Failed to check robot alerts`, error);
+            await this.events.emit<BaseServiceError>({
+                type: BaseServiceEvents.ERROR,
+                data: {
+                    service: this.name,
+                    error: `Failed to check robot alerts - ${error.message}`
+                }
+            });
         } finally {
             await beacon.die();
             if (!this.lightship.isServerShuttingDown()) {
@@ -1578,8 +1595,15 @@ export class RobotBaseService extends HTTPService {
                                 }
                             }
                         } catch (err) {
-                            this.log.error(`Failed to run robot's #${robotId} strategy - ${err.message}`);
-                            //TODO: send robot error event;
+                            const error = `Failed to run robot's #${robotId} strategy - ${err.message}`;
+                            this.log.error(error);
+                            await this.events.emit<RobotWorkerError>({
+                                type: RobotWorkerEvents.ERROR,
+                                data: {
+                                    robotId,
+                                    error
+                                }
+                            });
                         } finally {
                             this.#robots[robotId].locked = false;
                         }
@@ -1587,8 +1611,14 @@ export class RobotBaseService extends HTTPService {
                 );
             }
         } catch (error) {
-            this.log.error(error);
-            //TODO: send robot service error event;
+            this.log.error(error, "Failed to run robots");
+            await this.events.emit<BaseServiceError>({
+                type: BaseServiceEvents.ERROR,
+                data: {
+                    service: this.name,
+                    error: `Failed to run robots - ${error.message}`
+                }
+            });
         } finally {
             await beacon.die();
             tracer.end(trace);

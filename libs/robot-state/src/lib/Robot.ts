@@ -241,17 +241,6 @@ export class Robot {
         });
     }
 
-    pause() {
-        this._status = RobotStatus.paused;
-        this._eventsToSend.push({
-            type: RobotWorkerEvents.PAUSED,
-            data: {
-                robotId: this._id,
-                status: RobotStatus.paused
-            }
-        });
-    }
-
     setError(err: any) {
         this._eventsToSend.push({
             type: RobotWorkerEvents.ERROR,
