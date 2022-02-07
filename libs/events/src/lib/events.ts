@@ -3,7 +3,7 @@ import { Lightship } from "lightship";
 import { ValidationSchema } from "fastest-validator";
 import { v4 as uuid } from "uuid";
 import logger from "@cryptuoso/logger";
-import { JSONParse, round, sleep } from "@cryptuoso/helpers";
+import { GenericObject, JSONParse, round, sleep } from "@cryptuoso/helpers";
 import { CloudEvent as Event, CloudEventV1 } from "cloudevents";
 import { BaseError } from "@cryptuoso/errors";
 import { EventsCatalog, EventHandler, BASE_REDIS_PREFIX } from "./catalog";
@@ -474,7 +474,7 @@ export class Events {
         }
     }
 
-    async emitRaw(topic: string, event: CloudEventV1) {
+    async emitRaw(topic: string, event: CloudEventV1<GenericObject<any>>) {
         try {
             const cloudEvent = new Event(event);
 
