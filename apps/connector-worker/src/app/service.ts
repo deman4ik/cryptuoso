@@ -480,7 +480,7 @@ export default class ConnectorRunnerService extends BaseService {
                 throw new BaseError(`Failed to save order #${order.id} - ${error.message}`, { order, nextJob });
             }
 
-            if (order.status === OrderStatus.closed || order.status === OrderStatus.canceled) {
+            if ((order.status === OrderStatus.closed || order.status === OrderStatus.canceled) && !order.error) {
                 await this.events.emit<OrdersStatusEvent>({
                     type: ConnectorWorkerEvents.ORDER_STATUS,
                     data: {
