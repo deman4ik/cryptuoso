@@ -203,7 +203,9 @@ export default class UserProfileService extends HTTPService {
 
     private async _onServiceStart(): Promise<void> {
         this.pool = Pool(() => spawn<Encrypt>(new ThreadsWorker("./encryptWorker")), {
-            name: "encrypt"
+            name: "encrypt",
+            concurrency: this.workerConcurrency,
+            size: this.workerThreads
         });
     }
 

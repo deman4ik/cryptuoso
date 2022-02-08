@@ -74,6 +74,11 @@ spec:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
                                 key: BACKTESTER_WORKER_CONCURRENCY
+                      - name: WORKER_THREADS
+                        valueFrom:
+                            secretKeyRef:
+                                name: cpz-env-<ENV>
+                                key: BACKTESTER_WORKER_THREADS
                       - name: THREADS_WORKER_INIT_TIMEOUT
                         valueFrom:
                             secretKeyRef:

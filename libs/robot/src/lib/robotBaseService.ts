@@ -143,8 +143,8 @@ export class RobotBaseService extends HTTPService {
             async () => await spawn<RobotWorker>(new ThreadsWorker("./worker"), { timeout: 60000 }),
             {
                 name: "worker",
-                concurrency: this.workerConcurrency || 12,
-                size: this.workerConcurrency || 12
+                concurrency: this.workerConcurrency,
+                size: this.workerThreads
             }
         );
         await sleep(3000);

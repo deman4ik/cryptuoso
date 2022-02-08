@@ -41,6 +41,7 @@ export class BaseService {
     #queues: { [key: string]: { instance: Queue<any>; scheduler: QueueScheduler; events?: QueueEvents } } = {};
     #workers: { [key: string]: Worker } = {};
     #workerConcurrency = +process.env.WORKER_CONCURRENCY || 10;
+    #workerThreads = +process.env.WORKER_THREADS || 2;
     #lockers = new Map<string, { unlock(): Promise<void> }>();
     #cleanQueueGrace = +process.env.CLEAN_QUEUE_GRACE || 1000 * 60 * 60 * 48;
     #cleanQueues = async () => {
@@ -371,7 +372,7 @@ export class BaseService {
         this.#workers[name] = new Worker(name, processor.bind(this), {
             lockDuration: 60000,
             connection: this.redis.duplicate(),
-            concurrency: +this.#workerConcurrency,
+            concurrency: this.#workerConcurrency * this.#workerThreads,
             ...opts
         });
         this.#workers[name].on("error", (err) => {
@@ -385,6 +386,10 @@ export class BaseService {
 
     get workerConcurrency() {
         return this.#workerConcurrency;
+    }
+
+    get workerThreads() {
+        return this.#workerThreads;
     }
 
     get redlock() {
