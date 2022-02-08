@@ -923,8 +923,16 @@ export class UserPosition {
                 });
             }
 
+            const canceledOrders =
+                this._exitOrders &&
+                Array.isArray(this._exitOrders) &&
+                this._exitOrders.filter((o) => o.status === OrderStatus.canceled);
             // Exit hasn't any open signal orders
             if (!this.hasOpenExitOrders) {
+                if (canceledOrders.length > 5) {
+                    throw new BaseError("Can't close position. Please contact support");
+                }
+
                 // Creating new exit order to close position
                 this._close({
                     action: this._direction === "long" ? TradeAction.closeLong : TradeAction.closeShort,
