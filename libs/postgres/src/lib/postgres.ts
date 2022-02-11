@@ -1,4 +1,11 @@
-import { createPool, sql, ClientConfigurationInputType, createTypeParserPreset } from "slonik";
+import {
+    createPool,
+    sql,
+    ClientConfigurationInputType,
+    createTypeParserPreset,
+    DatabasePoolType,
+    DatabaseTransactionConnectionType
+} from "slonik";
 import { createFieldNameTransformationInterceptor } from "slonik-interceptor-field-name-transformation";
 import { createQueryLoggingInterceptor } from "slonik-interceptor-query-logging";
 import dayjs from "@cryptuoso/dayjs";
@@ -47,4 +54,4 @@ const pgUtil = {
     prepareUnnest
 };
 
-export { pg, sql, pgUtil };
+export { pg, sql, pgUtil, DatabasePoolType, DatabaseTransactionConnectionType };

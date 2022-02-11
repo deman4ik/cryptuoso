@@ -83,6 +83,7 @@ export default class PortfolioManagerService extends HTTPService {
                 createUserPortfolio: {
                     inputSchema: {
                         exchange: "string",
+                        type: { type: "enum", values: ["shared", "dedicated"], optional: true, default: "shared" },
                         userExAccId: { type: "uuid" },
                         tradingAmountType: { type: "string" },
                         balancePercent: { type: "number", optional: true },
@@ -280,6 +281,7 @@ export default class PortfolioManagerService extends HTTPService {
     async createUserPortfolio(
         {
             exchange,
+            type,
             userExAccId,
             tradingAmountType,
             balancePercent,
@@ -295,6 +297,7 @@ export default class PortfolioManagerService extends HTTPService {
             custom
         }: PortfolioSettings & {
             exchange: UserPortfolioDB["exchange"];
+            type: UserPortfolioDB["type"];
             userExAccId: UserPortfolioDB["userExAccId"];
             custom: boolean;
         },
@@ -401,6 +404,7 @@ export default class PortfolioManagerService extends HTTPService {
             userId,
             userExAccId,
             exchange,
+            type,
             status: "starting"
         };
 
@@ -434,30 +438,20 @@ export default class PortfolioManagerService extends HTTPService {
         ${userPortfolio.status}
         );`);
 
-            if (!custom && robots && robots.length) {
-                await t.query(sql`
+            await t.query(sql`
                 insert into user_portfolio_settings (user_portfolio_id, active_from, user_portfolio_settings, robots, active)
                 values (${userPortfolio.id}, ${dayjs.utc().toISOString()}, ${JSON.stringify(
-                    userPortfolioSettings
-                )}, ${JSON.stringify(robots)}, ${true}); 
+                userPortfolioSettings
+            )}, ${JSON.stringify(robots)}, ${true}); 
                 `);
-            } else {
-                custom = true;
-                await t.query(sql`
-                   insert into user_portfolio_settings (user_portfolio_id, active_from, user_portfolio_settings)
-                   values (${userPortfolio.id}, ${null}, ${JSON.stringify(userPortfolioSettings)}); 
-                   `);
-            }
         });
 
-        if (!custom)
-            await this.events.emit<PortfolioManagerUserPortfolioBuilded>({
-                type: PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED,
-                data: {
-                    userPortfolioId: userPortfolio.id
-                }
-            });
-        else await this.buildUserPortfolio({ userPortfolioId: userPortfolio.id });
+        await this.events.emit<PortfolioManagerUserPortfolioBuilded>({
+            type: PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED,
+            data: {
+                userPortfolioId: userPortfolio.id
+            }
+        });
 
         return { result: userPortfolio.id };
     }

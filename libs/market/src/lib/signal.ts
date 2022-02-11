@@ -17,16 +17,6 @@ export interface AlertInfo extends TradeInfo {
     candleTimestamp: string;
 }
 
-export interface ActiveAlert extends AlertInfo {
-    id: string;
-    robotId: string;
-    asset: string;
-    currency: string;
-    timeframe: ValidTimeframe;
-    activeFrom: string;
-    activeTo: string;
-}
-
 export interface SignalInfo extends AlertInfo {
     type: SignalType;
     positionId: string;
@@ -45,4 +35,9 @@ export interface SignalEvent extends SignalInfo {
     currency: string;
     timeframe: ValidTimeframe;
     timestamp: string;
+}
+
+export interface ActiveAlert extends SignalEvent {
+    activeFrom: string;
+    activeTo: string;
 }

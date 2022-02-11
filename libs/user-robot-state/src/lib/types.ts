@@ -4,6 +4,7 @@ import { UserRobotSettings } from "@cryptuoso/robot-settings";
 import { UserMarketState } from "@cryptuoso/market";
 import { OrdersStatusEvent } from "@cryptuoso/connector-events";
 import { UserPortfolioDB, UserPortfolioState } from "@cryptuoso/portfolio-state";
+import { RobotState } from "@cryptuoso/robot-state";
 
 export const enum UserPositionStatus {
     delayed = "delayed",
@@ -107,7 +108,9 @@ export interface UserRobotDB {
     robotId: string;
     userPortfolioId?: string;
     internalState: UserRobotInternalState;
+    robotState?: RobotState;
     status: UserRobotStatus;
+    type: "shared" | "dedicated";
     startedAt?: string;
     stoppedAt?: string;
     message?: string;

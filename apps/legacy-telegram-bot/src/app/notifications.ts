@@ -1,13 +1,12 @@
 import { OrdersErrorEvent, UserExchangeAccountErrorEvent } from "@cryptuoso/connector-events";
 import dayjs from "@cryptuoso/dayjs";
-import { SignalType, TradeAction } from "@cryptuoso/market";
-import { Signal } from "@cryptuoso/robot-events";
+import { SignalEvent, SignalType, TradeAction } from "@cryptuoso/market";
 import { UserPositionStatus, UserRobotStatus, UserTradeEvent } from "@cryptuoso/user-robot-state";
 import { Notification } from "@cryptuoso/user-state";
 import { UserSubErrorEvent, UserSubPaymentStatusEvent, UserSubStatusEvent } from "@cryptuoso/user-sub-events";
 
 export function handleSignal(notification: Notification<any> & { telegramId: number }) {
-    const signal = notification.data as Signal & {
+    const signal = notification.data as SignalEvent & {
         robotCode: string;
         volume: number;
         profit: number;

@@ -122,6 +122,7 @@ export interface UserPortfolioDB {
     userId: string;
     userExAccId?: string;
     exchange: string;
+    type: "shared" | "dedicated";
     status: "starting" | "started" | "stopping" | "stopped" | "error" | "buildError";
     startedAt?: string;
     stoppedAt?: string;

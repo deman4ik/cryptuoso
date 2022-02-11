@@ -7,6 +7,8 @@ import {
     ExchangePrice,
     OrderType,
     RobotPositionStatus,
+    SignalEvent,
+    SignalType,
     Timeframe,
     ValidTimeframe
 } from "@cryptuoso/market";
@@ -37,7 +39,6 @@ import {
     RobotRunnerStatus,
     RobotWorkerError,
     RobotWorkerEvents,
-    Signal,
     SignalEvents
 } from "@cryptuoso/robot-events";
 import {
@@ -59,10 +60,12 @@ import { Tracer } from "@cryptuoso/logger";
 
 export interface RobotBaseServiceConfig extends HTTPServiceConfig {
     exchange: string;
+    userId?: string;
 }
 
 export class RobotBaseService extends HTTPService {
     #exchange: string;
+    #userId: string;
     #pool: Pool<any>;
     #connector: any;
     #publicConnector: PublicConnector;
@@ -87,7 +90,7 @@ export class RobotBaseService extends HTTPService {
     #robotAlerts: {
         [key: string]: ActiveAlert;
     } = {};
-    #robots: {
+    robots: {
         [id: string]: { robot: Robot; locked: boolean };
     } = {};
     #retryOptions = {
@@ -103,34 +106,37 @@ export class RobotBaseService extends HTTPService {
     constructor(config: RobotBaseServiceConfig) {
         super(config);
         this.#exchange = config.exchange;
+        this.#userId = config.userId || process.env.USER_ID;
         this.#publicConnector = new PublicConnector();
 
-        this.events.subscribe({
-            [getRobotStatusEventName(this.#exchange)]: {
-                schema: RobotRunnerSchema[RobotRunnerEvents.STATUS],
-                handler: this.handleRobotStatus.bind(this)
-            },
-            [getRobotsCheckEventName(this.#exchange)]: {
-                handler: this.handleCheckSubscriptions.bind(this)
-            },
-            [getMarketsCheckEventName(this.#exchange)]: {
-                handler: this.resubscribe.bind(this)
-            },
-            [getExwatcherImporterStatusEventName(this.#exchange)]: {
-                schema: {
-                    id: "uuid",
-                    type: {
-                        type: "enum",
-                        values: ["recent", "history"]
-                    },
-                    exchange: "string",
-                    asset: "string",
-                    currency: "string",
-                    status: "string"
+        if (!this.#userId) {
+            this.events.subscribe({
+                [getRobotStatusEventName(this.#exchange)]: {
+                    schema: RobotRunnerSchema[RobotRunnerEvents.STATUS],
+                    handler: this.handleRobotStatus.bind(this)
                 },
-                handler: this.handleImporterStatusEvent.bind(this)
-            }
-        });
+                [getRobotsCheckEventName(this.#exchange)]: {
+                    handler: this.handleCheckSubscriptions.bind(this)
+                },
+                [getMarketsCheckEventName(this.#exchange)]: {
+                    handler: this.resubscribe.bind(this)
+                },
+                [getExwatcherImporterStatusEventName(this.#exchange)]: {
+                    schema: {
+                        id: "uuid",
+                        type: {
+                            type: "enum",
+                            values: ["recent", "history"]
+                        },
+                        exchange: "string",
+                        asset: "string",
+                        currency: "string",
+                        status: "string"
+                    },
+                    handler: this.handleImporterStatusEvent.bind(this)
+                }
+            });
+        }
 
         this.addOnStartHandler(this.onServiceStart);
         this.addOnStartedHandler(this.onServiceStarted);
@@ -152,21 +158,22 @@ export class RobotBaseService extends HTTPService {
     }
 
     async onServiceStarted() {
-        this.initCache();
         await this.resubscribe();
         this.#cronHandleChanges.start();
         this.#cronCheck.start();
         this.#cronRunRobots.start();
         this.#cronWatch.start();
-        this.#candlesSaveTimer = setTimeout(this.handleCandlesToSave.bind(this), 0);
+        if (this.isRobotService) this.#candlesSaveTimer = setTimeout(this.handleCandlesToSave.bind(this), 0);
         this.#checkAlertsTimer = setTimeout(this.checkRobotAlerts.bind(this), 0);
     }
 
     async onServiceStop() {
         try {
-            this.#cronRunRobots.stop();
             this.#cronHandleChanges.stop();
             this.#cronCheck.stop();
+            this.#cronRunRobots.stop();
+            this.#cronWatch.stop();
+
             await this.unsubscribeAll();
             await sleep(5000);
             await this.#pool.terminate();
@@ -181,20 +188,20 @@ export class RobotBaseService extends HTTPService {
     // #region event handlers
     async handleRobotStatus({ robotId, status }: RobotRunnerStatus) {
         try {
-            if ((status === "start" && !this.#robots[robotId]) || status === "restart") {
+            if ((status === "start" && !this.robots[robotId]) || status === "restart") {
                 await this.subscribeRobot(robotId);
-            } else if (status === "stop" && this.#robots[robotId]) {
-                while (this.#robots[robotId].locked) {
+            } else if (status === "stop" && this.robots[robotId]) {
+                while (this.robots[robotId].locked) {
                     await sleep(1000);
                 }
-                this.#robots[robotId].locked = true;
+                this.robots[robotId].locked = true;
                 const alerts = Object.values(this.#robotAlerts)
                     .filter(({ robotId: alertRobotId }) => alertRobotId === robotId)
                     .map((a) => a.id);
                 for (const id of alerts) {
                     delete this.#robotAlerts[id];
                 }
-                const robot = this.#robots[robotId].robot;
+                const robot = this.robots[robotId].robot;
                 robot.stop();
 
                 await this.db.pg.transaction(async (t) => {
@@ -209,7 +216,7 @@ export class RobotBaseService extends HTTPService {
 
                 robot.clearEvents();
 
-                delete this.#robots[robotId];
+                delete this.robots[robotId];
             }
         } catch (error) {
             this.log.error(`Failed to change robot's #${robotId} status - ${error.message}`);
@@ -247,6 +254,18 @@ export class RobotBaseService extends HTTPService {
     // #endregion
 
     // #region getters and helpers
+
+    get exchange() {
+        return this.#exchange;
+    }
+
+    get userId() {
+        return this.#userId;
+    }
+
+    get isRobotService() {
+        return !this.#userId;
+    }
 
     createExwatcherId(asset: string, currency: string) {
         return `${this.#exchange}.${asset}.${currency}`;
@@ -450,11 +469,16 @@ export class RobotBaseService extends HTTPService {
         }
     }
 
+    async getExwatcherSubscriptions(): Promise<Exwatcher[]> {
+        const subscriptions = await this.db.pg.any<Exwatcher>(
+            sql`select * from exwatchers where exchange = ${this.#exchange}`
+        );
+        return [...subscriptions];
+    }
+
     async resubscribe() {
         try {
-            const subscriptions = await this.db.pg.any<Exwatcher>(
-                sql`select * from exwatchers where exchange = ${this.#exchange}`
-            );
+            const subscriptions = await this.getExwatcherSubscriptions();
 
             if (subscriptions && Array.isArray(subscriptions) && subscriptions.length > 0) {
                 await Promise.all(
@@ -508,18 +532,23 @@ export class RobotBaseService extends HTTPService {
                     exchange: this.#exchange,
                     asset,
                     currency,
-                    status: ExwatcherStatus.pending,
+                    status: this.isRobotService ? ExwatcherStatus.pending : ExwatcherStatus.subscribed,
                     importerId: this.#subscriptions[id]?.importerId || null,
                     importStartedAt: null,
                     error: null
                 };
 
-                const importerId = await this.importRecentCandles(this.#subscriptions[id]);
-                if (importerId) {
-                    this.#subscriptions[id].status = ExwatcherStatus.importing;
-                    this.#subscriptions[id].importerId = importerId;
-                    this.#subscriptions[id].importStartedAt = dayjs.utc().toISOString();
-                    await this.saveSubscription(this.#subscriptions[id]);
+                if (this.#subscriptions[id].status === ExwatcherStatus.pending) {
+                    const importerId = await this.importRecentCandles(this.#subscriptions[id]);
+                    if (importerId) {
+                        this.#subscriptions[id].status = ExwatcherStatus.importing;
+                        this.#subscriptions[id].importerId = importerId;
+                        this.#subscriptions[id].importStartedAt = dayjs.utc().toISOString();
+                        await this.saveSubscription(this.#subscriptions[id]);
+                    }
+                } else if (this.#subscriptions[id].status === ExwatcherStatus.subscribed) {
+                    const exwatcherSubscribed = await this.subscribe(this.#subscriptions[id]); //TODO: subscribe robots
+                    if (exwatcherSubscribed) await this.subscribeRobots(this.#subscriptions[id]);
                 }
             }
             this.#cronCheck.start();
@@ -585,27 +614,27 @@ export class RobotBaseService extends HTTPService {
         try {
             if (subscription) {
                 const { id, status } = subscription;
-                if (status !== ExwatcherStatus.subscribed) {
-                    try {
-                        this.#candlesCurrent[id] = {};
-                        await this.subscribeCCXT(id);
+                if (status === ExwatcherStatus.subscribed) return true;
 
-                        this.#subscriptions[id].status = ExwatcherStatus.subscribed;
-                        this.#subscriptions[id].importStartedAt = null;
-                        this.#subscriptions[id].error = null;
-                        this.log.info(`Subscribed ${id}`);
+                try {
+                    this.#candlesCurrent[id] = {};
+                    await this.subscribeCCXT(id);
 
-                        await this.saveSubscription(this.#subscriptions[id]);
+                    this.#subscriptions[id].status = ExwatcherStatus.subscribed;
+                    this.#subscriptions[id].importStartedAt = null;
+                    this.#subscriptions[id].error = null;
+                    this.log.info(`Subscribed ${id}`);
 
-                        await this.initCandlesHistory(this.#subscriptions[id]);
-                        return true;
-                    } catch (e) {
-                        // this.log.error(e);
-                        this.#subscriptions[id].status = ExwatcherStatus.failed;
-                        this.#subscriptions[id].importStartedAt = null;
-                        this.#subscriptions[id].error = e.message;
-                        await this.saveSubscription(this.#subscriptions[id]);
-                    }
+                    await this.saveSubscription(this.#subscriptions[id]);
+
+                    await this.initCandlesHistory(this.#subscriptions[id]);
+                    return true;
+                } catch (e) {
+                    // this.log.error(e);
+                    this.#subscriptions[id].status = ExwatcherStatus.failed;
+                    this.#subscriptions[id].importStartedAt = null;
+                    this.#subscriptions[id].error = e.message;
+                    await this.saveSubscription(this.#subscriptions[id]);
                 }
             }
         } catch (err) {
@@ -1166,8 +1195,8 @@ export class RobotBaseService extends HTTPService {
 
     async subscribeRobots(subscription: Exwatcher) {
         this.log.info(`Subscribing ${subscription.id} robots`);
-        const existedRobotsCondition = Object.keys(this.#robots).length
-            ? sql`AND r.id not in (${sql.join(Object.keys(this.#robots), sql`, `)})`
+        const existedRobotsCondition = Object.keys(this.robots).length
+            ? sql`AND r.id not in (${sql.join(Object.keys(this.robots), sql`, `)})`
             : sql``;
         const robots = await this.db.pg.any<RobotState>(sql`
         SELECT r.id, 
@@ -1194,22 +1223,22 @@ export class RobotBaseService extends HTTPService {
 
         if (robots && Array.isArray(robots) && robots.length) {
             for (const robot of robots) {
-                if (!this.#robots[robot.id]) {
+                if (!this.robots[robot.id]) {
                     try {
-                        this.#robots[robot.id] = {
+                        this.robots[robot.id] = {
                             robot: new Robot(robot),
                             locked: false
                         };
                         this.getActiveRobotAlerts(robot.id);
-                        if (this.#robots[robot.id].robot.status !== RobotStatus.started) {
-                            this.#robots[robot.id].robot.start();
+                        if (this.robots[robot.id].robot.status !== RobotStatus.started) {
+                            this.robots[robot.id].robot.start();
 
                             await Promise.all(
-                                this.#robots[robot.id].robot.eventsToSend.map(async (event) => {
+                                this.robots[robot.id].robot.eventsToSend.map(async (event) => {
                                     await this.events.emit(event);
                                 })
                             );
-                            this.#robots[robot.id].robot.clearEvents();
+                            this.robots[robot.id].robot.clearEvents();
                             await this.db.pg.query(sql`UPDATE robot SET status = 'started' WHERE id = ${robot.id}`);
                         }
                         this.log.info(`Robot #${robot.id} is subscribed!`);
@@ -1246,23 +1275,23 @@ export class RobotBaseService extends HTTPService {
         AND r.id = ${robotId};`);
 
         try {
-            this.#robots[robot.id] = {
+            this.robots[robot.id] = {
                 robot: new Robot(robot),
                 locked: true
             };
             this.getActiveRobotAlerts(robot.id);
-            if (this.#robots[robotId].robot.status !== RobotStatus.started) {
-                this.#robots[robot.id].robot.start();
+            if (this.robots[robotId].robot.status !== RobotStatus.started) {
+                this.robots[robot.id].robot.start();
 
                 await Promise.all(
-                    this.#robots[robot.id].robot.eventsToSend.map(async (event) => {
+                    this.robots[robot.id].robot.eventsToSend.map(async (event) => {
                         await this.events.emit(event);
                     })
                 );
-                this.#robots[robot.id].robot.clearEvents();
+                this.robots[robot.id].robot.clearEvents();
                 await this.db.pg.query(sql`UPDATE robot SET status = 'started' WHERE id = ${robotId}`);
             }
-            this.#robots[robot.id].locked = false;
+            this.robots[robot.id].locked = false;
             this.log.info(`Robot #${robot.id} is subscribed!`);
         } catch (err) {
             this.log.error(`Failed to subscribe #${robot.id} robot ${err.message}`);
@@ -1273,12 +1302,12 @@ export class RobotBaseService extends HTTPService {
     async getActiveRobotAlerts(robotId: string) {
         const currentDate = dayjs.utc().valueOf();
 
-        const robot = this.#robots[robotId].robot;
+        const robot = this.robots[robotId].robot;
         const { asset, currency, timeframe } = robot;
         const { amountInUnit, unit } = Timeframe.get(timeframe);
         const positions = robot.state.positions;
 
-        this.log.info(`Cleaning robot's #${robotId} alerts`);
+        //   this.log.info(`Cleaning robot's #${robotId} alerts`);
         const alerts = Object.values(this.#robotAlerts)
             .filter(({ robotId: alertRobotId }) => alertRobotId === robotId)
             .map((a) => a.id);
@@ -1290,7 +1319,7 @@ export class RobotBaseService extends HTTPService {
             for (const pos of positions) {
                 if (pos.alerts) {
                     for (const alert of Object.values(pos.alerts)) {
-                        this.log.info(`Saving robot's #${robotId} alert`);
+                        //  this.log.info(`Saving robot's #${robotId} alert`);
                         const activeFrom = dayjs.utc(alert.candleTimestamp).add(amountInUnit, unit);
                         const activeTo = dayjs
                             .utc(alert.candleTimestamp)
@@ -1302,9 +1331,16 @@ export class RobotBaseService extends HTTPService {
                                 ...alert,
                                 id,
                                 robotId: robot.id,
+                                exchange: this.#exchange,
                                 asset,
                                 currency,
                                 timeframe: +timeframe,
+                                timestamp: dayjs.utc().toISOString(),
+                                positionId: pos.id,
+                                positionPrefix: pos.prefix,
+                                positionCode: pos.code,
+                                positionParentId: pos.parentId,
+                                type: SignalType.alert,
                                 activeFrom: activeFrom.toISOString(),
                                 activeTo: activeTo.toISOString()
                             };
@@ -1331,6 +1367,10 @@ export class RobotBaseService extends HTTPService {
         for (const id of alerts) {
             delete this.#robotAlerts[id];
         }
+    }
+
+    async handleSignal(signal: SignalEvent) {
+        return;
     }
 
     async checkRobotAlerts() {
@@ -1365,12 +1405,12 @@ export class RobotBaseService extends HTTPService {
                                     `Alert #${alert.id} (${action} ${orderType} ${price} ${asset}/${currency}) - Triggered!`
                                 );
 
-                                if (this.#robots[robotId].locked) return null;
+                                if (this.robots[robotId].locked) return null;
                                 const beacon = this.lightship.createBeacon();
-                                this.#robots[robotId].locked = true;
+                                this.robots[robotId].locked = true;
                                 //   this.log.debug(`Robot #${robotId} is LOCKED!`);
                                 try {
-                                    const robot = this.#robots[robotId].robot;
+                                    const robot = this.robots[robotId].robot;
                                     robot.setStrategyState();
                                     const { success, error } = robot.handleCurrentCandle({
                                         ...candle,
@@ -1383,48 +1423,52 @@ export class RobotBaseService extends HTTPService {
                                         this.log.error(error);
                                     }
 
-                                    if (robot.eventsToSend.length)
-                                        await Promise.all(
-                                            robot.eventsToSend.map(async (event) => {
-                                                await this.events.emit(event);
-                                            })
-                                        );
-
-                                    await this.db.pg.transaction(async (t) => {
-                                        if (robot.positionsToSave.length)
-                                            await this.#saveRobotPositions(t, robot.positionsToSave);
-
-                                        if (robot.signalsToSave.length) {
-                                            await this.#saveRobotSignals(
-                                                t,
-                                                robot.signalsToSave.map(({ data }) => data)
+                                    if (this.isRobotService) {
+                                        if (robot.eventsToSend.length)
+                                            await Promise.all(
+                                                robot.eventsToSend.map(async (event) => {
+                                                    await this.events.emit(event);
+                                                })
                                             );
+
+                                        await this.db.pg.transaction(async (t) => {
+                                            if (robot.positionsToSave.length)
+                                                await this.#saveRobotPositions(t, robot.positionsToSave);
+
+                                            if (robot.signalsToSave.length) {
+                                                await this.#saveRobotSignals(
+                                                    t,
+                                                    robot.signalsToSave.map(({ data }) => data)
+                                                );
+                                            }
+
+                                            await this.#saveRobotState(t, robot.robotState);
+                                        });
+
+                                        if (robot.hasClosedPositions) {
+                                            await this.events.emit<any>({
+                                                type: StatsCalcRunnerEvents.ROBOT,
+                                                data: {
+                                                    robotId
+                                                }
+                                            }); //TODO: deprecate
+
+                                            await this.events.emit<TradeStatsRunnerRobot>({
+                                                type: TradeStatsRunnerEvents.ROBOT,
+                                                data: {
+                                                    robotId
+                                                }
+                                            });
+
+                                            await this.events.emit<TradeStatsRunnerPortfolioRobot>({
+                                                type: TradeStatsRunnerEvents.PORTFOLIO_ROBOT,
+                                                data: {
+                                                    robotId
+                                                }
+                                            });
                                         }
-
-                                        await this.#saveRobotState(t, robot.robotState);
-                                    });
-
-                                    if (robot.hasClosedPositions) {
-                                        await this.events.emit<any>({
-                                            type: StatsCalcRunnerEvents.ROBOT,
-                                            data: {
-                                                robotId
-                                            }
-                                        }); //TODO: deprecate
-
-                                        await this.events.emit<TradeStatsRunnerRobot>({
-                                            type: TradeStatsRunnerEvents.ROBOT,
-                                            data: {
-                                                robotId
-                                            }
-                                        });
-
-                                        await this.events.emit<TradeStatsRunnerPortfolioRobot>({
-                                            type: TradeStatsRunnerEvents.PORTFOLIO_ROBOT,
-                                            data: {
-                                                robotId
-                                            }
-                                        });
+                                    } else if (robot.hasTradesToSave) {
+                                        await this.handleSignal(robot.tradesToSave[0]);
                                     }
 
                                     robot.clearEvents();
@@ -1440,7 +1484,7 @@ export class RobotBaseService extends HTTPService {
                                     });
                                     return null;
                                 } finally {
-                                    this.#robots[robotId].locked = false;
+                                    this.robots[robotId].locked = false;
                                     await beacon.die();
                                     // this.log.debug(`Robot #${robotId} is UNLOCKED!`);
                                 }
@@ -1489,18 +1533,18 @@ export class RobotBaseService extends HTTPService {
 
             if (currentTimeframes.length) {
                 this.log.info(`Handling new ${currentTimeframes.join(", ")} candles`);
-                const robotIds = Object.values(this.#robots)
+                const robotIds = Object.values(this.robots)
                     .filter(({ robot: { timeframe } }) => currentTimeframes.includes(timeframe))
                     .map(({ robot: { id } }) => id);
 
                 await Promise.all(
                     robotIds.map(async (robotId) => {
                         try {
-                            while (this.#robots[robotId].locked) {
+                            while (this.robots[robotId].locked) {
                                 await sleep(200);
                             }
-                            this.#robots[robotId].locked = true;
-                            const robot = this.#robots[robotId].robot;
+                            this.robots[robotId].locked = true;
+                            const robot = this.robots[robotId].robot;
                             const { asset, currency, timeframe } = robot;
                             const prevTime = Timeframe.getPrevSince(currentDate, timeframe);
                             const exwatcherId = this.createExwatcherId(asset, currency);
@@ -1510,7 +1554,7 @@ export class RobotBaseService extends HTTPService {
                                 candles: this.#candlesHistory[exwatcherId][timeframe].filter((c) => c.time <= prevTime)
                             });
                             const { state, positionsToSave, eventsToSend } = robotState;
-                            this.#robots[robotId].robot = new Robot(state);
+                            this.robots[robotId].robot = new Robot(state);
 
                             if (eventsToSend && Array.isArray(eventsToSend) && eventsToSend.length) {
                                 await Promise.all(
@@ -1537,7 +1581,7 @@ export class RobotBaseService extends HTTPService {
                                 await this.#saveRobotState(t, state);
                             });
 
-                            this.log.info(`Cleaning robot's #${robotId} alerts`);
+                            // this.log.info(`Cleaning robot's #${robotId} alerts`);
                             const alerts = Object.values(this.#robotAlerts)
                                 .filter(({ robotId: alertRobotId }) => alertRobotId === robotId)
                                 .map((a) => a.id);
@@ -1548,8 +1592,8 @@ export class RobotBaseService extends HTTPService {
                             const alertsToSave = eventsToSend?.filter(({ type }) => type === SignalEvents.ALERT);
 
                             const { amountInUnit, unit } = Timeframe.get(state.timeframe);
-                            for (const { data } of alertsToSave as { data: Signal }[]) {
-                                this.log.info(`Saving robot's #${robotId} alert`);
+                            for (const { data } of alertsToSave as { data: SignalEvent }[]) {
+                                //  this.log.info(`Saving robot's #${robotId} alert`);
 
                                 this.#robotAlerts[data.id] = {
                                     ...data,
@@ -1599,7 +1643,7 @@ export class RobotBaseService extends HTTPService {
                                 }
                             });
                         } finally {
-                            this.#robots[robotId].locked = false;
+                            this.robots[robotId].locked = false;
                         }
                     })
                 );
@@ -1675,7 +1719,7 @@ export class RobotBaseService extends HTTPService {
         }
     };
 
-    #saveRobotSignals = async (transaction: DatabaseTransactionConnectionType, signals: Signal[]) => {
+    #saveRobotSignals = async (transaction: DatabaseTransactionConnectionType, signals: SignalEvent[]) => {
         for (const signal of signals) {
             const {
                 id,

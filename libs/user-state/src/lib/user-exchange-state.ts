@@ -31,6 +31,7 @@ export interface UserExchangeAccount {
     name: string;
     keys: UserExchangeKeys;
     status: UserExchangeAccStatus;
+    type: "shared" | "dedicated";
     ordersCache: GenericObject<any>;
     balances?: UserExchangeAccBalances;
     error?: any;
@@ -41,6 +42,7 @@ export interface UserExchangeAccountInfo {
     exchange: string;
     name?: string;
     status: UserExchangeAccStatus;
+    type?: "shared" | "dedicated";
     error?: string;
     balance?: number;
 }

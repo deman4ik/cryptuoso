@@ -10,11 +10,12 @@ import {
     ValidTimeframe,
     SignalInfo,
     RobotPositionStatus,
-    Candle
+    Candle,
+    SignalEvent
 } from "@cryptuoso/market";
 import { IndicatorState, IndicatorType } from "@cryptuoso/robot-indicators";
 import { NewEvent } from "@cryptuoso/events";
-import { RobotWorkerEvents, Signal, SignalEvents } from "@cryptuoso/robot-events";
+import { RobotWorkerEvents, SignalEvents } from "@cryptuoso/robot-events";
 import logger from "@cryptuoso/logger";
 import { RobotPositionState, StrategyProps } from "./types";
 import { StrategySettings } from "@cryptuoso/robot-settings";
@@ -179,7 +180,7 @@ export class BaseStrategy {
     }
 
     _createSignalEvent(signal: SignalInfo, type: SignalEvents.ALERT | SignalEvents.TRADE) {
-        const signalData: Signal = {
+        const signalData: SignalEvent = {
             ...signal,
             id: uuid(),
             robotId: this._robotId,

@@ -7,7 +7,7 @@ import { OUR_STATS_CALC_TOPIC, STATS_CALC_TOPIC } from "@cryptuoso/stats-calc-ev
 import { ALERT_TOPIC, ROBOT_RUNNER_TOPIC, ROBOT_WORKER_TOPIC, SIGNAL_TOPIC } from "@cryptuoso/robot-events";
 import { BASE_REDIS_PREFIX, BASE_SERVICE_TOPIC, DEAD_LETTER_TOPIC } from "@cryptuoso/events";
 import { CONNECTOR_RUNNER_TOPIC, CONNECTOR_WORKER_TOPIC } from "@cryptuoso/connector-events";
-import { EXCHANGES, IN_EXWATCHER_TOPIC, OUT_EXWATCHER_TOPIC } from "@cryptuoso/exwatcher-events";
+import { EXCHANGES, IN_EXWATCHER_TOPIC, OUT_EXWATCHER_TOPIC } from "@cryptuoso/exwatcher-events"; //TODO: robot exchange topics
 import { IMPORTER_RUNNER_TOPIC, IN_IMPORTER_WORKER_TOPIC, OUT_IMPORTER_WORKER_TOPIC } from "@cryptuoso/importer-events";
 import { USER_ROBOT_RUNNER_TOPIC, USER_ROBOT_WORKER_TOPIC, USER_TRADE_TOPIC } from "@cryptuoso/user-robot-events";
 import { IN_USER_SUB_TOPIC, OUT_USER_SUB_TOPIC } from "@cryptuoso/user-sub-events";

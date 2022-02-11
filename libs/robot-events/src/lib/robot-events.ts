@@ -214,21 +214,6 @@ export interface RobotRunnerMarketsCheck {
 
 export type RobotRunnerRobotsCheck = RobotRunnerMarketsCheck;
 
-export interface Signal extends SignalInfo {
-    id: string;
-    robotId: string;
-    exchange: string;
-    asset: string;
-    currency: string;
-    timeframe: ValidTimeframe;
-    timestamp: string;
-}
-
-export interface ActiveAlert extends Signal {
-    activeFrom: string;
-    activeTo: string;
-}
-
 export interface RobotWorkerError {
     [key: string]: any;
     robotId: string;

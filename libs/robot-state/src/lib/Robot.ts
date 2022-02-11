@@ -6,7 +6,9 @@ import {
     RobotPositionStatus,
     Candle,
     calcPositionProfit,
-    Timeframe
+    Timeframe,
+    SignalEvent,
+    ActiveAlert
 } from "@cryptuoso/market";
 import { RobotWorkerEvents, SignalEvents } from "@cryptuoso/robot-events";
 import { NewEvent } from "@cryptuoso/events";
@@ -139,17 +141,26 @@ export class Robot {
 
     get alertsToSave() {
         const { amountInUnit, unit } = Timeframe.get(this._timeframe);
-        return this._eventsToSend
-            .filter(({ type }) => type === SignalEvents.ALERT)
-            .map(({ data }) => ({
-                ...data,
-                activeFrom: dayjs.utc(data.candleTimestamp).add(amountInUnit, unit).toISOString(),
-                activeTo: dayjs
-                    .utc(data.candleTimestamp)
-                    .add(amountInUnit * 2, unit)
-                    .add(-1, "millisecond")
-                    .toISOString()
-            }));
+        return this.alertEventsToSend.map(
+            ({ data }) =>
+                ({
+                    ...data,
+                    activeFrom: dayjs.utc(data.candleTimestamp).add(amountInUnit, unit).toISOString(),
+                    activeTo: dayjs
+                        .utc(data.candleTimestamp)
+                        .add(amountInUnit * 2, unit)
+                        .add(-1, "millisecond")
+                        .toISOString()
+                } as ActiveAlert)
+        );
+    }
+
+    get hasTradesToSave() {
+        return this.tradeEventsToSend.length > 0;
+    }
+
+    get tradesToSave() {
+        return this.tradeEventsToSend.map(({ data }) => data as SignalEvent);
     }
 
     get hasClosedPositions() {

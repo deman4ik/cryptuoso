@@ -2026,6 +2026,29 @@
             },
             "tags": []
         },
+        "user-robot": {
+            "root": "libs/user-robot",
+            "sourceRoot": "libs/user-robot/src",
+            "projectType": "library",
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "outputs": ["{options.outputFile}"],
+                    "options": {
+                        "lintFilePatterns": ["libs/user-robot/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/libs/user-robot"],
+                    "options": {
+                        "jestConfig": "libs/user-robot/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            },
+            "tags": []
+        },
         "user-robot-events": {
             "root": "libs/user-robot-events",
             "sourceRoot": "libs/user-robot-events/src",

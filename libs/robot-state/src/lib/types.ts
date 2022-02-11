@@ -2,8 +2,6 @@ import {
     AlertInfo,
     BasePosition,
     Candle,
-    ExchangeCandle,
-    ExchangePrice,
     OrderType,
     PositionDirection,
     RobotPositionStatus,
@@ -14,7 +12,6 @@ import {
 import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 import { IndicatorState } from "@cryptuoso/robot-indicators";
 import { BaseStats, FullStats, PeriodStats } from "@cryptuoso/trade-stats";
-import { ActiveAlert } from "@cryptuoso/robot-events";
 
 export const enum RobotStatus {
     starting = "starting",
@@ -89,31 +86,4 @@ export interface RobotState {
     periodStats?: PeriodStats<BaseStats>[];
     emulatedFullStats?: FullStats;
     emulatedPeriodStats?: PeriodStats<BaseStats>[];
-}
-
-export const enum RobotJobType {
-    stop = "stop",
-    candle = "candle",
-    tick = "tick"
-}
-
-export interface RobotJob {
-    id?: string;
-    robotId: string;
-    type: RobotJobType;
-    data?: ExchangeCandle | ActiveAlert | { robotId: string };
-    retries?: number;
-    error?: string;
-}
-
-export const enum Queues {
-    robot = "robot",
-    alerts = "alerts",
-    robotRunner = "robot-runner"
-}
-
-export const enum RobotRunnerJobType {
-    alerts = "alerts",
-    newCandles = "newCandles",
-    idleRobotJobs = "idleRobotJobs"
 }

@@ -54,6 +54,7 @@
             "@cryptuoso/test-helpers": ["libs/test-helpers/src/index.ts"],
             "@cryptuoso/trade-stats": ["libs/trade-stats/src/index.ts"],
             "@cryptuoso/trade-stats-events": ["libs/trade-stats-events/src/index.ts"],
+            "@cryptuoso/user-robot": ["libs/user-robot/src/index.ts"],
             "@cryptuoso/user-robot-events": ["libs/user-robot-events/src/index.ts"],
             "@cryptuoso/user-robot-state": ["libs/user-robot-state/src/index.ts"],
             "@cryptuoso/user-signal-state": ["libs/user-signal-state/src/index.ts"],

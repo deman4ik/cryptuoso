@@ -33,10 +33,10 @@ import {
     OrdersStatusEvent,
     UserExchangeAccountErrorEvent
 } from "@cryptuoso/connector-events";
-import { ActionsHandlerError } from "@cryptuoso/errors";
+import { ActionsHandlerError, BaseError } from "@cryptuoso/errors";
 import dayjs from "@cryptuoso/dayjs";
 import { Job } from "bullmq";
-import { Signal, SignalEvents, SignalSchema } from "@cryptuoso/robot-events";
+import { SignalEvents, SignalSchema } from "@cryptuoso/robot-events";
 import { Event } from "@cryptuoso/events";
 import { OrderStatus, SignalEvent, TradeAction } from "@cryptuoso/market";
 import { UserSub } from "@cryptuoso/billing";
@@ -226,8 +226,9 @@ export default class UserRobotRunnerService extends HTTPService {
             userExAccId: UserRobotDB["userExAccId"];
             userPortfolioId: UserRobotDB["userPortfolioId"];
             status: UserRobotDB["status"];
+            type: UserRobotDB["type"];
         }>(sql`
-            SELECT ur.id, ur.user_id, ur.user_ex_acc_id, ur.user_portfolio_id, ur.status
+            SELECT ur.id, ur.user_id, ur.user_ex_acc_id, ur.user_portfolio_id, ur.status, ur.type
             FROM user_robots ur
             WHERE ur.id = ${id};
         `);
@@ -250,8 +251,9 @@ export default class UserRobotRunnerService extends HTTPService {
             id: UserExchangeAccount["id"];
             name: UserExchangeAccount["name"];
             status: UserExchangeAccount["status"];
+            type: UserExchangeAccount["type"];
         }>(sql`
-                SELECT id, name, status
+                SELECT id, name, status, type
                 FROM user_exchange_accs
                 WHERE id = ${userRobot.userExAccId};
             `);
@@ -270,6 +272,14 @@ export default class UserRobotRunnerService extends HTTPService {
                 "FORBIDDEN",
                 403
             );
+
+        if (userRobot.type !== userExchangeAccount.type)
+            throw new ActionsHandlerError(
+                `Wrong User Robot's (${userRobot.type}) and Exchange Account's (${userExchangeAccount.type}) types`,
+                null,
+                "FORBIDDEN",
+                403
+            ); //TODO: better error code
 
         const userSub = await this.db.pg.maybeOne<{ id: UserSub["id"] }>(sql`
         SELECT id 
@@ -352,14 +362,20 @@ export default class UserRobotRunnerService extends HTTPService {
     }
 
     async pause({ id, userExAccId, exchange, message }: UserRobotRunnerPause) {
-        let userRobotsToPause: { id: string; status: UserRobotStatus; userPortfolioId: string }[] = [];
+        let userRobotsToPause: {
+            id: string;
+            status: UserRobotStatus;
+            userPortfolioId: string;
+            type: UserRobotDB["type"];
+        }[] = [];
         if (id) {
             const userRobot = await this.db.pg.maybeOne<{
                 id: string;
                 status: UserRobotStatus;
                 userPortfolioId: string;
+                type: UserRobotDB["type"];
             }>(sql`
-            SELECT id, status, user_portfolio_id
+            SELECT id, status, user_portfolio_id, type
               FROM user_robots 
               WHERE id = ${id}
                 and status = ${UserRobotStatus.started};
@@ -370,8 +386,9 @@ export default class UserRobotRunnerService extends HTTPService {
                 id: string;
                 status: UserRobotStatus;
                 userPortfolioId: string;
+                type: UserRobotDB["type"];
             }>(sql`
-            SELECT id, status, user_portfolio_id
+            SELECT id, status, user_portfolio_id, type
              FROM user_robots
             WHERE user_ex_acc_id = ${userExAccId}
               AND status = ${UserRobotStatus.started};
@@ -382,8 +399,9 @@ export default class UserRobotRunnerService extends HTTPService {
                 id: string;
                 status: UserRobotStatus;
                 userPortfolioId: string;
+                type: UserRobotDB["type"];
             }>(sql`
-            SELECT ur.id, ur.status, user_portfolio_id
+            SELECT ur.id, ur.status, ur.user_portfolio_id, ur.type
              FROM user_robots ur, robots r
             WHERE ur.robot_id = r.id
               AND r.exchange = ${exchange}
@@ -392,20 +410,23 @@ export default class UserRobotRunnerService extends HTTPService {
             userRobotsToPause = [...userRobots];
         } else throw new Error("No User Robots id, userExAccId or exchange was specified");
 
-        for (const { id, status, userPortfolioId } of userRobotsToPause) {
-            await this.addUserRobotJob(
-                {
-                    userRobotId: id,
-                    type: UserRobotJobType.pause,
-                    data: {
-                        message
-                    }
-                },
-                status
-            );
-            if (userPortfolioId) {
-                await this.setPortfolioError({ userPortfolioId, message });
+        for (const { id, status, userPortfolioId, type } of userRobotsToPause) {
+            if (type === "shared") {
+                await this.addUserRobotJob(
+                    {
+                        userRobotId: id,
+                        type: UserRobotJobType.pause,
+                        data: {
+                            message
+                        }
+                    },
+                    status
+                );
+                if (userPortfolioId) {
+                    await this.setPortfolioError({ userPortfolioId, message });
+                }
             }
+            //TODO: handle type === "dedicated"
         }
 
         return userRobotsToPause.length;
@@ -567,6 +588,8 @@ export default class UserRobotRunnerService extends HTTPService {
             AND active = true;
             `);
                 });
+
+                //TODO: send sync event to user robot dedicated service
             } catch (error) {
                 this.log.error(error);
                 await this.events.emit<PortfolioManagerUserPortfolioBuildError>({
@@ -901,7 +924,7 @@ export default class UserRobotRunnerService extends HTTPService {
             await this.handleUserRobotStatusEvents(<UserRobotWorkerStatus>event.data);
     }
 
-    async handleSignalTradeEvents(signal: Signal) {
+    async handleSignalTradeEvents(signal: SignalEvent) {
         const { id, robotId, timestamp, emulated } = signal;
         if (emulated) return;
         const userRobots = await this.db.pg.any<{ id: string; status: UserRobotStatus }>(
@@ -909,6 +932,7 @@ export default class UserRobotRunnerService extends HTTPService {
             SELECT id, status 
              FROM user_robots
             WHERE robot_id = ${robotId}
+             AND type = 'shared'
              AND status = ${UserRobotStatus.started}
              AND ((internal_state->'latestSignal'->>'timestamp')::timestamp is null 
               OR (internal_state->'latestSignal'->>'timestamp')::timestamp < ${timestamp});
@@ -934,7 +958,8 @@ export default class UserRobotRunnerService extends HTTPService {
         const userRobot = await this.db.pg.one<{ id: string; status: UserRobotStatus }>(sql`
          SELECT id, status
           FROM user_robots
-         WHERE id = ${event.userRobotId};
+         WHERE id = ${event.userRobotId}
+         AND type = 'shared';
         `);
         await this.addUserRobotJob(
             {

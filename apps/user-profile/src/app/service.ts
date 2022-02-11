@@ -493,12 +493,14 @@ export default class UserProfileService extends HTTPService {
             id?: string;
             exchange: string;
             name?: string;
+            type?: UserExchangeAccount["type"];
             keys: { key: string; secret: string; pass?: string };
         }
     ) {
         const {
             exchange,
-            keys: { key, secret, pass }
+            keys: { key, secret, pass },
+            type
         } = params;
         const id = params.id;
         let name = params.name;
@@ -635,6 +637,7 @@ export default class UserProfileService extends HTTPService {
             exchange,
             name,
             keys: encryptedKeys,
+            type,
             status: UserExchangeAccStatus.enabled,
             error: null,
             balances: check.balances,
@@ -647,6 +650,7 @@ export default class UserProfileService extends HTTPService {
                 UPDATE user_exchange_accs
                 SET name = ${name},
                     keys = ${JSON.stringify(exchangeAcc.keys)},
+                    type = ${exchangeAcc.type},
                     status = ${exchangeAcc.status},
                     error = ${exchangeAcc.error},
                     balances = ${JSON.stringify(exchangeAcc.balances) || null}
@@ -655,12 +659,13 @@ export default class UserProfileService extends HTTPService {
         } else {
             await this.db.pg.query(sql`
                 INSERT INTO user_exchange_accs(
-                    id, user_id, exchange, name, keys, status, error, balances, orders_cache
+                    id, user_id, exchange, name, type, keys, status, error, balances, orders_cache
                 ) VALUES (
                     ${exchangeAcc.id},
                     ${exchangeAcc.userId},
                     ${exchangeAcc.exchange},
                     ${exchangeAcc.name},
+                    ${exchangeAcc.type},
                     ${JSON.stringify(exchangeAcc.keys)},
                     ${exchangeAcc.status},
                     ${exchangeAcc.error},

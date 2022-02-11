@@ -24,11 +24,12 @@ import {
     PortfolioManagerSignalSubscriptionBuildError,
     PortfolioManagerSignalSubscriptionError
 } from "@cryptuoso/portfolio-events";
-import { Signal, SignalEvents, SignalSchema } from "@cryptuoso/robot-events";
+import { SignalEvents, SignalSchema } from "@cryptuoso/robot-events";
 import { UserRobotRunnerEvents, UserRobotRunnerSchema } from "@cryptuoso/user-robot-events";
 import { TradeStatsRunnerEvents, TradeStatsRunnerSignalSubscription } from "@cryptuoso/trade-stats-events";
 import { SignalSubscriptionRobot } from "./signalSubscriptionRobot";
 import { startZignaly, stopZignaly } from "./zignalyProvider";
+import { SignalEvent } from "@cryptuoso/market";
 
 export type WebhooksServiceConfig = HTTPServiceConfig;
 
@@ -555,7 +556,7 @@ AND active = true;`);
         }
     }
 
-    async handleSignalTradeEvents(signal: Signal) {
+    async handleSignalTradeEvents(signal: SignalEvent) {
         if (signal.exchange !== "binance_futures") return;
         this.log.debug("Handling signal", signal);
         const { id, robotId, timestamp, emulated } = signal;

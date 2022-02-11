@@ -1,12 +1,11 @@
 import dayjs from "@cryptuoso/dayjs";
-import { OrderType, TradeAction } from "@cryptuoso/market";
+import { OrderType, SignalEvent, TradeAction } from "@cryptuoso/market";
 import {
     SignalRobotDB,
     SignalSubscriptionDB,
     SignalSubscriptionPosition,
     SignalSubscriptionState
 } from "@cryptuoso/portfolio-state";
-import { Signal } from "@cryptuoso/robot-events";
 import { v4 as uuid } from "uuid";
 import { closeZignalyPosition, openZignalyPosition } from "./zignalyProvider";
 
@@ -51,7 +50,7 @@ export class SignalSubscriptionRobot {
         if (positions && Array.isArray(positions) && positions.length) this.#openPositions = positions;
     }
 
-    async handleSignal(signal: Signal) {
+    async handleSignal(signal: SignalEvent) {
         if (signal.action === TradeAction.long || signal.action === TradeAction.short) {
             if (this.#robot.active === false) return;
             let hasPreviousActivePositions = false;
@@ -102,7 +101,7 @@ export class SignalSubscriptionRobot {
         this.#robot.state.latestSignal = signal;
     }
 
-    #openPosition = async (signal: Signal) => {
+    #openPosition = async (signal: SignalEvent) => {
         let position: SignalSubscriptionPosition = {
             id: uuid(),
             signalSubscriptionId: this.#robot.signalSubscriptionId,
@@ -126,7 +125,7 @@ export class SignalSubscriptionRobot {
         this.#positionsToSave = [...this.#positionsToSave, position];
     };
 
-    #closePosition = async (openPosition: SignalSubscriptionPosition, signal?: Signal) => {
+    #closePosition = async (openPosition: SignalSubscriptionPosition, signal?: SignalEvent) => {
         let position: SignalSubscriptionPosition = {
             ...openPosition,
             exitPrice: signal?.price || this.#robot.currentPrice,
