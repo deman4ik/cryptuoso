@@ -62,42 +62,6 @@ class BacktesterWorker {
         return this.#backtester;
     }
 
-    #loadStrategyCode = async (strategy: string, local: boolean) => {
-        let strategyCode: StrategyCode;
-        if (local) {
-            this.log.debug(`Loading local strategy ${strategy}`);
-            strategyCode = await import(`../../../../strategies/${strategy}`);
-        } else {
-            this.log.debug(`Loading remote strategy ${strategy}`);
-            const { file }: { file: string } = await this.db.pg.one(
-                sql`select file from strategies where id = ${strategy}`
-            );
-            strategyCode = requireFromString(file);
-        }
-        return strategyCode;
-    };
-
-    #loadBaseIndicatorsCode = async (fileNames: string[], local: boolean) => {
-        if (!fileNames || !Array.isArray(fileNames) || fileNames.length === 0) return [];
-        const indicatorsCode: { fileName: string; code: IndicatorCode }[] = await Promise.all(
-            fileNames.map(async (fileName) => {
-                let code: IndicatorCode;
-                if (local) {
-                    this.log.debug(`Loading local indicator ${fileName}`);
-                    code = await import(`../../../../indicators/${fileName}`);
-                } else {
-                    this.log.debug(`Loading remote indicator ${fileName}`);
-                    const { file }: { file: string } = await this.db.pg.one(
-                        sql`select file from indicators where id = ${fileName}`
-                    );
-                    code = requireFromString(file);
-                }
-                return { fileName, code };
-            })
-        );
-        return indicatorsCode;
-    };
-
     #loadHistoryCandles = async (
         exchange: string,
         asset: string,
@@ -632,18 +596,9 @@ class BacktesterWorker {
                     and asset = ${this.backtester.asset} 
                     and currency = ${this.backtester.currency};`);
                 this.backtester.feeRate = feeRate;
-                // Load strategy and indicators code, init strategy and indicators
-                const strategyCode = await this.#loadStrategyCode(
-                    this.backtester.strategy,
-                    this.backtester.settings.local
-                );
-                this.backtester.initRobots(strategyCode);
-                const baseIndicatorsFileNames = this.backtester.robotInstancesArray[0].baseIndicatorsFileNames;
-                const baseIndicatorsCode = await this.#loadBaseIndicatorsCode(
-                    baseIndicatorsFileNames,
-                    this.backtester.settings.local
-                );
-                this.backtester.initIndicators(baseIndicatorsCode);
+
+                this.backtester.initRobots();
+                this.backtester.initIndicators();
 
                 // Load required history candles
                 const requiredHistoryMaxBars = this.backtester.robotInstancesArray[0].requiredHistoryMaxBars;
