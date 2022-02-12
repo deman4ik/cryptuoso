@@ -1,5 +1,5 @@
 import { ISO_DATE_REGEX } from "@cryptuoso/helpers";
-import { TradeAction } from "@cryptuoso/market";
+import { SignalEvent, TradeAction } from "@cryptuoso/market";
 import { UserPortfolioDB } from "@cryptuoso/portfolio-state";
 import {
     UserPositionOrderStatus,
@@ -7,6 +7,7 @@ import {
     UserRobotJob,
     UserRobotStatus
 } from "@cryptuoso/user-robot-state";
+import { UserRobotTask } from "@cryptuoso/robot";
 
 export const USER_ROBOT_RUNNER_TOPIC = "in-user-robot-runner";
 
@@ -264,7 +265,7 @@ export interface UserRobotWorkerError {
     userPortfolioId?: string;
     timestamp: string;
     error: string;
-    job: UserRobotJob;
+    job?: UserRobotJob | UserRobotTask;
 }
 
 export interface UserRobotWorkerStatus {

@@ -1,11 +1,32 @@
 import { sql } from "@cryptuoso/postgres";
-import { Exwatcher, ExwatcherStatus, RobotBaseService, RobotBaseServiceConfig } from "@cryptuoso/robot";
+import { Exwatcher, ExwatcherStatus, RobotBaseService, RobotBaseServiceConfig, UserRobotTask } from "@cryptuoso/robot";
 import { UserPortfolioState } from "@cryptuoso/portfolio-state";
-import { ExchangeCandle, SignalEvent } from "@cryptuoso/market";
-import { UserRobot, UserRobotStateExt } from "@cryptuoso/user-robot-state";
+import { ExchangeCandle, Order, SignalEvent } from "@cryptuoso/market";
+import {
+    saveUserOrders,
+    saveUserPositions,
+    saveUserRobotState,
+    UserRobot,
+    UserRobotJobType,
+    UserRobotStateExt,
+    UserRobotStatus,
+    UserTradeEvent
+} from "@cryptuoso/user-robot-state";
 import { Robot, RobotState, RobotStatus } from "@cryptuoso/robot-state";
-import { keysToCamelCase } from "@cryptuoso/helpers";
+import { keysToCamelCase, sleep } from "@cryptuoso/helpers";
 import { getCurrentUserRobotSettings } from "@cryptuoso/robot-settings";
+import {
+    UserRobotWorkerError,
+    UserRobotWorkerEvents,
+    UserRobotWorkerStatus,
+    UserTradeEvents
+} from "@cryptuoso/user-robot-events";
+import dayjs from "dayjs";
+import { ConnectorJob } from "@cryptuoso/connector-state";
+import { NewEvent } from "@cryptuoso/events";
+import { TradeStatsRunnerEvents, TradeStatsRunnerUserRobot } from "@cryptuoso/trade-stats-events";
+import { OrdersStatusEvent } from "@cryptuoso/connector-events";
+import { BaseError } from "@cryptuoso/errors";
 
 export interface UserRobotBaseServiceConfig extends RobotBaseServiceConfig {
     userPortfolioId: string;
@@ -15,7 +36,8 @@ export class UserRobotBaseService extends RobotBaseService {
     #userPortfolioId: string;
 
     #userPortfolio: UserPortfolioState;
-
+    #connectorJobs: ConnectorJob[] = [];
+    #orders: { [key: string]: Order };
     robots: {
         [id: string]: { robot: Robot; userRobot: UserRobot; locked: boolean };
     } = {};
@@ -184,11 +206,153 @@ export class UserRobotBaseService extends RobotBaseService {
         }
     }
 
-    async handleSignal(signal: SignalEvent) {
-        const userRobot = this.robots[signal.robotId].userRobot;
+    async runUserRobot(job: UserRobotTask) {
+        const beacon = this.lightship.createBeacon();
+        const { robotId, type, data } = job;
+        const userRobot = this.robots[robotId].userRobot;
+        try {
+            while (this.robots[robotId].locked) {
+                await sleep(200);
+            }
+            this.lockRobot(robotId);
+            const eventsToSend: NewEvent<any>[] = [];
+            if (type === UserRobotJobType.signal) {
+                userRobot.handleSignal(data as SignalEvent);
+            } else if (type === UserRobotJobType.order) {
+                const order = data as OrdersStatusEvent;
 
-        userRobot.handleSignal(signal);
+                userRobot.handleOrder(order);
+            } else if (type === UserRobotJobType.stop) {
+                if (userRobot.status === UserRobotStatus.stopped) return;
+                userRobot.stop(data as { message?: string });
+            } else if (type === UserRobotJobType.pause) {
+                if (userRobot.status === UserRobotStatus.paused || userRobot.status === UserRobotStatus.stopped) return;
+                userRobot.pause(data as { message?: string });
+                const pausedEvent: NewEvent<UserRobotWorkerStatus> = {
+                    type: UserRobotWorkerEvents.PAUSED,
+                    data: {
+                        userRobotId: userRobot.id,
+                        timestamp: dayjs.utc().toISOString(),
+                        status: UserRobotStatus.paused,
+                        message: userRobot.message,
+                        userPortfolioId: this.#userPortfolioId
+                    }
+                };
+                eventsToSend.push(pausedEvent);
+            } else throw new BaseError(`Unknown user robot job type "${type}"`, job);
 
-        //TODO: handle orders and save state
+            if (
+                (userRobot.status === UserRobotStatus.stopping || userRobot.state.settings?.active === false) &&
+                !userRobot.hasActivePositions
+            ) {
+                userRobot.setStop();
+                const stoppedEvent: NewEvent<UserRobotWorkerStatus> = {
+                    type: UserRobotWorkerEvents.STOPPED,
+                    data: {
+                        userRobotId: userRobot.id,
+                        timestamp: userRobot.stoppedAt,
+                        status: UserRobotStatus.stopped,
+                        message: userRobot.message,
+                        userPortfolioId: this.#userPortfolioId
+                    }
+                };
+                eventsToSend.push(stoppedEvent);
+                this.log.info(`User Robot #${userRobot.id} stopped!`);
+            }
+
+            if (userRobot.positions.length) {
+                if (userRobot.ordersToCreate.length) {
+                    for (const order of userRobot.ordersToCreate) {
+                        this.#orders[order.id] = order;
+                    }
+                }
+
+                if (userRobot.connectorJobs.length) {
+                    for (const connectorJob of userRobot.connectorJobs) {
+                        this.#connectorJobs.push(connectorJob);
+                    }
+                }
+
+                if (userRobot.hasCanceledPositions) {
+                    this.log.error(`User Robot #${userRobot.id} has canceled positions!`);
+                }
+
+                if (userRobot.hasClosedPositions) {
+                    if (userRobot.state.userPortfolioId) {
+                        const tradeStatsEvent: NewEvent<TradeStatsRunnerUserRobot> = {
+                            type: TradeStatsRunnerEvents.USER_ROBOT,
+                            data: {
+                                userRobotId: userRobot.id,
+                                userPortfolioId: this.#userPortfolioId
+                            }
+                        };
+                        eventsToSend.push(tradeStatsEvent);
+                    }
+                }
+
+                if (userRobot.recentTrades.length) {
+                    for (const trade of userRobot.recentTrades) {
+                        const tradeEvent: NewEvent<UserTradeEvent> = {
+                            type: UserTradeEvents.TRADE,
+                            data: trade
+                        };
+                        eventsToSend.push(tradeEvent);
+                    }
+                }
+            }
+
+            await this.db.pg.transaction(async (t) => {
+                if (userRobot.positions.length) {
+                    await saveUserPositions(t, userRobot.positions);
+
+                    if (userRobot.ordersToCreate.length) {
+                        await saveUserOrders(t, userRobot.ordersToCreate);
+                    }
+                }
+
+                await saveUserRobotState(t, userRobot.state);
+            });
+
+            if (eventsToSend.length) {
+                for (const event of eventsToSend) {
+                    await this.events.emit(event);
+                }
+            }
+
+            userRobot.clear();
+
+            if (userRobot.status === UserRobotStatus.stopped) {
+                delete this.robots[robotId];
+            }
+        } catch (err) {
+            this.log.error(`Failed to process User Robot's #${userRobot.id} ${type} job - ${err.message}`);
+            await this.events.emit<UserRobotWorkerError>({
+                type: UserRobotWorkerEvents.ERROR,
+                data: {
+                    userRobotId: userRobot.id,
+                    userPortfolioId: this.#userPortfolioId,
+                    timestamp: dayjs.utc().toISOString(),
+                    error: err.message,
+                    job
+                }
+            });
+            await this.db.pg.query(sql`
+                UPDATE user_robots
+                SET status = ${UserRobotStatus.paused}, 
+                    message = ${err.message}
+                WHERE id = ${userRobot.id};`);
+            await this.events.emit<UserRobotWorkerStatus>({
+                type: UserRobotWorkerEvents.PAUSED,
+                data: {
+                    userRobotId: userRobot.id,
+                    timestamp: dayjs.utc().toISOString(),
+                    status: UserRobotStatus.paused,
+                    message: err.message
+                }
+            });
+        } finally {
+            this.unlockRobot(robotId);
+            await beacon.die();
+        }
     }
 }

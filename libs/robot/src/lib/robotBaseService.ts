@@ -29,7 +29,7 @@ import {
     TradeStatsRunnerPortfolioRobot,
     TradeStatsRunnerRobot
 } from "@cryptuoso/trade-stats-events";
-import { Exwatcher, ExwatcherStatus, Trade } from "./types";
+import { Exwatcher, ExwatcherStatus, Trade, UserRobotTask } from "./types";
 import {
     getMarketsCheckEventName,
     getRobotsCheckEventName,
@@ -57,6 +57,7 @@ import { ImporterState, Status } from "@cryptuoso/importer-state";
 import { DatabaseTransactionConnectionType } from "slonik";
 import { BaseServiceError, BaseServiceEvents, NewEvent } from "@cryptuoso/events";
 import { Tracer } from "@cryptuoso/logger";
+import { UserRobotJobType } from "@cryptuoso/user-robot-state";
 
 export interface RobotBaseServiceConfig extends HTTPServiceConfig {
     exchange: string;
@@ -1193,6 +1194,24 @@ export class RobotBaseService extends HTTPService {
 
     // #region Robot
 
+    lockRobot(robotId: string) {
+        if (this.robots[robotId]) {
+            if (this.robots[robotId].locked) return false;
+            this.robots[robotId].locked = true;
+            return true;
+        }
+        return false;
+    }
+
+    unlockRobot(robotId: string) {
+        if (this.robots[robotId]) {
+            if (!this.robots[robotId].locked) return false;
+            this.robots[robotId].locked = false;
+            return true;
+        }
+        return false;
+    }
+
     async subscribeRobots(subscription: Exwatcher) {
         this.log.info(`Subscribing ${subscription.id} robots`);
         const existedRobotsCondition = Object.keys(this.robots).length
@@ -1369,7 +1388,7 @@ export class RobotBaseService extends HTTPService {
         }
     }
 
-    async handleSignal(signal: SignalEvent) {
+    async runUserRobot(job: UserRobotTask) {
         return;
     }
 
@@ -1405,9 +1424,9 @@ export class RobotBaseService extends HTTPService {
                                     `Alert #${alert.id} (${action} ${orderType} ${price} ${asset}/${currency}) - Triggered!`
                                 );
 
-                                if (this.robots[robotId].locked) return null;
+                                const locked = this.lockRobot(robotId);
+                                if (!locked) return null;
                                 const beacon = this.lightship.createBeacon();
-                                this.robots[robotId].locked = true;
                                 //   this.log.debug(`Robot #${robotId} is LOCKED!`);
                                 try {
                                     const robot = this.robots[robotId].robot;
@@ -1468,7 +1487,11 @@ export class RobotBaseService extends HTTPService {
                                             });
                                         }
                                     } else if (robot.hasTradesToSave) {
-                                        await this.handleSignal(robot.tradesToSave[0]);
+                                        await this.runUserRobot({
+                                            robotId,
+                                            type: UserRobotJobType.signal,
+                                            data: robot.tradesToSave[0]
+                                        });
                                     }
 
                                     robot.clearEvents();
@@ -1484,7 +1507,7 @@ export class RobotBaseService extends HTTPService {
                                     });
                                     return null;
                                 } finally {
-                                    this.robots[robotId].locked = false;
+                                    this.unlockRobot(robotId);
                                     await beacon.die();
                                     // this.log.debug(`Robot #${robotId} is UNLOCKED!`);
                                 }
@@ -1543,7 +1566,8 @@ export class RobotBaseService extends HTTPService {
                             while (this.robots[robotId].locked) {
                                 await sleep(200);
                             }
-                            this.robots[robotId].locked = true;
+                            this.lockRobot(robotId);
+
                             const robot = this.robots[robotId].robot;
                             const { asset, currency, timeframe } = robot;
                             const prevTime = Timeframe.getPrevSince(currentDate, timeframe);
@@ -1643,7 +1667,7 @@ export class RobotBaseService extends HTTPService {
                                 }
                             });
                         } finally {
-                            this.robots[robotId].locked = false;
+                            this.unlockRobot(robotId);
                         }
                     })
                 );

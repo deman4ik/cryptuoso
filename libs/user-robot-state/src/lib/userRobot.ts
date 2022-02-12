@@ -353,4 +353,10 @@ export class UserRobot {
         position.executeJob();
         if (!this.hasActivePositions) this.handleDelayedPositions();
     }
+
+    clear() {
+        this.positions.forEach((p) => {
+            this._positions[p.id].clear();
+        });
+    }
 }

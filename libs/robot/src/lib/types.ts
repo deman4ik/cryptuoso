@@ -1,3 +1,7 @@
+import { OrdersStatusEvent } from "@cryptuoso/connector-events";
+import { SignalEvent } from "@cryptuoso/market";
+import { UserRobotJobType } from "@cryptuoso/user-robot-state";
+
 export const enum ExwatcherStatus {
     pending = "pending",
     importing = "importing",
@@ -21,4 +25,10 @@ export interface Trade {
     amount: number; // amount of base currency
     price: number; // float price in quote currency
     timestamp: number; // Unix timestamp in milliseconds
+}
+
+export interface UserRobotTask {
+    robotId: string;
+    type: UserRobotJobType;
+    data?: SignalEvent | OrdersStatusEvent | { message?: string };
 }

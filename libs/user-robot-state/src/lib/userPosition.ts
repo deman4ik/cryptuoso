@@ -957,4 +957,10 @@ export class UserPosition {
         const lastOrder = this.lastExitOrder || this.lastEntryOrder;
         if (lastOrder) this._meta.currentBalance = lastOrder.meta?.currentBalance;
     }
+
+    clear() {
+        this._ordersToCreate = [];
+        this._connectorJobs = [];
+        this._hasRecentTrade = false;
+    }
 }
