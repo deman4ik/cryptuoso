@@ -24,7 +24,7 @@ export default class UtilsService extends HTTPService {
         super(config);
 
         try {
-            //this.addOnStartHandler(this.onStart);
+            // this.addOnStartHandler(this.onStart);
             //  this.addOnStartedHandler(this.onStarted);
         } catch (err) {
             this.log.error("Error while constructing UtilsService", err);
@@ -36,7 +36,7 @@ export default class UtilsService extends HTTPService {
             async () => await spawn<RobotWorker>(new ThreadsWorker("./worker"), { timeout: 60000 }),
             {
                 name: "worker",
-                concurrency: 10,
+                concurrency: 12,
                 size: 10
             }
         );
@@ -73,8 +73,9 @@ export default class UtilsService extends HTTPService {
 
         this.log.info(`Loaded ${markets.length} markets`);
 
-        for (const { asset, timeframe } of markets) {
-            const requiredCandles = await this.db.pg.many<DBCandle>(sql`
+        await Promise.all(
+            markets.map(async ({ asset, timeframe }) => {
+                const requiredCandles = await this.db.pg.many<DBCandle>(sql`
                 SELECT time, timestamp, open, high, low, close
                 FROM candles
                 WHERE exchange = 'binance_futures'
@@ -87,14 +88,15 @@ export default class UtilsService extends HTTPService {
                 ORDER BY timestamp DESC
                 LIMIT 300;`);
 
-            if (!this.#candles[asset]) this.#candles[asset] = {};
-            const firstCandle = requiredCandles[0];
-            const newTime = dayjs.utc().add(1, "day").startOf("day");
-            this.#candles[asset][timeframe] = [
-                ...requiredCandles,
-                { ...firstCandle, time: newTime.valueOf(), timestamp: newTime.toISOString() }
-            ].map((c) => ({ ...c, timeframe }));
-        }
+                if (!this.#candles[asset]) this.#candles[asset] = {};
+                const firstCandle = requiredCandles[0];
+                const newTime = dayjs.utc().add(1, "day").startOf("day");
+                this.#candles[asset][timeframe] = [
+                    ...requiredCandles,
+                    { ...firstCandle, time: newTime.valueOf(), timestamp: newTime.toISOString() }
+                ].map((c) => ({ ...c, timeframe }));
+            })
+        );
 
         this.log.info(`Loaded candles`);
 

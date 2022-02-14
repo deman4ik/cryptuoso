@@ -159,6 +159,10 @@ export class RobotBaseService extends HTTPService {
     }
 
     async onServiceStarted() {
+        await this.startRobotService();
+    }
+
+    async startRobotService() {
         await this.resubscribe();
         this.#cronHandleChanges.start();
         this.#cronCheck.start();

@@ -108,6 +108,7 @@ export default class ConnectorRunnerService extends BaseService {
          SELECT * FROM connector_jobs
          WHERE user_ex_acc_id = ${userExAccId}
            AND next_job_at <= ${dayjs.utc().toISOString()}
+           AND allocation = 'shared'
            ORDER BY priority, next_job_at
          `) as Promise<ConnectorJob[]>;
     };
@@ -472,7 +473,13 @@ export default class ConnectorRunnerService extends BaseService {
                     await this.#saveOrder(t, order);
                     await this.#deleteJobs(t, order.id);
                     if (nextJob) {
-                        await this.#saveNextJob(t, { ...nextJob, id: uuid(), userExAccId, orderId });
+                        await this.#saveNextJob(t, {
+                            ...nextJob,
+                            id: uuid(),
+                            userExAccId,
+                            orderId,
+                            allocation: "shared"
+                        });
                     }
                 });
             } catch (error) {

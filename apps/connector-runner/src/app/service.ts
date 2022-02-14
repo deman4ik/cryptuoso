@@ -145,8 +145,9 @@ export default class ConnectorRunnerService extends HTTPService {
       FROM connector_jobs j,
            user_exchange_accs a
       WHERE j.user_ex_acc_id = a.id
+        AND j.allocation = 'shared'
         AND a.status = 'enabled'
-        AND a.type = 'shared'
+        AND a.allocation = 'shared'
         AND j.next_job_at IS NOT NULL
         AND j.next_job_at <= now()
       GROUP BY j.user_ex_acc_id
@@ -170,9 +171,12 @@ export default class ConnectorRunnerService extends HTTPService {
            user_exchange_accs a
       WHERE uo.user_ex_acc_id = a.id
       AND a.status = 'enabled'
-      AND a.type = 'shared'
+      AND a.allocation = 'shared'
       AND uo.status = 'open'
-      AND NOT EXISTS (select j.id from connector_jobs j where j.user_ex_acc_id = uo.user_ex_acc_id and j.order_id = uo.id);
+      AND NOT EXISTS (select j.id from connector_jobs j 
+                      where j.user_ex_acc_id = uo.user_ex_acc_id 
+                      and j.order_id = uo.id 
+                      and j.allocation = 'shared');
         `);
 
         if (userOrders && Array.isArray(userOrders) && userOrders.length) {
@@ -191,7 +195,7 @@ export default class ConnectorRunnerService extends HTTPService {
 
     async checkBalance({ userExAccId }: { userExAccId: string }, user: User) {
         const userExAcc = await this.db.pg.one<{ id: string; userId: string }>(sql`
-        SELECT id, user_id from user_exchange_accs where id = ${userExAccId} and type = 'shared';
+        SELECT id, user_id from user_exchange_accs where id = ${userExAccId} and allocation = 'shared';
         `);
         if (user && user.id !== userExAcc.userId)
             throw new ActionsHandlerError(
@@ -217,7 +221,7 @@ export default class ConnectorRunnerService extends HTTPService {
         select id as user_ex_acc_id 
         from user_exchange_accs 
         where status = 'enabled' 
-        and type = 'shared'
+        and allocation = 'shared'
         and ( (balances->> 'updatedAt')::timestamp without time zone is null 
           or (balances->> 'updatedAt')::timestamp without time zone < ${dayjs.utc().add(-50, "minute").toISOString()})
         `);
@@ -235,7 +239,7 @@ export default class ConnectorRunnerService extends HTTPService {
 
     async checkUserUnknownOrders({ userExAccId }: { userExAccId: string }, user: User) {
         const userExAcc = await this.db.pg.one<{ id: string; userId: string }>(sql`
-        SELECT id, user_id from user_exchange_accs where id = ${userExAccId} and type = 'shared';
+        SELECT id, user_id from user_exchange_accs where id = ${userExAccId} and allocation = 'shared';
         `);
         if (user && user.id !== userExAcc.userId)
             throw new ActionsHandlerError(
@@ -252,7 +256,7 @@ export default class ConnectorRunnerService extends HTTPService {
         select uea.id as user_ex_acc_id 
         from user_exchange_accs uea
         where status = 'enabled'
-        and type = 'shared'
+        and allocation = 'shared'
         and exists (select id from user_robots ur where ur.user_ex_acc_id = uea.id and ur.status in ('started','stopping','paused')); 
         `);
         if (userExAccIds && Array.isArray(userExAccIds) && userExAccIds.length) {

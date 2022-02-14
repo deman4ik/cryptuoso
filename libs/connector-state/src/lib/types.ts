@@ -12,6 +12,7 @@ export interface ConnectorJob extends OrderJob {
     orderId: string;
     nextJobAt: string;
     priority: Priority;
+    allocation: "shared" | "dedicated";
 }
 
 export const enum Queues {

@@ -83,7 +83,12 @@ export default class PortfolioManagerService extends HTTPService {
                 createUserPortfolio: {
                     inputSchema: {
                         exchange: "string",
-                        type: { type: "enum", values: ["shared", "dedicated"], optional: true, default: "shared" },
+                        allocation: {
+                            type: "enum",
+                            values: ["shared", "dedicated"],
+                            optional: true,
+                            default: "shared"
+                        },
                         userExAccId: { type: "uuid" },
                         tradingAmountType: { type: "string" },
                         balancePercent: { type: "number", optional: true },
@@ -281,7 +286,7 @@ export default class PortfolioManagerService extends HTTPService {
     async createUserPortfolio(
         {
             exchange,
-            type,
+            allocation,
             userExAccId,
             tradingAmountType,
             balancePercent,
@@ -297,7 +302,7 @@ export default class PortfolioManagerService extends HTTPService {
             custom
         }: PortfolioSettings & {
             exchange: UserPortfolioDB["exchange"];
-            type: UserPortfolioDB["type"];
+            allocation: UserPortfolioDB["allocation"];
             userExAccId: UserPortfolioDB["userExAccId"];
             custom: boolean;
         },
@@ -404,7 +409,7 @@ export default class PortfolioManagerService extends HTTPService {
             userId,
             userExAccId,
             exchange,
-            type,
+            allocation,
             status: "starting"
         };
 
@@ -430,12 +435,13 @@ export default class PortfolioManagerService extends HTTPService {
         await this.db.pg.transaction(async (t) => {
             await t.query(sql`
         insert into user_portfolios
-        (id, user_id, user_ex_acc_id, exchange, status)
+        (id, user_id, user_ex_acc_id, exchange, status, allocation)
         VALUES (${userPortfolio.id},
         ${userPortfolio.userId},
         ${userPortfolio.userExAccId || null}, 
         ${userPortfolio.exchange},
-        ${userPortfolio.status}
+        ${userPortfolio.status},
+        ${userPortfolio.allocation}
         );`);
 
             await t.query(sql`

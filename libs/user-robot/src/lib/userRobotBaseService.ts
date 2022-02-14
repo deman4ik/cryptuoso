@@ -1,4 +1,4 @@
-import { sql } from "@cryptuoso/postgres";
+import { DatabaseTransactionConnectionType, sql } from "@cryptuoso/postgres";
 import { Exwatcher, ExwatcherStatus, RobotBaseService, RobotBaseServiceConfig, UserRobotTask } from "@cryptuoso/robot";
 import { UserPortfolioState } from "@cryptuoso/portfolio-state";
 import { ExchangeCandle, Order, SignalEvent } from "@cryptuoso/market";
@@ -25,8 +25,10 @@ import dayjs from "dayjs";
 import { ConnectorJob } from "@cryptuoso/connector-state";
 import { NewEvent } from "@cryptuoso/events";
 import { TradeStatsRunnerEvents, TradeStatsRunnerUserRobot } from "@cryptuoso/trade-stats-events";
-import { OrdersStatusEvent } from "@cryptuoso/connector-events";
+import { ConnectorWorkerEvents, OrdersStatusEvent, UserExchangeAccountErrorEvent } from "@cryptuoso/connector-events";
 import { BaseError } from "@cryptuoso/errors";
+import { UserExchangeAccount, UserExchangeAccStatus } from "@cryptuoso/user-state";
+import { decrypt, PrivateConnector } from "@cryptuoso/ccxt-private";
 
 export interface UserRobotBaseServiceConfig extends RobotBaseServiceConfig {
     userPortfolioId: string;
@@ -34,8 +36,13 @@ export interface UserRobotBaseServiceConfig extends RobotBaseServiceConfig {
 
 export class UserRobotBaseService extends RobotBaseService {
     #userPortfolioId: string;
-
     #userPortfolio: UserPortfolioState;
+    #userExAcc: UserExchangeAccount;
+    #keys: {
+        api: string;
+        secret: string;
+    };
+    #userConnector: PrivateConnector;
     #connectorJobs: ConnectorJob[] = [];
     #orders: { [key: string]: Order };
     robots: {
@@ -48,12 +55,74 @@ export class UserRobotBaseService extends RobotBaseService {
         this.#userPortfolioId = config.userPortfolioId || process.env.USER_PORTFOLIO_ID;
 
         //TODO: handle portfolio builded event
-
-        this.addOnStartedHandler(this.onUserServiceStarted);
     }
 
-    async onUserServiceStarted() {
-        //TODO: init user connector
+    async onServiceStarted() {
+        await this.getUserPortfolio();
+        await this.getUserConnector();
+        await this.startRobotService();
+    }
+
+    async getUserConnector() {
+        await this.getUserExAcc();
+        this.#userConnector = new PrivateConnector({
+            exchange: this.exchange,
+            keys: {
+                apiKey: this.#keys.api,
+                secret: this.#keys.secret
+            },
+            ordersCache: this.#userExAcc.ordersCache
+        });
+        await this.#userConnector.initConnector();
+        await this.getConnectorJobs();
+    }
+
+    async getUserExAcc() {
+        try {
+            const userExAcc = await this.db.pg.one<UserExchangeAccount>(sql`
+         SELECT * FROM user_exchange_accs
+         WHERE id = ${this.#userPortfolio.userExAccId}
+         `);
+            if (userExAcc.allocation !== "dedicated")
+                throw new Error(`User Exchange Account's #${this.#userPortfolioId} allocation must be 'dedicated'`);
+            if (userExAcc.exchange !== this.exchange)
+                throw new Error(
+                    `User Exchange Account's #${this.#userPortfolio.userExAccId} exchange (${
+                        userExAcc.exchange
+                    }) is not service exchange (${this.exchange})`
+                );
+
+            this.#userExAcc = userExAcc;
+
+            const {
+                userId,
+                keys: { key, secret }
+            } = this.#userExAcc;
+
+            this.#keys = {
+                api: decrypt(userId, key),
+                secret: decrypt(userId, secret)
+            };
+        } catch (err) {
+            this.log.error(`Failed to decrypt #${this.#userPortfolio.userExAccId} keys - ${err.message}`);
+            if (err.message.includes("bad decrypt")) {
+                await this.events.emit<UserExchangeAccountErrorEvent>({
+                    type: ConnectorWorkerEvents.USER_EX_ACC_ERROR,
+                    data: {
+                        userExAccId: this.#userPortfolio.userExAccId,
+                        timestamp: dayjs.utc().toISOString(),
+                        error: err.message
+                    }
+                });
+
+                await this.db.pg.query(sql`
+            UPDATE user_exchange_accs SET status = ${UserExchangeAccStatus.disabled},
+            error = ${err.message || null}
+            WHERE id = ${this.#userPortfolio.userExAccId};
+            `);
+            }
+            throw err;
+        }
     }
 
     async getExwatcherSubscriptions(): Promise<Exwatcher[]> {
@@ -91,7 +160,7 @@ export class UserRobotBaseService extends RobotBaseService {
 
     async getUserPortfolio() {
         const userPortfolio = await this.db.pg.one<UserPortfolioState>(sql`
-        SELECT  p.id, p.type, p.user_id, p.user_ex_acc_id, p.exchange, p.status, 
+        SELECT  p.id, p.allocation, p.user_id, p.user_ex_acc_id, p.exchange, p.status, 
                 p.started_at,
               p.active_from as user_portfolio_settings_active_from,
               p.user_portfolio_settings as settings,
@@ -100,8 +169,8 @@ export class UserRobotBaseService extends RobotBaseService {
            WHERE p.id = ${this.#userPortfolioId}; 
        `);
 
-        if (userPortfolio.type !== "dedicated")
-            throw new Error(`User Portfolios #${this.#userPortfolioId} type must be 'dedicated'`);
+        if (userPortfolio.allocation !== "dedicated")
+            throw new Error(`User Portfolios #${this.#userPortfolioId} allocation must be 'dedicated'`);
 
         if (userPortfolio.exchange !== this.exchange)
             throw new Error(
@@ -110,19 +179,10 @@ export class UserRobotBaseService extends RobotBaseService {
                 }) is not service exchange (${this.exchange})`
             );
 
-        if (userPortfolio.userId !== this.userId)
-            throw new Error(
-                `User Portfolios #${this.#userPortfolioId} user (${userPortfolio.userId}) is not service user (${
-                    this.userId
-                })`
-            );
-
         this.#userPortfolio = userPortfolio;
     }
 
     async subscribeRobots({ asset, currency }: Exwatcher) {
-        if (!this.#userPortfolio) await this.getUserPortfolio();
-
         const rawData = await this.db.pg.any<UserRobotStateExt>(sql`
         SELECT * FROM v_user_robot_state WHERE status = 'started'
          AND user_portfolio_id = ${this.#userPortfolioId}
@@ -206,6 +266,34 @@ export class UserRobotBaseService extends RobotBaseService {
         }
     }
 
+    async getConnectorJobs() {
+        const jobs = await this.db.pg.any<ConnectorJob>(sql`
+         SELECT * FROM connector_jobs
+         WHERE user_ex_acc_id = ${this.#userExAcc.id}
+           AND allocation = 'dedicated'
+           ORDER BY priority, next_job_at
+         `);
+        for (const job of jobs) {
+            if (!this.#connectorJobs.map(({ id }) => id).includes(job.id)) this.#connectorJobs.push(job);
+        }
+    }
+
+    #saveConnectorJob = async (t: DatabaseTransactionConnectionType, nextJob: ConnectorJob) => {
+        try {
+            return await t.query(sql`
+        INSERT INTO connector_jobs (id, user_ex_acc_id, order_id, next_job_at, priority, type, allocation, data )
+        VALUES (${nextJob.id}, ${nextJob.userExAccId}, 
+        ${nextJob.orderId}, ${nextJob.nextJobAt || null}, 
+        ${nextJob.priority || 3}, ${nextJob.type}, 
+        'dedicated',
+        ${JSON.stringify(nextJob.data) || null});
+        `);
+        } catch (error) {
+            this.log.error("saveConnectorJob error", error, nextJob);
+            throw error;
+        }
+    };
+
     async runUserRobot(job: UserRobotTask) {
         const beacon = this.lightship.createBeacon();
         const { robotId, type, data } = job;
@@ -267,12 +355,6 @@ export class UserRobotBaseService extends RobotBaseService {
                     }
                 }
 
-                if (userRobot.connectorJobs.length) {
-                    for (const connectorJob of userRobot.connectorJobs) {
-                        this.#connectorJobs.push(connectorJob);
-                    }
-                }
-
                 if (userRobot.hasCanceledPositions) {
                     this.log.error(`User Robot #${userRobot.id} has canceled positions!`);
                 }
@@ -308,10 +390,22 @@ export class UserRobotBaseService extends RobotBaseService {
                     if (userRobot.ordersToCreate.length) {
                         await saveUserOrders(t, userRobot.ordersToCreate);
                     }
+
+                    if (userRobot.connectorJobs.length) {
+                        for (const connectorJob of userRobot.connectorJobs) {
+                            await this.#saveConnectorJob(t, connectorJob);
+                        }
+                    }
                 }
 
                 await saveUserRobotState(t, userRobot.state);
             });
+
+            if (userRobot.connectorJobs.length) {
+                for (const connectorJob of userRobot.connectorJobs) {
+                    this.#connectorJobs.push(connectorJob);
+                }
+            }
 
             if (eventsToSend.length) {
                 for (const event of eventsToSend) {

@@ -110,7 +110,7 @@ export interface UserRobotDB {
     internalState: UserRobotInternalState;
     robotState?: RobotState;
     status: UserRobotStatus;
-    type: "shared" | "dedicated";
+    allocation: "shared" | "dedicated";
     startedAt?: string;
     stoppedAt?: string;
     message?: string;

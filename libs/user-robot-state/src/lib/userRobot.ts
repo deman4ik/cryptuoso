@@ -25,7 +25,7 @@ export class UserRobot {
     _robotId: string;
     _settings: UserRobotDB["settings"];
     _internalState: UserRobotInternalState;
-    _type: UserRobotDB["type"];
+    _allocation: UserRobotDB["allocation"];
     _status: UserRobotStatus;
     _startedAt?: string;
     _stoppedAt?: string;
@@ -46,7 +46,7 @@ export class UserRobot {
         this._userId = state.userId;
         this._robotId = state.robotId;
         this._settings = state.settings;
-        this._type = state.type;
+        this._allocation = state.allocation;
         this._status = state.status;
         this._startedAt = state.startedAt;
         this._stoppedAt = state.stoppedAt;
@@ -89,7 +89,7 @@ export class UserRobot {
             userPortfolioId: this._userPortfolioId,
             internalState: this._internalState,
             status: this._status,
-            type: this._type,
+            allocation: this._allocation,
             startedAt: this._startedAt,
             stoppedAt: this._stoppedAt,
             message: this._message,

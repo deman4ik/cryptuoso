@@ -226,9 +226,9 @@ export default class UserRobotRunnerService extends HTTPService {
             userExAccId: UserRobotDB["userExAccId"];
             userPortfolioId: UserRobotDB["userPortfolioId"];
             status: UserRobotDB["status"];
-            type: UserRobotDB["type"];
+            allocation: UserRobotDB["allocation"];
         }>(sql`
-            SELECT ur.id, ur.user_id, ur.user_ex_acc_id, ur.user_portfolio_id, ur.status, ur.type
+            SELECT ur.id, ur.user_id, ur.user_ex_acc_id, ur.user_portfolio_id, ur.status, ur.allocation
             FROM user_robots ur
             WHERE ur.id = ${id};
         `);
@@ -251,9 +251,9 @@ export default class UserRobotRunnerService extends HTTPService {
             id: UserExchangeAccount["id"];
             name: UserExchangeAccount["name"];
             status: UserExchangeAccount["status"];
-            type: UserExchangeAccount["type"];
+            allocation: UserExchangeAccount["allocation"];
         }>(sql`
-                SELECT id, name, status, type
+                SELECT id, name, status, allocation
                 FROM user_exchange_accs
                 WHERE id = ${userRobot.userExAccId};
             `);
@@ -273,9 +273,9 @@ export default class UserRobotRunnerService extends HTTPService {
                 403
             );
 
-        if (userRobot.type !== userExchangeAccount.type)
+        if (userRobot.allocation !== userExchangeAccount.allocation)
             throw new ActionsHandlerError(
-                `Wrong User Robot's (${userRobot.type}) and Exchange Account's (${userExchangeAccount.type}) types`,
+                `Wrong User Robot's (${userRobot.allocation}) and Exchange Account's (${userExchangeAccount.allocation}) allocations`,
                 null,
                 "FORBIDDEN",
                 403
@@ -366,16 +366,16 @@ export default class UserRobotRunnerService extends HTTPService {
             id: string;
             status: UserRobotStatus;
             userPortfolioId: string;
-            type: UserRobotDB["type"];
+            allocation: UserRobotDB["allocation"];
         }[] = [];
         if (id) {
             const userRobot = await this.db.pg.maybeOne<{
                 id: string;
                 status: UserRobotStatus;
                 userPortfolioId: string;
-                type: UserRobotDB["type"];
+                allocation: UserRobotDB["allocation"];
             }>(sql`
-            SELECT id, status, user_portfolio_id, type
+            SELECT id, status, user_portfolio_id, allocation
               FROM user_robots 
               WHERE id = ${id}
                 and status = ${UserRobotStatus.started};
@@ -386,9 +386,9 @@ export default class UserRobotRunnerService extends HTTPService {
                 id: string;
                 status: UserRobotStatus;
                 userPortfolioId: string;
-                type: UserRobotDB["type"];
+                allocation: UserRobotDB["allocation"];
             }>(sql`
-            SELECT id, status, user_portfolio_id, type
+            SELECT id, status, user_portfolio_id, allocation
              FROM user_robots
             WHERE user_ex_acc_id = ${userExAccId}
               AND status = ${UserRobotStatus.started};
@@ -399,9 +399,9 @@ export default class UserRobotRunnerService extends HTTPService {
                 id: string;
                 status: UserRobotStatus;
                 userPortfolioId: string;
-                type: UserRobotDB["type"];
+                allocation: UserRobotDB["allocation"];
             }>(sql`
-            SELECT ur.id, ur.status, ur.user_portfolio_id, ur.type
+            SELECT ur.id, ur.status, ur.user_portfolio_id, ur.allocation
              FROM user_robots ur, robots r
             WHERE ur.robot_id = r.id
               AND r.exchange = ${exchange}
@@ -410,8 +410,8 @@ export default class UserRobotRunnerService extends HTTPService {
             userRobotsToPause = [...userRobots];
         } else throw new Error("No User Robots id, userExAccId or exchange was specified");
 
-        for (const { id, status, userPortfolioId, type } of userRobotsToPause) {
-            if (type === "shared") {
+        for (const { id, status, userPortfolioId, allocation } of userRobotsToPause) {
+            if (allocation === "shared") {
                 await this.addUserRobotJob(
                     {
                         userRobotId: id,
@@ -426,7 +426,7 @@ export default class UserRobotRunnerService extends HTTPService {
                     await this.setPortfolioError({ userPortfolioId, message });
                 }
             }
-            //TODO: handle type === "dedicated"
+            //TODO: handle allocation === "dedicated"
         }
 
         return userRobotsToPause.length;
@@ -932,7 +932,7 @@ export default class UserRobotRunnerService extends HTTPService {
             SELECT id, status 
              FROM user_robots
             WHERE robot_id = ${robotId}
-             AND type = 'shared'
+             AND allocation = 'shared'
              AND status = ${UserRobotStatus.started}
              AND ((internal_state->'latestSignal'->>'timestamp')::timestamp is null 
               OR (internal_state->'latestSignal'->>'timestamp')::timestamp < ${timestamp});
@@ -959,7 +959,7 @@ export default class UserRobotRunnerService extends HTTPService {
          SELECT id, status
           FROM user_robots
          WHERE id = ${event.userRobotId}
-         AND type = 'shared';
+         AND allocation = 'shared';
         `);
         await this.addUserRobotJob(
             {
