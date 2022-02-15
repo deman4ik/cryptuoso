@@ -29,7 +29,7 @@ import {
     TradeStatsRunnerPortfolioRobot,
     TradeStatsRunnerRobot
 } from "@cryptuoso/trade-stats-events";
-import { Exwatcher, ExwatcherStatus, Trade, UserRobotTask } from "./types";
+import { Exwatcher, ExwatcherStatus, Trade } from "./types";
 import {
     getMarketsCheckEventName,
     getRobotsCheckEventName,
@@ -1392,7 +1392,7 @@ export class RobotBaseService extends HTTPService {
         }
     }
 
-    async runUserRobot(job: UserRobotTask) {
+    async handleSignal(signal: SignalEvent) {
         return;
     }
 
@@ -1491,11 +1491,7 @@ export class RobotBaseService extends HTTPService {
                                             });
                                         }
                                     } else if (robot.hasTradesToSave) {
-                                        await this.runUserRobot({
-                                            robotId,
-                                            type: UserRobotJobType.signal,
-                                            data: robot.tradesToSave[0]
-                                        });
+                                        await this.handleSignal(robot.tradesToSave[0]);
                                     }
 
                                     robot.clearEvents();

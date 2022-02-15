@@ -95,7 +95,7 @@ export async function saveUserOrders(transaction: DatabaseTransactionConnectionT
             ex_id, ex_timestamp, ex_last_trade_at,
             remaining, executed, fee, 
             last_checked_at, params,
-            error, next_job
+            error, next_job, meta
         ) VALUES (
             ${order.id}, ${order.userExAccId}, ${order.userRobotId},
             ${order.positionId || null}, ${order.userPositionId},
@@ -107,7 +107,8 @@ export async function saveUserOrders(transaction: DatabaseTransactionConnectionT
             ${order.exId || null}, ${order.exTimestamp || null}, ${order.exLastTradeAt || null},
             ${order.remaining || null}, ${order.executed || null}, ${order.fee || null},
             ${order.lastCheckedAt || null}, ${JSON.stringify(order.params) || null},
-            ${order.error || null}, ${JSON.stringify(order.nextJob) || null}
+            ${order.error || null}, ${JSON.stringify(order.nextJob) || null},
+            ${JSON.stringify(order.meta) || JSON.stringify({})}
         );
         `);
     }

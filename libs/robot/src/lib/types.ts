@@ -26,9 +26,3 @@ export interface Trade {
     price: number; // float price in quote currency
     timestamp: number; // Unix timestamp in milliseconds
 }
-
-export interface UserRobotTask {
-    robotId: string;
-    type: UserRobotJobType;
-    data?: SignalEvent | OrdersStatusEvent | { message?: string };
-}

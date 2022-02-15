@@ -74,6 +74,7 @@ export interface Order {
     nextJob?: OrderJob;
     info?: ccxt.Order;
     meta?: { currentBalance?: number };
+    locked?: boolean;
 }
 
 export interface UnknownOrder {
