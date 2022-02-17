@@ -155,6 +155,7 @@ export interface UserRobotJob {
     userRobotId: string;
     type: UserRobotJobType;
     data?: SignalEvent | OrdersStatusEvent | { message?: string };
+    allocation: "shared" | "dedicated";
     retries?: number;
     error?: string;
 }

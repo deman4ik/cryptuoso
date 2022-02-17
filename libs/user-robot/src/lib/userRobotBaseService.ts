@@ -24,6 +24,7 @@ import {
 } from "@cryptuoso/user-robot-events";
 import dayjs from "@cryptuoso/dayjs";
 import ccxt from "ccxt";
+import cron from "node-cron";
 import { v4 as uuid } from "uuid";
 import { ConnectorJob, ConnectorJobType, Priority } from "@cryptuoso/connector-state";
 import { NewEvent } from "@cryptuoso/events";
@@ -37,6 +38,7 @@ import {
 import { BaseError } from "@cryptuoso/errors";
 import { UserExchangeAccBalances, UserExchangeAccount, UserExchangeAccStatus } from "@cryptuoso/user-state";
 import { decrypt, PrivateConnector } from "@cryptuoso/ccxt-private";
+import { SlonikError } from "slonik";
 
 export interface UserRobotBaseServiceConfig extends RobotBaseServiceConfig {
     userPortfolioId: string;
@@ -58,7 +60,14 @@ export class UserRobotBaseService extends RobotBaseService {
         [id: string]: { robot: Robot; userRobot: UserRobot; locked: boolean };
     } = {};
     #jobRetries = 3;
-
+    #connectorJobsTimer: NodeJS.Timer;
+    #userRobotJobsTimer: NodeJS.Timer;
+    #cronCheckBalance: cron.ScheduledTask = cron.schedule("0 5 * * * *", this.checkBalance.bind(this), {
+        scheduled: false
+    });
+    #cronCheckUnknownOrders: cron.ScheduledTask = cron.schedule("0 15 */12 * * *", this.checkBalance.bind(this), {
+        scheduled: false
+    });
     constructor(config: UserRobotBaseServiceConfig) {
         super(config);
 
@@ -66,6 +75,7 @@ export class UserRobotBaseService extends RobotBaseService {
 
         //TODO: handle portfolio builded event
         //TODO: handle user exchange acc changed
+        this.addOnStopHandler(this.onUserServiceStop);
     }
 
     async onServiceStarted() {
@@ -74,6 +84,28 @@ export class UserRobotBaseService extends RobotBaseService {
         await this.startRobotService();
     }
 
+    async onUserServiceStop() {
+        this.#cronCheckBalance.stop();
+        this.#cronCheckUnknownOrders.stop();
+    }
+
+    //#region Overrides
+    async saveSubscription(subscription: Exwatcher): Promise<void> {
+        return;
+    }
+
+    async deleteSubscription(id: string): Promise<void> {
+        return;
+    }
+
+    saveCandles(candles: ExchangeCandle[]) {
+        for (const { ...props } of candles) {
+            this.saveCandlesHistory({ ...props });
+        }
+    }
+    //#endregion
+
+    //#region Getters
     getRobotIdByUserRobotId(userRobotId: string) {
         return Object.values(this.robots).find(({ userRobot }) => userRobot.id === userRobotId).robot.id;
     }
@@ -81,7 +113,9 @@ export class UserRobotBaseService extends RobotBaseService {
     getUserRobotIdByRobotId(robotId: string) {
         return this.robots[robotId].userRobot.id;
     }
+    //#endregion
 
+    //#region Select Queries
     async getUserPortfolio() {
         const userPortfolio = await this.db.pg.one<UserPortfolioState>(sql`
         SELECT  p.id, p.allocation, p.user_id, p.user_ex_acc_id, p.exchange, p.status, 
@@ -118,6 +152,9 @@ export class UserRobotBaseService extends RobotBaseService {
         });
         await this.#userConnector.initConnector();
         await this.getConnectorJobs();
+        this.#connectorJobsTimer = setTimeout(this.runConnectorJobs.bind(this), 0);
+        this.#cronCheckBalance.start();
+        this.#cronCheckUnknownOrders.start();
     }
 
     async getUserExAcc() {
@@ -187,140 +224,18 @@ export class UserRobotBaseService extends RobotBaseService {
         }));
     }
 
-    async saveSubscription(subscription: Exwatcher): Promise<void> {
-        return;
-    }
-
-    async deleteSubscription(id: string): Promise<void> {
-        return;
-    }
-
-    saveCandles(candles: ExchangeCandle[]) {
-        for (const { ...props } of candles) {
-            this.saveCandlesHistory({ ...props });
-        }
-    }
-
-    async runOrderJobs() {
-        const lockedOrders = Object.values(this.#orders)
-            .filter(({ locked }) => locked)
-            .map(({ id }) => id);
-        const freeJobs = this.#connectorJobs.filter(
-            ({ orderId, nextJobAt }) =>
-                !lockedOrders.includes(orderId) && dayjs.utc(nextJobAt).valueOf() <= dayjs.utc().valueOf()
-        );
-        if (freeJobs.length) {
-            const orderIds = uniqueElementsBy(freeJobs, (a, b) => a.orderId === b.orderId).map(
-                ({ orderId }) => orderId
-            );
-            await Promise.all(orderIds.map(async (orderId) => await this.processOrderJobs(orderId)));
-        }
-    }
-
-    async processOrderJobs(orderId: string) {
-        if (!this.#orders[orderId]) return;
-        while (this.#orders[orderId].locked) {
-            await sleep(200);
-        }
-        try {
-            this.#orders[orderId].locked = true;
-
-            const [job] = this.#connectorJobs
-                .filter(({ orderId: jobOrderId }) => jobOrderId === orderId)
-                .sort((a, b) => sortDesc(dayjs.utc(a.nextJobAt).valueOf(), dayjs.utc(b.nextJobAt).valueOf()));
-
-            if (job) {
-                let order = this.#orders[orderId];
-                order.error = null;
-                let nextJob: {
-                    type: OrderJobType;
-                    priority: Priority;
-                    nextJobAt: string;
-                };
-                let errorToThrow;
-                try {
-                    const result = await this.processOrder(order, job);
-                    order = result.order;
-                    nextJob = result.nextJob;
-                } catch (err) {
-                    if (
-                        err instanceof ccxt.AuthenticationError ||
-                        err.message.includes("EAPI:Invalid key") ||
-                        err.message.includes("Invalid API-key")
-                    ) {
-                        errorToThrow = err;
-                    }
-
-                    order = {
-                        ...order,
-                        lastCheckedAt: dayjs.utc().toISOString(),
-                        error: PrivateConnector.getErrorMessage(err),
-                        status:
-                            order.nextJob && order.nextJob.type === OrderJobType.create
-                                ? OrderStatus.canceled
-                                : order.status,
-                        nextJob: null
-                    };
-                    nextJob = null;
-                }
-
-                if (order.status === OrderStatus.closed) {
-                    await this.checkBalance();
-                }
-
-                await this.db.pg.transaction(async (t) => {
-                    await this.#saveOrder(t, order);
-                    await this.#deleteJobs(t, order.id);
-                });
-
-                if ((order.status === OrderStatus.closed || order.status === OrderStatus.canceled) && !order.error) {
-                    this.#userRobotJobs.push({
-                        userRobotId: order.userRobotId,
-                        type: UserRobotJobType.order,
-                        data: {
-                            orderId: order.id,
-                            timestamp: dayjs.utc().toISOString(),
-                            userExAccId: order.userExAccId,
-                            userRobotId: order.userRobotId,
-                            userPositionId: order.userPositionId,
-                            positionId: order.positionId,
-                            status: order.status
-                        }
-                    });
-                } else if (order.error) {
-                    await this.events.emit<OrdersErrorEvent>({
-                        type: ConnectorWorkerEvents.ORDER_ERROR,
-                        data: {
-                            orderId: order.id,
-                            timestamp: dayjs.utc().toISOString(),
-                            userExAccId: order.userExAccId,
-                            userRobotId: order.userRobotId,
-                            userPositionId: order.userPositionId,
-                            positionId: order.positionId,
-                            status: order.status,
-                            error: order.error
-                        }
-                    });
-
-                    if (errorToThrow) throw errorToThrow;
-                }
-            }
-        } catch (error) {
-        } finally {
-            this.#orders[orderId].locked = false;
-        }
-    }
-
-    #getOrderByPrevId = async (orderId: string) => {
+    async getOrderByPrevId(orderId: string) {
         return this.db.pg.maybeOne<Order>(sql`
         SELECT * from user_orders
         WHERE prev_order_id = ${orderId}
         `);
-    };
+    }
 
-    #saveOrder = async (transaction: DatabaseTransactionConnectionType, order: Order) => {
+    //#region Orders
+
+    async updateOrderT(t: DatabaseTransactionConnectionType, order: Order) {
         try {
-            await transaction.query(sql`
+            await t.query(sql`
          UPDATE user_orders SET prev_order_id = ${order.prevOrderId || null},
          price = ${order.price || null},
          params = ${JSON.stringify(order.params) || null},
@@ -343,19 +258,273 @@ export class UserRobotBaseService extends RobotBaseService {
             this.log.error("saveOrder error", error, order);
             throw error;
         }
-    };
+    }
 
-    #deleteJobs = async (transaction: DatabaseTransactionConnectionType, orderId: string) => {
-        try {
-            await transaction.query(sql`
-        DELETE FROM connector_jobs WHERE order_id = ${orderId};
-        `);
-            this.#connectorJobs = [...this.#connectorJobs.filter(({ orderId: jobOrderId }) => jobOrderId !== orderId)];
-        } catch (error) {
-            this.log.error("deleteJobs error", error, orderId);
-            throw error;
+    //#endregion
+
+    //#region Connector Jobs
+    async getConnectorJobs() {
+        const jobs = await this.db.pg.any<ConnectorJob>(sql`
+         SELECT * FROM connector_jobs
+         WHERE user_ex_acc_id = ${this.#userExAcc.id}
+           AND allocation = 'dedicated'
+           ORDER BY priority, next_job_at
+         `);
+        for (const job of jobs) {
+            if (!this.#connectorJobs.map(({ id }) => id).includes(job.id)) this.#connectorJobs.push(job);
         }
-    };
+    }
+
+    async addConnectorJobT(t: DatabaseTransactionConnectionType, nextJob: ConnectorJob) {
+        await t.query(sql`
+        INSERT INTO connector_jobs (id, user_ex_acc_id, order_id, next_job_at, priority, type, allocation, data )
+        VALUES (${nextJob.id}, ${nextJob.userExAccId}, 
+        ${nextJob.orderId}, ${nextJob.nextJobAt || null}, 
+        ${nextJob.priority || 3}, ${nextJob.type}, 
+        'dedicated',
+        ${JSON.stringify(nextJob.data) || null});
+        `);
+
+        if (!this.#connectorJobs.find((c) => c.id === nextJob.id)) this.#connectorJobs.push(nextJob);
+    }
+
+    async deleteConnectorJobsT(t: DatabaseTransactionConnectionType, orderId: string) {
+        await t.query(sql`DELETE FROM connector_jobs WHERE order_id = ${orderId};`);
+        this.#connectorJobs = [...this.#connectorJobs.filter(({ orderId: jobOrderId }) => jobOrderId !== orderId)];
+    }
+
+    //#endregion
+
+    //#region User Robot Jobs
+    async getUserRobotJobs(userRobotId: string) {
+        const jobs = await this.db.pg.any<UserRobotJob>(sql`
+         SELECT * FROM user_robot_jobs
+         WHERE user_robot_id = ${userRobotId}
+           AND allocation = 'dedicated'
+           ORDER BY created_at asc
+         `);
+        for (const job of jobs) {
+            if (!this.#userRobotJobs.map(({ id }) => id).includes(job.id)) this.#userRobotJobs.push(job);
+        }
+    }
+
+    async addUserRobotJob(nextJob: UserRobotJob) {
+        await this.db.pg.query(sql`
+        INSERT INTO user_robot_jobs
+        (
+            id,
+            user_robot_id,
+            type,
+            data,
+            allocation
+        ) VALUES (
+            ${nextJob.id},
+            ${nextJob.userRobotId},
+            ${nextJob.type},
+            ${JSON.stringify(nextJob.data) || null},
+            ${nextJob.allocation}
+        )
+        ON CONFLICT ON CONSTRAINT user_robot_jobs_user_robot_id_type_data_key 
+         DO UPDATE SET updated_at = now(),
+         type = excluded.type,
+         data = excluded.data,
+         retries = null,
+         error = null;
+        `);
+        if (!this.#userRobotJobs.find((c) => c.id === nextJob.id)) this.#userRobotJobs.push(nextJob);
+    }
+
+    async updateUserRobotJob(job: UserRobotJob) {
+        await this.db.pg.query(sql`
+        UPDATE user_robot_jobs
+        SET retries = ${job.retries}, 
+            error = ${job.error}
+        WHERE id = ${job.id};`);
+        if (this.#userRobotJobs.find((c) => c.id === job.id))
+            this.#userRobotJobs = [...this.#userRobotJobs.filter(({ id: jobId }) => jobId !== job.id)];
+        this.#userRobotJobs.push(job);
+    }
+
+    async deleteUserRobotJobT(t: DatabaseTransactionConnectionType, id: string) {
+        await t.query(sql`DELETE FROM user_robot_jobs WHERE id = ${id};`);
+        this.#userRobotJobs = [...this.#userRobotJobs.filter(({ id: jobId }) => jobId !== id)];
+    }
+
+    async deleteUserRobotJobsT(t: DatabaseTransactionConnectionType, userRobotId: string) {
+        await t.query(sql`DELETE FROM user_robot_jobs WHERE user_robot_id = ${userRobotId};`);
+        this.#userRobotJobs = [
+            ...this.#userRobotJobs.filter(({ userRobotId: jobUserRobotId }) => jobUserRobotId !== userRobotId)
+        ];
+    }
+    //#endregion
+
+    //#region Connector
+    async runConnectorJobs() {
+        const beacon = this.lightship.createBeacon();
+        try {
+            const currentDate = dayjs.utc().valueOf();
+            const unlockedOrders = Object.values(this.#orders)
+                .filter(({ locked }) => locked === false)
+                .map(({ id }) => id);
+            const freeJobs = this.#connectorJobs.filter(
+                ({ orderId, nextJobAt }) =>
+                    unlockedOrders.includes(orderId) && dayjs.utc(nextJobAt).valueOf() <= currentDate
+            );
+            if (freeJobs.length) {
+                const orderIds = uniqueElementsBy(freeJobs, (a, b) => a.orderId === b.orderId).map(
+                    ({ orderId }) => orderId
+                );
+                await Promise.all(orderIds.map(async (orderId) => await this.processOrderJobs(orderId)));
+            }
+        } catch (err) {
+            this.log.error(`Failed to run connector jobs - ${err.message}`);
+        } finally {
+            await beacon.die();
+            if (!this.lightship.isServerShuttingDown()) {
+                this.#connectorJobsTimer = setTimeout(this.runConnectorJobs.bind(this), 1000);
+            }
+        }
+    }
+
+    async processOrderJobs(orderId: string) {
+        if (!this.#orders[orderId]) return;
+        while (this.#orders[orderId].locked) {
+            await sleep(200);
+        }
+        try {
+            this.#orders[orderId].locked = true;
+
+            const [job] = this.#connectorJobs
+                .filter(({ orderId: jobOrderId }) => jobOrderId === orderId)
+                .sort((a, b) => sortDesc(dayjs.utc(a.nextJobAt).valueOf(), dayjs.utc(b.nextJobAt).valueOf()));
+
+            if (job) {
+                try {
+                    let order = this.#orders[orderId];
+                    order.error = null;
+                    let nextJob: {
+                        type: OrderJobType;
+                        priority: Priority;
+                        nextJobAt: string;
+                    };
+                    let errorToThrow;
+                    try {
+                        const result = await this.processOrder(order, job);
+                        order = result.order;
+                        nextJob = result.nextJob;
+                    } catch (err) {
+                        if (
+                            err instanceof ccxt.AuthenticationError ||
+                            err.message.includes("EAPI:Invalid key") ||
+                            err.message.includes("Invalid API-key")
+                        ) {
+                            errorToThrow = err;
+                        }
+
+                        order = {
+                            ...order,
+                            lastCheckedAt: dayjs.utc().toISOString(),
+                            error: PrivateConnector.getErrorMessage(err),
+                            status:
+                                order.nextJob && order.nextJob.type === OrderJobType.create
+                                    ? OrderStatus.canceled
+                                    : order.status,
+                            nextJob: null
+                        };
+                        nextJob = null;
+                    }
+
+                    if (order.status === OrderStatus.closed) {
+                        await this.checkBalance();
+                    }
+
+                    await this.db.pg.transaction(async (t) => {
+                        await this.updateOrderT(t, order);
+                        await this.deleteConnectorJobsT(t, order.id);
+                        if (nextJob) {
+                            await this.addConnectorJobT(t, {
+                                ...nextJob,
+                                id: uuid(),
+                                userExAccId: this.#userExAcc.id,
+                                orderId,
+                                allocation: "dedicated"
+                            });
+                        }
+                    });
+
+                    if (
+                        (order.status === OrderStatus.closed || order.status === OrderStatus.canceled) &&
+                        !order.error
+                    ) {
+                        await this.addUserRobotJob({
+                            id: "dedicated",
+                            userRobotId: order.userRobotId,
+                            type: UserRobotJobType.order,
+                            data: {
+                                orderId: order.id,
+                                timestamp: dayjs.utc().toISOString(),
+                                userExAccId: order.userExAccId,
+                                userRobotId: order.userRobotId,
+                                userPositionId: order.userPositionId,
+                                positionId: order.positionId,
+                                status: order.status
+                            },
+                            allocation: "dedicated"
+                        });
+                    } else if (order.error) {
+                        await this.events.emit<OrdersErrorEvent>({
+                            type: ConnectorWorkerEvents.ORDER_ERROR,
+                            data: {
+                                orderId: order.id,
+                                timestamp: dayjs.utc().toISOString(),
+                                userExAccId: order.userExAccId,
+                                userRobotId: order.userRobotId,
+                                userPositionId: order.userPositionId,
+                                positionId: order.positionId,
+                                status: order.status,
+                                error: order.error
+                            }
+                        });
+
+                        if (errorToThrow) throw errorToThrow;
+                    }
+                } catch (e) {
+                    this.log.error(`Error while processing job ${job.id}`, e);
+                    if (
+                        e instanceof ccxt.AuthenticationError ||
+                        // e instanceof ccxt.InsufficientFunds ||
+                        e instanceof ccxt.InvalidNonce ||
+                        //e.message.includes("Margin is insufficient") ||
+                        //e.message.includes("EOrder:Insufficient initial margin") ||
+                        //e.message.includes("balance-insufficient") ||
+                        e.message.includes("EAPI:Invalid key") ||
+                        e.message.includes("Invalid API-key") ||
+                        e.message.includes("Failed to save order") ||
+                        e.message.includes("Could not find a key")
+                    ) {
+                        await this.events.emit<UserExchangeAccountErrorEvent>({
+                            type: ConnectorWorkerEvents.USER_EX_ACC_ERROR,
+                            data: {
+                                userExAccId: job.id,
+                                timestamp: dayjs.utc().toISOString(),
+                                error: e.message
+                            }
+                        });
+
+                        await this.db.pg.query(sql`
+                UPDATE user_exchange_accs SET status = ${UserExchangeAccStatus.invalid},
+                error = ${e.message || null}
+                WHERE id = ${job.id};
+                `);
+                        this.#userExAcc.status = UserExchangeAccStatus.invalid;
+                        this.#userExAcc.error = e.message;
+                    }
+                }
+            }
+        } finally {
+            this.#orders[orderId].locked = false;
+        }
+    }
 
     async processOrder(
         order: Order,
@@ -393,15 +562,15 @@ export class UserRobotBaseService extends RobotBaseService {
                 this.log.info(`UserExAcc #${userExAccId} recreating order ${order.positionId}/${order.id}`);
                 const response = await this.#userConnector.checkOrder(order);
                 if (response.order.status === OrderStatus.canceled) {
-                    const orderExists = await this.#getOrderByPrevId(order.id);
+                    const orderExists = await this.getOrderByPrevId(order.id);
 
                     if (orderExists) {
                         this.log.warn(
                             `UserExAcc #${userExAccId} recreating order ${order.positionId}/${order.id} - Order exists`
                         );
                         await this.db.pg.transaction(async (t) => {
-                            await this.#saveOrder(t, response.order);
-                            await this.#deleteJobs(t, response.order.id);
+                            await this.updateOrderT(t, response.order);
+                            await this.deleteConnectorJobsT(t, response.order.id);
                         });
                         ({ order, nextJob } = await this.#userConnector.checkOrder(orderExists));
                         return { order, nextJob };
@@ -432,7 +601,7 @@ export class UserRobotBaseService extends RobotBaseService {
                             }
                         };
                         await this.db.pg.transaction(async (t) => {
-                            await this.#saveOrder(t, response.order);
+                            await this.updateOrderT(t, response.order);
                             await saveUserOrders(t, [newOrder]);
                         });
                         ({ order, nextJob } = await this.#userConnector.createOrder(newOrder));
@@ -474,10 +643,10 @@ export class UserRobotBaseService extends RobotBaseService {
                     };
                 }
                 if (order.status === OrderStatus.closed || order.status === OrderStatus.canceled) {
-                    const orderExists = await this.#getOrderByPrevId(order.id);
+                    const orderExists = await this.getOrderByPrevId(order.id);
                     if (orderExists) {
                         await this.db.pg.transaction(async (t) => {
-                            await this.#deleteJobs(t, order.id);
+                            await this.deleteConnectorJobsT(t, order.id);
                         });
                         order = { ...orderExists };
                     } else return { order, nextJob: null };
@@ -610,6 +779,9 @@ export class UserRobotBaseService extends RobotBaseService {
         }
     }
 
+    //#endregion
+
+    //#region User Robots
     async subscribeRobots({ asset, currency }: Exwatcher) {
         const rawData = await this.db.pg.any<UserRobotStateExt>(sql`
         SELECT * FROM v_user_robot_state WHERE status = 'started'
@@ -682,66 +854,52 @@ export class UserRobotBaseService extends RobotBaseService {
                 this.robots[robotId].robot = new Robot(userRobot.robotState);
             }
 
-            this.getActiveRobotAlerts(robotId);
+            await this.getUserRobotJobs(userRobot.id);
+            this.initActiveRobotAlerts(robotId);
             if (this.robots[robotId].robot.status !== RobotStatus.started) {
                 this.robots[robotId].robot.start();
             }
             this.robots[robotId].locked = false;
             this.log.info(`Robot #${robotId} is subscribed!`);
+            this.#userRobotJobsTimer = setTimeout(this.runUserRobotJobs.bind(this), 0);
         } catch (err) {
             this.log.error(`Failed to subscribe #${robotId} robot ${err.message}`);
             throw err;
         }
     }
 
-    async getConnectorJobs() {
-        const jobs = await this.db.pg.any<ConnectorJob>(sql`
-         SELECT * FROM connector_jobs
-         WHERE user_ex_acc_id = ${this.#userExAcc.id}
-           AND allocation = 'dedicated'
-           ORDER BY priority, next_job_at
-         `);
-        for (const job of jobs) {
-            if (!this.#connectorJobs.map(({ id }) => id).includes(job.id)) this.#connectorJobs.push(job);
-        }
-    }
-
-    #saveConnectorJob = async (t: DatabaseTransactionConnectionType, nextJob: ConnectorJob) => {
-        try {
-            return await t.query(sql`
-        INSERT INTO connector_jobs (id, user_ex_acc_id, order_id, next_job_at, priority, type, allocation, data )
-        VALUES (${nextJob.id}, ${nextJob.userExAccId}, 
-        ${nextJob.orderId}, ${nextJob.nextJobAt || null}, 
-        ${nextJob.priority || 3}, ${nextJob.type}, 
-        'dedicated',
-        ${JSON.stringify(nextJob.data) || null});
-        `);
-        } catch (error) {
-            this.log.error("saveConnectorJob error", error, nextJob);
-            throw error;
-        }
-    };
-
     async handleSignal(signal: SignalEvent) {
-        this.#userRobotJobs.push({
+        await this.addUserRobotJob({
+            id: uuid(),
             userRobotId: this.getUserRobotIdByRobotId(signal.robotId),
             type: UserRobotJobType.signal,
-            data: signal
+            data: signal,
+            allocation: "dedicated"
         });
     }
 
     async runUserRobotJobs() {
-        if (this.#userRobotJobs.length) {
-            const userRobotIds = uniqueElementsBy(this.#userRobotJobs, (a, b) => a.userRobotId === b.userRobotId).map(
-                ({ userRobotId }) => userRobotId
-            );
+        const beacon = this.lightship.createBeacon();
+        try {
+            if (this.#userRobotJobs.length) {
+                const userRobotIds = uniqueElementsBy(
+                    this.#userRobotJobs,
+                    (a, b) => a.userRobotId === b.userRobotId
+                ).map(({ userRobotId }) => userRobotId);
 
-            await Promise.all(userRobotIds.map((userRobotId) => this.processUserRobotJobs(userRobotId)));
+                await Promise.all(userRobotIds.map((userRobotId) => this.processUserRobotJobs(userRobotId)));
+            }
+        } catch (err) {
+            this.log.error(`Failed to run user robot jobs - ${err.message}`);
+        } finally {
+            await beacon.die();
+            if (!this.lightship.isServerShuttingDown()) {
+                this.#connectorJobsTimer = setTimeout(this.runUserRobotJobs.bind(this), 1000);
+            }
         }
     }
 
     async processUserRobotJobs(userRobotId: string) {
-        const beacon = this.lightship.createBeacon();
         const robotId = this.getRobotIdByUserRobotId(userRobotId);
         try {
             while (this.robots[robotId].locked) {
@@ -749,34 +907,18 @@ export class UserRobotBaseService extends RobotBaseService {
             }
             this.lockRobot(robotId);
 
-            for (const job of this.#userRobotJobs.filter(
+            const freeJobs = this.#userRobotJobs.filter(
                 ({ userRobotId: jobUserRobotId }) => jobUserRobotId === userRobotId
-            )) {
-                await this.processUserRobot(job);
-
-                //TODO: insert user robot jobs + delete user robot jobs
+            );
+            if (freeJobs) {
+                for (const job of freeJobs) {
+                    await this.processUserRobot(job);
+                }
             }
         } finally {
             this.unlockRobot(robotId);
-            await beacon.die();
         }
     }
-
-    #deleteUserRobotJob = async (t: DatabaseTransactionConnectionType, id: string) => {
-        await t.query(sql`DELETE FROM user_robot_jobs WHERE id = ${id};`);
-    };
-
-    #deleteUserRobotJobs = async (t: DatabaseTransactionConnectionType, userRobotId: string) => {
-        await t.query(sql`DELETE FROM user_robot_jobs WHERE user_robot_id = ${userRobotId};`);
-    };
-
-    #updateUserRobotJobs = async (job: UserRobotJob) => {
-        await this.db.pg.query(sql`
-        UPDATE user_robot_jobs
-        SET retries = ${job.retries}, 
-            error = ${job.error}
-        WHERE id = ${job.id};`);
-    };
 
     async processUserRobot(job: UserRobotJob) {
         const { userRobotId, type, data } = job;
@@ -877,23 +1019,22 @@ export class UserRobotBaseService extends RobotBaseService {
 
                     if (userRobot.connectorJobs.length) {
                         for (const connectorJob of userRobot.connectorJobs) {
-                            await this.#saveConnectorJob(t, connectorJob);
+                            await this.addConnectorJobT(t, connectorJob);
                         }
                     }
                 }
 
                 await saveUserRobotState(t, userRobot.state);
 
-                if (userRobot.status === UserRobotStatus.stopped)
-                    await t.query(sql`DELETE FROM user_robot_jobs WHERE user_robot_id = ${userRobotId};`);
-                else await t.query(sql`DELETE FROM user_robot_jobs WHERE id = ${job.id};`);
-            });
+                if (userRobot.status === UserRobotStatus.stopped) await this.deleteUserRobotJobsT(t, userRobot.id);
+                else await this.deleteUserRobotJobT(t, job.id);
 
-            if (userRobot.connectorJobs.length) {
-                for (const connectorJob of userRobot.connectorJobs) {
-                    this.#connectorJobs.push(connectorJob);
+                if (userRobot.connectorJobs.length && userRobot.status !== UserRobotStatus.stopped) {
+                    for (const connectorJob of userRobot.connectorJobs) {
+                        await this.addConnectorJobT(t, connectorJob);
+                    }
                 }
-            }
+            });
 
             if (eventsToSend.length) {
                 for (const event of eventsToSend) {
@@ -911,19 +1052,15 @@ export class UserRobotBaseService extends RobotBaseService {
         } catch (err) {
             this.log.error(`Failed to process User Robot's #${userRobot.id} ${type} job - ${err.message}`);
 
-            try {
-                const retries = job.retries ? job.retries + 1 : 1;
-
-                await this.db.pg.query(sql`
-                    UPDATE user_robot_jobs
-                    SET retries = ${retries}, 
-                        error = ${err.message}
-                    WHERE id = ${job.id};`);
-            } catch (e) {
-                this.log.error(`Failed to update user robot's #${userRobotId} failed job status`, e);
+            if (err instanceof SlonikError) {
+                try {
+                    await this.updateUserRobotJob({ ...job, retries: job.retries ? job.retries + 1 : 1 });
+                } catch (e) {
+                    this.log.error(`Failed to update user robot's #${userRobotId} failed job status`, e);
+                }
             }
 
-            if (job.retries >= this.#jobRetries) {
+            if (!(err instanceof SlonikError) || job.retries >= this.#jobRetries) {
                 await this.events.emit<UserRobotWorkerError>({
                     type: UserRobotWorkerEvents.ERROR,
                     data: {

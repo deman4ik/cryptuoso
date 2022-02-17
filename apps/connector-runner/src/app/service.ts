@@ -187,7 +187,8 @@ export default class ConnectorRunnerService extends HTTPService {
                     userExAccId,
                     orderId,
                     nextJobAt: dayjs.utc().toISOString(),
-                    priority: Priority.medium
+                    priority: Priority.medium,
+                    allocation: "shared"
                 });
             }
         }

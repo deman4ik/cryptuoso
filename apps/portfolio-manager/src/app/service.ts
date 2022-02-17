@@ -174,7 +174,7 @@ export default class PortfolioManagerService extends HTTPService {
         await this.addJob("portfolioBuilder", "userPortfolioCheck", null, {
             jobId: "userPortfolioCheck",
             repeat: {
-                cron: "0 0 */12 * * *"
+                cron: "0 5 0 1 * *"
             },
             attempts: 3,
             backoff: { type: "exponential", delay: 60000 },
@@ -807,7 +807,8 @@ export default class PortfolioManagerService extends HTTPService {
     }
 
     async userPortfolioSettingsCheck() {
-        return;
+        //TODO: other exchanges
+        await this.rebuildPortfolios({ exchange: "binance_futures", checkDate: true });
     }
 
     async portfolioBuilderProcess(job: Job<PortfolioBuilderJob | UserPortfolioBuilderJob, boolean>) {

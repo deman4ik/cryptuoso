@@ -56,6 +56,7 @@ export default class UserRobotWorkerService extends BaseService {
  SELECT id, user_robot_id, type, data, retries
   FROM user_robot_jobs
  WHERE user_robot_id = ${userRobotId}
+   AND allocation = 'shared'
    AND (retries is null OR retries <= ${this.#jobRetries})
  ORDER BY created_at 
   LIMIT 1;  

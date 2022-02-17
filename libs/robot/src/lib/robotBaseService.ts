@@ -1252,7 +1252,7 @@ export class RobotBaseService extends HTTPService {
                             robot: new Robot(robot),
                             locked: false
                         };
-                        this.getActiveRobotAlerts(robot.id);
+                        this.initActiveRobotAlerts(robot.id);
                         if (this.robots[robot.id].robot.status !== RobotStatus.started) {
                             this.robots[robot.id].robot.start();
 
@@ -1302,7 +1302,7 @@ export class RobotBaseService extends HTTPService {
                 robot: new Robot(robot),
                 locked: true
             };
-            this.getActiveRobotAlerts(robot.id);
+            this.initActiveRobotAlerts(robot.id);
             if (this.robots[robotId].robot.status !== RobotStatus.started) {
                 this.robots[robot.id].robot.start();
 
@@ -1322,7 +1322,7 @@ export class RobotBaseService extends HTTPService {
         }
     }
 
-    async getActiveRobotAlerts(robotId: string) {
+    async initActiveRobotAlerts(robotId: string) {
         const currentDate = dayjs.utc().valueOf();
 
         const robot = this.robots[robotId].robot;
