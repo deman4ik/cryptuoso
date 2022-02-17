@@ -119,8 +119,12 @@ export class UserRobot {
         );
     }
 
+    get canceledPositions() {
+        return this.positions.filter((pos) => pos.status === UserPositionStatus.canceled);
+    }
+
     get hasCanceledPositions() {
-        return this.positions.filter((pos) => pos.status === UserPositionStatus.canceled).length > 0;
+        return this.canceledPositions.length > 0;
     }
 
     get hasClosedPositions() {

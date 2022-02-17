@@ -19,6 +19,7 @@ import logger from "@cryptuoso/logger";
 import { calcCurrencyDynamic, RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 import { periodStatsFromArray, periodStatsToArray, TradeStats, TradeStatsCalc } from "@cryptuoso/trade-stats";
 import { strategies } from "./strategies";
+import { UserTradeEvent } from "@cryptuoso/user-robot-state";
 
 export interface StrategyCode {
     [key: string]: any;
@@ -768,6 +769,20 @@ export class Robot {
             this._emulatedStats = newEmulatedStats;
             this._stats = newStats;
         }
+    }
+
+    handleEntryTradeConfirmation(trade: UserTradeEvent) {
+        const position = this._strategyInstance.getPosition();
+
+        if (position.code === trade.code) {
+            position._setEntryPrice(trade.entryPrice);
+        }
+        this._state.positions = this._strategyInstance.validPositions;
+    }
+
+    handleTradeCancelation(positionCode: string) {
+        this._strategyInstance._deletePosition(positionCode);
+        this._state.positions = this._strategyInstance.validPositions;
     }
 
     clearEvents() {

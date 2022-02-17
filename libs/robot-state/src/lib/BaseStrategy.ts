@@ -297,6 +297,10 @@ export class BaseStrategy {
         }
     }
 
+    _deletePosition(code: string) {
+        delete this._positions[code];
+    }
+
     get validPositions() {
         return Object.values(this._positions)
             .filter((position) => position.status !== RobotPositionStatus.closed)

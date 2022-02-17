@@ -983,6 +983,9 @@ export class UserRobotBaseService extends RobotBaseService {
 
                 if (userRobot.hasCanceledPositions) {
                     this.log.error(`User Robot #${userRobot.id} has canceled positions!`);
+                    for (const pos of userRobot.canceledPositions) {
+                        this.robots[robotId].robot.handleTradeCancelation(pos.code);
+                    }
                 }
 
                 if (userRobot.hasClosedPositions) {
@@ -1000,6 +1003,7 @@ export class UserRobotBaseService extends RobotBaseService {
 
                 if (userRobot.recentTrades.length) {
                     for (const trade of userRobot.recentTrades) {
+                        if (trade.exitExecuted > 0) this.robots[robotId].robot.handleEntryTradeConfirmation(trade);
                         const tradeEvent: NewEvent<UserTradeEvent> = {
                             type: UserTradeEvents.TRADE,
                             data: trade
@@ -1024,7 +1028,7 @@ export class UserRobotBaseService extends RobotBaseService {
                     }
                 }
 
-                await saveUserRobotState(t, userRobot.state);
+                await saveUserRobotState(t, { ...userRobot.state, robotState: this.robots[robotId].robot.robotState });
 
                 if (userRobot.status === UserRobotStatus.stopped) await this.deleteUserRobotJobsT(t, userRobot.id);
                 else await this.deleteUserRobotJobT(t, job.id);

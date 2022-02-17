@@ -333,6 +333,10 @@ export class RobotPosition {
         });
     }
 
+    _setEntryPrice(price: number) {
+        this._entryPrice = price;
+    }
+
     get _nextAlertNumb() {
         return Object.keys(this._alerts).length + 1;
     }

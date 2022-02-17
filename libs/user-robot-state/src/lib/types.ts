@@ -171,6 +171,7 @@ export interface UserTradeEvent extends UserRobotEventData {
     asset: string;
     currency: string;
     userRobotId: string;
+    positionId?: string;
     userPositionId: string;
     userPortfolioId?: string;
     userId: string;
