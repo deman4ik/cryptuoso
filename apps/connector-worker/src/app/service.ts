@@ -207,11 +207,12 @@ export default class ConnectorRunnerService extends BaseService {
     #saveNextJob = async (transaction: DatabaseTransactionConnectionType, nextJob: ConnectorJob) => {
         try {
             return transaction.query(sql`
-        INSERT INTO connector_jobs (id, user_ex_acc_id, order_id, next_job_at, priority, type, data )
+        INSERT INTO connector_jobs (id, user_ex_acc_id, order_id, next_job_at, priority, type, data, allocation )
         VALUES (${nextJob.id}, ${nextJob.userExAccId}, 
         ${nextJob.orderId}, ${nextJob.nextJobAt || null}, 
         ${nextJob.priority || 3}, ${nextJob.type}, 
-        ${JSON.stringify(nextJob.data) || null});
+        ${JSON.stringify(nextJob.data) || null},
+        'shared');
         `);
         } catch (error) {
             this.log.error("saveNextJob error", error, nextJob);

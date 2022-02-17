@@ -109,11 +109,12 @@ export default class ConnectorRunnerService extends HTTPService {
         const { userExAccId, type, orderId } = nextJob;
 
         await this.db.pg.query(sql`
-        INSERT INTO connector_jobs (id, user_ex_acc_id, order_id, next_job_at, priority, type, data )
+        INSERT INTO connector_jobs (id, user_ex_acc_id, order_id, next_job_at, priority, type, data, allocation )
         VALUES (${nextJob.id}, ${nextJob.userExAccId}, 
         ${nextJob.orderId}, ${nextJob.nextJobAt}, 
         ${nextJob.priority}, ${nextJob.type}, 
-        ${JSON.stringify(nextJob.data) || null});
+        ${JSON.stringify(nextJob.data) || null},
+        'shared');
         `);
 
         await this.queueJob(userExAccId, ConnectorJobType.order);

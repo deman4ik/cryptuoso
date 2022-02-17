@@ -7,7 +7,6 @@ import {
     UserRobotJob,
     UserRobotStatus
 } from "@cryptuoso/user-robot-state";
-import { UserRobotTask } from "@cryptuoso/robot";
 
 export const USER_ROBOT_RUNNER_TOPIC = "in-user-robot-runner";
 
@@ -265,7 +264,7 @@ export interface UserRobotWorkerError {
     userPortfolioId?: string;
     timestamp: string;
     error: string;
-    job?: UserRobotJob | UserRobotTask;
+    job?: UserRobotJob;
 }
 
 export interface UserRobotWorkerStatus {

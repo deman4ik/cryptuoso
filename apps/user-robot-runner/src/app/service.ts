@@ -203,11 +203,13 @@ export default class UserRobotRunnerService extends HTTPService {
         (
             user_robot_id,
             type,
-            data
+            data,
+            allocation
         ) VALUES (
             ${userRobotId},
             ${type},
-            ${JSON.stringify(data) || null}
+            ${JSON.stringify(data) || null},
+            'shared'
         )
         ON CONFLICT ON CONSTRAINT user_robot_jobs_user_robot_id_type_data_key 
          DO UPDATE SET updated_at = now(),
@@ -353,7 +355,8 @@ export default class UserRobotRunnerService extends HTTPService {
                 type: UserRobotJobType.stop,
                 data: {
                     message: message || null
-                }
+                },
+                allocation: "shared"
             },
             userRobot.status
         );
@@ -418,7 +421,8 @@ export default class UserRobotRunnerService extends HTTPService {
                         type: UserRobotJobType.pause,
                         data: {
                             message
-                        }
+                        },
+                        allocation: "shared"
                     },
                     status
                 );
@@ -506,7 +510,8 @@ export default class UserRobotRunnerService extends HTTPService {
                     {
                         userRobotId: id,
                         type: UserRobotJobType.signal,
-                        data: latestSignal
+                        data: latestSignal,
+                        allocation: "shared"
                     },
                     UserRobotStatus.started
                 );
@@ -759,7 +764,8 @@ export default class UserRobotRunnerService extends HTTPService {
                     type: UserRobotJobType.stop,
                     data: {
                         message: message || null
-                    }
+                    },
+                    allocation: "shared"
                 },
                 userRobot.status
             );
@@ -945,7 +951,8 @@ export default class UserRobotRunnerService extends HTTPService {
                     {
                         userRobotId: id,
                         type: UserRobotJobType.signal,
-                        data: signal
+                        data: signal,
+                        allocation: "shared"
                     },
                     status
                 )
@@ -965,7 +972,8 @@ export default class UserRobotRunnerService extends HTTPService {
             {
                 userRobotId: userRobot.id,
                 type: UserRobotJobType.order,
-                data: event
+                data: event,
+                allocation: "shared"
             },
             userRobot.status
         );
@@ -1069,7 +1077,8 @@ export default class UserRobotRunnerService extends HTTPService {
                             userPositionId: idleOrder.userPositionId,
                             positionId: idleOrder.positionId,
                             status: idleOrder.status
-                        }
+                        },
+                        allocation: "shared"
                     },
                     idleOrder.userRobotStatus
                 );

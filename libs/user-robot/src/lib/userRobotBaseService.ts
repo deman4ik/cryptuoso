@@ -322,7 +322,7 @@ export class UserRobotBaseService extends RobotBaseService {
             ${nextJob.userRobotId},
             ${nextJob.type},
             ${JSON.stringify(nextJob.data) || null},
-            ${nextJob.allocation}
+            'dedicated'
         )
         ON CONFLICT ON CONSTRAINT user_robot_jobs_user_robot_id_type_data_key 
          DO UPDATE SET updated_at = now(),
