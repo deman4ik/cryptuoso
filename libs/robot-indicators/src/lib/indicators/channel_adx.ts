@@ -11,7 +11,7 @@ export class ChannelADX extends BaseIndicator {
             optInTimePeriod: number;
         };
     }
-    parametersSchema = {
+    _parametersSchema = {
         ratio: {
             description: "Ratio",
             type: "number",

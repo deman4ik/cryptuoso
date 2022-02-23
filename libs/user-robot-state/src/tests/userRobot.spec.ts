@@ -47,6 +47,7 @@ describe("Test User Robot", () => {
             startedAt: dayjs.utc("2019-10-25T00:00:00.000Z").toISOString(),
             positions: [],
             currentPrice: 6500,
+            allocation: "shared",
             ...robotParams
         });
     });
@@ -1996,6 +1997,7 @@ describe("Test User Robot", () => {
             startedAt: dayjs.utc("2019-10-25T00:00:00.000Z").toISOString(),
             positions: [],
             currentPrice: 6500,
+            allocation: "shared",
             ...robotParams,
             settings: {
                 ...robotParams.settings,
@@ -2034,6 +2036,7 @@ describe("Test User Robot", () => {
             startedAt: dayjs.utc("2019-10-25T00:00:00.000Z").toISOString(),
             positions: [],
             currentPrice: 6500,
+            allocation: "shared",
             ...robotParams,
             settings: {
                 ...robotParams.settings,

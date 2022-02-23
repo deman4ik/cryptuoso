@@ -1,7 +1,3 @@
-import { OrdersStatusEvent } from "@cryptuoso/connector-events";
-import { SignalEvent } from "@cryptuoso/market";
-import { UserRobotJobType } from "@cryptuoso/user-robot-state";
-
 export const enum ExwatcherStatus {
     pending = "pending",
     importing = "importing",

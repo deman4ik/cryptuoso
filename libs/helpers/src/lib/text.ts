@@ -14,7 +14,8 @@ export const capitalize = (string: string) => string.charAt(0).toUpperCase() + s
  * @example
  * toCamelCase("underscore_key"); // underscoreKey
  */
-export const toCamelCase = (str: string) => {
+export const toCamelCase = (str: string, separator = "_") => {
+    if (separator && !str.includes(separator)) return str;
     const s =
         str &&
         str

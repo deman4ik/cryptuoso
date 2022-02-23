@@ -13,7 +13,7 @@ export class Parabolic extends BaseStrategy {
             lookback: number;
         };
     }
-    parametersSchema = {
+    _parametersSchema = {
         distInit: {
             description: "Stop init",
             type: "number",

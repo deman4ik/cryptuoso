@@ -3,7 +3,6 @@ import { Exwatcher, ExwatcherStatus, RobotBaseService, RobotBaseServiceConfig } 
 import { UserPortfolioState } from "@cryptuoso/portfolio-state";
 import { ExchangeCandle, Order, OrderJobType, OrderStatus, SignalEvent } from "@cryptuoso/market";
 import {
-    saveUserOrders,
     saveUserPositions,
     saveUserRobotState,
     UserRobot,
@@ -39,13 +38,17 @@ import { BaseError } from "@cryptuoso/errors";
 import { UserExchangeAccBalances, UserExchangeAccount, UserExchangeAccStatus } from "@cryptuoso/user-state";
 import { decrypt, PrivateConnector } from "@cryptuoso/ccxt-private";
 import { SlonikError } from "slonik";
+import {
+    PortfolioManagerOutEvents,
+    PortfolioManagerOutSchema,
+    PortfolioManagerSyncUserPortfolioDedicatedRobots
+} from "@cryptuoso/portfolio-events";
 
 export interface UserRobotBaseServiceConfig extends RobotBaseServiceConfig {
     userPortfolioId: string;
 }
 
 export class UserRobotBaseService extends RobotBaseService {
-    #userPortfolioId: string;
     #userPortfolio: UserPortfolioState;
     #userExAcc: UserExchangeAccount;
     #keys: {
@@ -55,7 +58,7 @@ export class UserRobotBaseService extends RobotBaseService {
     #userConnector: PrivateConnector;
     #userRobotJobs: UserRobotJob[] = [];
     #connectorJobs: ConnectorJob[] = [];
-    #orders: { [key: string]: Order };
+    #orders: { [key: string]: Order } = {};
     robots: {
         [id: string]: { robot: Robot; userRobot: UserRobot; locked: boolean };
     } = {};
@@ -68,19 +71,36 @@ export class UserRobotBaseService extends RobotBaseService {
     #cronCheckUnknownOrders: cron.ScheduledTask = cron.schedule("0 15 */12 * * *", this.checkBalance.bind(this), {
         scheduled: false
     });
-    constructor(config: UserRobotBaseServiceConfig) {
+    constructor(config?: UserRobotBaseServiceConfig) {
         super(config);
 
-        this.#userPortfolioId = config.userPortfolioId || process.env.USER_PORTFOLIO_ID;
-
-        //TODO: handle portfolio builded event
+        //TODO: start/stop portfolio
         //TODO: handle user exchange acc changed
+
+        this.events.subscribe({
+            [PortfolioManagerOutEvents.SYNC_USER_PORTFOLIO_DEDICATED_ROBOTS]: {
+                schema: PortfolioManagerOutSchema[PortfolioManagerOutEvents.SYNC_USER_PORTFOLIO_DEDICATED_ROBOTS],
+                handler: this.syncUserPortfolioRobots.bind(this)
+            }
+        });
+
         this.addOnStopHandler(this.onUserServiceStop);
     }
 
     async onServiceStarted() {
         await this.getUserPortfolio();
         await this.getUserConnector();
+
+        if (this.#userPortfolio.status === "started") {
+            await this.startUserServiceProcessing();
+        }
+    }
+
+    async startUserServiceProcessing() {
+        this.#connectorJobsTimer = setTimeout(this.runConnectorJobs.bind(this), 0);
+        this.#userRobotJobsTimer = setTimeout(this.runUserRobotJobs.bind(this), 0);
+        this.#cronCheckBalance.start();
+        this.#cronCheckUnknownOrders.start();
         await this.startRobotService();
     }
 
@@ -103,6 +123,15 @@ export class UserRobotBaseService extends RobotBaseService {
             this.saveCandlesHistory({ ...props });
         }
     }
+
+    async saveRobotState(transaction: DatabaseTransactionConnectionType, state: RobotState) {
+        const userRobotId = this.getUserRobotIdByRobotId(state.id);
+        await transaction.query(sql`
+            UPDATE user_robots
+               SET robot_state = ${JSON.stringify(state) || null}
+             WHERE id = ${userRobotId};
+        `);
+    }
     //#endregion
 
     //#region Getters
@@ -113,6 +142,12 @@ export class UserRobotBaseService extends RobotBaseService {
     getUserRobotIdByRobotId(robotId: string) {
         return this.robots[robotId].userRobot.id;
     }
+
+    getCurrentPrice(asset: string, currency: string) {
+        const exwatcherId = this.createExwatcherId(asset, currency);
+        return this.candlesCurrent[exwatcherId][1440].close;
+    }
+
     //#endregion
 
     //#region Select Queries
@@ -124,17 +159,15 @@ export class UserRobotBaseService extends RobotBaseService {
               p.user_portfolio_settings as settings,
               p.robots 
            FROM v_user_portfolios p
-           WHERE p.id = ${this.#userPortfolioId}; 
+           WHERE p.id = ${this.userPortfolioId}; 
        `);
 
         if (userPortfolio.allocation !== "dedicated")
-            throw new Error(`User Portfolios #${this.#userPortfolioId} allocation must be 'dedicated'`);
+            throw new Error(`User Portfolios #${this.userPortfolioId} allocation must be 'dedicated'`);
 
         if (userPortfolio.exchange !== this.exchange)
             throw new Error(
-                `User Portfolios #${this.#userPortfolioId} exchange (${
-                    userPortfolio.exchange
-                }) is not service exchange (${this.exchange})`
+                `User Portfolios #${this.userPortfolioId} exchange (${userPortfolio.exchange}) is not service exchange (${this.exchange})`
             );
 
         this.#userPortfolio = userPortfolio;
@@ -152,9 +185,6 @@ export class UserRobotBaseService extends RobotBaseService {
         });
         await this.#userConnector.initConnector();
         await this.getConnectorJobs();
-        this.#connectorJobsTimer = setTimeout(this.runConnectorJobs.bind(this), 0);
-        this.#cronCheckBalance.start();
-        this.#cronCheckUnknownOrders.start();
     }
 
     async getUserExAcc() {
@@ -164,7 +194,7 @@ export class UserRobotBaseService extends RobotBaseService {
          WHERE id = ${this.#userPortfolio.userExAccId}
          `);
             if (userExAcc.allocation !== "dedicated")
-                throw new Error(`User Exchange Account's #${this.#userPortfolioId} allocation must be 'dedicated'`);
+                throw new Error(`User Exchange Account's #${this.userPortfolioId} allocation must be 'dedicated'`);
             if (userExAcc.exchange !== this.exchange)
                 throw new Error(
                     `User Exchange Account's #${this.#userPortfolio.userExAccId} exchange (${
@@ -211,7 +241,7 @@ export class UserRobotBaseService extends RobotBaseService {
         FROM user_robots ur, robots r
         WHERE ur.robot_id = r.id
         AND ur.status = 'started'
-        AND ur.user_portfolio_id = ${this.#userPortfolioId};`);
+        AND ur.user_portfolio_id = ${this.userPortfolioId};`);
 
         return markets.map((m) => ({
             ...m,
@@ -232,6 +262,39 @@ export class UserRobotBaseService extends RobotBaseService {
     }
 
     //#region Orders
+
+    async saveUserOrderT(t: DatabaseTransactionConnectionType, order: Order) {
+        await t.query(sql`
+            INSERT INTO user_orders
+            (
+                id, user_ex_acc_id, user_robot_id, 
+                position_id, user_position_id,
+                prev_order_id,
+                exchange, asset, currency,
+                action, direction, type,
+                signal_price, price, 
+                volume, status, 
+                ex_id, ex_timestamp, ex_last_trade_at,
+                remaining, executed, fee, 
+                last_checked_at, params,
+                error, next_job, meta
+            ) VALUES (
+                ${order.id}, ${order.userExAccId}, ${order.userRobotId},
+                ${order.positionId || null}, ${order.userPositionId},
+                ${order.prevOrderId || null},
+                ${order.exchange}, ${order.asset}, ${order.currency},
+                ${order.action}, ${order.direction}, ${order.type}, 
+                ${order.signalPrice || null}, ${order.price || null},
+                ${order.volume}, ${order.status},
+                ${order.exId || null}, ${order.exTimestamp || null}, ${order.exLastTradeAt || null},
+                ${order.remaining || null}, ${order.executed || null}, ${order.fee || null},
+                ${order.lastCheckedAt || null}, ${JSON.stringify(order.params) || null},
+                ${order.error || null}, ${JSON.stringify(order.nextJob) || null},
+                ${JSON.stringify(order.meta) || JSON.stringify({})}
+            );
+            `);
+        this.#orders[order.id] = order;
+    }
 
     async updateOrderT(t: DatabaseTransactionConnectionType, order: Order) {
         try {
@@ -281,7 +344,7 @@ export class UserRobotBaseService extends RobotBaseService {
         VALUES (${nextJob.id}, ${nextJob.userExAccId}, 
         ${nextJob.orderId}, ${nextJob.nextJobAt || null}, 
         ${nextJob.priority || 3}, ${nextJob.type}, 
-        'dedicated',
+        ${"dedicated"},
         ${JSON.stringify(nextJob.data) || null});
         `);
 
@@ -322,7 +385,7 @@ export class UserRobotBaseService extends RobotBaseService {
             ${nextJob.userRobotId},
             ${nextJob.type},
             ${JSON.stringify(nextJob.data) || null},
-            'dedicated'
+            ${"dedicated"}
         )
         ON CONFLICT ON CONSTRAINT user_robot_jobs_user_robot_id_type_data_key 
          DO UPDATE SET updated_at = now(),
@@ -364,13 +427,14 @@ export class UserRobotBaseService extends RobotBaseService {
         try {
             const currentDate = dayjs.utc().valueOf();
             const unlockedOrders = Object.values(this.#orders)
-                .filter(({ locked }) => locked === false)
+                .filter(({ locked }) => locked !== true)
                 .map(({ id }) => id);
             const freeJobs = this.#connectorJobs.filter(
                 ({ orderId, nextJobAt }) =>
                     unlockedOrders.includes(orderId) && dayjs.utc(nextJobAt).valueOf() <= currentDate
             );
             if (freeJobs.length) {
+                this.log.debug(`Processing ${freeJobs.length} connector jobs`);
                 const orderIds = uniqueElementsBy(freeJobs, (a, b) => a.orderId === b.orderId).map(
                     ({ orderId }) => orderId
                 );
@@ -457,7 +521,7 @@ export class UserRobotBaseService extends RobotBaseService {
                         !order.error
                     ) {
                         await this.addUserRobotJob({
-                            id: "dedicated",
+                            id: uuid(),
                             userRobotId: order.userRobotId,
                             type: UserRobotJobType.order,
                             data: {
@@ -497,10 +561,10 @@ export class UserRobotBaseService extends RobotBaseService {
                         //e.message.includes("Margin is insufficient") ||
                         //e.message.includes("EOrder:Insufficient initial margin") ||
                         //e.message.includes("balance-insufficient") ||
-                        e.message.includes("EAPI:Invalid key") ||
-                        e.message.includes("Invalid API-key") ||
-                        e.message.includes("Failed to save order") ||
-                        e.message.includes("Could not find a key")
+                        e.message?.includes("EAPI:Invalid key") ||
+                        e.message?.includes("Invalid API-key") ||
+                        e.message?.includes("Failed to save order") ||
+                        e.message?.includes("Could not find a key")
                     ) {
                         await this.events.emit<UserExchangeAccountErrorEvent>({
                             type: ConnectorWorkerEvents.USER_EX_ACC_ERROR,
@@ -602,7 +666,7 @@ export class UserRobotBaseService extends RobotBaseService {
                         };
                         await this.db.pg.transaction(async (t) => {
                             await this.updateOrderT(t, response.order);
-                            await saveUserOrders(t, [newOrder]);
+                            await this.saveUserOrderT(t, newOrder);
                         });
                         ({ order, nextJob } = await this.#userConnector.createOrder(newOrder));
                         return { order, nextJob };
@@ -675,8 +739,9 @@ export class UserRobotBaseService extends RobotBaseService {
     }
 
     async checkBalance() {
+        this.log.debug(`Checking balance`);
         const balances: UserExchangeAccBalances = await this.#userConnector.getBalances();
-
+        this.log.info(`Current balance - ${balances.totalUSD}$`);
         await this.db.pg.query(sql`
         UPDATE user_exchange_accs SET balances = ${JSON.stringify(balances) || null}
         WHERE id = ${this.#userExAcc.id};
@@ -685,6 +750,7 @@ export class UserRobotBaseService extends RobotBaseService {
     }
 
     async checkUnknownOrders() {
+        this.log.debug(`Checking Unknown Orders`);
         const pairs: { asset: string; currency: string }[] = uniqueElementsBy(
             Object.values(this.robots).map(({ robot }) => ({ asset: robot._asset, currency: robot._currency })),
             (a, b) => a.asset === b.asset && a.currency === b.currency
@@ -708,6 +774,8 @@ export class UserRobotBaseService extends RobotBaseService {
                                 userExAccId: this.#userExAcc.id,
                                 info: JSON.stringify(o.info)
                             }));
+
+                        this.log.warn(`Found ${unknownOrders.length} Unknown Orders`);
                         await this.db.pg.query(sql`
                         INSERT INTO user_orders_unknown (
                             user_ex_acc_id,
@@ -782,12 +850,37 @@ export class UserRobotBaseService extends RobotBaseService {
     //#endregion
 
     //#region User Robots
+    async syncUserPortfolioRobots({ userPortfolioId }: PortfolioManagerSyncUserPortfolioDedicatedRobots) {
+        if (userPortfolioId !== this.userPortfolioId) return;
+        await this.unsubscribeUserRobots();
+        await this.resubscribe();
+        await this.resubscribeUserRobots();
+    }
+
     async subscribeRobots({ asset, currency }: Exwatcher) {
         const rawData = await this.db.pg.any<UserRobotStateExt>(sql`
         SELECT * FROM v_user_robot_state WHERE status = 'started'
-         AND user_portfolio_id = ${this.#userPortfolioId}
+         AND user_portfolio_id = ${this.userPortfolioId}
          AND asset = ${asset}
          AND currency = ${currency};                   
+      `);
+
+        const userRobots = keysToCamelCase(rawData) as UserRobotStateExt[];
+
+        await Promise.all(
+            userRobots.map(async (userRobot) => {
+                if (!this.robots[userRobot.robotId]) {
+                    await this.subscribeUserRobot(userRobot);
+                }
+            })
+        );
+    }
+
+    async resubscribeUserRobots() {
+        const rawData = await this.db.pg.any<UserRobotStateExt>(sql`
+        SELECT * FROM v_user_robot_state WHERE status = 'started'
+         AND user_portfolio_id = ${this.userPortfolioId}
+         AND robot_id not in (${sql.join(Object.keys(this.robots), sql`, `)});                   
       `);
 
         const userRobots = keysToCamelCase(rawData) as UserRobotStateExt[];
@@ -846,26 +939,67 @@ export class UserRobotBaseService extends RobotBaseService {
                         activeFrom: robotState.settings.activeFrom
                     }
                 });
-                this.robots[robotId].robot.setStrategyState();
                 this.robots[robotId].robot.initStrategy();
-                this.robots[robotId].robot.setIndicatorsState();
                 this.robots[robotId].robot.initIndicators();
             } else {
                 this.robots[robotId].robot = new Robot(userRobot.robotState);
             }
 
+            if (userRobot.positions && Array.isArray(userRobot.positions) && userRobot.positions.length) {
+                for (const { entryOrders, exitOrders } of userRobot.positions) {
+                    if (entryOrders && Array.isArray(entryOrders) && entryOrders.length) {
+                        const openEntryOrders = entryOrders.filter(
+                            ({ status }: Order) => status === OrderStatus.new || status === OrderStatus.open
+                        );
+                        for (const order of openEntryOrders) {
+                            this.#orders[order.id] = order;
+                        }
+                    }
+                    if (exitOrders && Array.isArray(exitOrders) && exitOrders.length) {
+                        const openExitOrders = exitOrders.filter(
+                            ({ status }: Order) => status === OrderStatus.new || status === OrderStatus.open
+                        );
+                        for (const order of openExitOrders) {
+                            this.#orders[order.id] = order;
+                        }
+                    }
+                }
+            }
+
             await this.getUserRobotJobs(userRobot.id);
+
             this.initActiveRobotAlerts(robotId);
             if (this.robots[robotId].robot.status !== RobotStatus.started) {
                 this.robots[robotId].robot.start();
             }
             this.robots[robotId].locked = false;
             this.log.info(`Robot #${robotId} is subscribed!`);
-            this.#userRobotJobsTimer = setTimeout(this.runUserRobotJobs.bind(this), 0);
         } catch (err) {
             this.log.error(`Failed to subscribe #${robotId} robot ${err.message}`);
             throw err;
         }
+    }
+
+    async unsubscribeUserRobots() {
+        const inactiveUserRobots = await this.db.pg.any<{ id: string }>(sql`
+            SELECT id 
+            FROM user_robots 
+            WHERE user_portfolio_id = ${this.userPortfolioId}
+            AND (settings->'active')::boolean = false
+        `);
+
+        await Promise.all(
+            inactiveUserRobots.map(
+                async ({ id }) =>
+                    await this.addUserRobotJob({
+                        id: uuid(),
+                        userRobotId: id,
+                        type: UserRobotJobType.disable,
+                        data: null,
+                        allocation: "dedicated"
+                    })
+            )
+        );
     }
 
     async handleSignal(signal: SignalEvent) {
@@ -878,14 +1012,24 @@ export class UserRobotBaseService extends RobotBaseService {
         });
     }
 
+    //TODO: run on event
     async runUserRobotJobs() {
         const beacon = this.lightship.createBeacon();
         try {
-            if (this.#userRobotJobs.length) {
-                const userRobotIds = uniqueElementsBy(
-                    this.#userRobotJobs,
-                    (a, b) => a.userRobotId === b.userRobotId
-                ).map(({ userRobotId }) => userRobotId);
+            const unlockedUserRobots = Object.values(this.robots)
+                .filter(
+                    ({ locked, userRobot }) =>
+                        locked === false &&
+                        userRobot.status !== UserRobotStatus.paused &&
+                        userRobot.status !== UserRobotStatus.stopped
+                )
+                .map(({ userRobot }) => userRobot.id);
+            const freeJobs = this.#userRobotJobs.filter(({ userRobotId }) => unlockedUserRobots.includes(userRobotId));
+            if (freeJobs.length) {
+                this.log.debug(`Processing ${freeJobs.length} user robot jobs`);
+                const userRobotIds = uniqueElementsBy(freeJobs, (a, b) => a.userRobotId === b.userRobotId).map(
+                    ({ userRobotId }) => userRobotId
+                );
 
                 await Promise.all(userRobotIds.map((userRobotId) => this.processUserRobotJobs(userRobotId)));
             }
@@ -894,7 +1038,7 @@ export class UserRobotBaseService extends RobotBaseService {
         } finally {
             await beacon.die();
             if (!this.lightship.isServerShuttingDown()) {
-                this.#connectorJobsTimer = setTimeout(this.runUserRobotJobs.bind(this), 1000);
+                this.#userRobotJobsTimer = setTimeout(this.runUserRobotJobs.bind(this), 1000);
             }
         }
     }
@@ -921,26 +1065,38 @@ export class UserRobotBaseService extends RobotBaseService {
     }
 
     async processUserRobot(job: UserRobotJob) {
+        this.log.debug(`Processing #${job.userRobotId} user robot job ${job.type}`);
         const { userRobotId, type, data } = job;
         const robotId = this.getRobotIdByUserRobotId(userRobotId);
         const userRobot = this.robots[robotId].userRobot;
+        const userRobotSettings = getCurrentUserRobotSettings({
+            settings: userRobot._settings,
+            currentPrice: this.getCurrentPrice(userRobot._asset, userRobot._currency),
+            totalBalanceUsd: this.#userExAcc.balances.totalUSD,
+            userPortfolioId: this.userPortfolioId,
+            userPortfolio: {
+                settings: this.#userPortfolio.settings
+            },
+            limits: userRobot._limits,
+            precision: userRobot._precision
+        });
+        userRobot.settings = userRobotSettings;
+        if (userRobot.status === UserRobotStatus.paused) return;
         try {
-            while (this.robots[robotId].locked) {
-                await sleep(200);
-            }
-            this.lockRobot(robotId);
             const eventsToSend: NewEvent<any>[] = [];
             if (type === UserRobotJobType.signal) {
                 userRobot.handleSignal(data as SignalEvent);
             } else if (type === UserRobotJobType.order) {
-                const order = data as OrdersStatusEvent;
-
-                userRobot.handleOrder(order);
+                const orderStatusEvent = data as OrdersStatusEvent;
+                const order = this.#orders[orderStatusEvent.orderId];
+                if (!userRobot._positions[order.userPositionId]) return;
+                userRobot._positions[order.userPositionId].handleOrder(order);
+                userRobot.handleOrder(orderStatusEvent);
             } else if (type === UserRobotJobType.stop) {
-                if (userRobot.status === UserRobotStatus.stopped) return;
+                //  if (userRobot.status === UserRobotStatus.stopped) return;
                 userRobot.stop(data as { message?: string });
             } else if (type === UserRobotJobType.pause) {
-                if (userRobot.status === UserRobotStatus.paused || userRobot.status === UserRobotStatus.stopped) return;
+                //  if (userRobot.status === UserRobotStatus.paused || userRobot.status === UserRobotStatus.stopped) return;
                 userRobot.pause(data as { message?: string });
                 const pausedEvent: NewEvent<UserRobotWorkerStatus> = {
                     type: UserRobotWorkerEvents.PAUSED,
@@ -949,10 +1105,12 @@ export class UserRobotBaseService extends RobotBaseService {
                         timestamp: dayjs.utc().toISOString(),
                         status: UserRobotStatus.paused,
                         message: userRobot.message,
-                        userPortfolioId: this.#userPortfolioId
+                        userPortfolioId: this.userPortfolioId
                     }
                 };
                 eventsToSend.push(pausedEvent);
+            } else if (type === UserRobotJobType.disable) {
+                userRobot.disable();
             } else throw new BaseError(`Unknown user robot job type "${type}"`, job);
 
             if (
@@ -967,7 +1125,7 @@ export class UserRobotBaseService extends RobotBaseService {
                         timestamp: userRobot.stoppedAt,
                         status: UserRobotStatus.stopped,
                         message: userRobot.message,
-                        userPortfolioId: this.#userPortfolioId
+                        userPortfolioId: this.userPortfolioId
                     }
                 };
                 eventsToSend.push(stoppedEvent);
@@ -982,7 +1140,7 @@ export class UserRobotBaseService extends RobotBaseService {
                 }
 
                 if (userRobot.hasCanceledPositions) {
-                    this.log.error(`User Robot #${userRobot.id} has canceled positions!`);
+                    this.log.warn(`User Robot #${userRobot.id} has canceled positions!`);
                     for (const pos of userRobot.canceledPositions) {
                         this.robots[robotId].robot.handleTradeCancelation(pos.code);
                     }
@@ -994,7 +1152,7 @@ export class UserRobotBaseService extends RobotBaseService {
                             type: TradeStatsRunnerEvents.USER_ROBOT,
                             data: {
                                 userRobotId: userRobot.id,
-                                userPortfolioId: this.#userPortfolioId
+                                userPortfolioId: this.userPortfolioId
                             }
                         };
                         eventsToSend.push(tradeStatsEvent);
@@ -1003,7 +1161,7 @@ export class UserRobotBaseService extends RobotBaseService {
 
                 if (userRobot.recentTrades.length) {
                     for (const trade of userRobot.recentTrades) {
-                        if (trade.exitExecuted > 0) this.robots[robotId].robot.handleEntryTradeConfirmation(trade);
+                        if (trade.exitExecuted === 0) this.robots[robotId].robot.handleEntryTradeConfirmation(trade);
                         const tradeEvent: NewEvent<UserTradeEvent> = {
                             type: UserTradeEvents.TRADE,
                             data: trade
@@ -1018,17 +1176,17 @@ export class UserRobotBaseService extends RobotBaseService {
                     await saveUserPositions(t, userRobot.positions);
 
                     if (userRobot.ordersToCreate.length) {
-                        await saveUserOrders(t, userRobot.ordersToCreate);
-                    }
-
-                    if (userRobot.connectorJobs.length) {
-                        for (const connectorJob of userRobot.connectorJobs) {
-                            await this.addConnectorJobT(t, connectorJob);
+                        for (const newOrder of userRobot.ordersToCreate) {
+                            await this.saveUserOrderT(t, newOrder);
                         }
                     }
                 }
 
-                await saveUserRobotState(t, { ...userRobot.state, robotState: this.robots[robotId].robot.robotState });
+                await saveUserRobotState(t, {
+                    ...userRobot.state,
+                    robotState:
+                        userRobot.status !== UserRobotStatus.stopped ? this.robots[robotId].robot.robotState : null
+                });
 
                 if (userRobot.status === UserRobotStatus.stopped) await this.deleteUserRobotJobsT(t, userRobot.id);
                 else await this.deleteUserRobotJobT(t, job.id);
@@ -1055,7 +1213,7 @@ export class UserRobotBaseService extends RobotBaseService {
             return userRobot.status;
         } catch (err) {
             this.log.error(`Failed to process User Robot's #${userRobot.id} ${type} job - ${err.message}`);
-
+            this.log.error(err);
             if (err instanceof SlonikError) {
                 try {
                     await this.updateUserRobotJob({ ...job, retries: job.retries ? job.retries + 1 : 1 });
@@ -1069,7 +1227,7 @@ export class UserRobotBaseService extends RobotBaseService {
                     type: UserRobotWorkerEvents.ERROR,
                     data: {
                         userRobotId: userRobot.id,
-                        userPortfolioId: this.#userPortfolioId,
+                        userPortfolioId: this.userPortfolioId,
                         timestamp: dayjs.utc().toISOString(),
                         error: err.message,
                         job
@@ -1089,6 +1247,7 @@ export class UserRobotBaseService extends RobotBaseService {
                         message: err.message
                     }
                 });
+                this.robots[robotId].robot._status = RobotStatus.stopped;
             }
         }
     }

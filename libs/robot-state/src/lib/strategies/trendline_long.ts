@@ -85,7 +85,7 @@ export class TrendlineLong extends BaseStrategy {
             peaks: number;
         };
     }
-    parametersSchema = {
+    _parametersSchema = {
         stop: {
             description: "Stop %",
             type: "number",

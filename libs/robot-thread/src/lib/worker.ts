@@ -20,8 +20,7 @@ export const worker = {
     async runStrategy(robotState: RobotStateBuffer) {
         try {
             const robot = new Robot(robotState.state);
-            robot.setStrategyState();
-            robot.setIndicatorsState();
+
             const candles = [...robotState.candles] as Candle[];
             robot.handleHistoryCandles(candles);
             const processed = robot.handleCandle(candles[candles.length - 1]);

@@ -9,7 +9,7 @@ export class HighestHigh extends BaseIndicator {
             seriesSize: number;
         };
     }
-    parametersSchema = {
+    _parametersSchema = {
         seriesSize: {
             description: "Highest Series Size",
             type: "number",

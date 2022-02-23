@@ -10,7 +10,7 @@ export class LowestLow extends BaseIndicator {
             optInTimePeriod: number;
         };
     }
-    parametersSchema = {
+    _parametersSchema = {
         seriesSize: {
             description: "Highest Series Size",
             type: "number",

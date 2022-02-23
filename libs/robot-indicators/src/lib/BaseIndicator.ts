@@ -28,7 +28,6 @@ export interface IndicatorState {
     parameters?: { [key: string]: number };
     variables?: { [key: string]: any };
     indicatorFunctions?: { [key: string]: () => any };
-    parametersSchema?: ValidationSchema;
 }
 
 export class BaseIndicator {
@@ -46,7 +45,7 @@ export class BaseIndicator {
         [key: string]: any;
     };
     _parametersSchema: ValidationSchema;
-    _eventsToSend: NewEvent<any>[];
+    _eventsToSend: NewEvent<any>[] = [];
     //result: number | number[];
     _log = logger.debug.bind(logger);
     _strategySettings: StrategySettings;
@@ -84,9 +83,7 @@ export class BaseIndicator {
                 this[key] = value;
             });
         }
-        this._parametersSchema = state.parametersSchema;
         this._strategySettings = state.strategySettings || {};
-        this._eventsToSend = [];
         this._utils = {
             round,
             addPercent

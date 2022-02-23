@@ -37,8 +37,9 @@ export class UserRobot {
     _positions: GenericObject<UserPosition>;
     _message?: string;
     _userPortfolioId?: string;
-    _userPortfolio?: UserRobotState["userPortfolio"];
     _currentPrice?: number;
+    _limits: UserRobotState["limits"];
+    _precision: UserRobotState["precision"];
 
     constructor(state: UserRobotState) {
         this._id = state.id;
@@ -60,8 +61,9 @@ export class UserRobot {
         this._positions = {};
         this._setPositions(state.positions);
         this._userPortfolioId = state.userPortfolioId;
-        this._userPortfolio = state.userPortfolio;
         this._currentPrice = state.currentPrice;
+        this._limits = state.limits;
+        this._precision = state.precision;
     }
 
     get id() {
@@ -111,12 +113,14 @@ export class UserRobot {
             .map((pos) => pos.tradeEvent);
     }
 
-    get hasActivePositions() {
-        return (
-            this.positions.filter(
-                (pos) => pos.status === UserPositionStatus.new || pos.status === UserPositionStatus.open
-            ).length > 0
+    get activePositions() {
+        return this.positions.filter(
+            (pos) => pos.status === UserPositionStatus.new || pos.status === UserPositionStatus.open
         );
+    }
+
+    get hasActivePositions() {
+        return this.activePositions.length > 0;
     }
 
     get canceledPositions() {
@@ -137,6 +141,13 @@ export class UserRobot {
 
     get connectorJobs(): ConnectorJob[] {
         return flattenArray(Object.values(this._positions).map((pos) => pos.connectorJobs));
+    }
+
+    set settings(settings: UserRobotDB["settings"]) {
+        this._settings = settings;
+        Object.keys(this._positions).forEach((pos) => {
+            this._positions[pos]._settings = settings;
+        });
     }
 
     _setPositions(positions: UserPositionState[]) {
@@ -176,6 +187,11 @@ export class UserRobot {
             });
     }
 
+    disable() {
+        this._settings.active = false;
+        this._status = UserRobotStatus.stopping;
+    }
+
     setStop() {
         this._status = UserRobotStatus.stopped;
         this._stoppedAt = dayjs.utc().toISOString();
@@ -188,7 +204,7 @@ export class UserRobot {
     }
 
     handleSignal(signal: SignalEvent) {
-        logger.info("Handling signal", signal);
+        logger.info(`User Robot #${this._id} - Handling signal`, signal);
         if (signal.robotId !== this._robotId)
             throw new BaseError(
                 "Wrong robot id",
@@ -332,7 +348,7 @@ export class UserRobot {
             });
     }
 
-    handleOrder(order: OrdersStatusEvent) {
+    handleOrder(order: OrdersStatusEvent | Order) {
         if (order.userRobotId !== this._id)
             throw new BaseError(
                 "Wrong user robot id",

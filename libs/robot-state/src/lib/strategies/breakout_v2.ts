@@ -13,7 +13,7 @@ export class Breakoutv2 extends BaseStrategy {
             orderTakeProfit: number;
         };
     }
-    parametersSchema = {
+    _parametersSchema = {
         adxPeriod: {
             description: "ADX period",
             type: "number",

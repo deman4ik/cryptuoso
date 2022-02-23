@@ -10,7 +10,7 @@ export class DoubleReverseMM extends BaseStrategy {
             periodLow: number;
         };
     }
-    parametersSchema = {
+    _parametersSchema = {
         periodHigh: {
             description: "PeriodHigh",
             type: "number",

@@ -11,7 +11,7 @@ export class FXHighBand extends BaseIndicator {
             optInTimePeriod: number;
         };
     }
-    parametersSchema = {
+    _parametersSchema = {
         seriesSize: {
             description: "StdDev Series Size",
             type: "number",

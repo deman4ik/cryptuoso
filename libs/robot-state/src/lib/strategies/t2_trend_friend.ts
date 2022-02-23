@@ -12,7 +12,7 @@ export class T2TF extends BaseStrategy {
             minBarsToHold: number;
         };
     }
-    parametersSchema = {
+    _parametersSchema = {
         sma1: {
             description: "SMA 1 window length",
             type: "number",

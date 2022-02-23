@@ -12,7 +12,16 @@ export function getCurrentUserRobotSettings({
     limits,
     precision,
     userRobotSettings //TODO: deprecate
-}: UserRobotStateExt): UserRobotDB["settings"] {
+}: {
+    settings: UserRobotStateExt["settings"];
+    currentPrice?: UserRobotStateExt["currentPrice"];
+    totalBalanceUsd: UserRobotStateExt["totalBalanceUsd"];
+    userPortfolioId?: UserRobotStateExt["userPortfolioId"];
+    userPortfolio?: UserRobotStateExt["userPortfolio"];
+    limits?: UserRobotStateExt["limits"];
+    precision?: UserRobotStateExt["precision"];
+    userRobotSettings?: UserRobotStateExt["userRobotSettings"];
+}): UserRobotDB["settings"] {
     let volume: number;
     let volumeInCurrency: number;
     let balance;

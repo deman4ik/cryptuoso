@@ -1,6 +1,7 @@
 import { keysToCamelCase } from "@cryptuoso/helpers";
 import { Order } from "@cryptuoso/market";
 import { sql, DatabasePoolType, DatabaseTransactionConnectionType } from "@cryptuoso/postgres";
+import { RobotState } from "@cryptuoso/robot-state";
 
 import { UserPositionDB, UserRobotDB, UserRobotStateExt } from "./types";
 
@@ -13,7 +14,6 @@ export async function getUserRobotState(db: DatabasePoolType, userRobotId: strin
 
 export async function saveUserPositions(transaction: DatabaseTransactionConnectionType, positions: UserPositionDB[]) {
     for (const p of positions) {
-        this.log.info(p);
         await transaction.query(sql`
         INSERT INTO user_positions
   ( id, prefix, code,
@@ -81,7 +81,6 @@ export async function saveUserPositions(transaction: DatabaseTransactionConnecti
 
 export async function saveUserOrders(transaction: DatabaseTransactionConnectionType, orders: Order[]) {
     for (const order of orders) {
-        this.log.info(order);
         await transaction.query(sql`
         INSERT INTO user_orders
         (

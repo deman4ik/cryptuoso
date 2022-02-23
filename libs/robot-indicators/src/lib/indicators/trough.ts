@@ -10,7 +10,7 @@ export class Trough extends BaseIndicator {
             candleProp: "open" | "high" | "low" | "close";
         };
     }
-    parametersSchema = {
+    _parametersSchema = {
         reversalAmount: {
             type: "number",
             integer: true,

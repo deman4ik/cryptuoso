@@ -706,27 +706,35 @@ export class UserPosition {
         this.handleSignal(this._internalState.delayedSignal);
     }
 
-    /*handleOrder(order: Order) {
-    if (this._isActionEntry(order.action)) {
-      this._entryDate =
-        order.exLastTradeAt || order.exTimestamp || dayjs.utc().toISOString();
-      this._entryCandleTimestamp = Timeframe.validTimeframeDatePrev(
-        this._entryDate,
-        this._timeframe
-      );
-      this._updateEntry();
-    } else {
-      this._exitDate =
-        order.exLastTradeAt || order.exTimestamp || dayjs.utc().toISOString();
-      this._exitCandleTimestamp = Timeframe.validTimeframeDatePrev(
-        this._exitDate,
-        this._timeframe
-      );
-      this._updateExit();
-    }
+    handleOrder(order: Order) {
+        if (order.userRobotId !== this._userRobotId)
+            throw new BaseError(
+                "Wrong user robot id",
+                {
+                    order,
+                    userRobotId: this._userRobotId
+                },
+                "ERR_WRONG"
+            );
+        if (order.userPositionId !== this._id)
+            throw new BaseError(
+                "Wrong user position id",
+                {
+                    order,
+                    userPositionId: this._id
+                },
+                "ERR_WRONG"
+            );
+        if (this._isActionEntry(order.action)) {
+            this._entryOrders = [...this._entryOrders.filter(({ id }) => id !== order.id), order];
+            this._updateEntry();
+        } else {
+            this._exitOrders = [...this._exitOrders.filter(({ id }) => id !== order.id), order];
+            this._updateExit();
+        }
 
-    this._setStatus();
-  }*/
+        this._setStatus();
+    }
 
     _tryToOpen() {
         if (

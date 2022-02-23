@@ -11,7 +11,7 @@ export class IRSTS extends BaseStrategy {
             stopLoss: number;
         };
     }
-    parametersSchema = {
+    _parametersSchema = {
         reversal: {
             description: "Reversal %",
             type: "number",

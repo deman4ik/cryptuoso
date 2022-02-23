@@ -16,7 +16,8 @@ export const enum PortfolioManagerOutEvents {
     PORTFOLIO_BUILD_ERROR = "out-portfolio-manager.portfolio-build-error",
     USER_PORTFOLIO_BUILD_ERROR = "out-portfolio-manager.user-portfolio-build-error",
     SIGNAL_SUBSCRIPTION_BUILD_ERROR = "out-portfolio-manager.signal-subscription-build-error",
-    SIGNAL_SUBSCRIPTION_ERROR = "out-portfolio-manager.signal-subscription-error"
+    SIGNAL_SUBSCRIPTION_ERROR = "out-portfolio-manager.signal-subscription-error",
+    SYNC_USER_PORTFOLIO_DEDICATED_ROBOTS = "out-portfolio-manager.sync-user-portfolio-d-robots"
 }
 
 export const PortfolioManagerInSchema = {
@@ -62,6 +63,9 @@ export const PortfolioManagerOutSchema = {
         signalSubscriptionId: "uuid",
         error: "string",
         data: { type: "object", optional: true }
+    },
+    [PortfolioManagerOutEvents.SYNC_USER_PORTFOLIO_DEDICATED_ROBOTS]: {
+        userPortfolioId: "uuid"
     }
 };
 
@@ -114,4 +118,8 @@ export interface PortfolioManagerSignalSubscriptionError {
     signalSubscriptionId: string;
     error: string;
     data?: any;
+}
+
+export interface PortfolioManagerSyncUserPortfolioDedicatedRobots {
+    userPortfolioId: string;
 }

@@ -44,7 +44,7 @@ export class Robot {
     _lastCandle: Candle;
     _state: StrategyProps;
     _strategyInstance: BaseStrategy;
-    _indicatorInstances: { [key: string]: BaseIndicator };
+    _indicatorInstances: { [key: string]: BaseIndicator } = {};
     _hasAlerts: boolean;
     _baseIndicatorsCode: { [key: string]: IndicatorCode };
     _candle: Candle;
@@ -53,8 +53,8 @@ export class Robot {
     _status: RobotStatus;
     _startedAt: string;
     _stoppedAt: string;
-    _eventsToSend: NewEvent<any>[];
-    _postionsToSave: RobotPositionState[];
+    _eventsToSend: NewEvent<any>[] = [];
+    _postionsToSave: RobotPositionState[] = [];
     _backtest: boolean;
     _error: any;
     _stats?: TradeStats;
@@ -99,6 +99,10 @@ export class Robot {
             indicators: {},
             initialized: false
         };
+
+        this.setStrategyState();
+        this.setIndicatorsState();
+
         /* Действия для проверки */
         this._hasAlerts = nvl(state.hasAlerts, false);
 
@@ -114,9 +118,6 @@ export class Robot {
         this._startedAt = state.startedAt;
         this._stoppedAt = state.stoppedAt;
         this._backtest = state.backtest;
-        this._eventsToSend = [];
-        this._postionsToSave = [];
-        this._indicatorInstances = {};
 
         /* Статистика */
         this._stats = { fullStats: state.fullStats, periodStats: periodStatsFromArray(nvl(state.periodStats, [])) };
@@ -309,69 +310,8 @@ export class Robot {
         return this._hasAlerts;
     }
 
-    get hasBaseIndicators() {
-        return Object.values(this._state.indicators).filter(({ type }) => type === IndicatorType.base);
-    }
-
-    get baseIndicatorsFileNames() {
-        return Object.values(this._state.indicators)
-            .filter(({ type }) => type === IndicatorType.base)
-            .map(({ fileName }) => fileName);
-    }
-
-    setBaseIndicatorsCode(baseIndicators: { fileName: string; code: IndicatorCode }[]) {
-        baseIndicators.forEach(({ fileName, code }) => {
-            this._baseIndicatorsCode[fileName] = code;
-        });
-    }
-
-    setStrategy(
-        strategyCodeParam: StrategyCode = {
-            init() {
-                throw new Error("Not implemented");
-            },
-            check() {
-                throw new Error("Not implemented");
-            }
-        },
-        strategyState: StrategyProps = this._state
-    ) {
-        let strategyCode: { [key: string]: any } = {};
-        if (strategyCodeParam) strategyCode = strategyCodeParam;
-        // Функции стратегии
-        const strategyFunctions: { [key: string]: () => any } = {};
-        Object.keys(strategyCode)
-            .filter((key) => typeof strategyCode[key] === "function")
-            .forEach((key) => {
-                strategyFunctions[key] = strategyCode[key];
-            });
-        // Схема параметров
-        const { parametersSchema } = strategyCode;
-
-        // Создаем новый инстанс класса стратегии
-        this._strategyInstance = new BaseStrategy({
-            initialized: strategyState.initialized,
-            strategySettings: this._settings.strategySettings,
-            exchange: this._exchange,
-            asset: this._asset,
-            currency: this._currency,
-            timeframe: this._timeframe,
-            robotId: this._id,
-            backtest: this._backtest,
-            emulateNextPosition: this.emulateNextPosition,
-            marginNextPosition: this.marginNextPosition,
-            stats: this._emulatedStats,
-            posLastNumb: strategyState.posLastNumb,
-            positions: strategyState.positions,
-            parametersSchema,
-            strategyFunctions, // функции стратегии
-            ...strategyState // предыдущий стейт стратегии
-        });
-    }
-
-    setStrategyState(strategyState: StrategyProps = this._state) {
+    setStrategyState() {
         this._strategyInstance = new strategies[this._strategy]({
-            initialized: strategyState.initialized,
             strategySettings: this._settings.strategySettings,
             exchange: this._exchange,
             asset: this._asset,
@@ -382,107 +322,7 @@ export class Robot {
             emulateNextPosition: this.emulateNextPosition,
             marginNextPosition: this.marginNextPosition,
             stats: this._emulatedStats,
-            posLastNumb: strategyState.posLastNumb,
-            positions: strategyState.positions,
-            ...strategyState // предыдущий стейт стратегии)
-        });
-    }
-
-    /**
-     *  Загрузка индикаторов
-     *
-     * @memberof Robot
-     */
-    setIndicators() {
-        // Идем по всем свойствам в объекте индикаторов
-        Object.keys(this._state.indicators).forEach((key) => {
-            // Считываем индикатор по ключу
-            const indicator = this._state.indicators[key];
-            // В зависимости от типа индикатора
-            switch (indicator.type) {
-                case IndicatorType.base: {
-                    // Если базовый индикатор
-
-                    // Считываем объект индикатора
-
-                    const indicatorCode = this._baseIndicatorsCode[indicator.fileName];
-                    // Берем все функции индикатора
-                    const indicatorFunctions: { [key: string]: () => any } = {};
-                    Object.keys(indicatorCode)
-                        .filter((ownProp) => typeof indicatorCode[ownProp] === "function")
-                        .forEach((ownProp) => {
-                            indicatorFunctions[ownProp] = indicatorCode[ownProp];
-                        });
-                    // Схема параметров
-                    const { parametersSchema } = indicatorCode;
-                    // Создаем новый инстанc базового индикатора
-                    this._indicatorInstances[key] = new BaseIndicator({
-                        exchange: this._exchange,
-                        asset: this._asset,
-                        currency: this._currency,
-                        timeframe: this._timeframe,
-                        robotId: this._id,
-                        strategySettings: this._settings.strategySettings,
-                        parametersSchema,
-                        indicatorFunctions, // функции индикатора
-                        ...indicator // стейт индикатора
-                    });
-                    break;
-                }
-                case IndicatorType.tulip: {
-                    // Если внешний индикатор Tulip
-
-                    // Создаем новый инстанc индикатора Tulip
-                    this._indicatorInstances[key] = new TulipIndicator({
-                        exchange: this._exchange,
-                        asset: this._asset,
-                        currency: this._currency,
-                        timeframe: this._timeframe,
-                        robotId: this._id,
-                        strategySettings: this._settings.strategySettings,
-                        parameters: indicator.parameters,
-                        ...indicator // стейт индикатора
-                    });
-                    break;
-                }
-                /* case INDICATORS_TALIB: {
-              // Если внешний индикатор Talib
-  
-              // Создаем новый инстанc индикатора Talib
-              this._indicatorInstances[key] = new TalibIndicatorClass({
-                exchange: this._exchange,
-                asset: this._asset,
-                currency: this._currency,
-                timeframe: this._timeframe,
-                robotId: this._id,
-                strategySettings: this._settings.strategySettings,
-                parameters: indicator.parameters,
-                ...indicator // стейт индикатора
-              });
-  
-              break;
-            }
-            case INDICATORS_TECH: {
-              // Если внешний индикатор Tech
-  
-              // Создаем новый инстанc индикатора Tech
-              this._indicatorInstances[key] = new TechInicatatorClass({
-                exchange: this._exchange,
-                asset: this._asset,
-                currency: this._currency,
-                timeframe: this._timeframe,
-                robotId: this._id,
-                strategySettings: this._settings.strategySettings,
-                parameters: indicator.parameters,
-                ...indicator // стейт индикатора
-              });
-  
-              break;
-            } */
-                default:
-                    // Неизвестный тип индикатора - ошибка
-                    throw new Error(`Unknown indicator type ${indicator.type}`);
-            }
+            ...this._state // предыдущий стейт стратегии)
         });
     }
 
@@ -788,8 +628,10 @@ export class Robot {
     clearEvents() {
         this._eventsToSend = [];
         this._postionsToSave = [];
-        this._strategyInstance._eventsToSend = [];
-        this._strategyInstance._positionsToSave = [];
+        if (this._strategyInstance) {
+            this._strategyInstance._eventsToSend = [];
+            this._strategyInstance._positionsToSave = [];
+        }
     }
 
     finalize() {

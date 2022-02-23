@@ -14,7 +14,7 @@ export class FXCash extends BaseStrategy {
             fxLowB: number;
         };
     }
-    parametersSchema = {
+    _parametersSchema = {
         macdFE: {
             description: "MACD Histogram Fast EMA",
             type: "number",

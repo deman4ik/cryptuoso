@@ -332,7 +332,6 @@ export class Backtester {
                     trades: [],
                     positions: {}
                 };
-                this.#robots[id].instance.setStrategyState();
                 this.#robots[id].instance.initStrategy();
             } catch (err) {
                 logger.error(`Backtester #${this.#id} - Failed to init robot #${id}`, err);
@@ -345,8 +344,6 @@ export class Backtester {
         Object.keys(this.#robots).forEach((id) => {
             try {
                 logger.debug(`Backtester #${this.#id} - Initializing robot's #${id} indicators`);
-
-                this.#robots[id].instance.setIndicatorsState();
 
                 this.#robots[id].instance.initIndicators();
             } catch (err) {

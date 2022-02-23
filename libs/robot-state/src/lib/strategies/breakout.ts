@@ -12,7 +12,7 @@ export class Breakout extends BaseStrategy {
             trailBars: number;
         };
     }
-    parametersSchema = {
+    _parametersSchema = {
         adxPeriod: {
             description: "ADX period",
             type: "number",

@@ -85,7 +85,7 @@ export class TrendlineShort extends BaseStrategy {
             troughs: number;
         };
     }
-    parametersSchema = {
+    _parametersSchema = {
         stop: {
             description: "Stop %",
             type: "number",

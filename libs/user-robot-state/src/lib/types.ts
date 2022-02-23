@@ -133,11 +133,11 @@ export interface UserRobotState extends UserRobotDB {
         settings?: UserPortfolioState["settings"];
     };
     currentPrice?: number;
+    limits?: UserMarketState["limits"]["userRobot"];
+    precision?: { amount: number; price: number };
 }
 
 export interface UserRobotStateExt extends UserRobotState {
-    limits: UserMarketState["limits"]["userRobot"];
-    precision: { amount: number; price: number };
     totalBalanceUsd: number;
     userRobotSettings?: UserRobotSettings; //TODO: deprecate
 }

@@ -48,6 +48,7 @@ import {
     PortfolioManagerOutEvents,
     PortfolioManagerOutSchema,
     PortfolioManagerPortfolioBuilded,
+    PortfolioManagerSyncUserPortfolioDedicatedRobots,
     PortfolioManagerUserPortfolioBuilded,
     PortfolioManagerUserPortfolioBuildError
 } from "@cryptuoso/portfolio-events";
@@ -545,7 +546,7 @@ export default class UserRobotRunnerService extends HTTPService {
     async syncUserPortfolioRobots({ userPortfolioId }: { userPortfolioId: string }) {
         this.log.info(`Syncing User Portfolio #${userPortfolioId} robots`);
         const userPortfolio = await this.db.pg.one<UserPortfolioState>(sql`
-        SELECT p.id, p.type, p.user_id, p.user_ex_acc_id, p.exchange, p.status, 
+        SELECT p.id, p.allocation, p.user_id, p.user_ex_acc_id, p.exchange, p.status, 
               p.active_from as user_portfolio_settings_active_from,
               p.user_portfolio_settings as settings,
               p.robots 
@@ -571,6 +572,7 @@ export default class UserRobotRunnerService extends HTTPService {
                             ...r,
                             userPortfolioId: userPortfolio.id,
                             userId: userPortfolio.userId,
+                            allocation: userPortfolio.allocation,
                             userExAccId: userPortfolio.userExAccId || undefined,
                             status: "started",
                             settings: JSON.stringify({
@@ -578,9 +580,9 @@ export default class UserRobotRunnerService extends HTTPService {
                                 share: r.share
                             })
                         })),
-                        ["userPortfolioId", "robotId", "userExAccId", "userId", "status", "settings"]
+                        ["userPortfolioId", "robotId", "userExAccId", "userId", "status", "allocation", "settings"]
                     ),
-                    ["uuid", "uuid", "uuid", "uuid", "varchar", "jsonb"]
+                    ["uuid", "uuid", "uuid", "uuid", "varchar", "varchar", "jsonb"]
                 )}
                 ON CONFLICT ON CONSTRAINT user_robots_user_portfolio_id_robot_id_key
                 DO UPDATE SET settings = excluded.settings, status = excluded.status;
@@ -594,7 +596,14 @@ export default class UserRobotRunnerService extends HTTPService {
             `);
                 });
 
-                //TODO: send sync event to user robot dedicated service
+                if (userPortfolio.allocation === "dedicated") {
+                    await this.events.emit<PortfolioManagerSyncUserPortfolioDedicatedRobots>({
+                        type: PortfolioManagerOutEvents.SYNC_USER_PORTFOLIO_DEDICATED_ROBOTS,
+                        data: {
+                            userPortfolioId
+                        }
+                    });
+                }
             } catch (error) {
                 this.log.error(error);
                 await this.events.emit<PortfolioManagerUserPortfolioBuildError>({
@@ -614,7 +623,7 @@ export default class UserRobotRunnerService extends HTTPService {
     async startPortfolio({ id, message }: UserRobotRunnerStartPortfolio, user: User) {
         GA.event(user.id, "portfolio", "start");
         const userPortfolio = await this.db.pg.one<UserPortfolioState>(sql`
-        SELECT  p.id, p.type, p.user_id, p.user_ex_acc_id, p.exchange, p.status, 
+        SELECT  p.id, p.allocation, p.user_id, p.user_ex_acc_id, p.exchange, p.status, 
                 p.started_at,
               p.active_from as user_portfolio_settings_active_from,
               p.user_portfolio_settings as settings,
@@ -718,7 +727,7 @@ export default class UserRobotRunnerService extends HTTPService {
     async stopPortfolio({ id, message }: UserRobotRunnerStopPortfolio, user: User) {
         GA.event(user.id, "portfolio", "stop");
         const userPortfolio = await this.db.pg.one<UserPortfolioState>(sql`
-        SELECT p.id, p.type, p.user_id, p.user_ex_acc_id, p.exchange, p.status, 
+        SELECT p.id, p.allocation, p.user_id, p.user_ex_acc_id, p.exchange, p.status, 
               ups.active_from as user_portfolio_settings_active_from,
               ups.user_portfolio_settings as settings
            FROM user_portfolios p
@@ -1025,7 +1034,6 @@ export default class UserRobotRunnerService extends HTTPService {
             default:
                 this.log.error(`Unknow job ${job.name}`);
         }
-        return { result: "ok" };
     }
 
     async checkIdleUserRobotJobs() {

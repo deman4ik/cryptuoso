@@ -12,7 +12,7 @@ export class Channels extends BaseStrategy {
             tick: number;
         };
     }
-    parametersSchema = {
+    _parametersSchema = {
         adx: {
             description: "ADX optInTimePeriod",
             type: "number",

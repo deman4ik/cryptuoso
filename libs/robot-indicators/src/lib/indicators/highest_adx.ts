@@ -10,7 +10,7 @@ export class HighestADX extends BaseIndicator {
             optInTimePeriod: number;
         };
     }
-    parametersSchema = {
+    _parametersSchema = {
         seriesSize: {
             description: "Highest ADX Series Size",
             type: "number",

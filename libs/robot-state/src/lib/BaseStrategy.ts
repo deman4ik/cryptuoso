@@ -28,7 +28,6 @@ export interface StrategyState extends StrategyProps {
     currency: string;
     timeframe: number;
     robotId: string;
-    parametersSchema?: ValidationSchema;
     strategyFunctions?: { [key: string]: () => any };
     backtest?: boolean;
     emulateNextPosition?: boolean;
@@ -53,8 +52,14 @@ export class BaseStrategy {
     _marginNextPosition?: number;
     _stats?: TradeStats;
     _candle: Candle;
-    _candles: Candle[];
-    _candlesProps: CandleProps;
+    _candles: Candle[] = [];
+    _candlesProps: CandleProps = {
+        open: [],
+        high: [],
+        low: [],
+        close: [],
+        volume: []
+    };
     _indicators: {
         [key: string]: IndicatorState; //TODO generic types
     };
@@ -67,8 +72,8 @@ export class BaseStrategy {
         MARKET: OrderType.market,
         STOP: OrderType.stop
     };
-    _eventsToSend: NewEvent<any>[];
-    _positionsToSave: RobotPositionState[];
+    _eventsToSend: NewEvent<any>[] = [];
+    _positionsToSave: RobotPositionState[] = [];
     _log = logger.debug.bind(logger);
     _dayjs = dayjs;
 
@@ -83,23 +88,11 @@ export class BaseStrategy {
         this._posLastNumb = state.posLastNumb || {};
         this._positions = {};
         this._setPositions(state.positions);
-        this._parametersSchema = state.parametersSchema;
         this._backtest = state.backtest;
         this._emulateNextPosition = nvl(state.emulateNextPosition, false);
         this._marginNextPosition = nvl(state.marginNextPosition, 1);
         this._stats = nvl(state.stats, {});
-        this._candle = null;
-        this._candles = []; // [{}]
-        this._candlesProps = {
-            open: [],
-            high: [],
-            low: [],
-            close: [],
-            volume: []
-        };
         this._indicators = state.indicators || {};
-        this._eventsToSend = [];
-        this._positionsToSave = [];
         if (state.variables) {
             Object.keys(state.variables).forEach((key) => {
                 this[key] = state.variables[key];

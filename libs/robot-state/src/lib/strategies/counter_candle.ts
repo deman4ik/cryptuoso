@@ -13,7 +13,7 @@ export class CounterCandle extends BaseStrategy {
             xClose: number;
         };
     }
-    parametersSchema = {
+    _parametersSchema = {
         highest: {
             description: "Highest",
             type: "number",
