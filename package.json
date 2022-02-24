@@ -68,6 +68,8 @@
         "serve:user-robot-runner": "nx serve user-robot-runner --watch=false",
         "build:user-robot-worker": "nx build user-robot-worker --prod",
         "serve:user-robot-worker": "nx serve user-robot-worker --watch=false",
+        "build:user-robot-dedicated": "nx build user-robot-dedicated --prod",
+        "serve:user-robot-dedicatedr": "nx serve user-robot-dedicated --watch=false",
         "build:connector-runner": "nx build connector-runner --prod",
         "serve:connector-runner": "nx serve connector-runner --watch=false",
         "build:connector-worker": "nx build connector-worker --prod",
