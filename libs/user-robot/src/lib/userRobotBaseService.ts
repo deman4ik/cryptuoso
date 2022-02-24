@@ -44,6 +44,7 @@ import { UserExchangeAccBalances, UserExchangeAccount, UserExchangeAccStatus } f
 import { decrypt, PrivateConnector } from "@cryptuoso/ccxt-private";
 import { SlonikError } from "slonik";
 import { UserExAccKeysChangedEvent, UserExAccOutEvents, UserExAccOutSchema } from "@cryptuoso/user-events";
+import events from "events";
 export interface UserRobotBaseServiceConfig extends RobotBaseServiceConfig {
     userPortfolioId: string;
 }
@@ -65,6 +66,8 @@ export class UserRobotBaseService extends RobotBaseService {
     #jobRetries = 3;
     #connectorJobsTimer: NodeJS.Timer;
     #userRobotJobsTimer: NodeJS.Timer;
+    #jobsEmiter: events.EventEmitter;
+
     #cronCheckBalance: cron.ScheduledTask = cron.schedule("0 5 * * * *", this.checkBalance.bind(this), {
         scheduled: false
     });
@@ -104,6 +107,8 @@ export class UserRobotBaseService extends RobotBaseService {
     async startUserServiceProcessing() {
         this.#connectorJobsTimer = setTimeout(this.runConnectorJobs.bind(this), 0);
         this.#userRobotJobsTimer = setTimeout(this.runUserRobotJobs.bind(this), 0);
+        this.#jobsEmiter.addListener("connectorJob", this.runConnectorJobs.bind(this));
+        this.#jobsEmiter.addListener("userRobotJob", this.runUserRobotJobs.bind(this));
         this.#cronCheckBalance.start();
         this.#cronCheckUnknownOrders.start();
         await this.startRobotService();
@@ -405,6 +410,7 @@ export class UserRobotBaseService extends RobotBaseService {
          error = null;
         `);
         if (!this.#userRobotJobs.find((c) => c.id === nextJob.id)) this.#userRobotJobs.push(nextJob);
+        this.#jobsEmiter.emit("userRobotJob");
     }
 
     async updateUserRobotJob(job: UserRobotJob) {
@@ -525,6 +531,8 @@ export class UserRobotBaseService extends RobotBaseService {
                             });
                         }
                     });
+
+                    if (nextJob) this.#jobsEmiter.emit("connectorJob");
 
                     if (
                         (order.status === OrderStatus.closed || order.status === OrderStatus.canceled) &&
@@ -1037,7 +1045,6 @@ export class UserRobotBaseService extends RobotBaseService {
         });
     }
 
-    //TODO: run on event
     async runUserRobotJobs() {
         const beacon = this.lightship.createBeacon();
         try {
@@ -1222,6 +1229,9 @@ export class UserRobotBaseService extends RobotBaseService {
                     }
                 }
             });
+
+            if (userRobot.connectorJobs.length && userRobot.status !== UserRobotStatus.stopped)
+                this.#jobsEmiter.emit("connectorJob");
 
             if (eventsToSend.length) {
                 for (const event of eventsToSend) {
