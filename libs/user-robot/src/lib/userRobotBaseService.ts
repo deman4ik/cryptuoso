@@ -44,7 +44,7 @@ import { UserExchangeAccBalances, UserExchangeAccount, UserExchangeAccStatus } f
 import { decrypt, PrivateConnector } from "@cryptuoso/ccxt-private";
 import { SlonikError } from "slonik";
 import { UserExAccKeysChangedEvent, UserExAccOutEvents, UserExAccOutSchema } from "@cryptuoso/user-events";
-import events from "events";
+import { EventEmitter } from "events";
 export interface UserRobotBaseServiceConfig extends RobotBaseServiceConfig {
     userPortfolioId: string;
 }
@@ -66,7 +66,7 @@ export class UserRobotBaseService extends RobotBaseService {
     #jobRetries = 3;
     #connectorJobsTimer: NodeJS.Timer;
     #userRobotJobsTimer: NodeJS.Timer;
-    #jobsEmiter: events.EventEmitter;
+    #jobsEmiter: EventEmitter;
 
     #cronCheckBalance: cron.ScheduledTask = cron.schedule("0 5 * * * *", this.checkBalance.bind(this), {
         scheduled: false
@@ -91,7 +91,7 @@ export class UserRobotBaseService extends RobotBaseService {
                 handler: this.updateUserConnector.bind(this)
             }
         });
-
+        this.#jobsEmiter = new EventEmitter({ captureRejections: true });
         this.addOnStopHandler(this.onUserServiceStop);
     }
 
