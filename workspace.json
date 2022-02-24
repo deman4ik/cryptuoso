@@ -1969,6 +1969,29 @@
             },
             "tags": []
         },
+        "user-events": {
+            "root": "libs/user-events",
+            "sourceRoot": "libs/user-events/src",
+            "projectType": "library",
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "outputs": ["{options.outputFile}"],
+                    "options": {
+                        "lintFilePatterns": ["libs/user-events/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/libs/user-events"],
+                    "options": {
+                        "jestConfig": "libs/user-events/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            },
+            "tags": []
+        },
         "user-profile": {
             "root": "apps/user-profile",
             "sourceRoot": "apps/user-profile/src",
@@ -2043,6 +2066,59 @@
                     "outputs": ["coverage/libs/user-robot"],
                     "options": {
                         "jestConfig": "libs/user-robot/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            },
+            "tags": []
+        },
+        "user-robot-dedicated": {
+            "root": "apps/user-robot-dedicated",
+            "sourceRoot": "apps/user-robot-dedicated/src",
+            "projectType": "application",
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:build",
+                    "outputs": ["{options.outputPath}"],
+                    "options": {
+                        "outputPath": "dist/apps/user-robot-dedicated",
+                        "main": "apps/user-robot-dedicated/src/main.ts",
+                        "tsConfig": "apps/user-robot-dedicated/tsconfig.app.json",
+                        "assets": ["apps/user-robot-dedicated/src/assets"],
+                        "webpackConfig": "apps/user-robot-dedicated/webpack.config.js"
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/user-robot-dedicated/src/environments/environment.ts",
+                                    "with": "apps/user-robot-dedicated/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:execute",
+                    "options": {
+                        "buildTarget": "user-robot-dedicated:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "outputs": ["{options.outputFile}"],
+                    "options": {
+                        "lintFilePatterns": ["apps/user-robot-dedicated/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/apps/user-robot-dedicated"],
+                    "options": {
+                        "jestConfig": "apps/user-robot-dedicated/jest.config.js",
                         "passWithNoTests": true
                     }
                 }

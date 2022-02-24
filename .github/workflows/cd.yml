@@ -125,7 +125,14 @@ jobs:
               run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do sed -i 's|<ENV>|prod|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
 
             - name: Deploy deployment to DigitalOcean Kubernetes
-              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig apply -f $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
+              run: |
+                  services=(${{ steps.services.outputs.list }}); 
+                  for i in "${services[@]}"; 
+                    if [[ "${i}" =!= *"user-robot-dedicated"* ]];
+                    then
+                        do kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig apply -f $GITHUB_WORKSPACE/deployments/${i}.yaml; 
+                    fi
+                  done;
 
             - name: Verify deployment dev
               if: contains(github.ref, 'dev')

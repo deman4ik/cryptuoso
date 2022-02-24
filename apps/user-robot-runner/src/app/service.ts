@@ -22,6 +22,8 @@ import {
     UserRobotRunnerStartPortfolio,
     UserRobotRunnerStop,
     UserRobotRunnerStopPortfolio,
+    UserRobotRunnerStopUserPortfolioDedicatedRobots,
+    UserRobotRunnerSyncUserPortfolioDedicatedRobots,
     UserRobotWorkerEvents,
     UserRobotWorkerStatus,
     USER_ROBOT_WORKER_TOPIC
@@ -48,7 +50,6 @@ import {
     PortfolioManagerOutEvents,
     PortfolioManagerOutSchema,
     PortfolioManagerPortfolioBuilded,
-    PortfolioManagerSyncUserPortfolioDedicatedRobots,
     PortfolioManagerUserPortfolioBuilded,
     PortfolioManagerUserPortfolioBuildError
 } from "@cryptuoso/portfolio-events";
@@ -597,8 +598,8 @@ export default class UserRobotRunnerService extends HTTPService {
                 });
 
                 if (userPortfolio.allocation === "dedicated") {
-                    await this.events.emit<PortfolioManagerSyncUserPortfolioDedicatedRobots>({
-                        type: PortfolioManagerOutEvents.SYNC_USER_PORTFOLIO_DEDICATED_ROBOTS,
+                    await this.events.emit<UserRobotRunnerSyncUserPortfolioDedicatedRobots>({
+                        type: UserRobotRunnerEvents.SYNC_USER_PORTFOLIO_DEDICATED_ROBOTS,
                         data: {
                             userPortfolioId
                         }
@@ -766,18 +767,27 @@ export default class UserRobotRunnerService extends HTTPService {
 
         const status = userRobots.length ? "stopping" : "stopped";
         const stoppedAt = status === "stopped" ? dayjs.utc().toISOString() : null;
-        for (const userRobot of userRobots) {
-            await this.addUserRobotJob(
-                {
-                    userRobotId: userRobot.id,
-                    type: UserRobotJobType.stop,
-                    data: {
-                        message: message || null
+        if (userPortfolio.allocation === "shared") {
+            for (const userRobot of userRobots) {
+                await this.addUserRobotJob(
+                    {
+                        userRobotId: userRobot.id,
+                        type: UserRobotJobType.stop,
+                        data: {
+                            message: message || null
+                        },
+                        allocation: "shared"
                     },
-                    allocation: "shared"
-                },
-                userRobot.status
-            );
+                    userRobot.status
+                );
+            }
+        } else {
+            await this.events.emit<UserRobotRunnerStopUserPortfolioDedicatedRobots>({
+                type: UserRobotRunnerEvents.STOP_USER_PORTFOLIO_DEDICATED_ROBOTS,
+                data: {
+                    userPortfolioId: id
+                }
+            });
         }
 
         await this.db.pg.query(sql`

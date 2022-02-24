@@ -31,6 +31,7 @@ import {
 } from "@cryptuoso/robot-settings";
 import { PrivateConnector } from "@cryptuoso/ccxt-private";
 import { GA } from "@cryptuoso/analytics";
+import { UserExAccKeysChangedEvent, UserExAccOutEvents } from "@cryptuoso/user-events";
 
 export type UserProfileServiceConfig = HTTPServiceConfig;
 
@@ -662,6 +663,13 @@ export default class UserProfileService extends HTTPService {
                     balances = ${JSON.stringify(exchangeAcc.balances) || null}
                 WHERE id = ${id};
             `);
+
+            await this.events.emit<UserExAccKeysChangedEvent>({
+                type: UserExAccOutEvents.KEYS_CHANGED,
+                data: {
+                    userExAccId: id
+                }
+            });
         } else {
             await this.db.pg.query(sql`
                 INSERT INTO user_exchange_accs(

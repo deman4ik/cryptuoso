@@ -16,6 +16,11 @@ import { Robot, RobotState, RobotStatus } from "@cryptuoso/robot-state";
 import { groupBy, keysToCamelCase, sleep, sortDesc, uniqueElementsBy } from "@cryptuoso/helpers";
 import { getCurrentUserRobotSettings } from "@cryptuoso/robot-settings";
 import {
+    UserPortfolioStatus,
+    UserRobotRunnerEvents,
+    UserRobotRunnerSchema,
+    UserRobotRunnerStopUserPortfolioDedicatedRobots,
+    UserRobotRunnerSyncUserPortfolioDedicatedRobots,
     UserRobotWorkerError,
     UserRobotWorkerEvents,
     UserRobotWorkerStatus,
@@ -38,12 +43,7 @@ import { BaseError } from "@cryptuoso/errors";
 import { UserExchangeAccBalances, UserExchangeAccount, UserExchangeAccStatus } from "@cryptuoso/user-state";
 import { decrypt, PrivateConnector } from "@cryptuoso/ccxt-private";
 import { SlonikError } from "slonik";
-import {
-    PortfolioManagerOutEvents,
-    PortfolioManagerOutSchema,
-    PortfolioManagerSyncUserPortfolioDedicatedRobots
-} from "@cryptuoso/portfolio-events";
-
+import { UserExAccKeysChangedEvent, UserExAccOutEvents, UserExAccOutSchema } from "@cryptuoso/user-events";
 export interface UserRobotBaseServiceConfig extends RobotBaseServiceConfig {
     userPortfolioId: string;
 }
@@ -74,13 +74,18 @@ export class UserRobotBaseService extends RobotBaseService {
     constructor(config?: UserRobotBaseServiceConfig) {
         super(config);
 
-        //TODO: start/stop portfolio
-        //TODO: handle user exchange acc changed
-
         this.events.subscribe({
-            [PortfolioManagerOutEvents.SYNC_USER_PORTFOLIO_DEDICATED_ROBOTS]: {
-                schema: PortfolioManagerOutSchema[PortfolioManagerOutEvents.SYNC_USER_PORTFOLIO_DEDICATED_ROBOTS],
+            [UserRobotRunnerEvents.SYNC_USER_PORTFOLIO_DEDICATED_ROBOTS]: {
+                schema: UserRobotRunnerSchema[UserRobotRunnerEvents.SYNC_USER_PORTFOLIO_DEDICATED_ROBOTS],
                 handler: this.syncUserPortfolioRobots.bind(this)
+            },
+            [UserRobotRunnerEvents.STOP_USER_PORTFOLIO_DEDICATED_ROBOTS]: {
+                schema: UserRobotRunnerSchema[UserRobotRunnerEvents.STOP_USER_PORTFOLIO_DEDICATED_ROBOTS],
+                handler: this.stopUserPortfolioRobots.bind(this)
+            },
+            [UserExAccOutEvents.KEYS_CHANGED]: {
+                schema: UserExAccOutSchema[UserExAccOutEvents.KEYS_CHANGED],
+                handler: this.updateUserConnector.bind(this)
             }
         });
 
@@ -326,6 +331,11 @@ export class UserRobotBaseService extends RobotBaseService {
     //#endregion
 
     //#region Connector Jobs
+    async updateUserConnector({ userExAccId }: UserExAccKeysChangedEvent) {
+        if (userExAccId !== this.#userExAcc.id) return;
+        await this.getUserConnector();
+    }
+
     async getConnectorJobs() {
         const jobs = await this.db.pg.any<ConnectorJob>(sql`
          SELECT * FROM connector_jobs
@@ -850,11 +860,26 @@ export class UserRobotBaseService extends RobotBaseService {
     //#endregion
 
     //#region User Robots
-    async syncUserPortfolioRobots({ userPortfolioId }: PortfolioManagerSyncUserPortfolioDedicatedRobots) {
+    async syncUserPortfolioRobots({ userPortfolioId }: UserRobotRunnerSyncUserPortfolioDedicatedRobots) {
         if (userPortfolioId !== this.userPortfolioId) return;
+        await this.getUserPortfolio();
         await this.unsubscribeUserRobots();
         await this.resubscribe();
         await this.resubscribeUserRobots();
+    }
+
+    async stopUserPortfolioRobots({ userPortfolioId }: UserRobotRunnerStopUserPortfolioDedicatedRobots) {
+        if (userPortfolioId !== this.userPortfolioId) return;
+        for (const id of Object.keys(this.robots)) {
+            await this.addUserRobotJob({
+                userRobotId: this.robots[id].userRobot.id,
+                type: UserRobotJobType.stop,
+                data: {
+                    message: null
+                },
+                allocation: "dedicated"
+            });
+        }
     }
 
     async subscribeRobots({ asset, currency }: Exwatcher) {
@@ -1233,6 +1258,7 @@ export class UserRobotBaseService extends RobotBaseService {
                         job
                     }
                 });
+
                 await this.db.pg.query(sql`
                 UPDATE user_robots
                 SET status = ${UserRobotStatus.paused}, 
@@ -1248,7 +1274,32 @@ export class UserRobotBaseService extends RobotBaseService {
                     }
                 });
                 this.robots[robotId].robot._status = RobotStatus.stopped;
+                await this.setPortfolioError(err.message);
             }
+        }
+    }
+
+    async setPortfolioError(message: string) {
+        try {
+            if (this.#userPortfolio.status !== "error") {
+                this.#userPortfolio.status = "error";
+                this.#userPortfolio.message = message;
+
+                await this.db.pg.query(
+                    sql`UPDATE user_portfolios set status = 'error', message = ${message} WHERE id = ${this.userPortfolioId}`
+                );
+                await this.events.emit<UserPortfolioStatus>({
+                    type: UserRobotWorkerEvents.ERROR_PORTFOLIO,
+                    data: {
+                        userPortfolioId: this.userPortfolioId,
+                        timestamp: dayjs.utc().toISOString(),
+                        status: "error",
+                        message
+                    }
+                });
+            }
+        } catch (error) {
+            this.log.error(error);
         }
     }
 }

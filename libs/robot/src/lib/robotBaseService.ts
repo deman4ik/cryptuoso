@@ -106,7 +106,7 @@ export class RobotBaseService extends HTTPService {
     };
     constructor(config: RobotBaseServiceConfig) {
         super(config);
-        this.#exchange = config.exchange;
+        this.#exchange = config.exchange || process.env.EXCHANGE;
         this.#userPortfolioId = config?.userPortfolioId || process.env.USER_PORTFOLIO_ID;
         this.#publicConnector = new PublicConnector();
 
@@ -1389,8 +1389,10 @@ export class RobotBaseService extends HTTPService {
     get activeRobotAlerts() {
         const currentDate = dayjs.utc().valueOf();
         return Object.values(this.#robotAlerts).filter(
-            ({ activeFrom, activeTo }) =>
-                dayjs.utc(activeFrom).valueOf() < currentDate && dayjs.utc(activeTo).valueOf() > currentDate
+            ({ activeFrom, activeTo, robotId }) =>
+                dayjs.utc(activeFrom).valueOf() < currentDate &&
+                dayjs.utc(activeTo).valueOf() > currentDate &&
+                this.robots[robotId].robot.status === RobotStatus.started
         );
     }
 
