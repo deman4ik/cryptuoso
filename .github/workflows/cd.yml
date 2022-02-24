@@ -128,7 +128,7 @@ jobs:
               run: |
                   services=(${{ steps.services.outputs.list }}); 
                   for i in "${services[@]}"; 
-                    if [[ "${i}" =!= *"user-robot-dedicated"* ]];
+                    if [[ "${i}" != *"user-robot-dedicated"* ]];
                     then
                         do kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig apply -f $GITHUB_WORKSPACE/deployments/${i}.yaml; 
                     fi
