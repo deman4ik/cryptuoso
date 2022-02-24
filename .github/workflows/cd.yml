@@ -128,9 +128,10 @@ jobs:
               run: |
                   services=(${{ steps.services.outputs.list }}); 
                   for i in "${services[@]}"; 
+                  do
                     if [[ "${i}" != *"user-robot-dedicated"* ]];
                     then
-                        do kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig apply -f $GITHUB_WORKSPACE/deployments/${i}.yaml; 
+                         kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig apply -f $GITHUB_WORKSPACE/deployments/${i}.yaml; 
                     fi
                   done;
 
