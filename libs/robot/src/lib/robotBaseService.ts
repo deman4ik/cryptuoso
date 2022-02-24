@@ -106,7 +106,7 @@ export class RobotBaseService extends HTTPService {
     };
     constructor(config: RobotBaseServiceConfig) {
         super(config);
-        this.#exchange = config.exchange || process.env.EXCHANGE;
+        this.#exchange = config?.exchange || process.env.EXCHANGE;
         this.#userPortfolioId = config?.userPortfolioId || process.env.USER_PORTFOLIO_ID;
         this.#publicConnector = new PublicConnector();
 
