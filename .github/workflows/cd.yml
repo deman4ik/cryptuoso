@@ -137,8 +137,24 @@ jobs:
 
             - name: Verify deployment dev
               if: contains(github.ref, 'dev')
-              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig --namespace=dev rollout status deployment/${i}-dev; done;
+              run: |
+                  services=(${{ steps.services.outputs.list }});
+                   for i in "${services[@]}"; 
+                    do 
+                      if [[ "${i}" != *"user-robot-dedicated"* ]];
+                      then
+                       kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig --namespace=dev rollout status deployment/${i}-dev;
+                      fi
+                    done;
 
             - name: Verify deployment prod
               if: contains(github.ref, 'master')
-              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig --namespace=prod rollout status deployment/${i}-prod; done;
+              run: |
+                  services=(${{ steps.services.outputs.list }}); 
+                  for i in "${services[@]}"; 
+                    do 
+                    if [[ "${i}" != *"user-robot-dedicated"* ]];
+                    then
+                    kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig --namespace=prod rollout status deployment/${i}-prod; 
+                    fi
+                  done;
