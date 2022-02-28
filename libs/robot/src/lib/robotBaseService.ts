@@ -1279,6 +1279,7 @@ export class RobotBaseService extends HTTPService {
                         this.log.info(`Robot #${robot.id} is subscribed!`);
                     } catch (err) {
                         this.log.error(`Failed to subscribe #${robot.id} robot ${err.message}`);
+                        this.log.error(err);
                         throw err;
                     }
                 }
@@ -1330,6 +1331,7 @@ export class RobotBaseService extends HTTPService {
             this.log.info(`Robot #${robot.id} is subscribed!`);
         } catch (err) {
             this.log.error(`Failed to subscribe #${robot.id} robot ${err.message}`);
+            this.log.error(err);
             throw err;
         }
     }
