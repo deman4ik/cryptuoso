@@ -565,7 +565,7 @@ export default class UserRobotRunnerService extends HTTPService {
 
                     await t.query(sql`
             INSERT INTO user_robots 
-            (user_portfolio_id, robot_id, user_ex_acc_id, user_id, status, settings)
+            (user_portfolio_id, robot_id, user_ex_acc_id, user_id, status, allocation, settings)
             SELECT *
                 FROM ${sql.unnest(
                     this.db.util.prepareUnnest(
