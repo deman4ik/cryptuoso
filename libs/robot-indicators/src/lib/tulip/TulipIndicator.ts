@@ -8,7 +8,7 @@ export class TulipIndicator extends BaseIndicator {
 
     constructor(state: IndicatorState) {
         super(state);
-        this.__parametersSchema = {
+        this._parametersSchema = {
             candlesLength: {
                 description: "Candles window length",
                 type: "number",
