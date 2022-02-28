@@ -139,6 +139,15 @@ export class UserRobot {
         );
     }
 
+    get closedAndCanceledPositions() {
+        return this.positions.filter(
+            (pos) =>
+                pos.status === UserPositionStatus.closed ||
+                pos.status === UserPositionStatus.closedAuto ||
+                pos.status === UserPositionStatus.canceled
+        );
+    }
+
     get connectorJobs(): ConnectorJob[] {
         return flattenArray(Object.values(this._positions).map((pos) => pos.connectorJobs));
     }
@@ -375,6 +384,9 @@ export class UserRobot {
     }
 
     clear() {
+        for (const { id } of this.closedAndCanceledPositions) {
+            delete this._positions[id];
+        }
         this.positions.forEach((p) => {
             this._positions[p.id].clear();
         });

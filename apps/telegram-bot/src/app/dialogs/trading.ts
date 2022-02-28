@@ -162,7 +162,6 @@ const getTradingInfo = async (ctx: BotContext) => {
                         id
                         userExAccId: user_ex_acc_id
                         exchange
-                        type
                         status
                         startedAt: started_at
                         stoppedAt: stopped_at

@@ -498,7 +498,7 @@ export default class PortfolioManagerService extends HTTPService {
             }
 
             const userPortfolio = await this.db.pg.one<UserPortfolioState>(sql`
-        SELECT p.id, p.type, p.user_id, p.user_ex_acc_id, p.exchange, p.status, 
+        SELECT p.id, p.allocation, p.user_id, p.user_ex_acc_id, p.exchange, p.status, 
               ups.id as user_portfolio_settings_id, 
               ups.active_from as user_portfolio_settings_active_from,
               ups.user_portfolio_settings as settings,

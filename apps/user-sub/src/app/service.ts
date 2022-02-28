@@ -266,7 +266,6 @@ export default class UserSubService extends HTTPService {
                     SELECT id 
                       FROM user_portfolios
                     WHERE user_id = ${sub.userId}
-                      AND type = 'trading'
                       AND (full_stats->'netProfit')::numeric > ${sub.subscriptionLimits?.trialNetProfit || 15};
                     `);
 
