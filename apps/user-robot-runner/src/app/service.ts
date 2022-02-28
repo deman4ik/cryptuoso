@@ -586,7 +586,7 @@ export default class UserRobotRunnerService extends HTTPService {
                     ["uuid", "uuid", "uuid", "uuid", "varchar", "varchar", "jsonb"]
                 )}
                 ON CONFLICT ON CONSTRAINT user_robots_user_portfolio_id_robot_id_key
-                DO UPDATE SET settings = excluded.settings, status = excluded.status;
+                DO UPDATE SET settings = excluded.settings, status = excluded.status, allocation = excluded.allocation;
             `);
 
                     await t.query(sql`
