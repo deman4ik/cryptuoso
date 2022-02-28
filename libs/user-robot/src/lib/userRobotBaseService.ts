@@ -251,6 +251,7 @@ export class UserRobotBaseService extends RobotBaseService {
         FROM user_robots ur, robots r
         WHERE ur.robot_id = r.id
         AND ur.status = 'started'
+        AND ur.allocation = 'dedicated'
         AND ur.user_portfolio_id = ${this.userPortfolioId};`);
 
         return markets.map((m) => ({
@@ -895,7 +896,8 @@ export class UserRobotBaseService extends RobotBaseService {
         SELECT * FROM v_user_robot_state WHERE status = 'started'
          AND user_portfolio_id = ${this.userPortfolioId}
          AND asset = ${asset}
-         AND currency = ${currency};                   
+         AND currency = ${currency}
+         AND allocation = 'dedicated';                   
       `);
 
         const userRobots = keysToCamelCase(rawData) as UserRobotStateExt[];
@@ -913,6 +915,7 @@ export class UserRobotBaseService extends RobotBaseService {
         const rawData = await this.db.pg.any<UserRobotStateExt>(sql`
         SELECT * FROM v_user_robot_state WHERE status = 'started'
          AND user_portfolio_id = ${this.userPortfolioId}
+         AND allocation = 'dedicated'
          AND robot_id not in (${sql.join(Object.keys(this.robots), sql`, `)});                   
       `);
 
@@ -1025,25 +1028,33 @@ export class UserRobotBaseService extends RobotBaseService {
     }
 
     async unsubscribeUserRobots() {
-        const inactiveUserRobots = await this.db.pg.any<{ id: string }>(sql`
+        const currentActiveUserRobots = Object.values(this.robots)
+            .filter(({ userRobot }) => userRobot.settings.active)
+            .map(({ userRobot }) => userRobot.id);
+
+        if (currentActiveUserRobots.length) {
+            const inactiveUserRobots = await this.db.pg.any<{ id: string }>(sql`
             SELECT id 
             FROM user_robots 
             WHERE user_portfolio_id = ${this.userPortfolioId}
             AND (settings->'active')::boolean = false
-        `);
+            AND allocation = 'dedicated'
+            AND id in (${sql.join(currentActiveUserRobots, sql`, `)})
+            ;`);
 
-        await Promise.all(
-            inactiveUserRobots.map(
-                async ({ id }) =>
-                    await this.addUserRobotJob({
-                        id: uuid(),
-                        userRobotId: id,
-                        type: UserRobotJobType.disable,
-                        data: null,
-                        allocation: "dedicated"
-                    })
-            )
-        );
+            await Promise.all(
+                inactiveUserRobots.map(
+                    async ({ id }) =>
+                        await this.addUserRobotJob({
+                            id: uuid(),
+                            userRobotId: id,
+                            type: UserRobotJobType.disable,
+                            data: null,
+                            allocation: "dedicated"
+                        })
+                )
+            );
+        }
     }
 
     async handleSignal(signal: SignalEvent) {
