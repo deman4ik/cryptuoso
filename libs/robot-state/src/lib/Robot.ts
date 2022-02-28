@@ -420,8 +420,8 @@ export class Robot {
             this._strategyInstance.initialized = true;
             // Считываем настройки индикаторов
             this._state.indicators = this._strategyInstance.indicators;
+            this.getStrategyState();
         }
-        this.getStrategyState();
     }
 
     /**

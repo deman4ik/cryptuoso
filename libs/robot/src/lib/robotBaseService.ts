@@ -234,26 +234,31 @@ export class RobotBaseService extends HTTPService {
     }
 
     async handleImporterStatusEvent(event: ImporterWorkerFinished | ImporterWorkerFailed) {
-        const { id: importerId, type, exchange, asset, currency, status } = event;
-        if (exchange !== this.#exchange && type !== "recent") return;
-        const subscription = Object.values(this.#subscriptions).find(
-            (sub: Exwatcher) =>
-                sub.status !== ExwatcherStatus.subscribed &&
-                (sub.importerId === importerId || (sub.asset === asset && sub.currency === currency))
-        );
-        if (subscription && status === Status.finished) {
-            this.log.info(`Importer ${importerId} finished!`);
-            const exwatcherSubscribed = await this.subscribe(subscription); //TODO: subscribe robots
-            if (exwatcherSubscribed) await this.subscribeRobots(subscription);
-        } else if (subscription && subscription.id && status === Status.failed) {
-            const { error } = event as ImporterWorkerFailed;
-            this.log.warn(`Importer ${importerId} failed!`, error);
-            this.#subscriptions[subscription.id].status = ExwatcherStatus.failed;
-            this.#subscriptions[subscription.id].importStartedAt = null;
-            this.#subscriptions[subscription.id].error = error;
-            await this.saveSubscription(this.#subscriptions[subscription.id]);
-        } else {
-            this.log.warn("Unknown Importer event", event);
+        try {
+            const { id: importerId, type, exchange, asset, currency, status } = event;
+            if (exchange !== this.#exchange && type !== "recent") return;
+            const subscription = Object.values(this.#subscriptions).find(
+                (sub: Exwatcher) =>
+                    sub.status !== ExwatcherStatus.subscribed &&
+                    (sub.importerId === importerId || (sub.asset === asset && sub.currency === currency))
+            );
+            if (subscription && status === Status.finished) {
+                this.log.info(`Importer ${importerId} finished!`);
+                const exwatcherSubscribed = await this.subscribe(subscription); //TODO: subscribe robots
+                if (exwatcherSubscribed) await this.subscribeRobots(subscription);
+            } else if (subscription && subscription.id && status === Status.failed) {
+                const { error } = event as ImporterWorkerFailed;
+                this.log.warn(`Importer ${importerId} failed!`, error);
+                this.#subscriptions[subscription.id].status = ExwatcherStatus.failed;
+                this.#subscriptions[subscription.id].importStartedAt = null;
+                this.#subscriptions[subscription.id].error = error;
+                await this.saveSubscription(this.#subscriptions[subscription.id]);
+            } else {
+                this.log.warn("Unknown Importer event", event);
+            }
+        } catch (err) {
+            this.log.error(`Failed to handle importer status event ${err.message}`, event);
+            this.log.error(err);
         }
     }
     // #endregion
@@ -1259,29 +1264,7 @@ export class RobotBaseService extends HTTPService {
         if (robots && Array.isArray(robots) && robots.length) {
             for (const robot of robots) {
                 if (!this.robots[robot.id]) {
-                    try {
-                        this.robots[robot.id] = {
-                            robot: new Robot(robot),
-                            locked: false
-                        };
-                        this.initActiveRobotAlerts(robot.id);
-                        if (this.robots[robot.id].robot.status !== RobotStatus.started) {
-                            this.robots[robot.id].robot.start();
-
-                            await Promise.all(
-                                this.robots[robot.id].robot.eventsToSend.map(async (event) => {
-                                    await this.events.emit(event);
-                                })
-                            );
-                            this.robots[robot.id].robot.clearEvents();
-                            await this.db.pg.query(sql`UPDATE robot SET status = 'started' WHERE id = ${robot.id}`);
-                        }
-                        this.log.info(`Robot #${robot.id} is subscribed!`);
-                    } catch (err) {
-                        this.log.error(`Failed to subscribe #${robot.id} robot ${err.message}`);
-                        this.log.error(err);
-                        throw err;
-                    }
+                    await this._subscribeRobot(robot);
                 }
             }
         }
@@ -1310,13 +1293,26 @@ export class RobotBaseService extends HTTPService {
         WHERE rs.robot_id = r.id AND r.exchange = ${this.#exchange}
         AND r.id = ${robotId};`);
 
+        await this._subscribeRobot(robot);
+    }
+
+    async _subscribeRobot(robot: RobotState) {
         try {
             this.robots[robot.id] = {
                 robot: new Robot(robot),
                 locked: true
             };
+            if (!this.robots[robot.id].robot.state.initialized) {
+                this.robots[robot.id].robot.initStrategy();
+                this.robots[robot.id].robot.initIndicators();
+                await this.db.pg.query(sql`
+                UPDATE robots 
+                SET state = ${JSON.stringify(this.robots[robot.id].robot.state)}
+                WHERE id = ${robot.id};
+                `);
+            }
             this.initActiveRobotAlerts(robot.id);
-            if (this.robots[robotId].robot.status !== RobotStatus.started) {
+            if (this.robots[robot.id].robot.status !== RobotStatus.started) {
                 this.robots[robot.id].robot.start();
 
                 await Promise.all(
@@ -1325,14 +1321,21 @@ export class RobotBaseService extends HTTPService {
                     })
                 );
                 this.robots[robot.id].robot.clearEvents();
-                await this.db.pg.query(sql`UPDATE robot SET status = 'started' WHERE id = ${robotId}`);
+                await this.db.pg.query(sql`UPDATE robot SET status = 'started' WHERE id = ${robot.id}`);
             }
             this.robots[robot.id].locked = false;
             this.log.info(`Robot #${robot.id} is subscribed!`);
         } catch (err) {
             this.log.error(`Failed to subscribe #${robot.id} robot ${err.message}`);
             this.log.error(err);
-            throw err;
+
+            await this.events.emit<RobotWorkerError>({
+                type: RobotWorkerEvents.ERROR,
+                data: {
+                    robotId: robot.id,
+                    error: `Failed to subscribe #${robot.id} robot ${err.message}`
+                }
+            });
         }
     }
 

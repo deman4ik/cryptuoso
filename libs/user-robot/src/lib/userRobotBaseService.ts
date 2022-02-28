@@ -1008,8 +1008,19 @@ export class UserRobotBaseService extends RobotBaseService {
             this.robots[robotId].locked = false;
             this.log.info(`Robot #${robotId} is subscribed!`);
         } catch (err) {
-            this.log.error(`Failed to subscribe #${robotId} robot ${err.message}`);
-            throw err;
+            this.log.error(`Failed to subscribe #${userRobot.id} user robot ${err.message}`);
+
+            this.log.error(err);
+
+            await this.events.emit<UserRobotWorkerError>({
+                type: UserRobotWorkerEvents.ERROR,
+                data: {
+                    userRobotId: userRobot.id,
+                    userPortfolioId: this.userPortfolioId,
+                    error: `Failed to subscribe #${robotId} robot ${err.message}`,
+                    timestamp: dayjs.utc().toISOString()
+                }
+            });
         }
     }
 
