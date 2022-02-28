@@ -1264,7 +1264,7 @@ export class RobotBaseService extends HTTPService {
         if (robots && Array.isArray(robots) && robots.length) {
             for (const robot of robots) {
                 if (!this.robots[robot.id]) {
-                    await this._subscribeRobot(robot);
+                    await this.#subscribeRobot(robot);
                 }
             }
         }
@@ -1293,10 +1293,10 @@ export class RobotBaseService extends HTTPService {
         WHERE rs.robot_id = r.id AND r.exchange = ${this.#exchange}
         AND r.id = ${robotId};`);
 
-        await this._subscribeRobot(robot);
+        await this.#subscribeRobot(robot);
     }
 
-    async _subscribeRobot(robot: RobotState) {
+    #subscribeRobot = async (robot: RobotState) => {
         try {
             this.robots[robot.id] = {
                 robot: new Robot(robot),
@@ -1337,7 +1337,7 @@ export class RobotBaseService extends HTTPService {
                 }
             });
         }
-    }
+    };
 
     async initActiveRobotAlerts(robotId: string) {
         const currentDate = dayjs.utc().valueOf();

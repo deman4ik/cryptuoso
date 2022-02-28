@@ -100,8 +100,10 @@ export class Robot {
             initialized: false
         };
 
-        this.setStrategyState();
-        this.setIndicatorsState();
+        if (this._state.initialized) {
+            this.setStrategyState();
+            this.setIndicatorsState();
+        }
 
         /* Действия для проверки */
         this._hasAlerts = nvl(state.hasAlerts, false);
@@ -412,6 +414,7 @@ export class Robot {
      * @memberof Robot
      */
     initStrategy() {
+        this.setStrategyState();
         // Если стратегия еще не проинициализирована
         if (!this._strategyInstance.initialized) {
             // Инициализируем
@@ -430,6 +433,7 @@ export class Robot {
      * @memberof Robot
      */
     initIndicators() {
+        this.setIndicatorsState();
         Object.keys(this._state.indicators).forEach((key) => {
             if (!this._indicatorInstances[key].initialized) {
                 this._indicatorInstances[key]._checkParameters();
