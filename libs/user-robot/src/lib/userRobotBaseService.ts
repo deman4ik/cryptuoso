@@ -913,14 +913,16 @@ export class UserRobotBaseService extends RobotBaseService {
 
     async resubscribeUserRobots() {
         const rawData = await this.db.pg.any<UserRobotStateExt>(sql`
-        SELECT * FROM v_user_robot_state WHERE status = 'started'
+        SELECT * FROM v_user_robot_state WHERE 
+        (status = 'started'
+        OR (settings->'active')::boolean = true)
          AND user_portfolio_id = ${this.userPortfolioId}
          AND allocation = 'dedicated'
          AND robot_id not in (${sql.join(Object.keys(this.robots), sql`, `)});                   
       `);
 
         const userRobots = keysToCamelCase(rawData) as UserRobotStateExt[];
-
+        this.log.info(`Subscribing ${userRobots.length} user robots`);
         await Promise.all(
             userRobots.map(async (userRobot) => {
                 if (!this.robots[userRobot.robotId]) {
@@ -1032,6 +1034,7 @@ export class UserRobotBaseService extends RobotBaseService {
             .filter(({ userRobot }) => userRobot.settings.active)
             .map(({ userRobot }) => userRobot.id);
 
+        this.log.info(`Unsubscribing user robots (${currentActiveUserRobots.length} active robots)`);
         if (currentActiveUserRobots.length) {
             const inactiveUserRobots = await this.db.pg.any<{ id: string }>(sql`
             SELECT id 
@@ -1041,7 +1044,7 @@ export class UserRobotBaseService extends RobotBaseService {
             AND allocation = 'dedicated'
             AND id in (${sql.join(currentActiveUserRobots, sql`, `)})
             ;`);
-
+            this.log.info(`Unsubscribing user robots (${inactiveUserRobots.length} inactive robots)`);
             await Promise.all(
                 inactiveUserRobots.map(
                     async ({ id }) =>
