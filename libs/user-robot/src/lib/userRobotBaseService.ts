@@ -893,7 +893,8 @@ export class UserRobotBaseService extends RobotBaseService {
 
     async subscribeRobots({ asset, currency }: Exwatcher) {
         const rawData = await this.db.pg.any<UserRobotStateExt>(sql`
-        SELECT * FROM v_user_robot_state WHERE status = 'started'
+        SELECT * FROM v_user_robot_state WHERE (status = 'started'
+        OR (settings->'active')::boolean = true)
          AND user_portfolio_id = ${this.userPortfolioId}
          AND asset = ${asset}
          AND currency = ${currency}
@@ -901,7 +902,7 @@ export class UserRobotBaseService extends RobotBaseService {
       `);
 
         const userRobots = keysToCamelCase(rawData) as UserRobotStateExt[];
-
+        this.log.info(`Subscribing ${userRobots.length} user robots`);
         await Promise.all(
             userRobots.map(async (userRobot) => {
                 if (!this.robots[userRobot.robotId]) {
@@ -922,7 +923,7 @@ export class UserRobotBaseService extends RobotBaseService {
       `);
 
         const userRobots = keysToCamelCase(rawData) as UserRobotStateExt[];
-        this.log.info(`Subscribing ${userRobots.length} user robots`);
+        this.log.info(`Subscribing ${userRobots.length} new user robots`);
         await Promise.all(
             userRobots.map(async (userRobot) => {
                 if (!this.robots[userRobot.robotId]) {
