@@ -117,7 +117,7 @@ export async function saveUserRobotState(transaction: DatabaseTransactionConnect
     await transaction.query(sql`
         UPDATE user_robots
            SET internal_state = ${JSON.stringify(state.internalState) || null},
-               robot_state = ${JSON.stringify(state.robotState) || null},
+               robot_state = ${JSON.stringify(state.robotState) || JSON.stringify({})},
                status = ${state.status},
                started_at = ${state.startedAt || null},
                stopped_at = ${state.stoppedAt || null},

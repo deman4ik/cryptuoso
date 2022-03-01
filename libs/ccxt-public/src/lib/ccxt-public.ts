@@ -119,7 +119,7 @@ export class PublicConnector {
                 }
                 if (exchange === "huobipro") {
                     dateFrom = dayjs.utc("01.01.2018").toISOString();
-                    limit = 2000;
+                    limit = 1000;
                     timeframe = 1440;
                 }
                 if (exchange === "binance_futures") {

@@ -871,10 +871,18 @@ export class UserRobotBaseService extends RobotBaseService {
     //#region User Robots
     async syncUserPortfolioRobots({ userPortfolioId }: UserRobotRunnerSyncUserPortfolioDedicatedRobots) {
         if (userPortfolioId !== this.userPortfolioId) return;
+        const oldUserPortfolioStatus = this.#userPortfolio.status;
         await this.getUserPortfolio();
-        await this.unsubscribeUserRobots();
-        await this.resubscribe();
-        await this.resubscribeUserRobots();
+
+        if (this.#userPortfolio.status === "started") {
+            if (oldUserPortfolioStatus !== "started") {
+                await this.startUserServiceProcessing();
+            } else {
+                await this.unsubscribeUserRobots();
+                await this.resubscribe();
+                await this.resubscribeUserRobots();
+            }
+        }
     }
 
     async stopUserPortfolioRobots({ userPortfolioId }: UserRobotRunnerStopUserPortfolioDedicatedRobots) {
