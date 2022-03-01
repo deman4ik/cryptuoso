@@ -152,6 +152,10 @@ export class UserRobot {
         return flattenArray(Object.values(this._positions).map((pos) => pos.connectorJobs));
     }
 
+    get settings() {
+        return this._settings;
+    }
+
     set settings(settings: UserRobotDB["settings"]) {
         this._settings = settings;
         Object.keys(this._positions).forEach((pos) => {
