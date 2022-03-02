@@ -42,7 +42,7 @@ export default class ConnectorRunnerService extends BaseService {
     }
 
     async onServiceStart() {
-        this.#pool = Pool(() => spawn<Decrypt>(new ThreadsWorker("./decryptWorker")), {
+        this.#pool = await Pool(async () => await spawn<Decrypt>(new ThreadsWorker("./decryptWorker")), {
             name: "decrypt",
             concurrency: this.workerConcurrency,
             size: this.workerThreads
