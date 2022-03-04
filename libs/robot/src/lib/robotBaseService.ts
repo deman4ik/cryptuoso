@@ -1397,7 +1397,8 @@ export class RobotBaseService extends HTTPService {
             ({ activeFrom, activeTo, robotId }) =>
                 dayjs.utc(activeFrom).valueOf() < currentDate &&
                 dayjs.utc(activeTo).valueOf() > currentDate &&
-                this.robots[robotId].robot.status === RobotStatus.started
+                this.robots[robotId] &&
+                this.robots[robotId]?.robot?.status === RobotStatus.started
         );
     }
 
