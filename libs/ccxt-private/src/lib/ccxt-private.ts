@@ -58,7 +58,7 @@ export class PrivateConnector {
                 password,
                 orders: ordersCache,
                 enableRateLimit: true,
-                agent: this.agent,
+                //  agent: this.agent,
                 timeout: 30000,
                 nonce() {
                     return this.milliseconds();

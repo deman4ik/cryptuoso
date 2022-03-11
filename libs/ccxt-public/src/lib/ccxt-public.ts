@@ -23,9 +23,9 @@ export class PublicConnector {
     log: Logger;
     connectors: { [key: string]: Exchange } = {};
     retryOptions = {
-        retries: 1000,
-        minTimeout: 100,
-        maxTimeout: 1000,
+        retries: 20,
+        minTimeout: 1000,
+        maxTimeout: 10000,
         onRetry: (err: any, i: number) => {
             if (err) {
                 this.log.warn(`Retry ${i} - ${err.message}`);
@@ -54,9 +54,9 @@ export class PublicConnector {
         logger.info("All public connectors inited!");
     }
 
-    #createConnector = (exchange: string, rateLimit = false) => {
+    #createConnector = (exchange: string, rateLimit = true) => {
         const config: { [key: string]: any } = {
-            agent: this.agent,
+            // agent: this.agent,
             rateLimit
         };
         if (exchange === "bitfinex" || exchange === "kraken" || exchange === "kucoin" || exchange === "huobipro") {
@@ -69,7 +69,7 @@ export class PublicConnector {
         } else throw new Error("Unsupported exchange");
     };
 
-    async initConnector(exchange: string, rateLimit = false): Promise<void> {
+    async initConnector(exchange: string, rateLimit = true): Promise<void> {
         if (!(exchange in this.connectors) || !this.connectors[exchange].markets) {
             this.#createConnector(exchange, rateLimit);
 
