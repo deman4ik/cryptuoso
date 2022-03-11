@@ -431,7 +431,7 @@ export class RobotBaseService extends HTTPService {
                             await sleep(1000);
                         } catch (e) {
                             this.log.warn(e.message);
-                            if (!e.message.includes("connection closed") && !e.message.includes("timed out"))
+                            if (!e.message?.includes("connection closed") && !e.message.includes("timed out"))
                                 await this.events.emit<ExwatcherErrorEvent>({
                                     type: ExwatcherEvents.ERROR,
                                     data: {
@@ -462,7 +462,7 @@ export class RobotBaseService extends HTTPService {
                         await sleep(1000);
                     } catch (e) {
                         this.log.warn(e.message);
-                        if (!e.message.includes("connection closed") && !e.message.includes("timed out"))
+                        if (!e.message?.includes("connection closed") && !e.message.includes("timed out"))
                             await this.events.emit<ExwatcherErrorEvent>({
                                 type: ExwatcherEvents.ERROR,
                                 data: {

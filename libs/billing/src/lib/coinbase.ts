@@ -57,7 +57,7 @@ class CoinbaseCommerce {
                 try {
                     return await resources.Charge.retrieve(chargeId);
                 } catch (e) {
-                    if (e.message.includes("limit")) bail(e);
+                    if (e.message?.includes("limit")) bail(e);
                     else throw e;
                 }
             };
@@ -110,7 +110,7 @@ class CoinbaseCommerce {
                         }
                     });
                 } catch (e) {
-                    if (e.message.includes("limit")) bail(e);
+                    if (e.message?.includes("limit")) bail(e);
                     else throw e;
                 }
             };

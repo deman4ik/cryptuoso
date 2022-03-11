@@ -71,7 +71,7 @@ export default class ConnectorRunnerService extends BaseService {
                 password = encryptedPass && (await this.decrypt(userId, encryptedPass));
             } catch (e) {
                 this.log.error(`Failed to decrypt #${id} keys`, e, keys);
-                if (e.message.includes("bad decrypt")) {
+                if (e.message?.includes("bad decrypt")) {
                     await this.events.emit<UserExchangeAccountErrorEvent>({
                         type: ConnectorWorkerEvents.USER_EX_ACC_ERROR,
                         data: {
@@ -388,10 +388,10 @@ export default class ConnectorRunnerService extends BaseService {
                 //e.message.includes("Margin is insufficient") ||
                 //e.message.includes("EOrder:Insufficient initial margin") ||
                 //e.message.includes("balance-insufficient") ||
-                e.message.includes("EAPI:Invalid key") ||
-                e.message.includes("Invalid API-key") ||
-                e.message.includes("Failed to save order") ||
-                e.message.includes("Could not find a key")
+                e.message?.includes("EAPI:Invalid key") ||
+                e.message?.includes("Invalid API-key") ||
+                e.message?.includes("Failed to save order") ||
+                e.message?.includes("Could not find a key")
             ) {
                 await this.events.emit<UserExchangeAccountErrorEvent>({
                     type: ConnectorWorkerEvents.USER_EX_ACC_ERROR,
