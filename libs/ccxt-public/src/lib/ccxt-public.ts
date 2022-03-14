@@ -17,7 +17,6 @@ import {
     batchCandles,
     Market
 } from "@cryptuoso/market";
-import { createSocksProxyAgent } from "./fetch";
 
 const EXCHANGES = ["bitfinex", "kraken", "kucoin", "binance_futures", "binance_spot"];
 export class PublicConnector {
