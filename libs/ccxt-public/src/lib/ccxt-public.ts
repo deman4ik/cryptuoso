@@ -1,4 +1,5 @@
 import ccxt, { Exchange } from "ccxt";
+import { SocksProxyAgent } from "socks-proxy-agent";
 import retry from "async-retry";
 import dayjs from "@cryptuoso/dayjs";
 import logger, { Logger } from "@cryptuoso/logger";
@@ -32,7 +33,7 @@ export class PublicConnector {
             }
         }
     };
-    agent = process.env.PROXY_ENDPOINT && createSocksProxyAgent(process.env.PROXY_ENDPOINT);
+    agent = process.env.PROXY_ENDPOINT && new SocksProxyAgent(process.env.PROXY_ENDPOINT);
     constructor() {
         this.log = logger;
     }

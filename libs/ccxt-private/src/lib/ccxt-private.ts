@@ -1,9 +1,9 @@
 import ccxt, { Exchange } from "ccxt";
+import { SocksProxyAgent } from "socks-proxy-agent";
 import retry from "async-retry";
 import dayjs from "@cryptuoso/dayjs";
 import logger, { Logger } from "@cryptuoso/logger";
 import { GenericObject, round, sortAsc, valuesString } from "@cryptuoso/helpers";
-import { createSocksProxyAgent } from "@cryptuoso/ccxt-public";
 import { BaseError } from "@cryptuoso/errors";
 import {
     ExchangePrice,
@@ -34,7 +34,7 @@ export class PrivateConnector {
             }
         }
     };
-    agent = process.env.PROXY_ENDPOINT && createSocksProxyAgent(process.env.PROXY_ENDPOINT);
+    agent = process.env.PROXY_ENDPOINT && new SocksProxyAgent(process.env.PROXY_ENDPOINT);
     config: { [key: string]: any } = {};
     constructor({
         exchange,
@@ -1087,6 +1087,7 @@ export class PrivateConnector {
                 message.includes("network") ||
                 message.includes("request") ||
                 message.includes("econnreset") ||
+                message.includes("order does not exist") ||
                 !order.nextJob?.retries ||
                 order.nextJob?.retries < 5
             ) {

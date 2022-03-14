@@ -7,6 +7,7 @@ import dayjs from "@cryptuoso/dayjs";
 import { spawn, Pool, Worker as ThreadsWorker, Transfer, TransferDescriptor } from "threads";
 import { RobotStateBuffer, RobotWorker } from "./worker";
 import { Tracer } from "@cryptuoso/logger";
+import { PublicConnector } from "@cryptuoso/ccxt-public";
 
 export type UtilsServiceConfig = HTTPServiceConfig;
 
@@ -25,9 +26,25 @@ export default class UtilsService extends HTTPService {
 
         try {
             // this.addOnStartHandler(this.onStart);
-            //  this.addOnStartedHandler(this.onStarted);
+            this.addOnStartedHandler(this.testCCXT);
         } catch (err) {
             this.log.error("Error while constructing UtilsService", err);
+        }
+    }
+
+    async testCCXT() {
+        try {
+            const connector = new PublicConnector();
+            const candles = await connector.getCandles(
+                "binance_futures",
+                "BTC",
+                "USDT",
+                1440,
+                dayjs.utc().add(-1, "day").toISOString()
+            );
+            this.log.info(candles);
+        } catch (err) {
+            this.log.error(err);
         }
     }
 

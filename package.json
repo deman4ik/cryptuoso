@@ -137,6 +137,7 @@
         "slonik": "^25.0.0",
         "slonik-interceptor-field-name-transformation": "^1.6.2",
         "slonik-interceptor-query-logging": "^1.4.3",
+        "socks-proxy-agent": "^6.2.0-beta.0",
         "statistics.js": "^1.0.0",
         "telegraf": "^3.38.0",
         "telegraf-throttler": "^0.2.0",
