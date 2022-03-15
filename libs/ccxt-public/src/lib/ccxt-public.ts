@@ -1,5 +1,4 @@
 import ccxt, { Exchange } from "ccxt";
-import { SocksProxyAgent } from "socks-proxy-agent";
 import retry from "async-retry";
 import dayjs from "@cryptuoso/dayjs";
 import logger, { Logger } from "@cryptuoso/logger";
@@ -17,7 +16,7 @@ import {
     batchCandles,
     Market
 } from "@cryptuoso/market";
-import { createProxyAgent } from "./fetch";
+import { createProxyAgent, createSocksProxyAgent } from "./fetch";
 
 const EXCHANGES = ["bitfinex", "kraken", "kucoin", "binance_futures", "binance_spot"];
 export class PublicConnector {
@@ -33,7 +32,7 @@ export class PublicConnector {
             }
         }
     };
-    agent = process.env.PROXY_ENDPOINT && createProxyAgent(process.env.PROXY_ENDPOINT);
+    agent = process.env.PROXY_ENDPOINT && createSocksProxyAgent(process.env.PROXY_ENDPOINT);
     constructor() {
         this.log = logger;
     }
