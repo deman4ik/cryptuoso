@@ -17,6 +17,7 @@ import {
     batchCandles,
     Market
 } from "@cryptuoso/market";
+import { createProxyAgent } from "./fetch";
 
 const EXCHANGES = ["bitfinex", "kraken", "kucoin", "binance_futures", "binance_spot"];
 export class PublicConnector {
@@ -32,7 +33,7 @@ export class PublicConnector {
             }
         }
     };
-    agent = process.env.PROXY_ENDPOINT && new SocksProxyAgent(process.env.PROXY_ENDPOINT);
+    agent = process.env.PROXY_ENDPOINT && createProxyAgent(process.env.PROXY_ENDPOINT);
     constructor() {
         this.log = logger;
     }

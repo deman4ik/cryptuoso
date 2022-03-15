@@ -40,7 +40,7 @@ export default class UtilsService extends HTTPService {
                 "BTC",
                 "USDT",
                 1440,
-                dayjs.utc().add(-1, "day").toISOString()
+                dayjs.utc().add(-1, "month").toISOString()
             );
             this.log.info(candles);
         } catch (err) {

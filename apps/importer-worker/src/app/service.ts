@@ -1,7 +1,6 @@
 import { spawn, Worker as ThreadsWorker, Thread } from "threads";
 import { Job } from "bullmq";
 import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
-import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { Importer, ImporterState, Status } from "@cryptuoso/importer-state";
 import { BaseError } from "@cryptuoso/errors";
 import {
@@ -18,12 +17,10 @@ import { ImportWorker } from "./worker";
 export type ImporterWorkerServiceConfig = BaseServiceConfig;
 
 export default class ImporterWorkerService extends BaseService {
-    connector: PublicConnector;
     abort: { [key: string]: boolean } = {};
     constructor(config?: ImporterWorkerServiceConfig) {
         super(config);
         try {
-            this.connector = new PublicConnector();
             this.addOnStartHandler(this.onServiceStart);
             this.events.subscribe({
                 [ImporterWorkerEvents.CANCEL]: {
