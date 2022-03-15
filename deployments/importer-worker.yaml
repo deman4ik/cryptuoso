@@ -89,6 +89,8 @@ spec:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
                                 key: THREADS_WORKER_INIT_TIMEOUT
+                      - name: NODE_TLS_REJECT_UNAUTHORIZED
+                        value: "0"
                   ports:
                       - containerPort: 9000
                         protocol: TCP
