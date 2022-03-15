@@ -494,17 +494,18 @@ export default class RobotRunnerService extends HTTPService {
         this.log.debug(`${exchange}.${asset}.${currency} market updated!`);
     }
 
-    async addMarket(
-        req: {
-            body: {
-                input: ExwatcherAddMarket;
-            };
-        },
-        res: any
-    ) {
+    async addMarket({
+        exchange,
+        asset,
+        currency,
+        available
+    }: {
+        exchange: string;
+        asset: string;
+        currency: string;
+        available?: number;
+    }) {
         try {
-            const { exchange, asset, currency, available } = req.body.input;
-
             const assetExists = await this.db.pg.maybeOne(sql`
             SELECT code from assets where code = ${asset};
             `);
@@ -524,9 +525,8 @@ export default class RobotRunnerService extends HTTPService {
             AND asset = ${asset}
             and currency = ${currency};
             `);
-            if (!marketExists) await this.updateMarket({ ...req.body.input, available: available || 0 });
-            res.send({ result: "OK" });
-            res.end();
+            if (!marketExists) await this.updateMarket({ exchange, asset, currency, available: available || 0 });
+            return { result: "OK" };
         } catch (error) {
             this.log.error(error);
             throw error;
