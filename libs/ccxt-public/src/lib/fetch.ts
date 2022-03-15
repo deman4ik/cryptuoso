@@ -11,8 +11,8 @@ export function createProxyAgent(proxy: string) {
     const proxyHost = new URL(`http://${proxy}`);
     const proxyOptions: HttpsProxyAgentOptions = {
         ...proxyHost,
-        //  host: proxyHost.host,
-        // port: +proxyHost.port,
+        host: proxyHost.host,
+        port: +proxyHost.port,
         ca
     };
     return createHttpsProxyAgent(proxyOptions);
@@ -22,8 +22,8 @@ export function createSocksProxyAgent(proxy: string) {
     const proxyHost = new URL(`socks://${proxy}`);
     const proxyOptions: HttpsProxyAgentOptions = {
         ...proxyHost,
-        // host: proxyHost.host,
-        // port: +proxyHost.port,
+        host: proxyHost.host,
+        port: +proxyHost.port,
         ca
     };
     return new SocksProxyAgent(proxyOptions);
