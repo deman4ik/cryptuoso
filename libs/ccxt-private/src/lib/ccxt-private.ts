@@ -1,5 +1,4 @@
 import ccxt, { Exchange } from "ccxt";
-import { SocksProxyAgent } from "socks-proxy-agent";
 import retry from "async-retry";
 import dayjs from "@cryptuoso/dayjs";
 import logger, { Logger } from "@cryptuoso/logger";
@@ -34,7 +33,7 @@ export class PrivateConnector {
             }
         }
     };
-    agent = process.env.PROXY_ENDPOINT && new SocksProxyAgent(process.env.PROXY_ENDPOINT);
+    agent = process.env.PROXY_ENDPOINT && createProxyAgent(process.env.PROXY_ENDPOINT);
     config: { [key: string]: any } = {};
     constructor({
         exchange,
@@ -1181,4 +1180,7 @@ export class PrivateConnector {
             throw e;
         }
     }
+}
+function createProxyAgent(PROXY_ENDPOINT: string) {
+    throw new Error("Function not implemented.");
 }

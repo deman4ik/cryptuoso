@@ -74,6 +74,8 @@ spec:
                             secretKeyRef:
                                 name: cpz-env-<ENV>
                                 key: PROXY_ENDPOINT
+                      - name: NODE_TLS_REJECT_UNAUTHORIZED
+                        value: 0
                   ports:
                       - containerPort: 3000
                         protocol: TCP

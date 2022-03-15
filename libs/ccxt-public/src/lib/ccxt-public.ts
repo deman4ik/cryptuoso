@@ -32,7 +32,7 @@ export class PublicConnector {
             }
         }
     };
-    agent = process.env.PROXY_ENDPOINT && createSocksProxyAgent(process.env.PROXY_ENDPOINT);
+    agent = process.env.PROXY_ENDPOINT && createProxyAgent(process.env.PROXY_ENDPOINT);
     constructor() {
         this.log = logger;
     }
