@@ -32,7 +32,7 @@ export class PublicConnector {
             }
         }
     };
-    agent = process.env.PROXY_ENDPOINT && createProxyAgent(process.env.PROXY_ENDPOINT);
+    agent = process.env.PROXY_ENDPOINT ? createProxyAgent(process.env.PROXY_ENDPOINT) : null;
     constructor() {
         this.log = logger;
     }
@@ -56,9 +56,9 @@ export class PublicConnector {
 
     #createConnector = (exchange: string, rateLimit = false) => {
         const config: { [key: string]: any } = {
-            agent: this.agent,
             rateLimit
         };
+        if (this.agent) config.agent = this.agent;
         if (exchange === "bitfinex" || exchange === "kraken" || exchange === "kucoin" || exchange === "huobipro") {
             this.connectors[exchange] = new ccxt[exchange](config);
         } else if (exchange === "binance_futures") {

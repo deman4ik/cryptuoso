@@ -1,5 +1,5 @@
 import { sleep } from "@cryptuoso/helpers";
-import { DBCandle, Timeframe } from "@cryptuoso/market";
+import { DBCandle, Market, Timeframe } from "@cryptuoso/market";
 import { sql } from "@cryptuoso/postgres";
 import { Robot, RobotState, RobotStatus } from "@cryptuoso/robot-state";
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
@@ -26,10 +26,33 @@ export default class UtilsService extends HTTPService {
 
         try {
             // this.addOnStartHandler(this.onStart);
-            this.addOnStartedHandler(this.testCCXT);
+            this.addOnStartedHandler(this.updateCandles);
         } catch (err) {
             this.log.error("Error while constructing UtilsService", err);
         }
+    }
+
+    async updateCandles() {
+        this.log.info("START");
+        for (const timeframe of Timeframe.validArray.filter((t) => t > 15).reverse()) {
+            this.log.debug(timeframe);
+            const markets = await this.db.pg.many<
+                Market & { loadedFrom: string }
+            >(sql`SELECT m.*, (select c.timestamp from candles c where c.exchange = m.exchange and c.asset = m.asset and c.currency = m.currency and c.timeframe = ${timeframe} order by timestamp asc limit 1 ) as loaded_from
+             FROM markets m where m.exchange = 'binance_futures' and m.available = 5;`);
+
+            for (const market of markets) {
+                this.log.info(market.asset, timeframe);
+                await this.db.pg.query(sql`
+                UPDATE candles SET exchange = 'binance_futures', type = 'history'
+                WHERE exchange = 'binance_spot'
+                AND asset = ${market.asset}
+                AND timeframe = ${timeframe}
+                AND timestamp < ${dayjs.utc(market.loadedFrom).toISOString()};
+                `);
+            }
+        }
+        this.log.info("END");
     }
 
     async testCCXT() {

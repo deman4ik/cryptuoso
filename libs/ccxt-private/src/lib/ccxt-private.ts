@@ -17,6 +17,7 @@ import {
 import { pg, sql } from "@cryptuoso/postgres";
 import { UserExchangeAccBalances, UserExchangeAccount } from "@cryptuoso/user-state";
 import { Priority } from "@cryptuoso/connector-state";
+import { createProxyAgent } from "@cryptuoso/ccxt-public";
 
 export class PrivateConnector {
     exchange: string;
@@ -33,7 +34,7 @@ export class PrivateConnector {
             }
         }
     };
-    agent = process.env.PROXY_ENDPOINT && createProxyAgent(process.env.PROXY_ENDPOINT);
+    agent = process.env.PROXY_ENDPOINT ? createProxyAgent(process.env.PROXY_ENDPOINT) : null;
     config: { [key: string]: any } = {};
     constructor({
         exchange,
@@ -57,12 +58,12 @@ export class PrivateConnector {
                 password,
                 orders: ordersCache,
                 enableRateLimit: true,
-                agent: this.agent,
                 timeout: 30000,
                 nonce() {
                     return this.milliseconds();
                 }
             };
+            if (this.agent) this.config.agent = this.agent;
         }
         this.exchange = exchange;
         this.log = logger;
@@ -1180,7 +1181,4 @@ export class PrivateConnector {
             throw e;
         }
     }
-}
-function createProxyAgent(PROXY_ENDPOINT: string) {
-    throw new Error("Function not implemented.");
 }
