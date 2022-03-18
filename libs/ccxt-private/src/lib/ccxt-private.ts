@@ -678,7 +678,9 @@ export class PrivateConnector {
                 }
             };
         } catch (err) {
-            this.log.error(err, order);
+            this.log.error(`#${order.userExAccId} - Failed to create order ${order.id} - ${err.message}`);
+            this.log.error(err);
+            this.log.error(order);
             throw err;
         }
     }
@@ -1077,8 +1079,10 @@ export class PrivateConnector {
                           }
             };
         } catch (err) {
-            this.log.error(err, order);
             const message = err.message?.toLowerCase();
+            this.log.error(`#${order.userExAccId} - Failed to check order ${order.id} - ${message}`);
+            this.log.error(err);
+            this.log.error(order);
 
             if (
                 err instanceof ccxt.NetworkError ||
@@ -1091,10 +1095,7 @@ export class PrivateConnector {
                 !order.nextJob?.retries ||
                 order.nextJob?.retries < 5
             ) {
-                const timeout =
-                    message.includes("no such order found") && order.exchange === "bitfinex"
-                        ? this.#orderCheckTimeout * 30
-                        : this.#orderCheckTimeout * 5;
+                const timeout = this.#orderCheckTimeout * (order.nextJob?.retries || 1);
                 return {
                     order: {
                         ...order,
