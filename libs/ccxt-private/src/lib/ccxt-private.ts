@@ -587,7 +587,7 @@ export class PrivateConnector {
                         err instanceof ccxt.InvalidOrder ||
                         err.message.includes("EAPI:Invalid key") ||
                         err.message.includes("Invalid API-key") ||
-                        err.message.include("notional")
+                        err.message.includes("notional")
                     ) {
                         throw err;
                     }
@@ -659,23 +659,31 @@ export class PrivateConnector {
                     executed,
                     fee: feeCost,
                     lastCheckedAt: dayjs.utc().toISOString(),
-                    nextJob: {
-                        type: OrderJobType.check
-                    },
+                    nextJob:
+                        status === "open"
+                            ? {
+                                  type: OrderJobType.check
+                              }
+                            : null,
                     error: null,
                     info: response
                 },
-                nextJob: {
-                    type: OrderJobType.check,
-                    priority: Priority.low,
-                    nextJobAt: dayjs
-                        .utc()
-                        .add(
-                            order.exchange === "bitfinex" ? this.#orderCheckTimeout * 10 : this.#orderCheckTimeout,
-                            "second"
-                        )
-                        .toISOString()
-                }
+                nextJob:
+                    status === "open"
+                        ? {
+                              type: OrderJobType.check,
+                              priority: Priority.low,
+                              nextJobAt: dayjs
+                                  .utc()
+                                  .add(
+                                      order.exchange === "bitfinex"
+                                          ? this.#orderCheckTimeout * 10
+                                          : this.#orderCheckTimeout,
+                                      "second"
+                                  )
+                                  .toISOString()
+                          }
+                        : null
             };
         } catch (err) {
             this.log.error(`#${order.userExAccId} - Failed to create order ${order.id} - ${err.message}`);
