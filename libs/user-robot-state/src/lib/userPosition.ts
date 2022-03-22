@@ -616,11 +616,13 @@ export class UserPosition {
                 type: OrderJobType.create
             }
         };
-        if (order.volume < 0)
+        if (order.volume <= 0)
             throw new BaseError(
                 "Wrong order volume value",
                 {
-                    userPositionId: this._id
+                    userPositionId: this._id,
+                    orderId: order.id,
+                    volume: order.volume
                 },
                 "ERR_CONFLICT"
             );

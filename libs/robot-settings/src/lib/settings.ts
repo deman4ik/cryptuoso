@@ -65,8 +65,8 @@ export function getCurrentUserRobotSettings({
         volumeInCurrency = limits.max.amountUSD;
     }
 
-    if (volumeInCurrency < 7) {
-        volumeInCurrency = 7;
+    if (volumeInCurrency < 10) {
+        volumeInCurrency = 10;
         volume = calcCurrencyDynamic(volumeInCurrency, currentPrice);
     }
 
@@ -79,5 +79,16 @@ export function getCurrentUserRobotSettings({
         if (balance < volumeInCurrency) throw new Error("Exchange account balance is insufficient");
     }
 
-    return { ...settings, volume: round(volume, precision?.amount || 6) };
+    volume = round(volume, precision?.amount || 6);
+
+    if (volume <= 0)
+        throw new BaseError(
+            "Wrong volume value",
+            {
+                volume
+            },
+            "ERR_CONFLICT"
+        );
+
+    return { ...settings, volume };
 }
