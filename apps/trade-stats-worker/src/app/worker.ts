@@ -192,7 +192,7 @@ class StatsCalcWorker {
     async calcPortfolio(job: TradeStatsPortfolio) {
         try {
             let { recalc = false } = job;
-            const { portfolioId } = job;
+            const { portfolioId, dateFrom, dateTo } = job;
 
             let initialStats: TradeStats = {
                 fullStats: null,
@@ -243,6 +243,7 @@ class StatsCalcWorker {
 
             let calcFrom;
             let entryDate;
+            let calcTo;
             if (!recalc && initialStats?.fullStats) {
                 calcFrom = initialStats.fullStats.lastPosition.exitDate;
             }
@@ -250,11 +251,18 @@ class StatsCalcWorker {
             if (recalc && portfolio.settings.dateFrom) {
                 entryDate = portfolio.settings.dateFrom;
             }
+            if (recalc && portfolio.settings.dateTo) {
+                calcTo = portfolio.settings.dateTo;
+            }
+            if (dateFrom) entryDate = dateFrom;
+
+            if (dateTo) calcTo = dateTo;
             if (calcFrom) logger.debug(`Calculating portfolio #${portfolioId} stats from ${calcFrom}`);
             else logger.debug(`Calculating portfolio #${portfolioId} stats full`);
 
             const conditionExitDate = !calcFrom ? sql`` : sql`AND p.exit_date > ${calcFrom}`;
-            const conditionEntryDate = !entryDate ? sql`` : sql`AND p.entry_date > ${entryDate}`;
+            const conditionEntryDateFrom = !entryDate ? sql`` : sql`AND p.entry_date > ${entryDate}`;
+            const conditionEntryDateTo = !calcTo ? sql`` : sql`AND p.entry_date < ${calcTo}`;
             const querySelectPart = sql`
             SELECT p.id, p.robot_id, p.direction, p.entry_date, p.entry_price, p.exit_date, p.exit_price, p.bars_held, p.meta, p.max_price
         `;
@@ -263,7 +271,8 @@ class StatsCalcWorker {
             WHERE p.portfolio_id = ${portfolioId}
                 AND p.status = 'closed'
                 ${conditionExitDate}
-                ${conditionEntryDate}
+                ${conditionEntryDateFrom}
+                ${conditionEntryDateTo}
         `;
             const queryCommonPart = sql`
             ${querySelectPart}

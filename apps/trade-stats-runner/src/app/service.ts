@@ -172,10 +172,10 @@ export default class StatisticCalcRunnerService extends HTTPService {
     }
 
     async handleStatsCalcPortfolioEvent(params: TradeStatsRunnerPortfolio) {
-        const { recalc, portfolioId, savePositions } = params;
+        const { recalc, portfolioId, savePositions, dateFrom, dateTo } = params;
 
         this.log.info(`New ${TradeStatsRunnerEvents.PORTFOLIO} event - ${portfolioId}`);
-        await this.queueJob({ type: "portfolio", recalc, portfolioId, savePositions });
+        await this.queueJob({ type: "portfolio", recalc, portfolioId, savePositions, dateFrom, dateTo });
     }
 
     async handleStatsCalcUserRobotEvent(params: TradeStatsRunnerUserRobot) {

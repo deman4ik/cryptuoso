@@ -46,6 +46,14 @@ export const TradeStatsRunnerSchema = {
         },
         portfolioId: {
             type: "uuid"
+        },
+        dateFrom: {
+            type: "string",
+            optional: true
+        },
+        dateTo: {
+            type: "string",
+            optional: true
         }
     },
     [TradeStatsRunnerEvents.PORTFOLIO_ROBOT]: {
@@ -159,6 +167,8 @@ export interface TradeStatsRunnerPortfolio {
     recalc?: boolean;
     portfolioId: string;
     savePositions?: boolean;
+    dateFrom?: string;
+    dateTo?: string;
 }
 
 export type TradeStatsRunnerPortfolioRobot = TradeStatsRunnerRobot;

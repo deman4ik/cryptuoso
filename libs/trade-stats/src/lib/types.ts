@@ -180,6 +180,8 @@ export interface TradeStatsPortfolio extends BaseTradeStatsJob {
     type: "portfolio";
     portfolioId: string;
     feeRate?: number;
+    dateFrom?: string;
+    dateTo?: string;
 }
 
 export interface TradeStatsUserRobot extends BaseTradeStatsJob {
