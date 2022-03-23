@@ -215,7 +215,7 @@ class StatsCalcWorker {
             AND r.id = ${portfolioId};
         `);
             if (!portfolio) throw new Error(`The portfolio doesn't exists (portfolioId: ${portfolioId})`);
-            if (portfolio.status !== "started") {
+            if (!recalc && portfolio.status !== "started") {
                 this.log.warn(`Portfolio #${portfolioId} is ${portfolio.status}. Skipping stats calc.`);
                 return;
             }
