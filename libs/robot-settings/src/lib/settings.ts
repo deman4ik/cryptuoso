@@ -41,6 +41,7 @@ export function getCurrentUserRobotSettings({
         }
         if (userPortfolioSettings.leverage) {
             volume = roundFirstSignificant(volume * userPortfolioSettings.leverage);
+            volumeInCurrency = round(volume * currentPrice, 2);
         }
     } else {
         //TODO: deprecate
