@@ -17,6 +17,7 @@ export interface BaseStats {
     avgNetProfit: number | null;
     percentNetProfit: number | null;
     localMax: number;
+    peakBalance: number;
     grossProfit: number;
     grossLoss: number;
     avgGrossProfit: number | null;
@@ -160,7 +161,8 @@ export type TradeStatsType =
     | "allUserRobotsAggr"
     | "allPortfoliosAggr"
     | "allUserPortfoliosAggr"
-    | "allSignalSubscriptionsAggr";
+    | "allSignalSubscriptionsAggr"
+    | "test";
 
 interface BaseTradeStatsJob {
     type: TradeStatsType;
@@ -182,6 +184,12 @@ export interface TradeStatsPortfolio extends BaseTradeStatsJob {
     feeRate?: number;
     dateFrom?: string;
     dateTo?: string;
+}
+
+export interface TradeStatsTest extends BaseTradeStatsJob {
+    type: "test";
+    testStatsId: string;
+    feeRate?: number;
 }
 
 export interface TradeStatsUserRobot extends BaseTradeStatsJob {
@@ -237,7 +245,8 @@ export type TradeStatsJob =
     | TradeStatsAllUserRobotsAggr
     | TradeStatsAllPortfoliosAggr
     | TradeStatsAllUserPortfoliosAggr
-    | TradeStatsAllSignalSubscriptionsAggr;
+    | TradeStatsAllSignalSubscriptionsAggr
+    | TradeStatsTest;
 
 export type TradeStatsAggrJob =
     | TradeStatsAllRobotsAggr

@@ -16,7 +16,8 @@ import {
     periodStatsToArray,
     FullStats,
     BaseStats,
-    TradeStatsSignalSubscription
+    TradeStatsSignalSubscription,
+    TradeStatsTest
 } from "@cryptuoso/trade-stats";
 import logger, { Logger } from "@cryptuoso/logger";
 import { sql, pg, pgUtil, makeChunksGenerator } from "@cryptuoso/postgres";
@@ -46,6 +47,7 @@ class StatsCalcWorker {
     }
 
     async process(job: TradeStatsJob) {
+        this.log.info(`Calculating stats ${job.type}`);
         switch (job.type) {
             case "robot":
                 await this.calcRobot(job as TradeStatsRobot);
@@ -62,9 +64,13 @@ class StatsCalcWorker {
             case "signalSubscription":
                 await this.calcSignalSubscription(job as TradeStatsSignalSubscription);
                 break;
+            case "test":
+                await this.calcTestStats(job as TradeStatsTest);
+                break;
             default:
                 this.log.error(`Unsupported stats calc type`);
         }
+        this.log.info(`Finished calculating stats ${job.type}`);
     }
 
     async calcStats(positions: BasePosition[], meta: StatsMeta, prevStats?: TradeStats) {
@@ -863,6 +869,119 @@ class StatsCalcWorker {
             }
         } catch (err) {
             this.log.error("Failed to calcSignalSubscription stats", err);
+            this.log.debug(job);
+            throw err;
+        }
+    }
+
+    async calcTestStats(job: TradeStatsTest) {
+        try {
+            let { recalc = false } = job;
+            const { testStatsId } = job;
+
+            let initialStats: TradeStats = {
+                fullStats: null,
+                periodStats: {
+                    year: null,
+                    quarter: null,
+                    month: null
+                }
+            };
+
+            const testStats = await this.db.pg.maybeOne<{
+                settings: { initialBalance: number; leverage: number };
+                feeRate: number;
+            }>(sql`
+            SELECT  r.settings, m.fee_rate
+            FROM test_stats r, mv_exchange_info m
+            WHERE r.exchange = m.exchange
+            AND r.id = ${testStatsId};
+        `);
+            if (!testStats) throw new Error(`The test stats doesn't exists (testStatsId: ${testStatsId})`);
+
+            const querySelectPart = sql`
+            SELECT p.id, p.robot_id, p.direction, p.entry_date, p.entry_price, p.exit_date, p.exit_price, p.bars_held, json_build_object('portfolioShare', p.share) AS meta, p.max_price
+        `;
+            const queryFromAndConditionPart = sql`
+            FROM test_stats_positions p
+            WHERE p.test_stats_id = ${testStatsId}
+        `;
+            const queryCommonPart = sql`
+            ${querySelectPart}
+            ${queryFromAndConditionPart}
+            ORDER BY p.exit_date
+        `;
+
+            const positionsCount = await this.db.pg.oneFirst<number>(sql`
+            SELECT COUNT(1)
+            ${queryFromAndConditionPart};
+        `);
+
+            if (positionsCount == 0) return false;
+
+            const positions: BasePosition[] = await DataStream.from(
+                makeChunksGenerator(
+                    this.db.pg,
+                    queryCommonPart,
+                    positionsCount > this.defaultChunkSize ? this.defaultChunkSize : positionsCount
+                )
+            ).reduce(async (accum: BasePosition[], chunk: BasePosition[]) => [...accum, ...chunk], []);
+
+            const newStats: TradeStats = await this.calcStats(
+                positions,
+                {
+                    job: {
+                        ...job,
+                        type: "portfolio",
+                        portfolioId: "test",
+                        savePositions: true,
+                        feeRate: testStats.feeRate
+                    },
+                    initialBalance: testStats.settings.initialBalance,
+                    leverage: testStats.settings.leverage
+                },
+                initialStats
+            );
+
+            await this.db.pg.transaction(async (t) => {
+                await t.query(sql`
+                UPDATE test_stats
+                SET full_stats = ${JSON.stringify(newStats.fullStats)}
+                WHERE id = ${testStatsId};`);
+
+                const periodStatsArray = periodStatsToArray(newStats.periodStats);
+                if (recalc) {
+                    await t.query(sql`DELETE FROM test_stats_period_stats WHERE test_stats_id = ${testStatsId}`);
+
+                    await t.query(sql`
+                    INSERT INTO test_stats_period_stats
+                    (test_stats_id,
+                    period,
+                    year,
+                    quarter,
+                    month,
+                    date_from,
+                    date_to,
+                    stats )
+                    SELECT * FROM
+                ${sql.unnest(
+                    this.db.util.prepareUnnest(
+                        periodStatsArray.map((s) => ({
+                            ...s,
+                            testStatsId,
+                            quarter: s.quarter || undefined,
+                            month: s.month || undefined,
+                            stats: JSON.stringify(s.stats)
+                        })),
+                        ["testStatsId", "period", "year", "quarter", "month", "dateFrom", "dateTo", "stats"]
+                    ),
+                    ["uuid", "varchar", "int8", "int8", "int8", "timestamp", "timestamp", "jsonb"]
+                )};
+                `);
+                }
+            });
+        } catch (err) {
+            this.log.error("Failed to calcPortfolio stats", err);
             this.log.debug(job);
             throw err;
         }

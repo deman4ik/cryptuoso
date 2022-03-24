@@ -16,10 +16,21 @@ export default class StatisticCalcWorkerService extends BaseService {
 
         try {
             this.addOnStartHandler(this.onServiceStart);
+            // this.addOnStartedHandler(this.onServiceStarted);
             this.addOnStopHandler(this.onServiceStop);
         } catch (err) {
             this.log.error("Error in StatisticCalcWorkerService constructor", err);
         }
+    }
+
+    async onServiceStarted(): Promise<void> {
+        await this.pool.queue(async (worker: StatsWorker) =>
+            worker.process({
+                type: "test",
+                testStatsId: "842b2999-9ded-4d41-b7dc-707eda003556",
+                recalc: true
+            })
+        );
     }
 
     private async onServiceStart(): Promise<void> {

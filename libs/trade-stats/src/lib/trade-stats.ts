@@ -1,5 +1,15 @@
 import dayjs from "@cryptuoso/dayjs";
-import { average, calcPercentValue, chunkArray, divide, nvl, round, sortAsc, sum } from "@cryptuoso/helpers";
+import {
+    average,
+    calcPercentValue,
+    chunkArray,
+    divide,
+    nvl,
+    percentBetween,
+    round,
+    sortAsc,
+    sum
+} from "@cryptuoso/helpers";
 import { BasePosition, calcPositionProfit } from "@cryptuoso/market";
 import { calcZScore, createDatesPeriod } from "./helpers";
 import { BaseStats, FullStats, PerformanceVals, Stats, StatsMeta, TradeStats, TradeStatsPortfolio } from "./types";
@@ -165,6 +175,7 @@ export class TradeStatsCalc implements TradeStats {
             avgNetProfit: nvl(prevStats?.avgNetProfit),
             percentNetProfit: nvl(prevStats?.percentNetProfit, 0),
             localMax: nvl(prevStats?.localMax, 0),
+            peakBalance: nvl(prevStats?.peakBalance, 0),
             grossProfit: nvl(prevStats?.grossProfit, 0),
             grossLoss: nvl(prevStats?.grossLoss, 0),
             avgGrossProfit: nvl(prevStats?.avgGrossProfit),
@@ -211,6 +222,7 @@ export class TradeStatsCalc implements TradeStats {
 
             stdDevPercentNetProfit: nvl(prevStats?.stdDevPercentNetProfit),
             localMax: nvl(prevStats?.localMax, 0),
+            peakBalance: nvl(prevStats?.peakBalance, 0),
             grossProfit: nvl(prevStats?.grossProfit, 0),
             grossLoss: nvl(prevStats?.grossLoss, 0),
             avgGrossProfit: nvl(prevStats?.avgGrossProfit),
@@ -367,10 +379,16 @@ export class TradeStatsCalc implements TradeStats {
             stats.netProfit = sum(stats.netProfit, profit);
 
             stats.currentBalance = sum(stats.initialBalance, stats.netProfit);
+
+            if (stats.peakBalance < stats.currentBalance) {
+                stats.peakBalance = stats.currentBalance;
+            }
+
             if (this.meta.job.type === "robot") {
                 stats.netProfitsSMA.push(stats.netProfit);
             }
             if (stats.netProfit > stats.localMax) stats.localMax = stats.netProfit;
+
             const drawdown = stats.netProfit - stats.localMax;
 
             if (stats.maxDrawdown > drawdown) {
@@ -388,7 +406,8 @@ export class TradeStatsCalc implements TradeStats {
             }
 
             if (this.hasBalance) {
-                const percentDrawdown = (Math.abs(stats.maxDrawdown) / stats.currentBalance) * 100;
+                const percentDrawdown = (100 * Math.abs(stats.maxDrawdown)) / stats.peakBalance;
+
                 if (percentDrawdown > stats.percentMaxDrawdown) {
                     stats.percentMaxDrawdown = percentDrawdown;
                     stats.percentMaxDrawdownDate = exitDate;
@@ -478,7 +497,9 @@ export class TradeStatsCalc implements TradeStats {
             stats.netProfit = sum(stats.netProfit, profit);
 
             stats.currentBalance = sum(stats.initialBalance, stats.netProfit);
-
+            if (stats.peakBalance < stats.currentBalance) {
+                stats.peakBalance = stats.currentBalance;
+            }
             if (stats.netProfit > stats.localMax) stats.localMax = stats.netProfit;
             const drawdown = stats.netProfit - stats.localMax;
 
@@ -497,7 +518,7 @@ export class TradeStatsCalc implements TradeStats {
             }
 
             if (this.hasBalance) {
-                const percentDrawdown = (Math.abs(stats.maxDrawdown) / stats.currentBalance) * 100;
+                const percentDrawdown = (100 * Math.abs(stats.maxDrawdown)) / stats.peakBalance;
                 if (percentDrawdown > stats.percentMaxDrawdown) {
                     stats.percentMaxDrawdown = percentDrawdown;
                     stats.percentMaxDrawdownDate = exitDate;
@@ -745,7 +766,6 @@ export class TradeStatsCalc implements TradeStats {
                 periodStats.year[year.key].stats = this.roundStats(periodStats.year[year.key].stats);
             } catch (err) {
                 logger.error(err);
-                logger.debug(year);
                 throw err;
             }
         }
@@ -797,7 +817,6 @@ export class TradeStatsCalc implements TradeStats {
                 periodStats.quarter[quarter.key].stats = this.roundStats(periodStats.quarter[quarter.key].stats);
             } catch (err) {
                 logger.error(err);
-                logger.debug(quarter);
                 throw err;
             }
         }
@@ -851,7 +870,6 @@ export class TradeStatsCalc implements TradeStats {
                 periodStats.month[month.key].stats = this.roundStats(periodStats.month[month.key].stats);
             } catch (err) {
                 logger.error(err);
-                logger.debug(month);
                 throw err;
             }
         }
