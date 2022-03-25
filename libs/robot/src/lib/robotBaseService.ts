@@ -612,7 +612,7 @@ export class RobotBaseService extends HTTPService {
                 .map((c) => ({ ...c, asset, currency, timeframe }))
                 .sort((a, b) => sortAsc(a.time, b.time));
         } catch (err) {
-            this.log.error("Failed to load history candles", err);
+            this.log.error(`Failed to load history candles - ${asset}/${currency}/${timeframe}`, err);
             throw err;
         }
     }
