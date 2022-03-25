@@ -527,8 +527,7 @@ export class RobotBaseService extends HTTPService {
         }
     }
 
-    async addSubscription({ exchange, asset, currency }: ExwatcherSubscribe): Promise<void> {
-        if (exchange !== this.#exchange) return;
+    async addSubscription({ asset, currency }: ExwatcherSubscribe): Promise<void> {
         const id = this.createExwatcherId(asset, currency);
         try {
             if (
@@ -1292,6 +1291,9 @@ export class RobotBaseService extends HTTPService {
         FROM robots r, v_robot_settings rs 
         WHERE rs.robot_id = r.id AND r.exchange = ${this.#exchange}
         AND r.id = ${robotId};`);
+
+        if (!this.#subscriptions[this.createExwatcherId(robot.asset, robot.currency)])
+            await this.addSubscription({ exchange: this.#exchange, asset: robot.asset, currency: robot.currency });
 
         await this.#subscribeRobot(robot);
     }

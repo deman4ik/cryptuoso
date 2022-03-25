@@ -87,7 +87,10 @@ export default class ImporterRunnerService extends HTTPService {
     async start({ id, exchange, asset, currency, type, timeframes, dateFrom, dateTo, amount }: ImporterRunnerStart) {
         try {
             const params: ImporterParams = {
-                timeframes: timeframes || [1440, 720, 480, 240, 120, 60, 30]
+                timeframes:
+                    timeframes || type === "history"
+                        ? [1440, 720, 480, 240, 120, 60, 30]
+                        : [1440, 720, 480, 240, 120, 60, 30, 5]
             };
             const market = await this.db.pg.maybeOne<{ loadFrom: string }>(sql`
             select load_from from markets 
