@@ -64,9 +64,10 @@ const worker = {
             portfolio.settings.excludeTimeframes.length
                 ? sql`AND r.timeframe NOT IN (${sql.join(portfolio.settings.excludeTimeframes, sql`, `)})`
                 : sql``;
-        const dateFromCondition = portfolio.settings.dateFrom
+        let dateFromCondition = portfolio.settings.dateFrom
             ? sql`AND p.entry_date >= ${portfolio.settings.dateFrom}`
             : sql``;
+        if (job.dateFrom) dateFromCondition = sql`AND p.entry_date >= ${job.dateFrom}`;
         const dateToCondition = portfolio.settings.dateTo
             ? sql`AND p.entry_date <= ${portfolio.settings.dateTo}`
             : sql``;

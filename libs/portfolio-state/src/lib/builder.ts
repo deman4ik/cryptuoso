@@ -211,10 +211,10 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
         this.log.debug(
             `Portfolio #${this.portfolio.id} - Calculating amounts for ${Object.keys(robots).length} robots`
         );
-        const propСoefficient = 100 / sum(...Object.values(robots).map((r) => r.stats.fullStats.amountProportion));
+        const propCoefficient = 100 / sum(...Object.values(robots).map((r) => r.stats.fullStats.amountProportion));
 
         for (const [key, robot] of Object.entries(robots)) {
-            robots[key].share = round(robot.stats.fullStats.amountProportion * propСoefficient, 2);
+            robots[key].share = round(robot.stats.fullStats.amountProportion * propCoefficient, 2);
 
             if (this.portfolio.settings.robotsShare && this.portfolio.settings.robotsShare[key]) {
                 robots[key].share = this.portfolio.settings.robotsShare[key];

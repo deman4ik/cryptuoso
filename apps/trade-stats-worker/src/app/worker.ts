@@ -254,15 +254,14 @@ class StatsCalcWorker {
                 calcFrom = initialStats.fullStats.lastPosition.exitDate;
             }
 
-            if (recalc && portfolio.settings.dateFrom) {
-                entryDate = portfolio.settings.dateFrom;
+            if (recalc && (portfolio.settings.dateFrom || dateFrom)) {
+                if (dateFrom) entryDate = dateFrom;
+                else entryDate = portfolio.settings.dateFrom;
             }
-            if (recalc && portfolio.settings.dateTo) {
-                calcTo = portfolio.settings.dateTo;
+            if (recalc && dateTo) {
+                calcTo = dateTo;
             }
-            if (dateFrom) entryDate = dateFrom;
 
-            if (dateTo) calcTo = dateTo;
             if (calcFrom) logger.debug(`Calculating portfolio #${portfolioId} stats from ${calcFrom}`);
             else logger.debug(`Calculating portfolio #${portfolioId} stats full`);
 

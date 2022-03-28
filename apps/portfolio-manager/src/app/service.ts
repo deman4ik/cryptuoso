@@ -751,7 +751,11 @@ export default class PortfolioManagerService extends HTTPService {
             await this.addJob<PortfolioBuilderJob>(
                 "portfolioBuilder",
                 "build",
-                { portfolioId: id, type: "portfolio" },
+                {
+                    portfolioId: id,
+                    type: "portfolio",
+                    dateFrom: dayjs.utc().startOf("month").add(-6, "month").toISOString()
+                },
                 {
                     jobId: id,
                     removeOnComplete: true,

@@ -110,6 +110,7 @@ export interface PortfolioBuilderJob {
     portfolioId: string;
     type: "portfolio";
     saveSteps?: boolean;
+    dateFrom?: string;
 }
 
 export interface UserPortfolioBuilderJob {
