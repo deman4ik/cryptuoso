@@ -14,7 +14,6 @@ import { BasePosition, calcPositionProfit } from "@cryptuoso/market";
 import { calcZScore, createDatesPeriod } from "./helpers";
 import { BaseStats, FullStats, PerformanceVals, Stats, StatsMeta, TradeStats, TradeStatsPortfolio } from "./types";
 import logger from "@cryptuoso/logger";
-//import fs from "fs";
 
 export class TradeStatsCalc implements TradeStats {
     fullStats: TradeStats["fullStats"];
@@ -649,15 +648,15 @@ export class TradeStatsCalc implements TradeStats {
                 const positionsProfitPercents = prevMonths.map(({ stats }) => stats.percentNetProfit);
                 const sumPercentNetProfit = sum(...positionsProfitPercents);
 
-                const avgPercentNetProfit = sumPercentNetProfit / prevMonths.length;
+                const avgPercentNetProfit = sumPercentNetProfit / positionsProfitPercents.length;
                 let sumPercentNetProfitSqDiff = null;
                 for (const percent of positionsProfitPercents) {
                     const percentProfitSqDiff = Math.pow(percent - avgPercentNetProfit, 2);
                     sumPercentNetProfitSqDiff = sum(sumPercentNetProfitSqDiff, percentProfitSqDiff);
                 }
 
-                stats.stdDevPercentNetProfit = Math.sqrt(sumPercentNetProfitSqDiff) / (prevMonths.length - 1);
-                stats.sharpeRatio = avgPercentNetProfit / stats.stdDevPercentNetProfit;
+                stats.stdDevPercentNetProfit = Math.sqrt(sumPercentNetProfitSqDiff / positionsProfitPercents.length);
+                stats.sharpeRatio = (avgPercentNetProfit - 6) / stats.stdDevPercentNetProfit;
             }
 
             if (this.meta.job.type === "robot") {
