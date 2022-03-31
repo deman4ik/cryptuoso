@@ -34,9 +34,12 @@ import {
     getMarketsCheckEventName,
     getRobotsCheckEventName,
     getRobotStatusEventName,
+    getRobotSubscribeEventName,
     RobotRunnerEvents,
     RobotRunnerSchema,
     RobotRunnerStatus,
+    RobotServiceEvents,
+    RobotServiceSchema,
     RobotWorkerError,
     RobotWorkerEvents,
     SignalEvents
@@ -55,9 +58,8 @@ import {
 } from "@cryptuoso/exwatcher-events";
 import { ImporterState, Status } from "@cryptuoso/importer-state";
 import { DatabaseTransactionConnectionType } from "slonik";
-import { BaseServiceError, BaseServiceEvents, NewEvent } from "@cryptuoso/events";
+import { BaseServiceError, BaseServiceEvents } from "@cryptuoso/events";
 import { Tracer } from "@cryptuoso/logger";
-import { UserRobotJobType } from "@cryptuoso/user-robot-state";
 
 export interface RobotBaseServiceConfig extends HTTPServiceConfig {
     exchange: string;
@@ -135,6 +137,10 @@ export class RobotBaseService extends HTTPService {
                         status: "string"
                     },
                     handler: this.handleImporterStatusEvent.bind(this)
+                },
+                [getRobotSubscribeEventName(this.#exchange)]: {
+                    schema: RobotServiceSchema[RobotServiceEvents.SUBSCRIBE],
+                    handler: this.addSubscription.bind(this)
                 }
             });
         }

@@ -22,6 +22,10 @@ export const enum RobotRunnerEvents {
     MARKETS_CHECK = "in-robot-runner.markets-check"
 }
 
+export const enum RobotServiceEvents {
+    SUBSCRIBE = "in-robot.subscribe"
+}
+
 export const getRobotStatusEventName = (exchange: string) => {
     if (!Object.values(EXCHANGES).includes(exchange)) throw new Error(`Exchange ${exchange} is not supported`);
     return `in-robot-runner-${exchange}.status`;
@@ -35,6 +39,11 @@ export const getRobotsCheckEventName = (exchange: string) => {
 export const getMarketsCheckEventName = (exchange: string) => {
     if (!Object.values(EXCHANGES).includes(exchange)) throw new Error(`Exchange ${exchange} is not supported`);
     return `in-robot-runner-${exchange}.markets-check`;
+};
+
+export const getRobotSubscribeEventName = (exchange: string) => {
+    if (!Object.values(EXCHANGES).includes(exchange)) throw new Error(`Exchange ${exchange} is not supported`);
+    return `in-robot-${exchange}.subscribe`;
 };
 
 export const ROBOT_WORKER_TOPIC = "out-robot-worker";
@@ -147,6 +156,13 @@ export const RobotRunnerSchema = {
     [RobotRunnerEvents.MARKETS_CHECK]: { exchange: "string" }
 };
 
+export const RobotServiceSchema = {
+    [RobotServiceEvents.SUBSCRIBE]: {
+        asset: "string",
+        currency: "string"
+    }
+};
+
 export const RobotWorkerSchema = {
     [RobotWorkerEvents.LOG]: {
         robotId: "uuid"
@@ -237,4 +253,9 @@ export interface AddMarket {
     asset: string;
     currency: string;
     available?: number;
+}
+
+export interface RobotServiceSubcribe {
+    asset: string;
+    currency: string;
 }

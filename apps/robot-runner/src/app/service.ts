@@ -13,7 +13,9 @@ import {
     RobotRunnerMarketsCheck,
     getMarketsCheckEventName,
     getRobotsCheckEventName,
-    RobotRunnerRobotsCheck
+    RobotRunnerRobotsCheck,
+    RobotServiceSubcribe,
+    getRobotSubscribeEventName
 } from "@cryptuoso/robot-events";
 import { ExwatcherAddMarket } from "@cryptuoso/exwatcher-events";
 import { BacktesterRunnerEvents, BacktesterRunnerStart } from "@cryptuoso/backtester-events";
@@ -74,6 +76,15 @@ export default class RobotRunnerService extends HTTPService {
                 updateMarkets: {
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.updateMarkets.bind(this))
+                },
+                addSubscription: {
+                    inputSchema: {
+                        exchange: "string",
+                        asset: "string",
+                        currency: "string"
+                    },
+                    roles: [UserRoles.admin, UserRoles.manager],
+                    handler: this.HTTPHandler.bind(this, this.addSubscription.bind(this))
                 }
             });
 
@@ -531,5 +542,15 @@ export default class RobotRunnerService extends HTTPService {
             this.log.error(error);
             throw error;
         }
+    }
+
+    async addSubscription({ exchange, asset, currency }: { exchange: string; asset: string; currency: string }) {
+        await this.events.emit<RobotServiceSubcribe>({
+            type: getRobotSubscribeEventName(exchange),
+            data: {
+                asset,
+                currency
+            }
+        });
     }
 }
