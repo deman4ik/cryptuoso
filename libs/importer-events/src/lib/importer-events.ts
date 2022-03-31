@@ -40,7 +40,8 @@ export const ImporterRunnerSchema = {
             type: "array",
             enum: Timeframe.validArray,
             empty: false,
-            default: [1440, 720, 480, 240, 120, 60, 30]
+            optional: true
+            //  default: [1440, 720, 480, 240, 120, 60, 30]
         },
         dateFrom: {
             type: "string",

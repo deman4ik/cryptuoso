@@ -90,7 +90,7 @@ export default class ImporterRunnerService extends HTTPService {
                 timeframes:
                     timeframes || type === "history"
                         ? [1440, 720, 480, 240, 120, 60, 30]
-                        : [1440, 720, 480, 240, 120, 60, 30, 5]
+                        : [1440, 720, 480, 240, 120, 60, 30, 15, 5]
             };
             const market = await this.db.pg.maybeOne<{ loadFrom: string }>(sql`
             select load_from from markets 
