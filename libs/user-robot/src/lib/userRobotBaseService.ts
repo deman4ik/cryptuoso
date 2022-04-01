@@ -397,7 +397,7 @@ export class UserRobotBaseService extends RobotBaseService {
             data,
             allocation
         ) VALUES (
-            ${nextJob.id},
+            ${nextJob.id || uuid()},
             ${nextJob.userRobotId},
             ${nextJob.type},
             ${JSON.stringify(nextJob.data) || null},
@@ -410,6 +410,7 @@ export class UserRobotBaseService extends RobotBaseService {
          retries = null,
          error = null;
         `);
+
         if (!this.#userRobotJobs.find((c) => c.id === nextJob.id)) this.#userRobotJobs.push(nextJob);
         this.#jobsEmiter.emit("userRobotJob");
     }
@@ -886,16 +887,22 @@ export class UserRobotBaseService extends RobotBaseService {
     }
 
     async stopUserPortfolioRobots({ userPortfolioId }: UserRobotRunnerStopUserPortfolioDedicatedRobots) {
-        if (userPortfolioId !== this.userPortfolioId) return;
-        for (const id of Object.keys(this.robots)) {
-            await this.addUserRobotJob({
-                userRobotId: this.robots[id].userRobot.id,
-                type: UserRobotJobType.stop,
-                data: {
-                    message: null
-                },
-                allocation: "dedicated"
-            });
+        try {
+            if (userPortfolioId !== this.userPortfolioId) return;
+            for (const id of Object.keys(this.robots)) {
+                await this.addUserRobotJob({
+                    id: uuid(),
+                    userRobotId: this.robots[id].userRobot.id,
+                    type: UserRobotJobType.stop,
+                    data: {
+                        message: null
+                    },
+                    allocation: "dedicated"
+                });
+            }
+        } catch (err) {
+            this.log.error(`Failed to stop user portfolio #${this.userPortfolioId} - ${err.message}`);
+            throw err;
         }
     }
 
