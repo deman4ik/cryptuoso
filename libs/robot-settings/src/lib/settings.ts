@@ -76,9 +76,9 @@ export function getCurrentUserRobotSettings({
         volumeInCurrency = round(volume * currentPrice, 2);
     }
 
-    if (userPortfolioId) {
+    /* if (userPortfolioId) {
         if (balance < volumeInCurrency) throw new Error("Exchange account balance is insufficient");
-    }
+    }*/
 
     volume = round(volume, precision?.amount || 6);
 

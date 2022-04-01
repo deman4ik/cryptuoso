@@ -33,7 +33,7 @@ export class BaseService {
     #onServiceStart: { (): Promise<void> }[] = [];
     #onServiceStarted: { (): Promise<void> }[] = [];
     #onServiceStop: { (): Promise<void> }[] = [];
-    #redisConnection: Redis.Redis;
+    #redisConnection: Redis;
     #redlock: Redlock;
     #cache: Cache;
     #db: { sql: typeof sql; pg: typeof pg; util: typeof pgUtil };

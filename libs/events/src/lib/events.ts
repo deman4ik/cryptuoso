@@ -1,4 +1,4 @@
-import { Redis } from "ioredis";
+import Redis from "ioredis";
 import { Lightship } from "lightship";
 import { ValidationSchema } from "fastest-validator";
 import { v4 as uuid } from "uuid";
@@ -152,13 +152,13 @@ export class Events {
         const beacon = this.#lightship.createBeacon();
         try {
             const rawData = await this.#state[topic].unbalanced.redis.xread(
-                "BLOCK",
-                this.#blockTimeout,
                 "COUNT",
                 this.#state[topic].unbalanced.count,
+                "BLOCK",
+                this.#blockTimeout,
                 "STREAMS",
                 topic,
-                ...[this.#state[topic].unbalanced.lastId]
+                this.#state[topic].unbalanced.lastId
             );
             // logger.debug("_receiveMessagesTick");
             //  logger.debug(JSON.stringify(rawData) || "no data");
@@ -237,10 +237,11 @@ export class Events {
                 "GROUP",
                 group,
                 this.#consumerId,
-                "BLOCK",
-                this.#blockTimeout,
+
                 "COUNT",
                 this.#state[`${topic}-${group}`].grouped.count,
+                "BLOCK",
+                this.#blockTimeout,
                 "STREAMS",
                 topic,
                 ">"
@@ -248,7 +249,7 @@ export class Events {
             // logger.debug("_receiveGroupMessagesTick");
             //  logger.debug(JSON.stringify(rawData) || "no data");
             if (rawData) {
-                const data = this._parseStreamResponse(rawData);
+                const data = this._parseStreamResponse(rawData as [string, StreamMessage[]][]);
                 const events: { [key: string]: Event } = this._parseEvents(data[topic]);
                 await Promise.all(
                     Object.entries(events).map(async ([msgId, event]) => {
@@ -325,7 +326,7 @@ export class Events {
                 group,
                 "-",
                 "+",
-                ...[this.#state[`${topic}-${group}`].pending.count]
+                this.#state[`${topic}-${group}`].pending.count
             );
 
             if (rawData) {
@@ -334,7 +335,7 @@ export class Events {
                     consumer: string;
                     idleSeconds: number;
                     retries: number;
-                }[] = this._parsePendingResponse(rawData);
+                }[] = this._parsePendingResponse(rawData as string[][]);
 
                 for (const { msgId, retries } of data.filter(
                     ({ idleSeconds, retries }) => idleSeconds > retries * this.#pendingRetryRate

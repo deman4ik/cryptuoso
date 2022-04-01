@@ -371,13 +371,15 @@ export default class EventsManager extends HTTPService {
      * ( command: `XGROUP DELCONSUMER ${stream} ${group} ${consumer}` ).
      */
     async deleteOldConsumers(stream: string, ttl: number) {
-        const groups = this._parseRedisInfoArray<RedisGroupInfo>(await this.redis.xinfo("GROUPS", stream));
+        const groups = this._parseRedisInfoArray<RedisGroupInfo>(
+            (await this.redis.xinfo("GROUPS", stream)) as string[][]
+        );
 
         for (const group of groups) {
             if (!group.consumers) continue;
 
             const consumers = this._parseRedisInfoArray<RedisConsumerInfo>(
-                await this.redis.xinfo("CONSUMERS", stream, group.name)
+                (await this.redis.xinfo("CONSUMERS", stream, group.name)) as string[][]
             );
 
             if (!consumers?.length) continue;

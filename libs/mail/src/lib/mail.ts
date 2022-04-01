@@ -4,7 +4,7 @@ import logger from "@cryptuoso/logger";
 
 export interface SendProps {
     from?: string;
-    to: string | Array<string>;
+    to: string;
     subject: string;
     text?: string;
     html?: string;

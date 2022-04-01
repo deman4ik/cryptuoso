@@ -738,11 +738,17 @@ export default class PortfolioManagerService extends HTTPService {
 
     async rebuildPortfolios({ exchange, checkDate }: PotrfolioManagerRebuildPortfolios) {
         const dateCondition = checkDate
-            ? sql`and (builded_at is null OR builded_at < ${dayjs.utc().startOf("day").add(-1, "month").toISOString()})`
+            ? sql`and (builded_at is null OR builded_at <= ${dayjs
+                  .utc()
+                  .startOf("day")
+                  .add(-1, "month")
+                  .add(1, "day")
+                  .toISOString()})`
             : sql``;
         const portfolios = await this.db.pg.any<{ id: PortfolioDB["id"] }>(sql`
         SELECT id FROM portfolios where exchange = ${exchange} 
         and status = 'started' 
+        and base = true
         ${dateCondition}
         ;
         `);
