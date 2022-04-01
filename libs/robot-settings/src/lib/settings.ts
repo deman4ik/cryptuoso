@@ -58,9 +58,11 @@ export function getCurrentUserRobotSettings({
         } else throw new BaseError("Unknown volume type", userRobotSettings);
     }
 
+    let downgrade = false;
     if (volume < limits.min.amount) {
         volume = limits.min.amount;
         volumeInCurrency = limits.min.amountUSD;
+        downgrade = true;
     } else if (limits.max?.amount && volume > limits.max?.amount) {
         volume = limits.max?.amount;
         volumeInCurrency = limits.max.amountUSD;
@@ -69,6 +71,7 @@ export function getCurrentUserRobotSettings({
     if (volumeInCurrency < 10) {
         volumeInCurrency = 10;
         volume = calcCurrencyDynamic(volumeInCurrency, currentPrice);
+        downgrade = true;
     }
 
     if (volume > 100) {
@@ -76,9 +79,9 @@ export function getCurrentUserRobotSettings({
         volumeInCurrency = round(volume * currentPrice, 2);
     }
 
-    /* if (userPortfolioId) {
+    if (userPortfolioId && downgrade) {
         if (balance < volumeInCurrency) throw new Error("Exchange account balance is insufficient");
-    }*/
+    }
 
     volume = round(volume, precision?.amount || 6);
 
