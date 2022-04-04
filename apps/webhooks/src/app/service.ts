@@ -116,20 +116,23 @@ export default class WebhooksService extends HTTPService {
                     handler: this.HTTPHandler.bind(this, this.syncSignalSubscriptionRobots.bind(this))
                 }
             });
-
-            this.events.subscribe({
-                [SignalEvents.TRADE]: {
-                    handler: this.handleSignalTradeEvents.bind(this),
-                    schema: SignalSchema[SignalEvents.TRADE]
-                },
-                [PortfolioManagerOutEvents.PORTFOLIO_BUILDED]: {
-                    handler: this.handlePortfolioBuilded.bind(this),
-                    schema: PortfolioManagerOutSchema[PortfolioManagerOutEvents.PORTFOLIO_BUILDED]
-                }
-            });
+            this.addOnStartHandler(this.onServiceStart.bind(this));
         } catch (err) {
             this.log.error("Failed to initialize WebhooksService", err);
         }
+    }
+
+    async onServiceStart() {
+        this.events.subscribe({
+            [SignalEvents.TRADE]: {
+                handler: this.handleSignalTradeEvents.bind(this),
+                schema: SignalSchema[SignalEvents.TRADE]
+            },
+            [PortfolioManagerOutEvents.PORTFOLIO_BUILDED]: {
+                handler: this.handlePortfolioBuilded.bind(this),
+                schema: PortfolioManagerOutSchema[PortfolioManagerOutEvents.PORTFOLIO_BUILDED]
+            }
+        });
     }
 
     async handleCoinbaseCommerceEvents(

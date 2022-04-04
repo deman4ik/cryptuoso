@@ -41,59 +41,63 @@ export default class NotificationsService extends BaseService {
         super(config);
         this.#mailUtil = mailUtil;
         try {
-            this.events.subscribe({
-                [UserRobotWorkerEvents.ERROR]: {
-                    schema: UserRobotWorkerSchema[UserRobotWorkerEvents.ERROR],
-                    handler: this.handleUserRobotError.bind(this)
-                },
-                [UserTradeEvents.TRADE]: {
-                    schema: UserTradeSchema[UserTradeEvents.TRADE],
-                    handler: this.handleUserTrade.bind(this)
-                },
-                [ConnectorWorkerEvents.ORDER_ERROR]: {
-                    schema: ConnectorWorkerSchema[ConnectorWorkerEvents.ORDER_ERROR],
-                    handler: this.handleOrderError.bind(this)
-                },
-                [ConnectorWorkerEvents.USER_EX_ACC_ERROR]: {
-                    schema: ConnectorWorkerSchema[ConnectorWorkerEvents.USER_EX_ACC_ERROR],
-                    handler: this.handleUserExAccError.bind(this)
-                },
-                [UserSubOutEvents.ERROR]: {
-                    schema: UserSubOutSchema[UserSubOutEvents.ERROR],
-                    handler: this.handleUserSubError.bind(this)
-                },
-                [UserSubOutEvents.PAYMENT_STATUS]: {
-                    schema: UserSubOutSchema[UserSubOutEvents.PAYMENT_STATUS],
-                    handler: this.handlePaymentStatus.bind(this)
-                },
-                [UserSubOutEvents.USER_SUB_STATUS]: {
-                    schema: UserSubOutSchema[UserSubOutEvents.USER_SUB_STATUS],
-                    handler: this.handleUserSubStatus.bind(this)
-                },
-                /*    [PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED]: {
-                    schema: PortfolioManagerOutSchema[PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED],
-                    handler: this.handleUserPortfolioBuilded.bind(this)
-                },*/
-                [PortfolioManagerOutEvents.USER_PORTFOLIO_BUILD_ERROR]: {
-                    schema: PortfolioManagerOutSchema[PortfolioManagerOutEvents.USER_PORTFOLIO_BUILD_ERROR],
-                    handler: this.handleUserPortfolioBuildError.bind(this)
-                },
-                [UserRobotWorkerEvents.STARTED_PORTFOLIO]: {
-                    schema: UserRobotWorkerSchema[UserRobotWorkerEvents.STARTED_PORTFOLIO],
-                    handler: this.handleUserPortfolioStatus.bind(this)
-                },
-                [UserRobotWorkerEvents.STOPPED_PORTFOLIO]: {
-                    schema: UserRobotWorkerSchema[UserRobotWorkerEvents.STOPPED_PORTFOLIO],
-                    handler: this.handleUserPortfolioStatus.bind(this)
-                },
-                [UserRobotWorkerEvents.ERROR_PORTFOLIO]: {
-                    schema: UserRobotWorkerSchema[UserRobotWorkerEvents.ERROR_PORTFOLIO],
-                    handler: this.handleUserPortfolioStatus.bind(this)
-                }
-            });
+            this.addOnStartHandler(this.onServiceStart.bind(this));
         } catch (err) {
             this.log.error("Error while constructing NotificationsService", err);
         }
+    }
+
+    async onServiceStart() {
+        this.events.subscribe({
+            [UserRobotWorkerEvents.ERROR]: {
+                schema: UserRobotWorkerSchema[UserRobotWorkerEvents.ERROR],
+                handler: this.handleUserRobotError.bind(this)
+            },
+            [UserTradeEvents.TRADE]: {
+                schema: UserTradeSchema[UserTradeEvents.TRADE],
+                handler: this.handleUserTrade.bind(this)
+            },
+            [ConnectorWorkerEvents.ORDER_ERROR]: {
+                schema: ConnectorWorkerSchema[ConnectorWorkerEvents.ORDER_ERROR],
+                handler: this.handleOrderError.bind(this)
+            },
+            [ConnectorWorkerEvents.USER_EX_ACC_ERROR]: {
+                schema: ConnectorWorkerSchema[ConnectorWorkerEvents.USER_EX_ACC_ERROR],
+                handler: this.handleUserExAccError.bind(this)
+            },
+            [UserSubOutEvents.ERROR]: {
+                schema: UserSubOutSchema[UserSubOutEvents.ERROR],
+                handler: this.handleUserSubError.bind(this)
+            },
+            [UserSubOutEvents.PAYMENT_STATUS]: {
+                schema: UserSubOutSchema[UserSubOutEvents.PAYMENT_STATUS],
+                handler: this.handlePaymentStatus.bind(this)
+            },
+            [UserSubOutEvents.USER_SUB_STATUS]: {
+                schema: UserSubOutSchema[UserSubOutEvents.USER_SUB_STATUS],
+                handler: this.handleUserSubStatus.bind(this)
+            },
+            /*    [PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED]: {
+                schema: PortfolioManagerOutSchema[PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED],
+                handler: this.handleUserPortfolioBuilded.bind(this)
+            },*/
+            [PortfolioManagerOutEvents.USER_PORTFOLIO_BUILD_ERROR]: {
+                schema: PortfolioManagerOutSchema[PortfolioManagerOutEvents.USER_PORTFOLIO_BUILD_ERROR],
+                handler: this.handleUserPortfolioBuildError.bind(this)
+            },
+            [UserRobotWorkerEvents.STARTED_PORTFOLIO]: {
+                schema: UserRobotWorkerSchema[UserRobotWorkerEvents.STARTED_PORTFOLIO],
+                handler: this.handleUserPortfolioStatus.bind(this)
+            },
+            [UserRobotWorkerEvents.STOPPED_PORTFOLIO]: {
+                schema: UserRobotWorkerSchema[UserRobotWorkerEvents.STOPPED_PORTFOLIO],
+                handler: this.handleUserPortfolioStatus.bind(this)
+            },
+            [UserRobotWorkerEvents.ERROR_PORTFOLIO]: {
+                schema: UserRobotWorkerSchema[UserRobotWorkerEvents.ERROR_PORTFOLIO],
+                handler: this.handleUserPortfolioStatus.bind(this)
+            }
+        });
     }
 
     #saveNotifications = async (notifications: Notification<any>[]) => {

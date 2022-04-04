@@ -45,7 +45,10 @@ const config: ClientConfigurationInput = {
     statementTimeout: "DISABLE_TIMEOUT",
     idleInTransactionSessionTimeout: "DISABLE_TIMEOUT",
     interceptors,
-    typeParsers
+    typeParsers,
+    ssl: {
+        rejectUnauthorized: false
+    }
 };
 
 const pg = createPool(process.env.PGCS, config);

@@ -31,12 +31,7 @@ export default class ConnectorRunnerService extends HTTPService {
                     handler: this.HTTPWithAuthHandler.bind(this, this.checkUserUnknownOrders.bind(this))
                 }
             });
-            this.events.subscribe({
-                [ConnectorRunnerEvents.ADD_JOB]: {
-                    schema: ConnectorRunnerSchema[ConnectorRunnerEvents.ADD_JOB],
-                    handler: this.addConnectorJob.bind(this)
-                }
-            });
+
             this.addOnStartHandler(this.onServiceStart);
         } catch (err) {
             this.log.error("Error while constructing ConnectorRunnerService", err);
@@ -44,6 +39,12 @@ export default class ConnectorRunnerService extends HTTPService {
     }
 
     async onServiceStart() {
+        this.events.subscribe({
+            [ConnectorRunnerEvents.ADD_JOB]: {
+                schema: ConnectorRunnerSchema[ConnectorRunnerEvents.ADD_JOB],
+                handler: this.addConnectorJob.bind(this)
+            }
+        });
         this.createQueue(Queues.connector);
 
         this.createQueue(Queues.connectorRunner);

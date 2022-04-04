@@ -112,6 +112,13 @@ export class RobotBaseService extends HTTPService {
         this.#userPortfolioId = config?.userPortfolioId || process.env.USER_PORTFOLIO_ID;
         this.#publicConnector = new PublicConnector();
 
+        this.addOnStartHandler(this.onServiceStart);
+        this.addOnStartedHandler(this.onServiceStarted);
+        this.addOnStopHandler(this.onServiceStop);
+    }
+
+    // #region Start/Stop
+    async onServiceStart() {
         if (!this.#userPortfolioId) {
             this.events.subscribe({
                 [getRobotStatusEventName(this.#exchange)]: {
@@ -144,14 +151,6 @@ export class RobotBaseService extends HTTPService {
                 }
             });
         }
-
-        this.addOnStartHandler(this.onServiceStart);
-        this.addOnStartedHandler(this.onServiceStarted);
-        this.addOnStopHandler(this.onServiceStop);
-    }
-
-    // #region Start/Stop
-    async onServiceStart() {
         this.#pool = await Pool(
             async () => await spawn<RobotWorker>(new ThreadsWorker("./worker"), { timeout: 60000 }),
             {

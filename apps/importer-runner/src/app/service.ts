@@ -40,16 +40,7 @@ export default class ImporterRunnerService extends HTTPService {
                     handler: this.startAllMarketsHTTPHandler
                 }
             });
-            this.events.subscribe({
-                [ImporterRunnerEvents.START]: {
-                    handler: this.start.bind(this),
-                    schema: ImporterRunnerSchema[ImporterRunnerEvents.START]
-                },
-                [ImporterRunnerEvents.STOP]: {
-                    handler: this.stop.bind(this),
-                    schema: ImporterRunnerSchema[ImporterRunnerEvents.STOP]
-                }
-            });
+
             this.addOnStartHandler(this.onServiceStart);
         } catch (err) {
             this.log.error("Error while constructing ImporterRunnerService", err);
@@ -57,6 +48,16 @@ export default class ImporterRunnerService extends HTTPService {
     }
 
     async onServiceStart() {
+        this.events.subscribe({
+            [ImporterRunnerEvents.START]: {
+                handler: this.start.bind(this),
+                schema: ImporterRunnerSchema[ImporterRunnerEvents.START]
+            },
+            [ImporterRunnerEvents.STOP]: {
+                handler: this.stop.bind(this),
+                schema: ImporterRunnerSchema[ImporterRunnerEvents.STOP]
+            }
+        });
         this.createQueue("importCandles");
         this.queues["importCandles"].events.on("failed", async ({ jobId, failedReason }) => {
             try {

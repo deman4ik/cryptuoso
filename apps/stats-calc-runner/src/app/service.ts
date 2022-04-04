@@ -64,40 +64,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
                     handler: this._HTTPHandler.bind(this, this.handleRecalcAllUserRobotsEvent.bind(this))
                 }
             });
-            this.events.subscribe({
-                [StatsCalcRunnerEvents.USER_SIGNAL_DELETED]: {
-                    schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_SIGNAL_DELETED],
-                    handler: this.handleUserSignalDeletedEvent.bind(this)
-                },
-                [StatsCalcRunnerEvents.USER_ROBOT_DELETED]: {
-                    schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_ROBOT_DELETED],
-                    handler: this.handleUserRobotDeletedEvent.bind(this)
-                },
-                [StatsCalcRunnerEvents.USER_SIGNAL]: {
-                    schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_SIGNAL],
-                    handler: this.handleCalcUserSignalEvent.bind(this)
-                },
-                [StatsCalcRunnerEvents.USER_SIGNALS]: {
-                    schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_SIGNALS],
-                    handler: this.handleCalcUserSignalsEvent.bind(this)
-                },
-                [StatsCalcRunnerEvents.ROBOT]: {
-                    schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.ROBOT],
-                    handler: this.handleStatsCalcRobotEvent.bind(this)
-                },
-                [StatsCalcRunnerEvents.ROBOTS]: {
-                    schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.ROBOTS],
-                    handler: this.handleStatsCalcRobotsEvent.bind(this)
-                },
-                [StatsCalcRunnerEvents.USER_ROBOT]: {
-                    schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_ROBOT],
-                    handler: this.handleStatsCalcUserRobotEvent.bind(this)
-                },
-                [StatsCalcRunnerEvents.USER_ROBOTS]: {
-                    schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_ROBOTS],
-                    handler: this.handleStatsCalcUserRobotsEvent.bind(this)
-                }
-            });
+
             this.addOnStartHandler(this.onServiceStart);
             this.addOnStopHandler(this.onServiceStop);
         } catch (err) {
@@ -106,6 +73,40 @@ export default class StatisticCalcRunnerService extends HTTPService {
     }
 
     async onServiceStart() {
+        this.events.subscribe({
+            [StatsCalcRunnerEvents.USER_SIGNAL_DELETED]: {
+                schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_SIGNAL_DELETED],
+                handler: this.handleUserSignalDeletedEvent.bind(this)
+            },
+            [StatsCalcRunnerEvents.USER_ROBOT_DELETED]: {
+                schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_ROBOT_DELETED],
+                handler: this.handleUserRobotDeletedEvent.bind(this)
+            },
+            [StatsCalcRunnerEvents.USER_SIGNAL]: {
+                schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_SIGNAL],
+                handler: this.handleCalcUserSignalEvent.bind(this)
+            },
+            [StatsCalcRunnerEvents.USER_SIGNALS]: {
+                schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_SIGNALS],
+                handler: this.handleCalcUserSignalsEvent.bind(this)
+            },
+            [StatsCalcRunnerEvents.ROBOT]: {
+                schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.ROBOT],
+                handler: this.handleStatsCalcRobotEvent.bind(this)
+            },
+            [StatsCalcRunnerEvents.ROBOTS]: {
+                schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.ROBOTS],
+                handler: this.handleStatsCalcRobotsEvent.bind(this)
+            },
+            [StatsCalcRunnerEvents.USER_ROBOT]: {
+                schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_ROBOT],
+                handler: this.handleStatsCalcUserRobotEvent.bind(this)
+            },
+            [StatsCalcRunnerEvents.USER_ROBOTS]: {
+                schema: StatsCalcRunnerSchema[StatsCalcRunnerEvents.USER_ROBOTS],
+                handler: this.handleStatsCalcUserRobotsEvent.bind(this)
+            }
+        });
         this.createQueue("calcStatistics");
     }
 

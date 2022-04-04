@@ -107,48 +107,7 @@ export default class UserRobotRunnerService extends HTTPService {
                     handler: this.HTTPWithAuthHandler.bind(this, this.syncUserPortfolioRobots.bind(this))
                 }
             });
-            this.events.subscribe({
-                [`${USER_ROBOT_WORKER_TOPIC}.*`]: {
-                    passFullEvent: true,
-                    handler: this.handleUserRobotWorkerEvents.bind(this)
-                },
-                [SignalEvents.TRADE]: {
-                    handler: this.handleSignalTradeEvents.bind(this),
-                    schema: SignalSchema[SignalEvents.TRADE]
-                },
-                [ConnectorWorkerEvents.ORDER_STATUS]: {
-                    handler: this.handleOrderStatus.bind(this),
-                    schema: ConnectorWorkerSchema[ConnectorWorkerEvents.ORDER_STATUS]
-                },
-                [ConnectorWorkerEvents.ORDER_ERROR]: {
-                    handler: this.handleOrderError.bind(this),
-                    schema: ConnectorWorkerSchema[ConnectorWorkerEvents.ORDER_ERROR]
-                },
-                [ConnectorWorkerEvents.USER_EX_ACC_ERROR]: {
-                    handler: this.handleUserExAccError.bind(this),
-                    schema: ConnectorWorkerSchema[ConnectorWorkerEvents.USER_EX_ACC_ERROR]
-                },
-                [UserRobotRunnerEvents.STOP]: {
-                    handler: this.stop.bind(this),
-                    schema: UserRobotRunnerSchema[UserRobotRunnerEvents.STOP]
-                },
-                [UserRobotRunnerEvents.STOP_PORTFOLIO]: {
-                    handler: this.stopPortfolio.bind(this),
-                    schema: UserRobotRunnerSchema[UserRobotRunnerEvents.STOP_PORTFOLIO]
-                },
-                [PortfolioManagerOutEvents.PORTFOLIO_BUILDED]: {
-                    handler: this.handlePortfolioBuilded.bind(this),
-                    schema: PortfolioManagerOutSchema[PortfolioManagerOutEvents.PORTFOLIO_BUILDED]
-                },
-                [PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED]: {
-                    handler: this.handleUserPortfolioBuilded.bind(this),
-                    schema: PortfolioManagerOutSchema[PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED]
-                },
-                [PortfolioManagerOutEvents.USER_PORTFOLIO_BUILD_ERROR]: {
-                    handler: this.handleUserPortfolioBuildError.bind(this),
-                    schema: PortfolioManagerOutSchema[PortfolioManagerOutEvents.USER_PORTFOLIO_BUILD_ERROR]
-                }
-            });
+
             this.addOnStartHandler(this.onServiceStart);
         } catch (err) {
             this.log.error("Error while constructing UserRobotRunnerService", err);
@@ -156,6 +115,48 @@ export default class UserRobotRunnerService extends HTTPService {
     }
 
     async onServiceStart() {
+        this.events.subscribe({
+            [`${USER_ROBOT_WORKER_TOPIC}.*`]: {
+                passFullEvent: true,
+                handler: this.handleUserRobotWorkerEvents.bind(this)
+            },
+            [SignalEvents.TRADE]: {
+                handler: this.handleSignalTradeEvents.bind(this),
+                schema: SignalSchema[SignalEvents.TRADE]
+            },
+            [ConnectorWorkerEvents.ORDER_STATUS]: {
+                handler: this.handleOrderStatus.bind(this),
+                schema: ConnectorWorkerSchema[ConnectorWorkerEvents.ORDER_STATUS]
+            },
+            [ConnectorWorkerEvents.ORDER_ERROR]: {
+                handler: this.handleOrderError.bind(this),
+                schema: ConnectorWorkerSchema[ConnectorWorkerEvents.ORDER_ERROR]
+            },
+            [ConnectorWorkerEvents.USER_EX_ACC_ERROR]: {
+                handler: this.handleUserExAccError.bind(this),
+                schema: ConnectorWorkerSchema[ConnectorWorkerEvents.USER_EX_ACC_ERROR]
+            },
+            [UserRobotRunnerEvents.STOP]: {
+                handler: this.stop.bind(this),
+                schema: UserRobotRunnerSchema[UserRobotRunnerEvents.STOP]
+            },
+            [UserRobotRunnerEvents.STOP_PORTFOLIO]: {
+                handler: this.stopPortfolio.bind(this),
+                schema: UserRobotRunnerSchema[UserRobotRunnerEvents.STOP_PORTFOLIO]
+            },
+            [PortfolioManagerOutEvents.PORTFOLIO_BUILDED]: {
+                handler: this.handlePortfolioBuilded.bind(this),
+                schema: PortfolioManagerOutSchema[PortfolioManagerOutEvents.PORTFOLIO_BUILDED]
+            },
+            [PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED]: {
+                handler: this.handleUserPortfolioBuilded.bind(this),
+                schema: PortfolioManagerOutSchema[PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED]
+            },
+            [PortfolioManagerOutEvents.USER_PORTFOLIO_BUILD_ERROR]: {
+                handler: this.handleUserPortfolioBuildError.bind(this),
+                schema: PortfolioManagerOutSchema[PortfolioManagerOutEvents.USER_PORTFOLIO_BUILD_ERROR]
+            }
+        });
         this.createQueue(Queues.userRobot);
 
         this.createQueue(Queues.userRobotRunner);

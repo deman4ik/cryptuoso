@@ -37,16 +37,7 @@ export default class BacktesterRunnerService extends HTTPService {
                     handler: this.HTTPHandler.bind(this, this.stop.bind(this))
                 }
             });
-            this.events.subscribe({
-                [BacktesterRunnerEvents.START]: {
-                    handler: this.start.bind(this),
-                    schema: BacktesterRunnerSchema[BacktesterRunnerEvents.START]
-                },
-                [BacktesterRunnerEvents.STOP]: {
-                    handler: this.stop.bind(this),
-                    schema: BacktesterRunnerSchema[BacktesterRunnerEvents.STOP]
-                }
-            });
+
             this.addOnStartHandler(this.onServiceStart);
         } catch (err) {
             this.log.error("Error while constructing BacktesterRunnerService", err);
@@ -54,6 +45,16 @@ export default class BacktesterRunnerService extends HTTPService {
     }
 
     async onServiceStart() {
+        this.events.subscribe({
+            [BacktesterRunnerEvents.START]: {
+                handler: this.start.bind(this),
+                schema: BacktesterRunnerSchema[BacktesterRunnerEvents.START]
+            },
+            [BacktesterRunnerEvents.STOP]: {
+                handler: this.stop.bind(this),
+                schema: BacktesterRunnerSchema[BacktesterRunnerEvents.STOP]
+            }
+        });
         this.createQueue("backtest", null, {
             maxStalledCount: 1,
             stalledInterval: 120000

@@ -77,6 +77,12 @@ export class UserRobotBaseService extends RobotBaseService {
     constructor(config?: UserRobotBaseServiceConfig) {
         super(config);
 
+        this.#jobsEmiter = new EventEmitter({ captureRejections: true });
+        this.addOnStartHandler(this.onUserRobotServiceStart.bind(this));
+        this.addOnStopHandler(this.onUserServiceStop);
+    }
+
+    async onUserRobotServiceStart(): Promise<void> {
         this.events.subscribe({
             [UserRobotRunnerEvents.SYNC_USER_PORTFOLIO_DEDICATED_ROBOTS]: {
                 schema: UserRobotRunnerSchema[UserRobotRunnerEvents.SYNC_USER_PORTFOLIO_DEDICATED_ROBOTS],
@@ -91,8 +97,6 @@ export class UserRobotBaseService extends RobotBaseService {
                 handler: this.updateUserConnector.bind(this)
             }
         });
-        this.#jobsEmiter = new EventEmitter({ captureRejections: true });
-        this.addOnStopHandler(this.onUserServiceStop);
     }
 
     async onServiceStarted() {
