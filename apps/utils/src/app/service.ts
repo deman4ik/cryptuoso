@@ -32,13 +32,6 @@ export default class UtilsService extends HTTPService {
         }
     }
 
-    async testSlonik() {
-        const markets = await this.db.pg.one<Market>(
-            sql`SELECT m.*FROM markets m where m.exchange = 'binance_futures' LIMIT 1;`
-        );
-        this.log.info(markets);
-    }
-
     async updateCandles() {
         this.log.info("START");
         for (const timeframe of Timeframe.validArray.filter((t) => t > 15).reverse()) {
