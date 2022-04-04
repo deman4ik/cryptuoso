@@ -28,7 +28,7 @@ import { ConnectorRunnerEvents, OrdersStatusEvent } from "@cryptuoso/connector-e
 import { BaseError } from "@cryptuoso/errors";
 import { NewEvent } from "@cryptuoso/events";
 import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
-import { DatabaseTransactionConnectionType } from "slonik";
+import { DatabaseTransactionConnection } from "slonik";
 import { calcBalancePercent, calcCurrencyDynamic, getCurrentUserRobotSettings } from "@cryptuoso/robot-settings";
 import dayjs from "@cryptuoso/dayjs";
 import { keysToCamelCase, round, roundFirstSignificant } from "@cryptuoso/helpers";

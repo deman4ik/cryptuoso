@@ -21,7 +21,7 @@ import { Decrypt } from "./decryptWorker";
 import { groupBy, sortDesc } from "@cryptuoso/helpers";
 import { Order, OrderJobType, OrderStatus } from "@cryptuoso/market";
 import { BaseError } from "@cryptuoso/errors";
-import { DatabaseTransactionConnectionType } from "slonik";
+import { DatabaseTransactionConnection } from "slonik";
 import { v4 as uuid } from "uuid";
 import ccxt from "ccxt";
 
@@ -134,7 +134,7 @@ export default class ConnectorRunnerService extends BaseService {
         `);
     };
 
-    #createOrder = async (transaction: DatabaseTransactionConnectionType, order: Order) => {
+    #createOrder = async (transaction: DatabaseTransactionConnection, order: Order) => {
         this.log.info(order);
         await transaction.query(sql`
             INSERT INTO user_orders
@@ -167,7 +167,7 @@ export default class ConnectorRunnerService extends BaseService {
             `);
     };
 
-    #saveOrder = async (transaction: DatabaseTransactionConnectionType, order: Order) => {
+    #saveOrder = async (transaction: DatabaseTransactionConnection, order: Order) => {
         try {
             return transaction.query(sql`
          UPDATE user_orders SET prev_order_id = ${order.prevOrderId || null},
@@ -193,7 +193,7 @@ export default class ConnectorRunnerService extends BaseService {
         }
     };
 
-    #deleteJobs = async (transaction: DatabaseTransactionConnectionType, orderId: string) => {
+    #deleteJobs = async (transaction: DatabaseTransactionConnection, orderId: string) => {
         try {
             return transaction.query(sql`
         DELETE FROM connector_jobs WHERE order_id = ${orderId};
@@ -204,7 +204,7 @@ export default class ConnectorRunnerService extends BaseService {
         }
     };
 
-    #saveNextJob = async (transaction: DatabaseTransactionConnectionType, nextJob: ConnectorJob) => {
+    #saveNextJob = async (transaction: DatabaseTransactionConnection, nextJob: ConnectorJob) => {
         try {
             return transaction.query(sql`
         INSERT INTO connector_jobs (id, user_ex_acc_id, order_id, next_job_at, priority, type, data, allocation )

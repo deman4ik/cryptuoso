@@ -1,4 +1,4 @@
-import { DatabasePoolType, sql, TaggedTemplateLiteralInvocationType } from "slonik";
+import { DatabasePool, sql, TaggedTemplateLiteralInvocation } from "slonik";
 import { nvl } from "@cryptuoso/helpers";
 
 export const prepareUnnest = (arr: { [key: string]: any }[], fields: string[]): any[][] =>
@@ -11,9 +11,9 @@ export const prepareUnnest = (arr: { [key: string]: any }[], fields: string[]): 
         return Object.values(newItem);
     });
 
-export type QueryType = TaggedTemplateLiteralInvocationType /* SqlSqlTokenType<QueryResultRowType<any>> */;
+export type QueryType = TaggedTemplateLiteralInvocation;
 
-export const makeChunksGenerator = (pg: DatabasePoolType, query: QueryType, chunkSize = 500) => {
+export const makeChunksGenerator = (pg: DatabasePool, query: QueryType, chunkSize = 500) => {
     if (!chunkSize || chunkSize < 1) throw new Error("Argument 'chunkSize' must be positive number.");
 
     return async function* () {

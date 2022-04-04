@@ -57,7 +57,7 @@ import {
     getExwatcherImporterStatusEventName
 } from "@cryptuoso/exwatcher-events";
 import { ImporterState, Status } from "@cryptuoso/importer-state";
-import { DatabaseTransactionConnectionType } from "slonik";
+import { DatabaseTransactionConnection } from "slonik";
 import { BaseServiceError, BaseServiceEvents } from "@cryptuoso/events";
 import { Tracer } from "@cryptuoso/logger";
 
@@ -1727,7 +1727,7 @@ export class RobotBaseService extends HTTPService {
         return await this.#pool.queue(async (worker: RobotWorker) => worker.runStrategy(robotState));
     }
 
-    #saveRobotPositions = async (transaction: DatabaseTransactionConnectionType, positions: RobotPositionState[]) => {
+    #saveRobotPositions = async (transaction: DatabaseTransactionConnection, positions: RobotPositionState[]) => {
         for (const position of positions) {
             await transaction.query(sql`
     INSERT INTO robot_positions
@@ -1778,7 +1778,7 @@ export class RobotBaseService extends HTTPService {
         }
     };
 
-    #saveRobotSignals = async (transaction: DatabaseTransactionConnectionType, signals: SignalEvent[]) => {
+    #saveRobotSignals = async (transaction: DatabaseTransactionConnection, signals: SignalEvent[]) => {
         for (const signal of signals) {
             const {
                 id,
@@ -1806,7 +1806,7 @@ export class RobotBaseService extends HTTPService {
         `);
         }
     };
-    async saveRobotState(transaction: DatabaseTransactionConnectionType, state: RobotState) {
+    async saveRobotState(transaction: DatabaseTransactionConnection, state: RobotState) {
         transaction.query(sql`
     UPDATE robots 
     SET state = ${JSON.stringify(state.state)}, 

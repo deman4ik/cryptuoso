@@ -1,4 +1,4 @@
-import { DatabaseTransactionConnectionType, sql } from "@cryptuoso/postgres";
+import { DatabaseTransactionConnection, sql } from "@cryptuoso/postgres";
 import { Exwatcher, ExwatcherStatus, RobotBaseService, RobotBaseServiceConfig } from "@cryptuoso/robot";
 import { UserPortfolioState } from "@cryptuoso/portfolio-state";
 import { ExchangeCandle, Order, OrderJobType, OrderStatus, SignalEvent } from "@cryptuoso/market";
@@ -134,7 +134,7 @@ export class UserRobotBaseService extends RobotBaseService {
         }
     }
 
-    async saveRobotState(transaction: DatabaseTransactionConnectionType, state: RobotState) {
+    async saveRobotState(transaction: DatabaseTransactionConnection, state: RobotState) {
         const userRobotId = this.getUserRobotIdByRobotId(state.id);
         await transaction.query(sql`
             UPDATE user_robots
@@ -274,7 +274,7 @@ export class UserRobotBaseService extends RobotBaseService {
 
     //#region Orders
 
-    async saveUserOrderT(t: DatabaseTransactionConnectionType, order: Order) {
+    async saveUserOrderT(t: DatabaseTransactionConnection, order: Order) {
         await t.query(sql`
             INSERT INTO user_orders
             (
@@ -307,7 +307,7 @@ export class UserRobotBaseService extends RobotBaseService {
         this.#orders[order.id] = order;
     }
 
-    async updateOrderT(t: DatabaseTransactionConnectionType, order: Order) {
+    async updateOrderT(t: DatabaseTransactionConnection, order: Order) {
         try {
             await t.query(sql`
          UPDATE user_orders SET prev_order_id = ${order.prevOrderId || null},
@@ -354,7 +354,7 @@ export class UserRobotBaseService extends RobotBaseService {
         }
     }
 
-    async addConnectorJobT(t: DatabaseTransactionConnectionType, nextJob: ConnectorJob) {
+    async addConnectorJobT(t: DatabaseTransactionConnection, nextJob: ConnectorJob) {
         await t.query(sql`
         INSERT INTO connector_jobs (id, user_ex_acc_id, order_id, next_job_at, priority, type, allocation, data )
         VALUES (${nextJob.id}, ${nextJob.userExAccId}, 
@@ -367,7 +367,7 @@ export class UserRobotBaseService extends RobotBaseService {
         if (!this.#connectorJobs.find((c) => c.id === nextJob.id)) this.#connectorJobs.push(nextJob);
     }
 
-    async deleteConnectorJobsT(t: DatabaseTransactionConnectionType, orderId: string) {
+    async deleteConnectorJobsT(t: DatabaseTransactionConnection, orderId: string) {
         await t.query(sql`DELETE FROM connector_jobs WHERE order_id = ${orderId};`);
         this.#connectorJobs = [...this.#connectorJobs.filter(({ orderId: jobOrderId }) => jobOrderId !== orderId)];
     }
@@ -426,12 +426,12 @@ export class UserRobotBaseService extends RobotBaseService {
         this.#userRobotJobs.push(job);
     }
 
-    async deleteUserRobotJobT(t: DatabaseTransactionConnectionType, id: string) {
+    async deleteUserRobotJobT(t: DatabaseTransactionConnection, id: string) {
         await t.query(sql`DELETE FROM user_robot_jobs WHERE id = ${id};`);
         this.#userRobotJobs = [...this.#userRobotJobs.filter(({ id: jobId }) => jobId !== id)];
     }
 
-    async deleteUserRobotJobsT(t: DatabaseTransactionConnectionType, userRobotId: string) {
+    async deleteUserRobotJobsT(t: DatabaseTransactionConnection, userRobotId: string) {
         await t.query(sql`DELETE FROM user_robot_jobs WHERE user_robot_id = ${userRobotId};`);
         this.#userRobotJobs = [
             ...this.#userRobotJobs.filter(({ userRobotId: jobUserRobotId }) => jobUserRobotId !== userRobotId)

@@ -62,12 +62,7 @@ export class BaseService {
             process.on("uncaughtException", this.#handleUncaughtException.bind(this));
             process.on("unhandledRejection", this.#handleUnhandledRejection.bind(this));
             this.#log = logger;
-            this.#lightship = createLightship({
-                port: +process.env.LS_PORT || 9000,
-                detectKubernetes: process.env.NODE_ENV === "production",
-                signals: process.env.NODE_ENV === "production" ? ["SIGTERM", "SIGHUP", "SIGINT"] : ["SIGTERM", "SIGHUP"]
-            });
-            this.#lightship.registerShutdownHandler(this.#stopService.bind(this));
+
             this.#name = config?.name || process.env.SERVICE;
             this.#db = {
                 sql,
@@ -163,6 +158,12 @@ export class BaseService {
     #startService = async () => {
         this.#log.info(`Starting ${this.#name} service...`);
         try {
+            this.#lightship = await createLightship({
+                port: +process.env.LS_PORT || 9000,
+                detectKubernetes: process.env.NODE_ENV === "production",
+                signals: process.env.NODE_ENV === "production" ? ["SIGTERM", "SIGHUP", "SIGINT"] : ["SIGTERM", "SIGHUP"]
+            });
+            this.#lightship.registerShutdownHandler(this.#stopService.bind(this));
             if (this.#onServiceStart.length > 0) {
                 for (const onStartFunc of this.#onServiceStart) {
                     await onStartFunc();

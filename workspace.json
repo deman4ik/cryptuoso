@@ -31,7 +31,7 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "options": {
                         "outputPath": "dist/apps/auth",
                         "main": "apps/auth/src/main.ts",
@@ -54,7 +54,7 @@
                     "outputs": ["{options.outputPath}"]
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "auth:build"
                     }
@@ -140,7 +140,7 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "options": {
                         "outputPath": "dist/apps/backtester-runner",
                         "main": "apps/backtester-runner/src/main.ts",
@@ -163,7 +163,7 @@
                     "outputs": ["{options.outputPath}"]
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "backtester-runner:build"
                     }
@@ -228,7 +228,7 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "options": {
                         "outputPath": "dist/apps/backtester-worker",
                         "main": "apps/backtester-worker/src/main.ts",
@@ -252,7 +252,7 @@
                     "outputs": ["{options.outputPath}"]
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "backtester-worker:build"
                     }
@@ -384,7 +384,7 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "options": {
                         "outputPath": "dist/apps/connector-runner",
                         "main": "apps/connector-runner/src/main.ts",
@@ -407,7 +407,7 @@
                     "outputs": ["{options.outputPath}"]
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "connector-runner:build"
                     }
@@ -462,7 +462,7 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "options": {
                         "outputPath": "dist/apps/connector-worker",
                         "main": "apps/connector-worker/src/main.ts",
@@ -486,7 +486,7 @@
                     "outputs": ["{options.outputPath}"]
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "connector-worker:build"
                     }
@@ -595,7 +595,7 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "options": {
                         "outputPath": "dist/apps/events-manager",
                         "main": "apps/events-manager/src/main.ts",
@@ -618,7 +618,7 @@
                     "outputs": ["{options.outputPath}"]
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "events-manager:build"
                     }
@@ -758,7 +758,7 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "options": {
                         "outputPath": "dist/apps/importer-runner",
                         "main": "apps/importer-runner/src/main.ts",
@@ -781,7 +781,7 @@
                     "outputs": ["{options.outputPath}"]
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "importer-runner:build"
                     }
@@ -843,7 +843,7 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "options": {
                         "outputPath": "dist/apps/importer-worker",
                         "main": "apps/importer-worker/src/main.ts",
@@ -867,7 +867,7 @@
                     "outputs": ["{options.outputPath}"]
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "importer-worker:build"
                     }
@@ -901,7 +901,7 @@
             "projectType": "application",
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "outputs": ["{options.outputPath}"],
                     "options": {
                         "outputPath": "dist/apps/legacy-telegram-bot",
@@ -924,7 +924,7 @@
                     }
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "legacy-telegram-bot:build"
                     }
@@ -1033,7 +1033,7 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "options": {
                         "outputPath": "dist/apps/notifications",
                         "main": "apps/notifications/src/main.ts",
@@ -1056,7 +1056,7 @@
                     "outputs": ["{options.outputPath}"]
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "notifications:build"
                     }
@@ -1108,7 +1108,7 @@
             "prefix": "portfolio-manager",
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "outputs": ["{options.outputPath}"],
                     "options": {
                         "outputPath": "dist/apps/portfolio-manager",
@@ -1132,7 +1132,7 @@
                     }
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "portfolio-manager:build"
                     }
@@ -1253,7 +1253,7 @@
             "projectType": "application",
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "outputs": ["{options.outputPath}"],
                     "options": {
                         "outputPath": "dist/apps/robot-binance",
@@ -1277,7 +1277,7 @@
                     }
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "robot-binance:build"
                     }
@@ -1363,7 +1363,7 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "options": {
                         "outputPath": "dist/apps/robot-runner",
                         "main": "apps/robot-runner/src/main.ts",
@@ -1386,7 +1386,7 @@
                     "outputs": ["{options.outputPath}"]
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "robot-runner:build"
                     }
@@ -1575,7 +1575,7 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "options": {
                         "outputPath": "dist/apps/stats-calc-runner",
                         "main": "apps/stats-calc-runner/src/main.ts",
@@ -1598,7 +1598,7 @@
                     "outputs": ["{options.outputPath}"]
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "stats-calc-runner:build"
                     }
@@ -1634,7 +1634,7 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "options": {
                         "outputPath": "dist/apps/stats-calc-worker",
                         "main": "apps/stats-calc-worker/src/main.ts",
@@ -1658,7 +1658,7 @@
                     "outputs": ["{options.outputPath}"]
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "stats-calc-worker:build"
                     }
@@ -1694,7 +1694,7 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "options": {
                         "outputPath": "dist/apps/support",
                         "main": "apps/support/src/main.ts",
@@ -1717,7 +1717,7 @@
                     "outputs": ["{options.outputPath}"]
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "support:build"
                     }
@@ -1748,7 +1748,7 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "options": {
                         "outputPath": "dist/apps/telegram-bot",
                         "main": "apps/telegram-bot/src/main.ts",
@@ -1771,7 +1771,7 @@
                     "outputs": ["{options.outputPath}"]
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "telegram-bot:build"
                     }
@@ -1871,7 +1871,7 @@
             "prefix": "trade-stats-runner",
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "outputs": ["{options.outputPath}"],
                     "options": {
                         "outputPath": "dist/apps/trade-stats-runner",
@@ -1894,7 +1894,7 @@
                     }
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "trade-stats-runner:build"
                     }
@@ -1923,7 +1923,7 @@
             "prefix": "trade-stats-worker",
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "outputs": ["{options.outputPath}"],
                     "options": {
                         "outputPath": "dist/apps/trade-stats-worker",
@@ -1947,7 +1947,7 @@
                     }
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "trade-stats-worker:build"
                     }
@@ -2000,7 +2000,7 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "options": {
                         "outputPath": "dist/apps/user-profile",
                         "main": "apps/user-profile/src/main.ts",
@@ -2024,7 +2024,7 @@
                     "outputs": ["{options.outputPath}"]
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "user-profile:build"
                     }
@@ -2078,7 +2078,7 @@
             "projectType": "application",
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "outputs": ["{options.outputPath}"],
                     "options": {
                         "outputPath": "dist/apps/user-robot-dedicated",
@@ -2102,7 +2102,7 @@
                     }
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "user-robot-dedicated:build"
                     }
@@ -2157,7 +2157,7 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "options": {
                         "outputPath": "dist/apps/user-robot-runner",
                         "main": "apps/user-robot-runner/src/main.ts",
@@ -2180,7 +2180,7 @@
                     "outputs": ["{options.outputPath}"]
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "user-robot-runner:build"
                     }
@@ -2240,7 +2240,7 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "options": {
                         "outputPath": "dist/apps/user-robot-worker",
                         "main": "apps/user-robot-worker/src/main.ts",
@@ -2263,7 +2263,7 @@
                     "outputs": ["{options.outputPath}"]
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "user-robot-worker:build"
                     }
@@ -2348,7 +2348,7 @@
             "prefix": "user-sub",
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "outputs": ["{options.outputPath}"],
                     "options": {
                         "outputPath": "dist/apps/user-sub",
@@ -2371,7 +2371,7 @@
                     }
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "user-sub:build"
                     }
@@ -2423,7 +2423,7 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "options": {
                         "outputPath": "dist/apps/utils",
                         "main": "apps/utils/src/main.ts",
@@ -2447,7 +2447,7 @@
                     "outputs": ["{options.outputPath}"]
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "utils:build"
                     }
@@ -2479,7 +2479,7 @@
             "prefix": "webhooks",
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:build",
+                    "builder": "@nrwl/node:webpack",
                     "outputs": ["{options.outputPath}"],
                     "options": {
                         "outputPath": "dist/apps/webhooks",
@@ -2502,7 +2502,7 @@
                     }
                 },
                 "serve": {
-                    "builder": "@nrwl/node:execute",
+                    "builder": "@nrwl/node:node",
                     "options": {
                         "buildTarget": "webhooks:build"
                     }

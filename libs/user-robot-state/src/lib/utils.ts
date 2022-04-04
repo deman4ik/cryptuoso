@@ -1,18 +1,18 @@
 import { keysToCamelCase } from "@cryptuoso/helpers";
 import { Order } from "@cryptuoso/market";
-import { sql, DatabasePoolType, DatabaseTransactionConnectionType } from "@cryptuoso/postgres";
+import { sql, DatabasePool, DatabaseTransactionConnection } from "@cryptuoso/postgres";
 import { RobotState } from "@cryptuoso/robot-state";
 
 import { UserPositionDB, UserRobotDB, UserRobotStateExt } from "./types";
 
-export async function getUserRobotState(db: DatabasePoolType, userRobotId: string) {
+export async function getUserRobotState(db: DatabasePool, userRobotId: string) {
     const rawData = await db.one<UserRobotStateExt>(sql`
         SELECT * FROM v_user_robot_state WHERE id = ${userRobotId};`);
 
     return keysToCamelCase(rawData) as UserRobotStateExt;
 }
 
-export async function saveUserPositions(transaction: DatabaseTransactionConnectionType, positions: UserPositionDB[]) {
+export async function saveUserPositions(transaction: DatabaseTransactionConnection, positions: UserPositionDB[]) {
     for (const p of positions) {
         await transaction.query(sql`
         INSERT INTO user_positions
@@ -79,7 +79,7 @@ export async function saveUserPositions(transaction: DatabaseTransactionConnecti
     }
 }
 
-export async function saveUserOrders(transaction: DatabaseTransactionConnectionType, orders: Order[]) {
+export async function saveUserOrders(transaction: DatabaseTransactionConnection, orders: Order[]) {
     for (const order of orders) {
         await transaction.query(sql`
         INSERT INTO user_orders
@@ -113,7 +113,7 @@ export async function saveUserOrders(transaction: DatabaseTransactionConnectionT
     }
 }
 
-export async function saveUserRobotState(transaction: DatabaseTransactionConnectionType, state: UserRobotDB) {
+export async function saveUserRobotState(transaction: DatabaseTransactionConnection, state: UserRobotDB) {
     await transaction.query(sql`
         UPDATE user_robots
            SET internal_state = ${JSON.stringify(state.internalState) || null},

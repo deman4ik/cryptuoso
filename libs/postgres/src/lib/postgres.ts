@@ -1,10 +1,10 @@
 import {
     createPool,
     sql,
-    ClientConfigurationInputType,
+    ClientConfigurationInput,
     createTypeParserPreset,
-    DatabasePoolType,
-    DatabaseTransactionConnectionType
+    DatabasePool,
+    DatabaseTransactionConnection
 } from "slonik";
 import { createFieldNameTransformationInterceptor } from "slonik-interceptor-field-name-transformation";
 import { createQueryLoggingInterceptor } from "slonik-interceptor-query-logging";
@@ -39,11 +39,11 @@ const typeParsers = [
     }
 ];
 
-const config: ClientConfigurationInputType = {
+const config: ClientConfigurationInput = {
     connectionRetryLimit: 1000,
-    connectionTimeout: 60000,
-    idleTimeout: 3000,
-    maximumPoolSize: 10,
+    connectionTimeout: 30000,
+    statementTimeout: "DISABLE_TIMEOUT",
+    idleInTransactionSessionTimeout: "DISABLE_TIMEOUT",
     interceptors,
     typeParsers
 };
@@ -54,4 +54,4 @@ const pgUtil = {
     prepareUnnest
 };
 
-export { pg, sql, pgUtil, DatabasePoolType, DatabaseTransactionConnectionType };
+export { pg, sql, pgUtil, DatabasePool, DatabaseTransactionConnection };

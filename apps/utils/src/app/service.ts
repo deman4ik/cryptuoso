@@ -26,7 +26,7 @@ export default class UtilsService extends HTTPService {
 
         try {
             // this.addOnStartHandler(this.onStart);
-            this.addOnStartedHandler(this.updateCandles);
+            // this.addOnStartedHandler(this.testSlonik);
         } catch (err) {
             this.log.error("Error while constructing UtilsService", err);
         }
