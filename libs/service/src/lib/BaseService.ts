@@ -44,6 +44,7 @@ export class BaseService {
     #workerThreads = +process.env.WORKER_THREADS || 2;
     #lockers = new Map<string, { unlock(): Promise<void> }>();
     #cleanQueueGrace = +process.env.CLEAN_QUEUE_GRACE || 1000 * 60 * 60 * 48;
+    #config: BaseServiceConfig;
     #cleanQueues = async () => {
         await Promise.all(
             Object.keys(this.#queues).map(async (name) => {
@@ -58,6 +59,7 @@ export class BaseService {
 
     constructor(config?: BaseServiceConfig) {
         try {
+            this.#config = config;
             //TODO: check environment variables
             process.on("uncaughtException", this.#handleUncaughtException.bind(this));
             process.on("unhandledRejection", this.#handleUnhandledRejection.bind(this));
@@ -77,8 +79,6 @@ export class BaseService {
                 reconnectOnError: this.redisReconnectOnError.bind(this)
             });
             this.#redisConnection.on("error", this.#hanleRedisError.bind(this));
-
-            this.#events = new Events(this.#redisConnection, this.#lightship, config?.eventsConfig);
 
             this.#redlock = new Redlock([this.#redisConnection]);
         } catch (err) {
@@ -164,6 +164,7 @@ export class BaseService {
                 signals: process.env.NODE_ENV === "production" ? ["SIGTERM", "SIGHUP", "SIGINT"] : ["SIGTERM", "SIGHUP"]
             });
             this.#lightship.registerShutdownHandler(this.#stopService.bind(this));
+            this.#events = new Events(this.#redisConnection, this.#lightship, this.#config?.eventsConfig);
             if (this.#onServiceStart.length > 0) {
                 for (const onStartFunc of this.#onServiceStart) {
                     await onStartFunc();
@@ -259,6 +260,13 @@ export class BaseService {
 
     get lightship() {
         return this.#lightship;
+    }
+
+    createBeacon() {
+        if (this.#lightship) {
+            return this.#lightship.createBeacon();
+        }
+        return null;
     }
 
     get isDev() {
