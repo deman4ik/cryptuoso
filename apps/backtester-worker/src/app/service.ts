@@ -24,13 +24,6 @@ export default class BacktesterWorkerService extends BaseService {
     constructor(config?: BacktesterWorkerServiceConfig) {
         super(config);
         try {
-            this.events.subscribe({
-                [BacktesterWorkerEvents.CANCEL]: {
-                    handler: this.cancel.bind(this),
-                    schema: BacktesterWorkerSchema[BacktesterWorkerEvents.CANCEL],
-                    unbalanced: true
-                }
-            });
             this.addOnStartHandler(this.onServiceStart);
         } catch (err) {
             this.log.error("Error in BacktesterWorkerService constructor", err);
@@ -38,6 +31,13 @@ export default class BacktesterWorkerService extends BaseService {
     }
 
     async onServiceStart(): Promise<void> {
+        this.events.subscribe({
+            [BacktesterWorkerEvents.CANCEL]: {
+                handler: this.cancel.bind(this),
+                schema: BacktesterWorkerSchema[BacktesterWorkerEvents.CANCEL],
+                unbalanced: true
+            }
+        });
         this.createWorker("backtest", this.process);
     }
 

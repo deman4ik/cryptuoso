@@ -83,24 +83,7 @@ export default class StatisticCalcRunnerService extends HTTPService {
                     handler: this.HTTPHandler.bind(this, this.handleRecalcAllSignalSubscriptionsEvent.bind(this))
                 }
             });
-            this.events.subscribe({
-                [TradeStatsRunnerEvents.ROBOT]: {
-                    schema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.ROBOT],
-                    handler: this.handleStatsCalcRobotEvent.bind(this)
-                },
-                [TradeStatsRunnerEvents.PORTFOLIO_ROBOT]: {
-                    schema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.PORTFOLIO_ROBOT],
-                    handler: this.handleStatsCalcPortfolioRobotEvent.bind(this)
-                },
-                [TradeStatsRunnerEvents.USER_ROBOT]: {
-                    schema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.USER_ROBOT],
-                    handler: this.handleStatsCalcUserRobotEvent.bind(this)
-                },
-                [TradeStatsRunnerEvents.SIGNAL_SUBSCRIPTION]: {
-                    schema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.SIGNAL_SUBSCRIPTION],
-                    handler: this.handleStatsCalcSignalSubscriptionEvent.bind(this)
-                }
-            });
+
             this.addOnStartHandler(this.onServiceStart);
         } catch (err) {
             this.log.error("Error while constructing StatisticCalcRunnerService", err);
@@ -108,6 +91,24 @@ export default class StatisticCalcRunnerService extends HTTPService {
     }
 
     async onServiceStart() {
+        this.events.subscribe({
+            [TradeStatsRunnerEvents.ROBOT]: {
+                schema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.ROBOT],
+                handler: this.handleStatsCalcRobotEvent.bind(this)
+            },
+            [TradeStatsRunnerEvents.PORTFOLIO_ROBOT]: {
+                schema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.PORTFOLIO_ROBOT],
+                handler: this.handleStatsCalcPortfolioRobotEvent.bind(this)
+            },
+            [TradeStatsRunnerEvents.USER_ROBOT]: {
+                schema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.USER_ROBOT],
+                handler: this.handleStatsCalcUserRobotEvent.bind(this)
+            },
+            [TradeStatsRunnerEvents.SIGNAL_SUBSCRIPTION]: {
+                schema: TradeStatsRunnerSchema[TradeStatsRunnerEvents.SIGNAL_SUBSCRIPTION],
+                handler: this.handleStatsCalcSignalSubscriptionEvent.bind(this)
+            }
+        });
         this.createQueue("stats-calc");
     }
 

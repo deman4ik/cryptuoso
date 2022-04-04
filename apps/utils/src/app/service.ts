@@ -26,10 +26,17 @@ export default class UtilsService extends HTTPService {
 
         try {
             // this.addOnStartHandler(this.onStart);
-            // this.addOnStartedHandler(this.testSlonik);
+            this.addOnStartedHandler(this.testSlonik);
         } catch (err) {
             this.log.error("Error while constructing UtilsService", err);
         }
+    }
+
+    async testSlonik() {
+        const markets = await this.db.pg.one<Market>(
+            sql`SELECT m.*FROM markets m where m.exchange = 'binance_futures' LIMIT 1;`
+        );
+        this.log.info(markets);
     }
 
     async updateCandles() {

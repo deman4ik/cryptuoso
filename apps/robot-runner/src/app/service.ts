@@ -88,13 +88,6 @@ export default class RobotRunnerService extends HTTPService {
                 }
             });
 
-            this.events.subscribe({
-                [`${ROBOT_WORKER_TOPIC}.*`]: {
-                    passFullEvent: true,
-                    handler: this.handleRobotWorkerEvents.bind(this)
-                }
-            });
-
             this.addOnStartHandler(this.onServiceStart);
         } catch (err) {
             this.log.error("Error while constructing RobotRunnerService", err);
@@ -102,6 +95,12 @@ export default class RobotRunnerService extends HTTPService {
     }
 
     async onServiceStart() {
+        this.events.subscribe({
+            [`${ROBOT_WORKER_TOPIC}.*`]: {
+                passFullEvent: true,
+                handler: this.handleRobotWorkerEvents.bind(this)
+            }
+        });
         const queueKey = this.name;
 
         this.createQueue(queueKey);

@@ -71,12 +71,6 @@ export default class UserSubService extends HTTPService {
                 }
             });
 
-            this.events.subscribe({
-                [UserSubInEvents.CHECK_PAYMENT]: {
-                    schema: UserSubInSchema[UserSubInEvents.CHECK_PAYMENT],
-                    handler: this.checkPayment.bind(this)
-                }
-            });
             this.addOnStartHandler(this.onServiceStart);
         } catch (err) {
             this.log.error("Failed to initialize UserSubService", err);
@@ -84,6 +78,12 @@ export default class UserSubService extends HTTPService {
     }
 
     async onServiceStart() {
+        this.events.subscribe({
+            [UserSubInEvents.CHECK_PAYMENT]: {
+                schema: UserSubInSchema[UserSubInEvents.CHECK_PAYMENT],
+                handler: this.checkPayment.bind(this)
+            }
+        });
         this.createQueue("user-sub");
 
         this.createWorker("user-sub", this.process);

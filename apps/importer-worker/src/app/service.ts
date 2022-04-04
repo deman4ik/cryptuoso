@@ -22,19 +22,19 @@ export default class ImporterWorkerService extends BaseService {
         super(config);
         try {
             this.addOnStartHandler(this.onServiceStart);
-            this.events.subscribe({
-                [ImporterWorkerEvents.CANCEL]: {
-                    handler: this.cancel.bind(this),
-                    schema: ImporterWorkerSchema[ImporterWorkerEvents.CANCEL],
-                    unbalanced: true
-                }
-            });
         } catch (err) {
             this.log.error("Error in ImporterWorkerService constructor", err);
         }
     }
 
     async onServiceStart(): Promise<void> {
+        this.events.subscribe({
+            [ImporterWorkerEvents.CANCEL]: {
+                handler: this.cancel.bind(this),
+                schema: ImporterWorkerSchema[ImporterWorkerEvents.CANCEL],
+                unbalanced: true
+            }
+        });
         this.createWorker("importCandles", this.process);
     }
 

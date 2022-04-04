@@ -53,6 +53,41 @@ export default class EventsManager extends HTTPService {
     constructor(config?: EventsManagerConfig) {
         super(config);
 
+        this.createRoutes({
+            resend: {
+                auth: true,
+                roles: [UserRoles.admin],
+                handler: this._resendHandler.bind(this),
+                inputSchema: {
+                    eventId: {
+                        type: "uuid",
+                        optional: true
+                    },
+                    eventIds: {
+                        type: "array",
+                        items: "uuid",
+                        optional: true
+                    },
+                    topic: {
+                        type: "string",
+                        optional: true
+                    },
+                    type: {
+                        type: "string",
+                        optional: true
+                    },
+                    resend: {
+                        type: "boolean",
+                        optional: true
+                    }
+                }
+            }
+        });
+
+        this.addOnStartHandler(this.onServiceStart);
+    }
+
+    async onServiceStart() {
         this.events.subscribe({
             [`${DEAD_LETTER_TOPIC}.**`]: {
                 handler: this.#deadLettersHandler.bind(this)
@@ -111,41 +146,6 @@ export default class EventsManager extends HTTPService {
             }
         });
 
-        this.createRoutes({
-            resend: {
-                auth: true,
-                roles: [UserRoles.admin],
-                handler: this._resendHandler.bind(this),
-                inputSchema: {
-                    eventId: {
-                        type: "uuid",
-                        optional: true
-                    },
-                    eventIds: {
-                        type: "array",
-                        items: "uuid",
-                        optional: true
-                    },
-                    topic: {
-                        type: "string",
-                        optional: true
-                    },
-                    type: {
-                        type: "string",
-                        optional: true
-                    },
-                    resend: {
-                        type: "boolean",
-                        optional: true
-                    }
-                }
-            }
-        });
-
-        this.addOnStartHandler(this.onServiceStart);
-    }
-
-    async onServiceStart() {
         const queueKey = this.name;
 
         this.createQueue(queueKey);
