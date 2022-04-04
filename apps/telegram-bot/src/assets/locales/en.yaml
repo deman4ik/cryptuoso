@@ -239,6 +239,7 @@ dialogs:
             <b>Minimum trading balance:</b> ${round(limits.minBalance)} $\n\n
             <b>Performance:</b>\n
             <b>Total Net Profit:</b> ${plus(round(stats.netProfit))} $\n
+            <b>Win Rate:</b> ${round(stats.winRate)} %\n
             <b>Max Drawdown:</b> ${round(stats.maxDrawdown)} $\n
             <b>Payoff Ratio:</b> ${stats.payoffRatio} \n
             <b>Recovery Factor:</b> ${stats.recoveyFactor} \n
@@ -477,24 +478,15 @@ positions:
     none: You have no positions yet...
     positionsOpen: <b>📬 Open positions:</b> ${openPositions}\n
     positionsClosed: <b>📪 Latest Closed positions:</b> ${closedPositions}\n
-    positionOpenNotif: >
-        \n\n-------\n
-        <b>Trade Opened</b>\n\n
-        <b>Entry:</b> ${entryAction}\n
-        <b>Entry Date:</b> ${formatDate(entryDate)}\n
-        <b>Entry Price:</b> ${entryPrice} $
-        <b>Amount:</b> ${volume} ${asset}
     positionOpen: >
-        \n\n-------\n
-        <b>Trade Opened</b>\n\n
+        \n-------\n
         <b>Entry:</b> ${entryAction}\n
         <b>Entry Date:</b> ${formatDate(entryDate)}\n
         <b>Entry Price:</b> ${entryPrice} $\n
         <b>Amount:</b> ${volume} ${asset}\n
         <b>Unrealized Profit:</b> ${plus(round(profit,2))} $
     positionClosed: >
-        \n\n-------\n
-        <b>Trade Closed</b>\n\n
+        \n-------\n
         <b>Entry:</b> ${entryAction}\n
         <b>Entry Date:</b> ${formatDate(entryDate)}\n
         <b>Entry Price:</b> ${entryPrice} $\n\n
