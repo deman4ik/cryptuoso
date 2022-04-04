@@ -22,7 +22,7 @@ import { createProxyAgent } from "@cryptuoso/ccxt-public";
 export class PrivateConnector {
     exchange: string;
     log: Logger;
-    #orderCheckTimeout = 5;
+    #orderCheckTimeout = 10;
     connector: Exchange;
     retryOptions = {
         retries: 20,
@@ -673,15 +673,7 @@ export class PrivateConnector {
                         ? {
                               type: OrderJobType.check,
                               priority: Priority.low,
-                              nextJobAt: dayjs
-                                  .utc()
-                                  .add(
-                                      order.exchange === "bitfinex"
-                                          ? this.#orderCheckTimeout * 10
-                                          : this.#orderCheckTimeout,
-                                      "second"
-                                  )
-                                  .toISOString()
+                              nextJobAt: dayjs.utc().add(this.#orderCheckTimeout, "second").toISOString()
                           }
                         : null
             };
@@ -1103,7 +1095,8 @@ export class PrivateConnector {
                 !order.nextJob?.retries ||
                 order.nextJob?.retries < 5
             ) {
-                const timeout = this.#orderCheckTimeout * (order.nextJob?.retries || 1);
+                let timeout = this.#orderCheckTimeout * (order.nextJob?.retries || 1);
+                if (message.includes("order does not exist")) timeout *= 2;
                 return {
                     order: {
                         ...order,
