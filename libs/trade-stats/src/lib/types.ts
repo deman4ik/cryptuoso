@@ -43,6 +43,9 @@ export interface BasePeriodStats {
     percentNetProfit: BaseStats["percentNetProfit"];
     percentGrossProfit: BaseStats["percentGrossProfit"];
     percentGrossLoss: BaseStats["percentGrossLoss"];
+    percentMaxDrawdown?: BaseStats["percentMaxDrawdown"];
+    winRate?: BaseStats["winRate"];
+    payoffRatio?: BaseStats["payoffRatio"];
 }
 
 export interface Stats extends BaseStats {
@@ -113,6 +116,10 @@ export interface FullStats extends Stats {
     avgPercentGrossLossQuarters: number | null;
     avgPercentGrossLossMonths: number | null;
     avgPercentNetProfitYearly: number | null;
+    avgPercentMaxDrawdownYearly: number | null;
+    avgPayoffRatioYearly: number | null;
+    avgWinRateYearly: number | null;
+    avgTradesCountYearly: number | null;
     emulateNextPosition: boolean | null;
     marginNextPosition: number | null;
     zScore: number | null;

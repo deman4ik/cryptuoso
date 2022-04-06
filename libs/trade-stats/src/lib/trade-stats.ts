@@ -8,6 +8,7 @@ import {
     percentBetween,
     round,
     sortAsc,
+    standardDeviation,
     sum
 } from "@cryptuoso/helpers";
 import { BasePosition, calcPositionProfit } from "@cryptuoso/market";
@@ -268,6 +269,10 @@ export class TradeStatsCalc implements TradeStats {
             avgPercentGrossLossQuarters: nvl(fullStats?.avgPercentGrossLossQuarters),
             avgPercentGrossLossMonths: nvl(fullStats?.avgPercentGrossLossMonths),
             avgPercentNetProfitYearly: nvl(fullStats?.avgPercentNetProfitYearly),
+            avgPercentMaxDrawdownYearly: nvl(fullStats?.avgPercentMaxDrawdownYearly),
+            avgPayoffRatioYearly: nvl(fullStats?.avgPayoffRatioYearly),
+            avgWinRateYearly: nvl(fullStats?.avgWinRateYearly),
+            avgTradesCountYearly: nvl(fullStats?.avgTradesCountYearly),
             emulateNextPosition: nvl(fullStats?.emulateNextPosition, false),
             marginNextPosition: nvl(fullStats?.marginNextPosition, 1),
             zScore: nvl(fullStats?.zScore),
@@ -453,16 +458,6 @@ export class TradeStatsCalc implements TradeStats {
             stats.percentGrossLoss = (stats.grossLoss / stats.initialBalance) * 100;
             stats.amountProportion = 100 / stats.percentMaxDrawdown;
 
-            /*  stats.avgPercentNetProfit = stats.sumPercentNetProfit / stats.tradesCount;
-            stats.sumPercentNetProfitSqDiff = null;
-            for (const percent of stats.positionsProfitPercents) {
-                const percentProfitSqDiff = Math.pow(percent - stats.avgPercentNetProfit, 2);
-                stats.sumPercentNetProfitSqDiff = sum(stats.sumPercentNetProfitSqDiff, percentProfitSqDiff);
-            }
-            if (stats.tradesCount > 1) {
-                stats.stdDevPercentNetProfit = Math.sqrt(stats.sumPercentNetProfitSqDiff) / (stats.tradesCount - 1);
-                stats.sharpeRatio = stats.avgPercentNetProfit / stats.stdDevPercentNetProfit;
-            } */
             stats.recoveryFactor = divide(stats.percentNetProfit, stats.percentMaxDrawdown);
         } else {
             stats.recoveryFactor = divide(stats.netProfit, stats.maxDrawdown) * -1;
@@ -576,6 +571,9 @@ export class TradeStatsCalc implements TradeStats {
                     percentNetProfit: value.stats.percentNetProfit,
                     percentGrossProfit: value.stats.percentGrossProfit,
                     percentGrossLoss: value.stats.percentGrossLoss
+                    /*  percentMaxDrawdown: value.stats.percentMaxDrawdown,
+                    winRate: value.stats.winRate,
+                    payoffRatio: value.stats.payoffRatio */
                 }
             };
         }
@@ -590,6 +588,9 @@ export class TradeStatsCalc implements TradeStats {
                     percentNetProfit: value.stats.percentNetProfit,
                     percentGrossProfit: value.stats.percentGrossProfit,
                     percentGrossLoss: value.stats.percentGrossLoss
+                    /*    percentMaxDrawdown: value.stats.percentMaxDrawdown,
+                    winRate: value.stats.winRate,
+                    payoffRatio: value.stats.payoffRatio*/
                 }
             };
         }
@@ -603,7 +604,10 @@ export class TradeStatsCalc implements TradeStats {
                     tradesCount: value.stats.tradesCount,
                     percentNetProfit: value.stats.percentNetProfit,
                     percentGrossProfit: value.stats.percentGrossProfit,
-                    percentGrossLoss: value.stats.percentGrossLoss
+                    percentGrossLoss: value.stats.percentGrossLoss,
+                    percentMaxDrawdown: value.stats.percentMaxDrawdown,
+                    winRate: value.stats.winRate,
+                    payoffRatio: value.stats.payoffRatio
                 }
             };
         }
@@ -614,6 +618,20 @@ export class TradeStatsCalc implements TradeStats {
         stats.avgTradesCountYears = average(...years.map(({ stats: { tradesCount } }) => tradesCount));
         stats.avgTradesCountQuarters = average(...quarters.map(({ stats: { tradesCount } }) => tradesCount));
         stats.avgTradesCountMonths = average(...months.map(({ stats: { tradesCount } }) => tradesCount));
+
+        stats.avgTradesCountYearly = stats.avgTradesCountMonths * (12 / months.length);
+
+        stats.avgPercentNetProfitYearly =
+            sum(...months.map(({ stats: { percentNetProfit } }) => percentNetProfit)) * (12 / months.length);
+
+        stats.avgPercentMaxDrawdownYearly =
+            average(...months.map(({ stats: { percentMaxDrawdown } }) => percentMaxDrawdown)) * (12 / months.length);
+
+        stats.avgWinRateYearly = average(...months.map(({ stats: { winRate } }) => winRate)) * (12 / months.length);
+
+        stats.avgPayoffRatioYearly =
+            average(...months.map(({ stats: { payoffRatio } }) => payoffRatio)) * (12 / months.length);
+
         stats.avgPercentNetProfitYears = average(...years.map(({ stats: { percentNetProfit } }) => percentNetProfit));
         stats.avgPercentNetProfitQuarters = average(
             ...quarters.map(({ stats: { percentNetProfit } }) => percentNetProfit)
@@ -634,11 +652,6 @@ export class TradeStatsCalc implements TradeStats {
         );
         stats.avgPercentGrossLossMonths = average(...months.map(({ stats: { percentGrossLoss } }) => percentGrossLoss));
 
-        if (months.length < 12) {
-            stats.avgPercentNetProfitYearly =
-                sum(...months.map(({ stats: { percentNetProfit } }) => percentNetProfit)) * (12 / months.length);
-        } else stats.avgPercentNetProfitYearly = stats.avgPercentNetProfitYears;
-
         if (this.hasBalance) {
             const prevMonths = months
                 .sort((a, b) => sortAsc(dayjs.utc(a.dateFrom).valueOf(), dayjs.utc(b.dateFrom).valueOf()))
@@ -646,17 +659,12 @@ export class TradeStatsCalc implements TradeStats {
 
             if (prevMonths && prevMonths.length > 2) {
                 const positionsProfitPercents = prevMonths.map(({ stats }) => stats.percentNetProfit);
-                const sumPercentNetProfit = sum(...positionsProfitPercents);
 
-                const avgPercentNetProfit = sumPercentNetProfit / positionsProfitPercents.length;
-                let sumPercentNetProfitSqDiff = null;
-                for (const percent of positionsProfitPercents) {
-                    const percentProfitSqDiff = Math.pow(percent - avgPercentNetProfit, 2);
-                    sumPercentNetProfitSqDiff = sum(sumPercentNetProfitSqDiff, percentProfitSqDiff);
-                }
+                const avgPercentNetProfit = average(...positionsProfitPercents);
 
-                stats.stdDevPercentNetProfit = Math.sqrt(sumPercentNetProfitSqDiff / positionsProfitPercents.length);
-                stats.sharpeRatio = (avgPercentNetProfit - 6) / stats.stdDevPercentNetProfit;
+                stats.stdDevPercentNetProfit = standardDeviation(positionsProfitPercents, true);
+
+                stats.sharpeRatio = (avgPercentNetProfit - 6) / (stats.stdDevPercentNetProfit * Math.sqrt(12));
             }
 
             if (this.meta.job.type === "robot") {

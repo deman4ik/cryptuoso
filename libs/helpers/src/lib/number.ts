@@ -105,3 +105,17 @@ export function percentBetween(a: number, b: number) {
     else if (a > 0) return ((b - a) * 100) / a;
     else if (a < 0) return ((a - b) * 100) / a;
 }
+
+/**
+ * Calculates the standard deviation of an array of numbers.
+ *
+ * @param arr
+ * @param usePopulation Omit the second argument, usePopulation, to get the sample standard deviation or set it to true to get the population standard deviation.
+ */
+export function standardDeviation(arr: number[], usePopulation = false) {
+    const mean = arr.reduce((acc, val) => acc + val, 0) / arr.length;
+    return Math.sqrt(
+        arr.reduce((acc, val) => acc.concat((val - mean) ** 2), []).reduce((acc, val) => acc + val, 0) /
+            (arr.length - (usePopulation ? 0 : 1))
+    );
+}
