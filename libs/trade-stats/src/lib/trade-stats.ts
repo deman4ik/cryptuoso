@@ -662,9 +662,9 @@ export class TradeStatsCalc implements TradeStats {
 
                 const avgPercentNetProfit = average(...positionsProfitPercents);
 
-                stats.stdDevPercentNetProfit = standardDeviation(positionsProfitPercents, true);
+                stats.stdDevPercentNetProfit = standardDeviation(positionsProfitPercents);
 
-                stats.sharpeRatio = (avgPercentNetProfit - 6) / (stats.stdDevPercentNetProfit * Math.sqrt(12));
+                stats.sharpeRatio = avgPercentNetProfit / (stats.stdDevPercentNetProfit * Math.sqrt(12));
             }
 
             if (this.meta.job.type === "robot") {
