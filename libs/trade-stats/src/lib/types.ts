@@ -46,6 +46,7 @@ export interface BasePeriodStats {
     percentMaxDrawdown?: BaseStats["percentMaxDrawdown"];
     winRate?: BaseStats["winRate"];
     payoffRatio?: BaseStats["payoffRatio"];
+    netProfit?: BaseStats["netProfit"];
 }
 
 export interface Stats extends BaseStats {

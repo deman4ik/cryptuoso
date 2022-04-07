@@ -453,9 +453,9 @@ export class TradeStatsCalc implements TradeStats {
         stats.payoffRatio = Math.abs(divide(stats.avgGrossProfit, stats.avgGrossLoss));
 
         if (this.hasBalance) {
-            stats.percentNetProfit = (stats.netProfit / stats.initialBalance) * 100;
-            stats.percentGrossProfit = (stats.grossProfit / stats.initialBalance) * 100;
-            stats.percentGrossLoss = (stats.grossLoss / stats.initialBalance) * 100;
+            stats.percentNetProfit = (stats.netProfit / stats.currentBalance) * 100;
+            stats.percentGrossProfit = (stats.grossProfit / stats.currentBalance) * 100;
+            stats.percentGrossLoss = (stats.grossLoss / stats.currentBalance) * 100;
             stats.amountProportion = 100 / stats.percentMaxDrawdown;
 
             stats.recoveryFactor = divide(stats.percentNetProfit, stats.percentMaxDrawdown);
@@ -540,9 +540,9 @@ export class TradeStatsCalc implements TradeStats {
         stats.payoffRatio = Math.abs(divide(stats.avgGrossProfit, stats.avgGrossLoss));
 
         if (this.hasBalance) {
-            stats.percentNetProfit = (stats.netProfit / stats.initialBalance) * 100;
-            stats.percentGrossProfit = (stats.grossProfit / stats.initialBalance) * 100;
-            stats.percentGrossLoss = (stats.grossLoss / stats.initialBalance) * 100;
+            stats.percentNetProfit = (stats.netProfit / stats.currentBalance) * 100;
+            stats.percentGrossProfit = (stats.grossProfit / stats.currentBalance) * 100;
+            stats.percentGrossLoss = (stats.grossLoss / stats.currentBalance) * 100;
             stats.recoveryFactor = divide(stats.percentNetProfit, stats.percentMaxDrawdown);
         } else {
             stats.recoveryFactor = divide(stats.netProfit, stats.maxDrawdown) * -1;
@@ -607,7 +607,8 @@ export class TradeStatsCalc implements TradeStats {
                     percentGrossLoss: value.stats.percentGrossLoss,
                     percentMaxDrawdown: value.stats.percentMaxDrawdown,
                     winRate: value.stats.winRate,
-                    payoffRatio: value.stats.payoffRatio
+                    payoffRatio: value.stats.payoffRatio,
+                    netProfit: value.stats.netProfit
                 }
             };
         }
@@ -658,13 +659,13 @@ export class TradeStatsCalc implements TradeStats {
                 .slice(0, -1);
 
             if (prevMonths && prevMonths.length > 2) {
-                const positionsProfitPercents = prevMonths.map(({ stats }) => stats.percentNetProfit);
+                const positionsProfitPercents = prevMonths.map(({ stats }) => stats.netProfit);
 
                 const avgPercentNetProfit = average(...positionsProfitPercents);
 
                 stats.stdDevPercentNetProfit = standardDeviation(positionsProfitPercents);
 
-                stats.sharpeRatio = (avgPercentNetProfit - 6) / stats.stdDevPercentNetProfit;
+                stats.sharpeRatio = avgPercentNetProfit / stats.stdDevPercentNetProfit;
             }
 
             if (this.meta.job.type === "robot") {
