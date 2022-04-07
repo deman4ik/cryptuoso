@@ -875,10 +875,10 @@ class StatsCalcWorker {
 
     async calcTestStats(job: TradeStatsTest) {
         try {
-            let { recalc = false } = job;
+            const { recalc = false } = job;
             const { testStatsId } = job;
 
-            let initialStats: TradeStats = {
+            const initialStats: TradeStats = {
                 fullStats: null,
                 periodStats: {
                     year: null,
