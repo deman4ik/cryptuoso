@@ -16,16 +16,6 @@ export const roundFirstSignificant = (x: number) => {
 };
 
 /**
- * Returnts a number rounded to a specified amout of digits.
- *
- * @param n A number to be rounded.
- * @param decimals Number of decimals. Default value is 0.
- * @example
- * round(12.345, 2); // 12.35
- */
-export const roundOld = (n: number, decimals = 0): number => +Number(`${Math.round(+`${n}e${decimals}`)}e-${decimals}`);
-
-/**
  * Returns the sum of numbers provided.
  *
  * @param nums
