@@ -115,6 +115,7 @@ export interface ISubscription {
     id: Subscription["id"];
     name: Subscription["name"];
     description: Subscription["description"];
+    trial_available: Subscription["trialAvailable"];
     options: {
         code: SubscriptionOption["code"];
         name: SubscriptionOption["name"];

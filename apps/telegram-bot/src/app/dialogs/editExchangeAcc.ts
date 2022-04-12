@@ -90,7 +90,7 @@ const handler = async (ctx: BotContext) => {
             } = await ctx.gql.request<{ userExchangeAccUpsert: { result: string } }>(
                 ctx,
                 gql`
-                    mutation UserExchangeAccUpsert($id: uuid, $exchange: String!, $name: String, $keys: ExchangeKeys!) {
+                    mutation userExchangeAccUpsert($id: uuid, $exchange: String!, $name: String, $keys: ExchangeKeys!) {
                         userExchangeAccUpsert(id: $id, exchange: $exchange, name: $name, keys: $keys) {
                             result
                         }

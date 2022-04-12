@@ -3,6 +3,8 @@ import { InlineKeyboard } from "grammy";
 import { BotContext, ISubscription } from "../types";
 import { Router } from "../utils/dialogsRouter";
 import { gql } from "../utils/graphql-client";
+import { accountActions } from "./account";
+import { checkoutUserSubActions } from "./checkoutUserSub";
 
 export const enum createUserSubActions {
     enter = "crUSub:enter",
@@ -62,6 +64,7 @@ const enter = async (ctx: BotContext) => {
                     id
                     name
                     description
+                    trial_available
                     options: subscription_options(where: { available: { _gte: $available } }) {
                         code
                         name
@@ -113,12 +116,12 @@ const option = async (ctx: BotContext) => {
     let id;
     try {
         ({
-            createUserSub: { id }
+            userSubCreate: { id }
         } = await ctx.gql.request(
             ctx,
             gql`
-                mutation createUserSub($subscriptionId: uuid!, $subscriptionOption: String!) {
-                    createUserSub(subscriptionId: $subscriptionId, subscriptionOption: $subscriptionOption) {
+                mutation userSubCreate($subscriptionId: uuid!, $subscriptionOption: String!) {
+                    userSubCreate(subscriptionId: $subscriptionId, subscriptionOption: $subscriptionOption) {
                         id
                     }
                 }
@@ -140,7 +143,15 @@ const option = async (ctx: BotContext) => {
     if (id) {
         await ctx.reply(ctx.i18n.t("dialogs.createUserSub.success"));
     }
-    ctx.dialog.return({ reload: true });
+    if (ctx.session.dialog.current.data.sub.trial_available) {
+        ctx.dialog.return({ reload: true });
+    } else {
+        ctx.dialog.enter(checkoutUserSubActions.enter, {
+            edit: false,
+            backAction: accountActions.enter,
+            backData: { edit: true, reload: true }
+        });
+    }
 };
 
 const router: Router = new Map();

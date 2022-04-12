@@ -62,7 +62,7 @@ const confirm = async (ctx: BotContext) => {
             username: name
         }),
         getMainKeyboard(ctx)
-    );
+    ); //TODO: Getting Started
 };
 
 const input = async (ctx: BotContext) => {
@@ -170,7 +170,7 @@ const input = async (ctx: BotContext) => {
             }),
 
             getMainKeyboard(ctx)
-        );
+        ); //TODO: Getting Started
     } else {
         await ctx.reply(ctx.i18n.t("defaultHandler"), getStartKeyboard(ctx));
     }

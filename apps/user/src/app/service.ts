@@ -1,4 +1,4 @@
-import { HTTPService, HTTPServiceConfig, RequestExtended } from "@cryptuoso/service";
+import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import {
     User,
     UserRoles,
@@ -10,21 +10,19 @@ import {
     Notification
 } from "@cryptuoso/user-state";
 import { RobotStatus } from "@cryptuoso/robot-types";
-import { UserRobotDB, UserRobotStatus } from "@cryptuoso/user-robot-state";
-import { UserMarketState } from "@cryptuoso/market";
+import { UserRobotStatus } from "@cryptuoso/user-robot-state";
 import { ActionsHandlerError } from "@cryptuoso/errors";
 import { sql } from "@cryptuoso/postgres";
 import { v4 as uuid } from "uuid";
 import dayjs, { UnitType } from "@cryptuoso/dayjs";
 import { spawn, Pool, Worker as ThreadsWorker } from "threads";
 import { Encrypt } from "./encryptWorker";
-import { chunkArray, formatExchange, GenericObject, round } from "@cryptuoso/helpers";
-
+import { chunkArray, formatExchange } from "@cryptuoso/helpers";
 import { PrivateConnector } from "@cryptuoso/ccxt-private";
 import { GA } from "@cryptuoso/analytics";
 import { UserExAccKeysChangedEvent, UserExAccOutEvents } from "@cryptuoso/user-events";
 
-import { UserPayment, UserSub, coinbaseCommerce, SubscriptionOption } from "@cryptuoso/billing";
+import { UserPayment, UserSub, coinbaseCommerce, SubscriptionOption, Subscription } from "@cryptuoso/billing";
 import {
     UserSubCancel,
     UserSubCheckout,
@@ -987,10 +985,11 @@ export default class UserService extends HTTPService {
         try {
             // Есть ли подписка и опция
             const subscription = await this.db.pg.maybeOne<{
-                code: string;
-                name: string;
-                subscriptionName: string;
-            }>(sql`SELECT so.code, so.name, s.name as subscription_name
+                code: SubscriptionOption["code"];
+                name: SubscriptionOption["name"];
+                subscriptionName: Subscription["name"];
+                trialAvailable: Subscription["trialAvailable"];
+            }>(sql`SELECT so.code, so.name, s.name as subscription_name, s.trial_available
             FROM subscription_options so , subscriptions s 
             WHERE so.code = ${subscriptionOption} 
             AND so.subscription_id = ${subscriptionId}
@@ -1030,13 +1029,17 @@ export default class UserService extends HTTPService {
                 return { id: sameActiveUserSub.id };
             }
 
-            // Была ли подписка с триалом
-            const trialSubscription = await this.db.pg.maybeOne(sql`SELECT id FROM user_subs 
+            let status: UserSub["status"] = "pending";
+            if (subscription.trialAvailable) {
+                // Была ли подписка с триалом
+                const trialSubscription = await this.db.pg.maybeOne(sql`SELECT id FROM user_subs 
             WHERE user_id = ${user.id}
             AND trial_started IS NOT NULL ORDER BY created_at DESC LIMIT 1;`);
-            let status: UserSub["status"] = "trial";
-            // Если была, сразу ожидаем оплату
-            if (trialSubscription) status = "pending";
+
+                // Если была, сразу ожидаем оплату
+                if (trialSubscription) status = "pending";
+                else status = "trial";
+            }
 
             const userSub: UserSub = {
                 id: uuid(),

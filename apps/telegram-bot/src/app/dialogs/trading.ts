@@ -507,12 +507,12 @@ const deletePortfolio = async (ctx: BotContext) => {
     let result;
     try {
         ({
-            deleteUserPortfolio: { result }
-        } = await ctx.gql.request<{ deleteUserPortfolio: { result: string } }>(
+            userPortfolioDelete: { result }
+        } = await ctx.gql.request<{ userPortfolioDelete: { result: string } }>(
             ctx,
             gql`
-                mutation deleteUserPortfolio($userPortfolioId: uuid!) {
-                    deleteUserPortfolio(userPortfolioId: $userPortfolioId) {
+                mutation userPortfolioDelete($userPortfolioId: uuid!) {
+                    userPortfolioDelete(userPortfolioId: $userPortfolioId) {
                         result
                     }
                 }

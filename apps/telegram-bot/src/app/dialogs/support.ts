@@ -28,12 +28,12 @@ const message = async (ctx: BotContext) => {
     const { payload } = ctx.session.dialog.current.data;
 
     const {
-        supportMessage: { result }
+        userSupportMessage: { result }
     } = await ctx.gql.request(
         ctx,
         gql`
-            mutation SupportMessage($message: String!) {
-                supportMessage(message: $message) {
+            mutation userSupportMessage($message: String!) {
+                userSupportMessage(message: $message) {
                     result
                 }
             }

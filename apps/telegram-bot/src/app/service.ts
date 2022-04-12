@@ -409,7 +409,7 @@ export default class TelegramBotService extends HTTPService {
     async startHandler(ctx: any, next: NextFunction) {
         logger.debug("start");
         ctx.session.dialog.current = null;
-
+        //TODO: getting started
         await this.mainMenu(ctx);
         await next();
         // return this.mainMenu(ctx);

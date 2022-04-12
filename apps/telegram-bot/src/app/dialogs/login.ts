@@ -109,7 +109,7 @@ const input = async (ctx: BotContext) => {
                 username: ctx.utils.formatName(ctx)
             }),
             getMainKeyboard(ctx)
-        );
+        ); //TODO: Getting Started
     } else {
         await ctx.reply(ctx.i18n.t("defaultHandler"), getStartKeyboard(ctx));
     }

@@ -26,13 +26,14 @@ const chooseExchange = async (ctx: BotContext) => {
         const { exchanges } = await ctx.gql.request<{ exchanges: { code: string; name: string }[] }>(
             ctx,
             gql`
-                query {
-                    exchanges {
+                query exchanges($available: Int!) {
+                    exchanges(where: { available: { _gte: $available } }) {
                         code
                         name
                     }
                 }
-            `
+            `,
+            { available: ctx.session.user.access }
         );
         ctx.session.exchanges = exchanges;
     }

@@ -295,12 +295,12 @@ const notifications = async (ctx: BotContext) => {
         let result;
         try {
             ({
-                setNotificationSettings: { result }
+                userSetNotificationSettings: { result }
             } = await ctx.gql.request(
                 ctx,
                 gql`
-                    mutation SetNotificationSettings($tradingTelegram: Boolean) {
-                        setNotificationSettings(tradingTelegram: $tradingTelegram) {
+                    mutation userSetNotificationSettings($tradingTelegram: Boolean) {
+                        userSetNotificationSettings(tradingTelegram: $tradingTelegram) {
                             result
                         }
                     }

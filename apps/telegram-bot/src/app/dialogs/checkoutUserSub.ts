@@ -43,16 +43,16 @@ const enter = async (ctx: BotContext) => {
     const { userSub } = ctx.session;
 
     const {
-        checkoutUserSub: { userPayment }
+        userSubCheckout: { userPayment }
     }: {
-        checkoutUserSub: {
+        userSubCheckout: {
             userPayment: IUserPayment;
         };
     } = await ctx.gql.request(
         ctx,
         gql`
-            mutation checkoutUserSub($userSubId: uuid!) {
-                checkoutUserSub(userSubId: $userSubId) {
+            mutation userSubCheckout($userSubId: uuid!) {
+                userSubCheckout(userSubId: $userSubId) {
                     userPayment {
                         id
                         code
@@ -95,16 +95,16 @@ const check = async (ctx: BotContext) => {
     const { userPayment: oldUserPayment } = ctx.session.dialog.current.data;
     const { userSub } = ctx.session;
     const {
-        checkPayment: { userPayment }
+        userSubCheckPayment: { userPayment }
     }: {
-        checkPayment: {
+        userSubCheckPayment: {
             userPayment: IUserPayment;
         };
     } = await ctx.gql.request(
         ctx,
         gql`
-            mutation checkPayment($chargeId: uuid!, $provider: String!) {
-                checkPayment(chargeId: $chargeId, provider: $provider) {
+            mutation userSubCheckPayment($chargeId: uuid!, $provider: String!) {
+                userSubCheckPayment(chargeId: $chargeId, provider: $provider) {
                     userPayment {
                         id
                         code

@@ -33,6 +33,7 @@ export interface Subscription {
     description?: string;
     options?: SubscriptionOption[];
     limits?: SubscriptionLimits;
+    trialAvailable?: boolean;
 }
 
 export interface UserSub {

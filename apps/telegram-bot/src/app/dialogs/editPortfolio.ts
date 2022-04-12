@@ -118,16 +118,16 @@ const handleAmount = async (ctx: BotContext) => {
     const { amountType: tradingAmountType, balancePercent, tradingAmountCurrency } = data;
     await ctx.reply(ctx.i18n.t("dialogs.addPortfolio.progress"));
     try {
-        await ctx.gql.request<{ editUserPortfolio: { result: string } }>(
+        await ctx.gql.request<{ userPortfolioEdit: { result: string } }>(
             ctx,
             gql`
-                mutation editUserPortfolioAmount(
+                mutation userPortfolioEditAmount(
                     $userPortfolioId: uuid!
                     $tradingAmountType: String!
                     $balancePercent: Int
                     $tradingAmountCurrency: Int
                 ) {
-                    editUserPortfolio(
+                    userPortfolioEdit(
                         userPortfolioId: $userPortfolioId
                         tradingAmountType: $tradingAmountType
                         balancePercent: $balancePercent
@@ -165,11 +165,11 @@ const optionsChosen = async (ctx: BotContext) => {
     await ctx.reply(ctx.i18n.t("dialogs.addPortfolio.progress"));
     let error;
     try {
-        await ctx.gql.request<{ editUserPortfolio: { result: string } }>(
+        await ctx.gql.request<{ userPortfolioEdit: { result: string } }>(
             ctx,
             gql`
-                mutation editUserPortfolioOptions($userPortfolioId: uuid!, $options: PortfolioOptions!) {
-                    editUserPortfolio(userPortfolioId: $userPortfolioId, options: $options) {
+                mutation userPortfolioEditOptions($userPortfolioId: uuid!, $options: PortfolioOptions!) {
+                    userPortfolioEdit(userPortfolioId: $userPortfolioId, options: $options) {
                         result
                     }
                 }

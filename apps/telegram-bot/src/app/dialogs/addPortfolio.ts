@@ -207,11 +207,11 @@ const finish = async (ctx: BotContext) => {
     await ctx.reply(ctx.i18n.t("dialogs.addPortfolio.progress"));
     try {
         ({
-            createUserPortfolio: { result }
-        } = await ctx.gql.request<{ createUserPortfolio: { result: string } }>(
+            userPortfolioCreate: { result }
+        } = await ctx.gql.request<{ userPortfolioCreate: { result: string } }>(
             ctx,
             gql`
-                mutation (
+                mutation userPortfolioCreate(
                     $exchange: String!
                     $userExAccId: uuid
                     $tradingAmountType: String!
@@ -219,7 +219,7 @@ const finish = async (ctx: BotContext) => {
                     $tradingAmountCurrency: Int
                     $options: PortfolioOptions
                 ) {
-                    createUserPortfolio(
+                    userPortfolioCreate(
                         exchange: $exchange
                         userExAccId: $userExAccId
                         tradingAmountType: $tradingAmountType
