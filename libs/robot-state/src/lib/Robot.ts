@@ -1,5 +1,5 @@
 import dayjs from "@cryptuoso/dayjs";
-import { BaseIndicator, TulipIndicator, IndicatorCode, IndicatorType, indicators } from "@cryptuoso/robot-indicators";
+import { BaseIndicator, TulipIndicator, indicators } from "@cryptuoso/robot-indicators";
 import {
     ValidTimeframe,
     CandleProps,
@@ -14,12 +14,13 @@ import { RobotWorkerEvents, SignalEvents } from "@cryptuoso/robot-events";
 import { NewEvent } from "@cryptuoso/events";
 import { CANDLES_RECENT_AMOUNT, equals, nvl, sortAsc } from "@cryptuoso/helpers";
 import { BaseStrategy } from "./BaseStrategy";
-import { RobotPositionState, RobotState, RobotStatus, StrategyProps } from "./types";
+import { RobotPositionState, RobotState, RobotStatus, StrategyProps } from "@cryptuoso/robot-types";
 import logger from "@cryptuoso/logger";
 import { calcCurrencyDynamic, RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 import { periodStatsFromArray, periodStatsToArray, TradeStats, TradeStatsCalc } from "@cryptuoso/trade-stats";
 import { strategies } from "./strategies";
 import { UserTradeEvent } from "@cryptuoso/user-robot-state";
+import { IndicatorCode, IndicatorType } from "@cryptuoso/robot-types";
 
 export interface StrategyCode {
     [key: string]: any;

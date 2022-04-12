@@ -1,7 +1,6 @@
-import { Timeframe, ValidTimeframe, TradeAction, OrderType, SignalInfo, SignalType, Candle } from "@cryptuoso/market";
+import { Timeframe, ValidTimeframe, TradeAction, OrderType, SignalType, Candle } from "@cryptuoso/market";
 import { CANDLES_RECENT_AMOUNT, ISO_DATE_REGEX } from "@cryptuoso/helpers";
 import { RobotSettings, RobotSettingsSchema, StrategySettings } from "@cryptuoso/robot-settings";
-import { RobotStatusCommand } from "@cryptuoso/robot-state";
 
 export const EXCHANGES = {
     binance_futures: "binance_futures",
@@ -221,7 +220,7 @@ export interface RobotRunnerPause {
 
 export interface RobotRunnerStatus {
     robotId: string;
-    status: RobotStatusCommand;
+    status: "start" | "restart" | "stop";
 }
 
 export interface RobotRunnerMarketsCheck {

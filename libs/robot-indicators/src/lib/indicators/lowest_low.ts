@@ -1,5 +1,5 @@
-import { BaseIndicator, IndicatorState } from "../BaseIndicator";
-
+import { BaseIndicator } from "../BaseIndicator";
+import { IndicatorState } from "@cryptuoso/robot-types";
 export class LowestLow extends BaseIndicator {
     constructor(state: IndicatorState) {
         super(state);

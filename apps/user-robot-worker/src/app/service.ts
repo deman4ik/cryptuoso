@@ -23,15 +23,12 @@ import {
     UserTradeEvents
 } from "@cryptuoso/user-robot-events";
 import { Job } from "bullmq";
-import { Order, SignalEvent } from "@cryptuoso/market";
+import { SignalEvent } from "@cryptuoso/market";
 import { ConnectorRunnerEvents, OrdersStatusEvent } from "@cryptuoso/connector-events";
 import { BaseError } from "@cryptuoso/errors";
 import { NewEvent } from "@cryptuoso/events";
-import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
-import { DatabaseTransactionConnection } from "slonik";
-import { calcBalancePercent, calcCurrencyDynamic, getCurrentUserRobotSettings } from "@cryptuoso/robot-settings";
+import { getCurrentUserRobotSettings } from "@cryptuoso/user-robot-state";
 import dayjs from "@cryptuoso/dayjs";
-import { keysToCamelCase, round, roundFirstSignificant } from "@cryptuoso/helpers";
 import { TradeStatsRunnerEvents, TradeStatsRunnerUserRobot } from "@cryptuoso/trade-stats-events";
 
 export type UserRobotWorkerServiceConfig = BaseServiceConfig;
@@ -179,17 +176,8 @@ export default class UserRobotWorkerService extends BaseService {
 
                 if (userRobot.hasClosedPositions) {
                     this.log.info(
-                        `User Robot #${userRobot.id} has closed positions, sending ${StatsCalcRunnerEvents.USER_ROBOT} event.`
+                        `User Robot #${userRobot.id} has closed positions, sending ${TradeStatsRunnerEvents.USER_ROBOT} event.`
                     );
-                    // <StatsCalcRunnerUserRobot>
-                    const statsCalcEvent: NewEvent<any> = {
-                        type: StatsCalcRunnerEvents.USER_ROBOT,
-                        data: {
-                            userRobotId: userRobot.id
-                        }
-                    };
-                    eventsToSend.push(statsCalcEvent);
-                    //TODO: deprecate
 
                     if (userRobot.state.userPortfolioId) {
                         const tradeStatsEvent: NewEvent<TradeStatsRunnerUserRobot> = {

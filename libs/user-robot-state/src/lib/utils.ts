@@ -1,7 +1,6 @@
 import { keysToCamelCase } from "@cryptuoso/helpers";
 import { Order } from "@cryptuoso/market";
 import { sql, DatabasePool, DatabaseTransactionConnection } from "@cryptuoso/postgres";
-import { RobotState } from "@cryptuoso/robot-state";
 
 import { UserPositionDB, UserRobotDB, UserRobotStateExt } from "./types";
 

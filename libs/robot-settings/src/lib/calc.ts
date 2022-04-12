@@ -1,5 +1,5 @@
 import { roundFirstSignificant } from "@cryptuoso/helpers";
-import { RobotSettings, UserSignalSettings } from "./types";
+import { RobotSettings } from "./types";
 
 export const calcCurrencyDynamic = (volumeInCurrency: number, price: number) =>
     roundFirstSignificant(volumeInCurrency / price);
@@ -27,7 +27,7 @@ export const calcBalancePercent = (percent: number, balance: number, price: numb
     };
 };
 
-export const getRobotPositionVolume = (settings: RobotSettings | UserSignalSettings, price?: number): number => {
+export const getRobotPositionVolume = (settings: RobotSettings, price?: number): number => {
     if (settings.volumeType === "assetStatic") {
         return settings.volume;
     } else if (settings.volumeType === "currencyDynamic") {

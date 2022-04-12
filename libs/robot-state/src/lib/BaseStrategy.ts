@@ -13,11 +13,10 @@ import {
     Candle,
     SignalEvent
 } from "@cryptuoso/market";
-import { IndicatorState, IndicatorType } from "@cryptuoso/robot-indicators";
 import { NewEvent } from "@cryptuoso/events";
 import { RobotWorkerEvents, SignalEvents } from "@cryptuoso/robot-events";
 import logger from "@cryptuoso/logger";
-import { RobotPositionState, StrategyProps } from "./types";
+import { RobotPositionState, StrategyProps, IndicatorState, IndicatorType } from "@cryptuoso/robot-types";
 import { StrategySettings } from "@cryptuoso/robot-settings";
 import { TradeStats } from "@cryptuoso/trade-stats";
 

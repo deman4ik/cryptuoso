@@ -17,9 +17,8 @@ import {
     RobotServiceSubcribe,
     getRobotSubscribeEventName
 } from "@cryptuoso/robot-events";
-import { ExwatcherAddMarket } from "@cryptuoso/exwatcher-events";
 import { BacktesterRunnerEvents, BacktesterRunnerStart } from "@cryptuoso/backtester-events";
-import { RobotStatus } from "@cryptuoso/robot-state";
+import { RobotStatus } from "@cryptuoso/robot-types";
 import { StrategySettings } from "@cryptuoso/robot-settings";
 import { equals, robotExchangeName, sleep, sortDesc } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";

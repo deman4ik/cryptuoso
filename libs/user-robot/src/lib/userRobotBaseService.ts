@@ -10,11 +10,12 @@ import {
     UserRobotJobType,
     UserRobotStateExt,
     UserRobotStatus,
-    UserTradeEvent
+    UserTradeEvent,
+    getCurrentUserRobotSettings
 } from "@cryptuoso/user-robot-state";
-import { Robot, RobotState, RobotStatus } from "@cryptuoso/robot-state";
-import { groupBy, keysToCamelCase, sleep, sortDesc, uniqueElementsBy } from "@cryptuoso/helpers";
-import { getCurrentUserRobotSettings } from "@cryptuoso/robot-settings";
+import { Robot } from "@cryptuoso/robot-state";
+import { RobotState, RobotStatus } from "@cryptuoso/robot-types";
+import { keysToCamelCase, sleep, sortDesc, uniqueElementsBy } from "@cryptuoso/helpers";
 import {
     UserPortfolioStatus,
     UserRobotRunnerEvents,
@@ -30,7 +31,7 @@ import dayjs from "@cryptuoso/dayjs";
 import ccxt from "ccxt";
 import cron from "node-cron";
 import { v4 as uuid } from "uuid";
-import { ConnectorJob, ConnectorJobType, Priority } from "@cryptuoso/connector-state";
+import { ConnectorJob, Priority } from "@cryptuoso/connector-state";
 import { NewEvent } from "@cryptuoso/events";
 import { TradeStatsRunnerEvents, TradeStatsRunnerUserRobot } from "@cryptuoso/trade-stats-events";
 import {

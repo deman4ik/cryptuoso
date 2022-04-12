@@ -1,16 +1,6 @@
-import { TradeStats } from "@cryptuoso/stats-calc";
-
 export enum UserAggrStatsTypes {
     signal = "signal",
     userRobot = "userRobot"
-}
-
-export interface UserAggrStats extends TradeStats {
-    id: string;
-    userId: string;
-    exchange?: string;
-    asset?: string;
-    type: UserAggrStatsTypes;
 }
 
 export const enum UserRoles {

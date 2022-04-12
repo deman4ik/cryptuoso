@@ -30,8 +30,6 @@ export interface BalancePercentSettings extends BaseSettings {
 
 export type RobotSettings = AssetStaticSettings | CurrencyDynamicSettings;
 
-export type UserSignalSettings = AssetStaticSettings | CurrencyDynamicSettings;
-
 export type UserRobotSettings = RobotSettings | BalancePercentSettings; //| AssetDynamicDeltaSettings;
 
 export interface StrategySettings {

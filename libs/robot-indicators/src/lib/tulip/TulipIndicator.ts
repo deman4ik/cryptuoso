@@ -1,4 +1,5 @@
-import { IndicatorState, BaseIndicator } from "../BaseIndicator";
+import { IndicatorState } from "@cryptuoso/robot-types";
+import { BaseIndicator } from "../BaseIndicator";
 import tulip from "./create";
 
 export class TulipIndicator extends BaseIndicator {

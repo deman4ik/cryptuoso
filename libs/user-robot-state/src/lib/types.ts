@@ -4,7 +4,7 @@ import { UserRobotSettings } from "@cryptuoso/robot-settings";
 import { UserMarketState } from "@cryptuoso/market";
 import { OrdersStatusEvent } from "@cryptuoso/connector-events";
 import { UserPortfolioDB, UserPortfolioState } from "@cryptuoso/portfolio-state";
-import { RobotState } from "@cryptuoso/robot-state";
+import { RobotState } from "@cryptuoso/robot-types";
 
 export const enum UserPositionStatus {
     delayed = "delayed",

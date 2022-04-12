@@ -13,7 +13,7 @@ import {
     Candle,
     DBCandle
 } from "@cryptuoso/market";
-import { RobotPositionState, RobotPostionInternalState } from "./types";
+import { RobotPositionState, RobotPostionInternalState } from "@cryptuoso/robot-types";
 import logger from "@cryptuoso/logger";
 
 /**

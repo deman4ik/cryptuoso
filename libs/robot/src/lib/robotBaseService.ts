@@ -18,12 +18,12 @@ import retry from "async-retry";
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import { spawn, Pool, Worker as ThreadsWorker } from "threads";
 import { RobotStateBuffer, RobotWorker } from "@cryptuoso/robot-thread";
-import { Robot, RobotPosition, RobotPositionState, RobotState, RobotStatus } from "@cryptuoso/robot-state";
+import { Robot, RobotPosition } from "@cryptuoso/robot-state";
+import { RobotPositionState, RobotState, RobotStatus } from "@cryptuoso/robot-types";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
 import ccxtpro from "ccxt.pro";
 import cron from "node-cron";
 import dayjs from "@cryptuoso/dayjs";
-import { StatsCalcRunnerEvents } from "@cryptuoso/stats-calc-events";
 import {
     TradeStatsRunnerEvents,
     TradeStatsRunnerPortfolioRobot,
@@ -1497,13 +1497,6 @@ export class RobotBaseService extends HTTPService {
                                         });
 
                                         if (robot.hasClosedPositions) {
-                                            await this.events.emit<any>({
-                                                type: StatsCalcRunnerEvents.ROBOT,
-                                                data: {
-                                                    robotId
-                                                }
-                                            }); //TODO: deprecate
-
                                             await this.events.emit<TradeStatsRunnerRobot>({
                                                 type: TradeStatsRunnerEvents.ROBOT,
                                                 data: {
@@ -1669,13 +1662,6 @@ export class RobotBaseService extends HTTPService {
                                 Array.isArray(positionsToSave) &&
                                 positionsToSave.filter(({ status }) => status === RobotPositionStatus.closed).length > 0
                             ) {
-                                await this.events.emit<any>({
-                                    type: StatsCalcRunnerEvents.ROBOT,
-                                    data: {
-                                        robotId
-                                    }
-                                }); //TODO: deprecate
-
                                 await this.events.emit<TradeStatsRunnerRobot>({
                                     type: TradeStatsRunnerEvents.ROBOT,
                                     data: {

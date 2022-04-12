@@ -10,9 +10,6 @@ import {
     BacktesterPositionState,
     BacktesterLogs
 } from "@cryptuoso/backtester-state";
-import requireFromString from "require-from-string";
-import { RobotPositionState, RobotState, RobotStatus, StrategyCode } from "@cryptuoso/robot-state";
-import { IndicatorCode } from "@cryptuoso/robot-indicators";
 import { ValidTimeframe, Candle, DBCandle, SignalEvent, CandleType, ActiveAlert } from "@cryptuoso/market";
 import { sortAsc, chunkArray } from "@cryptuoso/helpers";
 import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
@@ -20,6 +17,7 @@ import logger, { Logger } from "@cryptuoso/logger";
 import { sql, pg, pgUtil, makeChunksGenerator } from "@cryptuoso/postgres";
 import Redis from "ioredis";
 import Cache from "ioredis-cache";
+import { RobotPositionState, RobotState, RobotStatus } from "@cryptuoso/robot-types";
 
 const subject = new Subject();
 let backtesterWorker: BacktesterWorker;

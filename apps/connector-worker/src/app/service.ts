@@ -1,7 +1,9 @@
-import { BaseService, BaseServiceConfig } from "@cryptuoso/service";
+import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import { Job } from "bullmq";
-import { ConnectorJob, ConnectorJobType, Priority } from "@cryptuoso/connector-state";
+import { ConnectorJob, ConnectorJobType, ConnectorRunnerJobType, Priority, Queues } from "@cryptuoso/connector-state";
 import {
+    ConnectorRunnerEvents,
+    ConnectorRunnerSchema,
     ConnectorWorkerEvents,
     OrdersErrorEvent,
     OrdersStatusEvent,
@@ -10,6 +12,8 @@ import {
 import { sql } from "@cryptuoso/postgres";
 import dayjs from "@cryptuoso/dayjs";
 import {
+    User,
+    UserRoles,
     EncryptedData,
     UserExchangeAccBalances,
     UserExchangeAccount,
@@ -20,20 +24,38 @@ import { Pool, spawn, Worker as ThreadsWorker } from "threads";
 import { Decrypt } from "./decryptWorker";
 import { groupBy, sortDesc } from "@cryptuoso/helpers";
 import { Order, OrderJobType, OrderStatus } from "@cryptuoso/market";
-import { BaseError } from "@cryptuoso/errors";
+import { ActionsHandlerError, BaseError } from "@cryptuoso/errors";
 import { DatabaseTransactionConnection } from "slonik";
 import { v4 as uuid } from "uuid";
 import ccxt from "ccxt";
 
-export type ConnectorRunnerServiceConfig = BaseServiceConfig;
+export type ConnectorRunnerServiceConfig = HTTPServiceConfig;
 
-export default class ConnectorRunnerService extends BaseService {
+export default class ConnectorRunnerService extends HTTPService {
     #pool: Pool<any>;
 
     connectors: { [key: string]: PrivateConnector } = {};
     constructor(config?: ConnectorRunnerServiceConfig) {
         super(config);
         try {
+            this.createRoutes({
+                checkBalance: {
+                    auth: true,
+                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager, UserRoles.admin],
+                    inputSchema: {
+                        userExAccId: "uuid"
+                    },
+                    handler: this.HTTPWithAuthHandler.bind(this, this.checkBalance.bind(this))
+                },
+                checkUnknownOrders: {
+                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager, UserRoles.admin],
+                    inputSchema: {
+                        userExAccId: "uuid"
+                    },
+                    handler: this.HTTPWithAuthHandler.bind(this, this.checkUserUnknownOrders.bind(this))
+                }
+            });
+
             this.addOnStartHandler(this.onServiceStart);
             this.addOnStopHandler(this.onServiceStop);
         } catch (err) {
@@ -47,11 +69,246 @@ export default class ConnectorRunnerService extends BaseService {
             concurrency: this.workerConcurrency,
             size: this.workerThreads
         });
-        this.createWorker("connector", this.process);
+
+        this.events.subscribe({
+            [ConnectorRunnerEvents.ADD_JOB]: {
+                schema: ConnectorRunnerSchema[ConnectorRunnerEvents.ADD_JOB],
+                handler: this.addConnectorJob.bind(this)
+            }
+        });
+        this.createQueue(Queues.connector);
+
+        this.createQueue(Queues.connectorRunner);
+        this.createWorker(Queues.connectorRunner, this.processRunnerJobs);
+
+        await this.addJob(Queues.connectorRunner, ConnectorRunnerJobType.idleOrderJobs, null, {
+            jobId: ConnectorRunnerJobType.idleOrderJobs,
+            repeat: {
+                cron: "*/15 * * * * *"
+            },
+            removeOnComplete: 1,
+            removeOnFail: 10
+        });
+
+        await this.addJob(Queues.connectorRunner, ConnectorRunnerJobType.idleOpenOrders, null, {
+            jobId: ConnectorRunnerJobType.idleOpenOrders,
+            repeat: {
+                every: 1000 * 120
+            },
+            removeOnComplete: 1,
+            removeOnFail: 10
+        });
+
+        await this.addJob(Queues.connectorRunner, ConnectorRunnerJobType.checkBalance, null, {
+            jobId: ConnectorRunnerJobType.checkBalance,
+            repeat: {
+                every: 1000 * 60
+            },
+            removeOnComplete: 1,
+            removeOnFail: 10
+        });
+        await this.addJob(Queues.connectorRunner, ConnectorRunnerJobType.checkUnknownOrders, null, {
+            jobId: ConnectorRunnerJobType.checkUnknownOrders,
+            repeat: {
+                cron: "0 15 */12 * * *"
+            },
+            removeOnComplete: 1,
+            removeOnFail: 10
+        });
+
+        this.createWorker(Queues.connector, this.processWorkerJobs);
     }
 
     private async onServiceStop(): Promise<void> {
         await this.#pool.terminate();
+    }
+
+    async queueJob(userExAccId: string, type: ConnectorJobType) {
+        const { status } = await this.db.pg.one<{ status: UserExchangeAccStatus }>(sql`
+            SELECT status FROM user_exchange_accs WHERE id = ${userExAccId};
+            `);
+
+        if (status === UserExchangeAccStatus.enabled) {
+            await this.addJob(
+                Queues.connector,
+                type,
+                { userExAccId },
+                {
+                    jobId: userExAccId,
+                    removeOnComplete: true,
+                    removeOnFail: 100
+                }
+            );
+        }
+        this.log.info(`Queued Connector Job #${userExAccId} - ${type}`);
+    }
+
+    async addConnectorJob(nextJob: ConnectorJob) {
+        const { userExAccId, type, orderId } = nextJob;
+
+        await this.db.pg.query(sql`
+        INSERT INTO connector_jobs (id, user_ex_acc_id, order_id, next_job_at, priority, type, data, allocation )
+        VALUES (${nextJob.id}, ${nextJob.userExAccId}, 
+        ${nextJob.orderId}, ${nextJob.nextJobAt}, 
+        ${nextJob.priority}, ${nextJob.type}, 
+        ${JSON.stringify(nextJob.data) || null},
+        'shared');
+        `);
+
+        await this.queueJob(userExAccId, ConnectorJobType.order);
+        this.log.info(`Added new Connector job ${userExAccId} ${type} order ${orderId}`);
+    }
+
+    async processRunnerJobs(job: Job) {
+        switch (job.name) {
+            case ConnectorRunnerJobType.idleOrderJobs:
+                await this.checkIdleOrderJobs();
+                break;
+            case ConnectorRunnerJobType.idleOpenOrders:
+                await this.checkIdleOpenOrders();
+                break;
+            case ConnectorRunnerJobType.checkBalance:
+                await this.checkBalances();
+                break;
+            case ConnectorRunnerJobType.checkUnknownOrders:
+                await this.checkUnknownOrders();
+                break;
+            default:
+                this.log.error(`Unknow job ${job.name}`);
+        }
+    }
+
+    async checkIdleOrderJobs() {
+        const userExAccIds = await this.db.pg.any<{ userExAccId: string }>(sql`
+        SELECT j.user_ex_acc_id
+      FROM connector_jobs j,
+           user_exchange_accs a
+      WHERE j.user_ex_acc_id = a.id
+        AND j.allocation = 'shared'
+        AND a.status = 'enabled'
+        AND a.allocation = 'shared'
+        AND j.next_job_at IS NOT NULL
+        AND j.next_job_at <= now()
+      GROUP BY j.user_ex_acc_id
+        `);
+        if (userExAccIds && Array.isArray(userExAccIds) && userExAccIds.length) {
+            this.log.info(`${userExAccIds.length} userExAccs has order jobs`);
+            for (const { userExAccId } of userExAccIds) {
+                try {
+                    await this.queueJob(userExAccId, ConnectorJobType.order);
+                } catch (e) {
+                    this.log.error(e);
+                }
+            }
+        }
+    }
+
+    async checkIdleOpenOrders() {
+        const userOrders = await this.db.pg.any<{ id: string; userExAccId: string }>(sql`
+        SELECT uo.id, uo.user_ex_acc_id
+      FROM user_orders uo,
+           user_exchange_accs a
+      WHERE uo.user_ex_acc_id = a.id
+      AND a.status = 'enabled'
+      AND a.allocation = 'shared'
+      AND uo.status = 'open'
+      AND NOT EXISTS (select j.id from connector_jobs j 
+                      where j.user_ex_acc_id = uo.user_ex_acc_id 
+                      and j.order_id = uo.id 
+                      and j.allocation = 'shared');
+        `);
+
+        if (userOrders && Array.isArray(userOrders) && userOrders.length) {
+            for (const { id: orderId, userExAccId } of userOrders) {
+                await this.addConnectorJob({
+                    id: uuid(),
+                    type: OrderJobType.check,
+                    userExAccId,
+                    orderId,
+                    nextJobAt: dayjs.utc().toISOString(),
+                    priority: Priority.medium,
+                    allocation: "shared"
+                });
+            }
+        }
+    }
+
+    async checkBalance({ userExAccId }: { userExAccId: string }, user: User) {
+        const userExAcc = await this.db.pg.one<{ id: string; userId: string }>(sql`
+        SELECT id, user_id from user_exchange_accs where id = ${userExAccId} and allocation = 'shared';
+        `);
+        if (user && user.id !== userExAcc.userId)
+            throw new ActionsHandlerError(
+                "Current user isn't owner of this User Exchange Account",
+                { userExAccId },
+                "FORBIDDEN",
+                403
+            );
+        await this.addJob(
+            Queues.connector,
+            ConnectorJobType.balance,
+            { userExAccId },
+            {
+                jobId: userExAccId,
+                removeOnComplete: true,
+                removeOnFail: 100
+            }
+        );
+    }
+
+    async checkBalances() {
+        const userExAccIds = await this.db.pg.any<{ userExAccId: string }>(sql`
+        select id as user_ex_acc_id 
+        from user_exchange_accs 
+        where status = 'enabled' 
+        and allocation = 'shared'
+        and ( (balances->> 'updatedAt')::timestamp without time zone is null 
+          or (balances->> 'updatedAt')::timestamp without time zone < ${dayjs.utc().add(-50, "minute").toISOString()})
+        `);
+        if (userExAccIds && Array.isArray(userExAccIds) && userExAccIds.length) {
+            this.log.info(`${userExAccIds.length} userExAccs need to check balance`);
+            for (const { userExAccId } of userExAccIds) {
+                try {
+                    await this.queueJob(userExAccId, ConnectorJobType.balance);
+                } catch (e) {
+                    this.log.error(e);
+                }
+            }
+        }
+    }
+
+    async checkUserUnknownOrders({ userExAccId }: { userExAccId: string }, user: User) {
+        const userExAcc = await this.db.pg.one<{ id: string; userId: string }>(sql`
+        SELECT id, user_id from user_exchange_accs where id = ${userExAccId} and allocation = 'shared';
+        `);
+        if (user && user.id !== userExAcc.userId)
+            throw new ActionsHandlerError(
+                "Current user isn't owner of this User Exchange Account",
+                { userExAccId },
+                "FORBIDDEN",
+                403
+            );
+        await this.queueJob(userExAccId, ConnectorJobType.unknownOrders);
+    }
+
+    async checkUnknownOrders() {
+        const userExAccIds = await this.db.pg.any<{ userExAccId: string }>(sql`
+        select uea.id as user_ex_acc_id 
+        from user_exchange_accs uea
+        where status = 'enabled'
+        and allocation = 'shared'
+        and exists (select id from user_robots ur where ur.user_ex_acc_id = uea.id and ur.status in ('started','stopping','paused')); 
+        `);
+        if (userExAccIds && Array.isArray(userExAccIds) && userExAccIds.length) {
+            this.log.info(`${userExAccIds.length} userExAccs need to check unknown orders`);
+            for (const { userExAccId } of userExAccIds) {
+                try {
+                    await this.queueJob(userExAccId, ConnectorJobType.unknownOrders);
+                } catch (e) {
+                    this.log.error(e);
+                }
+            }
+        }
     }
 
     async decrypt(userId: string, data: EncryptedData) {
@@ -220,7 +477,7 @@ export default class ConnectorRunnerService extends BaseService {
         }
     };
 
-    async process(job: Job) {
+    async processWorkerJobs(job: Job) {
         const beacon = this.lightship.createBeacon();
         try {
             const userExAccId = job.id;

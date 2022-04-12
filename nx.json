@@ -38,7 +38,7 @@
   "cli": {
     "defaultCollection": "@nrwl/node"
   },
-  "defaultProject": "importer-runner",
+  "defaultProject": "user",
   "generators": {
     "@nrwl/workspace": {
       "library": {

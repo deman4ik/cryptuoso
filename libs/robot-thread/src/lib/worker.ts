@@ -1,7 +1,8 @@
 import { NewEvent } from "@cryptuoso/events";
 import logger from "@cryptuoso/logger";
 import { Candle } from "@cryptuoso/market";
-import { Robot, RobotPositionState, RobotState } from "@cryptuoso/robot-state";
+import { Robot } from "@cryptuoso/robot-state";
+import { RobotPositionState, RobotState } from "@cryptuoso/robot-types";
 
 export interface RobotStateBuffer {
     state: RobotState;

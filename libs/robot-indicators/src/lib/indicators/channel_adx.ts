@@ -1,4 +1,5 @@
-import { BaseIndicator, IndicatorState } from "../BaseIndicator";
+import { IndicatorState } from "@cryptuoso/robot-types";
+import { BaseIndicator } from "../BaseIndicator";
 
 export class ChannelADX extends BaseIndicator {
     constructor(state: IndicatorState) {

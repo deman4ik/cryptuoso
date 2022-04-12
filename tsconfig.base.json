@@ -48,6 +48,7 @@
             "@cryptuoso/robot-settings": ["libs/robot-settings/src/index.ts"],
             "@cryptuoso/robot-state": ["libs/robot-state/src/index.ts"],
             "@cryptuoso/robot-thread": ["libs/robot-thread/src/index.ts"],
+            "@cryptuoso/robot-types": ["libs/robot-types/src/index.ts"],
             "@cryptuoso/service": ["libs/service/src/index.ts"],
             "@cryptuoso/stats-calc": ["libs/stats-calc/src/index.ts"],
             "@cryptuoso/stats-calc-events": ["libs/stats-calc-events/src/index.ts"],
@@ -58,9 +59,9 @@
             "@cryptuoso/user-robot": ["libs/user-robot/src/index.ts"],
             "@cryptuoso/user-robot-events": ["libs/user-robot-events/src/index.ts"],
             "@cryptuoso/user-robot-state": ["libs/user-robot-state/src/index.ts"],
-            "@cryptuoso/user-signal-state": ["libs/user-signal-state/src/index.ts"],
             "@cryptuoso/user-state": ["libs/user-state/src/index.ts"],
-            "@cryptuoso/user-sub-events": ["libs/user-sub-events/src/index.ts"]
+            "@cryptuoso/user-sub-events": ["libs/user-sub-events/src/index.ts"],
+            "@cryptuoso/user-types": ["libs/user-types/src/index.ts"]
         },
         "resolveJsonModule": true
     },

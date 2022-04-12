@@ -2,33 +2,10 @@ import { addPercent, chunkArrayIncrEnd, round, validate } from "@cryptuoso/helpe
 import { ValidationSchema } from "fastest-validator";
 import { CandleProps, DBCandle } from "@cryptuoso/market";
 import { NewEvent } from "@cryptuoso/events";
-import { RobotWorkerEvents } from "@cryptuoso/robot-events";
 import tulip from "./tulip/create";
 import logger from "@cryptuoso/logger";
 import { StrategySettings } from "@cryptuoso/robot-settings";
-
-export interface IndicatorCode {
-    [key: string]: any;
-    init(): void;
-    calc(): void;
-}
-
-export const enum IndicatorType {
-    base = "base",
-    tulip = "tulip"
-    /*talib = "talib",
-    techind = "techind"*/
-}
-
-export interface IndicatorState {
-    [key: string]: any;
-    name: string;
-    indicatorName: string;
-    initialized?: boolean;
-    parameters?: { [key: string]: number };
-    variables?: { [key: string]: any };
-    indicatorFunctions?: { [key: string]: () => any };
-}
+import { IndicatorState } from "@cryptuoso/robot-types";
 
 export class BaseIndicator {
     [key: string]: any;
@@ -104,7 +81,7 @@ export class BaseIndicator {
 
     _logEvent(data: any) {
         this._eventsToSend.push({
-            type: RobotWorkerEvents.LOG,
+            type: "out-robot-worker.log",
             data: { ...data, name: this._name, indicatorName: this._indicatorName }
         });
     }
