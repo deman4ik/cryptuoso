@@ -54,7 +54,7 @@ export default class EventsManager extends HTTPService {
         super(config);
 
         this.createRoutes({
-            resend: {
+            eventsResendEvent: {
                 auth: true,
                 roles: [UserRoles.admin],
                 handler: this._resendHandler.bind(this),

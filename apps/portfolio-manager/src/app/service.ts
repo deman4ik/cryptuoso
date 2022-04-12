@@ -46,7 +46,7 @@ export default class PortfolioManagerService extends HTTPService {
         super(config);
         try {
             this.createRoutes({
-                initPortfolios: {
+                portfolioInit: {
                     inputSchema: {
                         exchange: "string",
                         tradingAmountType: { type: "string", default: "balancePercent" },
@@ -65,22 +65,22 @@ export default class PortfolioManagerService extends HTTPService {
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.initPortfolios.bind(this))
                 },
-                buildPortfolio: {
+                portfolioBuild: {
                     inputSchema: PortfolioManagerInSchema[PortfolioManagerInEvents.BUILD_PORTFOLIO],
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.buildPortfolio.bind(this))
                 },
-                buildPortfolios: {
+                portfolioBuildMany: {
                     inputSchema: PortfolioManagerInSchema[PortfolioManagerInEvents.BUILD_PORTFOLIOS],
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.buildPortfolios.bind(this))
                 },
-                rebuildPortfolios: {
+                portfolioRebuild: {
                     inputSchema: PortfolioManagerInSchema[PortfolioManagerInEvents.REBUILD_PORTFOLIOS],
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.rebuildPortfolios.bind(this))
                 },
-                createUserPortfolio: {
+                userPortfolioCreate: {
                     inputSchema: {
                         exchange: "string",
                         allocation: {
@@ -116,7 +116,7 @@ export default class PortfolioManagerService extends HTTPService {
                     roles: [UserRoles.admin, UserRoles.manager, UserRoles.user, UserRoles.vip],
                     handler: this.HTTPWithAuthHandler.bind(this, this.createUserPortfolio.bind(this))
                 },
-                editUserPortfolio: {
+                userPortfolioEdit: {
                     inputSchema: {
                         userPortfolioId: { type: "uuid", optional: true },
                         tradingAmountType: { type: "string", optional: true },
@@ -144,7 +144,7 @@ export default class PortfolioManagerService extends HTTPService {
                     roles: [UserRoles.admin, UserRoles.manager, UserRoles.user, UserRoles.vip],
                     handler: this.HTTPWithAuthHandler.bind(this, this.editUserPortfolio.bind(this))
                 },
-                deleteUserPortfolio: {
+                userPortfolioDelete: {
                     inputSchema: {
                         userPortfolioId: { type: "uuid", optional: true }
                     },
@@ -152,12 +152,12 @@ export default class PortfolioManagerService extends HTTPService {
                     roles: [UserRoles.admin, UserRoles.manager, UserRoles.user, UserRoles.vip],
                     handler: this.HTTPWithAuthHandler.bind(this, this.deleteUserPortfolio.bind(this))
                 },
-                buildUserPortfolio: {
+                userPortfolioBuild: {
                     inputSchema: PortfolioManagerInSchema[PortfolioManagerInEvents.BUILD_USER_PORTFOLIO],
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.buildUserPortfolio.bind(this))
                 },
-                buildUserPortfolios: {
+                userPortfolioBuildMany: {
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.buildUserPortfolios.bind(this))
                 }

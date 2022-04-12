@@ -57,12 +57,12 @@ export default class RobotRunnerService extends HTTPService {
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.robotsCheck.bind(this))
                 },
-                marketsCheck: {
+                marketCheckAll: {
                     inputSchema: RobotRunnerSchema[RobotRunnerEvents.MARKETS_CHECK],
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.marketsCheck.bind(this))
                 },
-                addMarket: {
+                marketCreate: {
                     inputSchema: {
                         exchange: "string",
                         asset: "string",
@@ -70,20 +70,20 @@ export default class RobotRunnerService extends HTTPService {
                         available: { type: "number", integer: true, optional: true }
                     },
                     roles: [UserRoles.admin, UserRoles.manager],
-                    handler: this.HTTPHandler.bind(this, this.addMarket.bind(this))
+                    handler: this.HTTPHandler.bind(this, this.marketCreate.bind(this))
                 },
-                updateMarkets: {
+                marketUpdateAll: {
                     roles: [UserRoles.admin, UserRoles.manager],
-                    handler: this.HTTPHandler.bind(this, this.updateMarkets.bind(this))
+                    handler: this.HTTPHandler.bind(this, this.marketsUpdate.bind(this))
                 },
-                addSubscription: {
+                marketSubscribe: {
                     inputSchema: {
                         exchange: "string",
                         asset: "string",
                         currency: "string"
                     },
                     roles: [UserRoles.admin, UserRoles.manager],
-                    handler: this.HTTPHandler.bind(this, this.addSubscription.bind(this))
+                    handler: this.HTTPHandler.bind(this, this.marketSubscribe.bind(this))
                 }
             });
 
@@ -104,7 +104,7 @@ export default class RobotRunnerService extends HTTPService {
 
         this.createQueue(queueKey);
 
-        this.createWorker(queueKey, this.updateMarkets);
+        this.createWorker(queueKey, this.marketsUpdate);
 
         await this.connector.initAllConnectors(true);
         await this.addJob(queueKey, "updateMarkets", null, {
@@ -421,7 +421,7 @@ export default class RobotRunnerService extends HTTPService {
         }
     }
 
-    async updateMarkets() {
+    async marketsUpdate() {
         try {
             while (!this.connector.isInited()) {
                 this.log.info("Waiting for connectors to Initialize...");
@@ -503,7 +503,7 @@ export default class RobotRunnerService extends HTTPService {
         this.log.debug(`${exchange}.${asset}.${currency} market updated!`);
     }
 
-    async addMarket({
+    async marketCreate({
         exchange,
         asset,
         currency,
@@ -542,7 +542,7 @@ export default class RobotRunnerService extends HTTPService {
         }
     }
 
-    async addSubscription({ exchange, asset, currency }: { exchange: string; asset: string; currency: string }) {
+    async marketSubscribe({ exchange, asset, currency }: { exchange: string; asset: string; currency: string }) {
         await this.events.emit<RobotServiceSubcribe>({
             type: getRobotSubscribeEventName(exchange),
             data: {

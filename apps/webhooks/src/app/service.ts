@@ -43,7 +43,7 @@ export default class WebhooksService extends HTTPService {
                 }
             });
             this.createRoutes({
-                createSignalSubscription: {
+                signalSubscriptionCreate: {
                     inputSchema: {
                         exchange: "string",
                         type: { type: "enum", values: ["zignaly"] },
@@ -65,7 +65,7 @@ export default class WebhooksService extends HTTPService {
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.createSignalSubscription.bind(this))
                 },
-                editSignalSubscription: {
+                signalSubscriptionEdit: {
                     inputSchema: {
                         signalSubscriptionId: "uuid",
                         leverage: { type: "number", optional: true, integer: true, positive: true },
@@ -84,33 +84,33 @@ export default class WebhooksService extends HTTPService {
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.editSignalSubscription.bind(this))
                 },
-                deleteSignalSubscription: {
+                signalSubscriptionDelete: {
                     inputSchema: {
                         signalSubscriptionId: "uuid"
                     },
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.deleteSignalSubscription.bind(this))
                 },
-                startSignalSubscription: {
+                signalSubscriptionStart: {
                     inputSchema: {
                         signalSubscriptionId: "uuid"
                     },
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.startSignalSubscription.bind(this))
                 },
-                stopSignalSubscription: {
+                signalSubscriptionStop: {
                     inputSchema: {
                         signalSubscriptionId: "uuid"
                     },
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.stopSignalSubscription.bind(this))
                 },
-                syncSignalPortfolioRobots: {
+                signalSubscriptionSyncPortfolioRobots: {
                     roles: [UserRoles.admin, UserRoles.manager],
                     inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.SYNC_SIGNAL_PORTFOLIO_ROBOTS],
                     handler: this.HTTPHandler.bind(this, this.syncSignalPortfolioRobots.bind(this))
                 },
-                syncSignalSubscriptionRobots: {
+                signalSubscriptionSyncRobots: {
                     roles: [UserRoles.admin, UserRoles.manager],
                     inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.SYNC_SIGNAL_SUBSCRIPTION_ROBOTS],
                     handler: this.HTTPHandler.bind(this, this.syncSignalSubscriptionRobots.bind(this))

@@ -96,12 +96,12 @@ export default class UserRobotRunnerService extends HTTPService {
                     inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.STOP_PORTFOLIO],
                     handler: this.HTTPWithAuthHandler.bind(this, this.stopPortfolio.bind(this))
                 },
-                syncPortfolioRobots: {
+                portfolioSyncRobots: {
                     roles: [UserRoles.admin, UserRoles.manager],
                     inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.SYNC_PORTFOLIO_ROBOTS],
                     handler: this.HTTPWithAuthHandler.bind(this, this.syncPortfolioRobots.bind(this))
                 },
-                syncUserPortfolioRobots: {
+                userPortfolioSyncRobots: {
                     roles: [UserRoles.admin, UserRoles.manager],
                     inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.SYNC_USER_PORTFOLIO_ROBOTS],
                     handler: this.HTTPWithAuthHandler.bind(this, this.syncUserPortfolioRobots.bind(this))

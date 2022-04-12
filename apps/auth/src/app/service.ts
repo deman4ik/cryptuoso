@@ -17,7 +17,7 @@ export default class AuthService extends HTTPService {
         try {
             this.auth = new Auth();
             this.createRoutes({
-                login: {
+                authLogin: {
                     handler: this.login.bind(this),
                     roles: [UserRoles.anonymous],
                     inputSchema: {
@@ -25,7 +25,7 @@ export default class AuthService extends HTTPService {
                         password: { type: "string", empty: false, trim: true }
                     }
                 },
-                loginTelegram: {
+                authLoginTelegram: {
                     handler: this.loginTelegram.bind(this),
                     inputSchema: {
                         data: {
@@ -42,7 +42,7 @@ export default class AuthService extends HTTPService {
                         }
                     }
                 },
-                setTelegram: {
+                authSetTelegram: {
                     handler: this.setTelegram.bind(this),
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
@@ -61,11 +61,11 @@ export default class AuthService extends HTTPService {
                         }
                     }
                 },
-                logout: {
+                authLogout: {
                     handler: this.logout.bind(this),
                     auth: true
                 },
-                register: {
+                authRegister: {
                     handler: this.register.bind(this),
                     roles: [UserRoles.anonymous],
                     inputSchema: {
@@ -80,12 +80,12 @@ export default class AuthService extends HTTPService {
                         name: { type: "string", optional: true, empty: false, trim: true }
                     }
                 },
-                refreshToken: {
+                authRefreshToken: {
                     handler: this.refreshToken.bind(this),
                     auth: false,
                     inputSchema: null
                 },
-                activateAccount: {
+                authActivateAccount: {
                     handler: this.activateAccount.bind(this),
                     roles: [UserRoles.anonymous, UserRoles.manager, UserRoles.admin],
                     inputSchema: {
@@ -93,7 +93,7 @@ export default class AuthService extends HTTPService {
                         secretCode: { type: "string", empty: false, trim: true }
                     }
                 },
-                changePassword: {
+                authChangePassword: {
                     handler: this.changePassword.bind(this),
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
@@ -108,13 +108,13 @@ export default class AuthService extends HTTPService {
                         oldPassword: { type: "string", optional: true, trim: true }
                     }
                 },
-                passwordReset: {
-                    handler: this.passwordReset.bind(this),
+                authResetPassword: {
+                    handler: this.resetPassword.bind(this),
                     inputSchema: {
                         email: { type: "email", normalize: true }
                     }
                 },
-                confirmPasswordReset: {
+                authConfirmPasswordReset: {
                     handler: this.confirmPasswordReset.bind(this),
                     inputSchema: {
                         userId: "string",
@@ -128,7 +128,7 @@ export default class AuthService extends HTTPService {
                         }
                     }
                 },
-                changeEmail: {
+                authChangeEmail: {
                     handler: this.changeEmail.bind(this),
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     auth: true,
@@ -136,8 +136,8 @@ export default class AuthService extends HTTPService {
                         email: { type: "email", normalize: true }
                     }
                 },
-                confirmChangeEmail: {
-                    handler: this.confirmChangeEmail.bind(this),
+                authConfirmEmailChange: {
+                    handler: this.confirmEmailChange.bind(this),
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
                     auth: true,
                     inputSchema: {
@@ -256,7 +256,7 @@ export default class AuthService extends HTTPService {
         res.end();
     }
 
-    async passwordReset(req: RequestExtended, res: HttpResponse) {
+    async resetPassword(req: RequestExtended, res: HttpResponse) {
         const userId = await this.auth.passwordReset(req.body.input);
         res.send({ userId });
         res.end();
@@ -286,7 +286,7 @@ export default class AuthService extends HTTPService {
         res.end();
     }
 
-    async confirmChangeEmail(req: RequestExtended, res: HttpResponse) {
+    async confirmEmailChange(req: RequestExtended, res: HttpResponse) {
         const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.confirmChangeEmail({
             userId: req.body.session_variables["x-hasura-user-id"],
             secretCode: req.body.input.secretCode

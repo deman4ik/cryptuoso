@@ -39,7 +39,7 @@ export default class ConnectorRunnerService extends HTTPService {
         super(config);
         try {
             this.createRoutes({
-                checkBalance: {
+                connectorCheckBalance: {
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager, UserRoles.admin],
                     inputSchema: {
@@ -47,7 +47,7 @@ export default class ConnectorRunnerService extends HTTPService {
                     },
                     handler: this.HTTPWithAuthHandler.bind(this, this.checkBalance.bind(this))
                 },
-                checkUnknownOrders: {
+                connectorCheckUnknownOrders: {
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager, UserRoles.admin],
                     inputSchema: {
                         userExAccId: "uuid"
