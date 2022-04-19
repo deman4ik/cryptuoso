@@ -192,7 +192,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
             .map(({ robotId }) => robotId);
     }
 
-    async calcAmounts(
+    /* async calcAmounts(
         robotIds: string[],
         currentRobotId?: string
     ): Promise<
@@ -229,11 +229,54 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
                     );
                     if (amountInCurrency < robots[key].minAmountCurrency) return false;
                 }*/
-            }
+    /*      }
         }
 
         //const minShare = Math.min(...Object.values(robots).map((r) => r.share));
         // this.portfolio.variables.minBalance = round(this.portfolio.context.minTradeAmount * (100 / minShare));
+        const portfolioRobots: {
+            [key: string]: PortoflioRobotState;
+        } = Object.values(robots)
+            .filter((r) => r.share)
+            .reduce((p, c) => ({ ...p, [c.robotId]: { ...c } }), {});
+        for (const [key, robot] of Object.entries(portfolioRobots)) {
+            portfolioRobots[key].positions = robot.positions.map((pos) => {
+                return {
+                    ...pos,
+                    meta: {
+                        portfolioShare: robot.share
+                    }
+                };
+            });
+        }
+        return portfolioRobots;
+    } */
+
+    async calcAmounts(
+        robotIds: string[],
+        currentRobotId?: string
+    ): Promise<
+        Readonly<
+            | {
+                  [key: string]: PortoflioRobotState;
+              }
+            | false
+        >
+    > {
+        const robots: {
+            [key: string]: PortoflioRobotState;
+        } = Object.values({ ...this.robots })
+            .filter(({ robotId }) => robotIds.includes(robotId))
+            .reduce((p, c) => ({ ...p, [c.robotId]: { ...c } }), {});
+        this.log.debug(
+            `Portfolio #${this.portfolio.id} - Calculating amounts for ${Object.keys(robots).length} robots`
+        );
+
+        const share = round(100 / Object.keys(robots).length, 2);
+        for (const key of Object.keys(robots)) {
+            robots[key].share = share;
+        }
+
         const portfolioRobots: {
             [key: string]: PortoflioRobotState;
         } = Object.values(robots)
