@@ -48,11 +48,11 @@ export default class ConnectorRunnerService extends HTTPService {
                     handler: this.HTTPWithAuthHandler.bind(this, this.checkBalance.bind(this))
                 },
                 connectorCheckUnknownOrders: {
-                    roles: [UserRoles.user, UserRoles.vip, UserRoles.manager, UserRoles.admin],
+                    roles: [UserRoles.manager, UserRoles.admin],
                     inputSchema: {
                         userExAccId: "uuid"
                     },
-                    handler: this.HTTPWithAuthHandler.bind(this, this.checkUserUnknownOrders.bind(this))
+                    handler: this.HTTPHandler.bind(this, this.checkUserUnknownOrders.bind(this))
                 }
             });
 
@@ -253,7 +253,7 @@ export default class ConnectorRunnerService extends HTTPService {
                 removeOnComplete: true,
                 removeOnFail: 100
             }
-        );
+        ); //TODO: send notification with balance
     }
 
     async checkBalances() {
@@ -277,17 +277,11 @@ export default class ConnectorRunnerService extends HTTPService {
         }
     }
 
-    async checkUserUnknownOrders({ userExAccId }: { userExAccId: string }, user: User) {
-        const userExAcc = await this.db.pg.one<{ id: string; userId: string }>(sql`
-        SELECT id, user_id from user_exchange_accs where id = ${userExAccId} and allocation = 'shared';
+    async checkUserUnknownOrders({ userExAccId }: { userExAccId: string }) {
+        await this.db.pg.one<{ id: string; userId: string }>(sql`
+        SELECT id from user_exchange_accs where id = ${userExAccId};
         `);
-        if (user && user.id !== userExAcc.userId)
-            throw new ActionsHandlerError(
-                "Current user isn't owner of this User Exchange Account",
-                { userExAccId },
-                "FORBIDDEN",
-                403
-            );
+
         await this.queueJob(userExAccId, ConnectorJobType.unknownOrders);
     }
 

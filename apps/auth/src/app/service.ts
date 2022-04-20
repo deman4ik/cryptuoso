@@ -27,6 +27,7 @@ export default class AuthService extends HTTPService {
                 },
                 authLoginTelegram: {
                     handler: this.loginTelegram.bind(this),
+                    roles: [UserRoles.anonymous],
                     inputSchema: {
                         data: {
                             type: "object",
@@ -110,6 +111,7 @@ export default class AuthService extends HTTPService {
                 },
                 authResetPassword: {
                     handler: this.resetPassword.bind(this),
+                    roles: [UserRoles.anonymous, UserRoles.manager, UserRoles.admin],
                     inputSchema: {
                         email: { type: "email", normalize: true }
                     }

@@ -19,7 +19,6 @@ export const auth = async (ctx: BotContext, next: NextFunction) => {
             return;
         }
     }
-    if (ctx.session?.user && ctx.session?.user.access !== 5 && ctx.session?.user.access !== 10)
-        await ctx.reply("❌  You are not allowed to use this bot. Please contact support");
-    else await next();
+
+    await next();
 };
