@@ -552,3 +552,22 @@ userSubscription:
     status: 💰 Subscription <b>${name}</b> is <b>${status}</b>${message}
     expiring: ${date}\n\nPlease renew you subscription.\n\nAfter subscription expires all robots will be <b>stopped</b>! If there are any <b>open positions</b> they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!
     expired: \n\nAll robots are <b>stopping</b> now! If there are any <b>open positions</b> they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!
+signalSubTrade:
+    new: >
+        🤖✅ New ${asset} Signal!\n\n${n}
+    open: >
+        -------\n
+        <b>Entry:</b> ${entryAction}\n
+        <b>Entry Date:</b> ${entryDate}\n
+        <b>Entry Price:</b> ${entryPrice} $\n\n
+        <b>Amount:</b> ${share}% of portfolio balance
+    closed: >
+        -------\n
+        <b>Entry:</b> ${entryAction}\n
+        <b>Entry Date:</b> ${entryDate}\n
+        <b>Entry Price:</b> ${entryPrice} $\n\n
+        <b>Exit:</b> ${exitAction}\n
+        <b>Exit Date:</b> ${exitDate}\n
+        <b>Exit Price:</b> ${exitPrice} $\n\n
+        <b>Amount:</b> ${share}% of portfolio balance\n
+        <b>Profit:</b> ${profit} $\n

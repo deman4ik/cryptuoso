@@ -50,6 +50,7 @@
             "@cryptuoso/robot-thread": ["libs/robot-thread/src/index.ts"],
             "@cryptuoso/robot-types": ["libs/robot-types/src/index.ts"],
             "@cryptuoso/service": ["libs/service/src/index.ts"],
+            "@cryptuoso/signal-subscription-events": ["libs/signal-subscription-events/src/index.ts"],
             "@cryptuoso/stats-calc": ["libs/stats-calc/src/index.ts"],
             "@cryptuoso/stats-calc-events": ["libs/stats-calc-events/src/index.ts"],
             "@cryptuoso/test-helpers": ["libs/test-helpers/src/index.ts"],

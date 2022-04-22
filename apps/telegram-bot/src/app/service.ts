@@ -94,6 +94,16 @@ export default class TelegramBotService extends HTTPService {
         });
 
         this.bot = new Bot<BotContext>(process.env.BOT_TOKEN);
+
+        // Filter channel data
+        this.bot.use(async (ctx: BotContext, next: NextFunction) => {
+            if (ctx.chat.type === "channel") {
+                this.log.debug("Ignoring Channel message");
+                return;
+            }
+            await next();
+        });
+
         // Install familiar reply variants to ctx
         this.bot.use(hydrateReply);
 

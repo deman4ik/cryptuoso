@@ -46,9 +46,10 @@ export default class WebhooksService extends HTTPService {
                 signalSubscriptionCreate: {
                     inputSchema: {
                         exchange: "string",
-                        type: { type: "enum", values: ["zignaly"] },
-                        url: "url",
-                        token: "string",
+                        type: { type: "enum", values: ["zignaly", "telegram"] },
+                        url: { type: "url", optional: true },
+                        token: { type: "string", optional: true },
+                        userId: { type: "uuid", optional: true },
                         initialBalance: { type: "number", positive: true },
                         leverage: { type: "number", optional: true, integer: true, positive: true },
                         options: {
@@ -62,7 +63,7 @@ export default class WebhooksService extends HTTPService {
                             }
                         }
                     },
-                    roles: [UserRoles.admin, UserRoles.manager],
+                    roles: [UserRoles.admin, UserRoles.manager, UserRoles.vip, UserRoles.user],
                     handler: this.HTTPHandler.bind(this, this.createSignalSubscription.bind(this))
                 },
                 signalSubscriptionEdit: {
@@ -572,6 +573,7 @@ AND active = true;`);
             share: SignalRobotDB["share"];
             state: SignalRobotDB["state"];
             exchange: SignalSubscriptionDB["exchange"];
+            userId: SignalSubscriptionDB["userId"];
             type: SignalSubscriptionDB["type"];
             url: SignalSubscriptionDB["url"];
             token: SignalSubscriptionDB["token"];
@@ -587,6 +589,7 @@ AND active = true;`);
             ssr.share,
             ssr.state,
             ss.exchange, 
+            ss.user_id,
             ss.type, 
             ss.url,
             ss.token,
@@ -614,7 +617,7 @@ AND active = true;`);
                         if (redlockSignal.aborted) {
                             throw redlockSignal.error;
                         }
-                        const robot = new SignalSubscriptionRobot(r);
+                        const robot = new SignalSubscriptionRobot({ events: this.events, robot: r });
 
                         const openPositions = await this.db.pg.any<SignalSubscriptionPosition>(sql`
                 SELECT * 

@@ -1,4 +1,5 @@
 import dayjs from "@cryptuoso/dayjs";
+import { Events } from "@cryptuoso/events";
 import { OrderType, SignalEvent, TradeAction } from "@cryptuoso/market";
 import {
     SignalRobotDB,
@@ -7,6 +8,7 @@ import {
     SignalSubscriptionState
 } from "@cryptuoso/portfolio-state";
 import { v4 as uuid } from "uuid";
+import { closeTelegramPosition, openTelegramPosition } from "./telegramProvider";
 import { closeZignalyPosition, openZignalyPosition } from "./zignalyProvider";
 
 export class SignalSubscriptionRobot {
@@ -23,27 +25,32 @@ export class SignalSubscriptionRobot {
         token: SignalSubscriptionDB["token"];
         settings: SignalSubscriptionState["settings"];
         currentPrice: number;
+        userId?: string;
     };
     #openPositions: SignalSubscriptionPosition[] = [];
     #positionsToSave: SignalSubscriptionPosition[] = [];
-
-    constructor(robot: {
-        id: SignalRobotDB["id"];
-        signalSubscriptionId: SignalRobotDB["signalSubscriptionId"];
-        robotId: SignalRobotDB["robotId"];
-        active: SignalRobotDB["active"];
-        share: SignalRobotDB["share"];
-        state: SignalRobotDB["state"];
-        exchange: SignalSubscriptionDB["exchange"];
-        type: SignalSubscriptionDB["type"];
-        url: SignalSubscriptionDB["url"];
-        token: SignalSubscriptionDB["token"];
-        settings: SignalSubscriptionState["settings"];
-        currentPrice: number;
+    #events: Events;
+    constructor(props: {
+        robot: {
+            id: SignalRobotDB["id"];
+            signalSubscriptionId: SignalRobotDB["signalSubscriptionId"];
+            robotId: SignalRobotDB["robotId"];
+            active: SignalRobotDB["active"];
+            share: SignalRobotDB["share"];
+            state: SignalRobotDB["state"];
+            exchange: SignalSubscriptionDB["exchange"];
+            type: SignalSubscriptionDB["type"];
+            url: SignalSubscriptionDB["url"];
+            token: SignalSubscriptionDB["token"];
+            settings: SignalSubscriptionState["settings"];
+            currentPrice: number;
+        };
+        events: Events;
     }) {
-        this.#robot = robot;
+        this.#robot = props.robot;
         this.#robot.state = this.#robot.state || {};
         this.#openPositions = [];
+        this.#events = props.events;
     }
 
     handleOpenPositions(positions: SignalSubscriptionPosition[]) {
@@ -53,7 +60,6 @@ export class SignalSubscriptionRobot {
     async handleSignal(signal: SignalEvent) {
         if (signal.action === TradeAction.long || signal.action === TradeAction.short) {
             if (this.#robot.active === false) return;
-            let hasPreviousActivePositions = false;
 
             if (signal.positionParentId) {
                 const activeParents = this.#openPositions.filter(
@@ -71,7 +77,6 @@ export class SignalSubscriptionRobot {
                         (pos.direction === "short" && signal.action === TradeAction.long)
                 );
                 if (previousActivePositions?.length) {
-                    hasPreviousActivePositions = true;
                     for (const position of previousActivePositions) {
                         await this.#closePosition(position);
                     }
@@ -114,12 +119,15 @@ export class SignalSubscriptionRobot {
             direction: signal.action === TradeAction.long ? "long" : "short",
             entryPrice: signal.price,
             entryDate: dayjs.utc().toISOString(),
-            entryOrderType: "limit",
+            entryOrderType: signal.orderType,
+            entryAction: signal.action,
             share: this.#robot.share
         };
 
         if (this.#robot.type === "zignaly")
             position = await openZignalyPosition(this.#robot.url, this.#robot.token, position);
+        else if (this.#robot.type === "telegram")
+            position = await openTelegramPosition(this.#events, this.#robot.userId, position);
         else throw new Error("Not supported"); //TODO universal webhook
 
         this.#positionsToSave = [...this.#positionsToSave, position];
@@ -130,10 +138,16 @@ export class SignalSubscriptionRobot {
             ...openPosition,
             exitPrice: signal?.price || this.#robot.currentPrice,
             exitDate: dayjs.utc().toISOString(),
-            exitOrderType: signal ? "limit" : "market"
+            exitAction:
+                signal?.action || openPosition.direction === "long" ? TradeAction.closeLong : TradeAction.closeShort,
+            exitOrderType: signal?.orderType || OrderType.market
         };
+
+        //TODO: profit with fees
         if (this.#robot.type === "zignaly")
             position = await closeZignalyPosition(this.#robot.url, this.#robot.token, position, !signal);
+        else if (this.#robot.type === "telegram")
+            position = await closeTelegramPosition(this.#events, this.#robot.userId, position);
         else throw new Error("Not supported"); //TODO universal webhook
         this.#positionsToSave = [...this.#positionsToSave, position];
     };

@@ -7,8 +7,11 @@ import {
     PortfolioManagerUserPortfolioBuilded,
     PortfolioManagerUserPortfolioBuildError
 } from "@cryptuoso/portfolio-events";
+import { SignalSubscriptionTrade } from "@cryptuoso/signal-subscription-events";
 import { UserPortfolioStatus } from "@cryptuoso/user-robot-events";
 import { round } from "@cryptuoso/helpers";
+
+//TODO: Notifications typings
 
 export function handleUserTrade(notification: Notification<any> & { telegramId: number }) {
     const {
@@ -49,6 +52,43 @@ export function handleUserTrade(notification: Notification<any> & { telegramId: 
             exitPrice: +exitPrice,
             exitDate: dayjs.utc(exitDate).format("YYYY-MM-DD HH:mm UTC"),
             profit: round(profit, 2)
+        });
+    }
+
+    return {
+        telegramId: notification.telegramId,
+        message: `${info}${tradeText}`
+    };
+}
+
+export function handleSignalSubscriptionTrade(notification: Notification<any> & { telegramId: number }) {
+    const { status, asset, entryAction, entryPrice, entryDate, share, exitAction, exitPrice, exitDate, profit } =
+        notification.data as SignalSubscriptionTrade & { robotCode: string };
+    //TODO: Set lang from DB
+    const LANG = "en";
+    const info = this.i18n.t(LANG, "signalSubTrade.new", {
+        asset,
+        n: ""
+    });
+    let tradeText;
+    if (status === UserPositionStatus.open) {
+        tradeText = this.i18n.t(LANG, "signalSubTrade.open", {
+            entryAction: this.i18n.t(LANG, `tradeAction.${entryAction}`),
+            entryPrice: +entryPrice,
+            entryDate: dayjs.utc(entryDate).format("YYYY-MM-DD HH:mm UTC"),
+            share
+        });
+    } else {
+        tradeText = this.i18n.t(LANG, "signalSubTrade.closed", {
+            share,
+            asset,
+            entryAction: this.i18n.t(LANG, `tradeAction.${entryAction}`),
+            entryPrice: +entryPrice,
+            entryDate: dayjs.utc(entryDate).format("YYYY-MM-DD HH:mm UTC"),
+            exitAction: this.i18n.t(LANG, `tradeAction.${exitAction}`),
+            exitPrice: +exitPrice,
+            exitDate: dayjs.utc(exitDate).format("YYYY-MM-DD HH:mm UTC"),
+            profit: round(profit, 2) //TODO
         });
     }
 

@@ -78,6 +78,4 @@ export interface Notification<T> {
     sendTelegram: boolean;
     sendEmail: boolean;
     readed?: boolean;
-    robotId?: string;
-    userRobotId?: string;
 }

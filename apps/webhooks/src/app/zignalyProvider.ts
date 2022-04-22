@@ -1,6 +1,7 @@
 import { SignalSubscriptionPosition } from "@cryptuoso/portfolio-state";
 import fetch from "node-fetch";
 import logger from "@cryptuoso/logger";
+import { OrderType } from "@cryptuoso/market";
 
 interface ZignalySignal {
     key: string;
@@ -54,7 +55,7 @@ export async function openZignalyPosition(
         type: "entry",
         pair: `${position.asset}${position.currency}`.toLowerCase(),
         side: position.direction,
-        orderType: position.entryOrderType,
+        orderType: position.entryOrderType === OrderType.limit ? "limit" : "market",
         positionSizePercentage: `${position.share}`,
         signalId: `${position.id}`,
         leverage: `${position.leverage}`
@@ -85,7 +86,7 @@ export async function closeZignalyPosition(
         exchangeAccountType: "futures",
         type: "exit",
         pair: `${position.asset}${position.currency}`.toLowerCase(),
-        orderType: position.exitOrderType,
+        orderType: position.exitOrderType === OrderType.limit ? "limit" : "market",
         signalId: `${position.id}`
     };
 

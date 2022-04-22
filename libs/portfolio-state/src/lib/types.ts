@@ -1,4 +1,4 @@
-import { BasePosition, PositionDirection, SignalEvent, TradeAction } from "@cryptuoso/market";
+import { BasePosition, OrderType, PositionDirection, SignalEvent, TradeAction } from "@cryptuoso/market";
 import { BaseStats, FullStats, PerformanceVals, PeriodStats } from "@cryptuoso/trade-stats";
 
 export interface PortfolioOptions {
@@ -184,13 +184,14 @@ export interface UserPortfolioInfo {
 
 export interface SignalSubscriptionDB {
     id: string;
+    userId?: string;
     exchange: string;
-    type: "zignaly";
+    type: "zignaly" | "telegram";
     status: "started" | "stopped" | "stopping";
     fullStats?: FullStats;
     periodStats?: PeriodStats<BaseStats>[];
-    url: string;
-    token: string;
+    url?: string;
+    token?: string;
 }
 
 export interface SignalSubscriptionState extends SignalSubscriptionDB {
@@ -220,11 +221,13 @@ export interface SignalSubscriptionPosition {
     direction: PositionDirection;
     entryPrice: number;
     entryDate: string;
-    entryOrderType: "limit" | "market";
+    entryAction: TradeAction;
+    entryOrderType: OrderType;
     exitPrice?: number;
     exitDate?: string;
-    exitOrderType?: "limit" | "market";
-    leverage: number;
+    exitAction?: TradeAction;
+    exitOrderType?: OrderType;
+    leverage?: number;
     volume?: number;
     status?: "open" | "canceled" | "closed" | "closedAuto";
     profit?: number;

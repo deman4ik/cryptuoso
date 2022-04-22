@@ -32,6 +32,11 @@ import {
     PortfolioManagerUserPortfolioBuilded,
     PortfolioManagerUserPortfolioBuildError
 } from "@cryptuoso/portfolio-events";
+import {
+    SignalSubscriptionEvents,
+    SignalSubscriptionSchema,
+    SignalSubscriptionTrade
+} from "@cryptuoso/signal-subscription-events";
 
 export type NotificationsServiceConfig = BaseServiceConfig;
 //TODO: enum for notification types
@@ -77,6 +82,11 @@ export default class NotificationsService extends BaseService {
                 schema: UserSubOutSchema[UserSubOutEvents.USER_SUB_STATUS],
                 handler: this.handleUserSubStatus.bind(this)
             },
+            [SignalSubscriptionEvents.TRADE]: {
+                schema: SignalSubscriptionSchema[SignalSubscriptionEvents.TRADE],
+                handler: this.handleSignalSubscriptionTrade.bind(this)
+            },
+
             /*    [PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED]: {
                 schema: PortfolioManagerOutSchema[PortfolioManagerOutEvents.USER_PORTFOLIO_BUILDED],
                 handler: this.handleUserPortfolioBuilded.bind(this)
@@ -151,6 +161,22 @@ export default class NotificationsService extends BaseService {
     AND ur.id = ${userRobotId};
     `);
 
+    #getUserInfo = async (userId: string) =>
+        this.db.pg.one<{
+            userId: string;
+            telegramId?: number;
+            email?: number;
+            userSettings: UserSettings;
+        }>(sql`
+SELECT 
+ u.id as user_id,
+ u.telegram_id,
+ u.email,
+ u.settings as user_settings
+ FROM  users u
+WHERE u.id = ${userId};
+`);
+
     async handleUserRobotError(event: UserRobotWorkerError) {
         try {
             this.log.info(`Handling user robot error event`, event);
@@ -167,7 +193,6 @@ export default class NotificationsService extends BaseService {
                     error,
                     robotCode
                 },
-                userRobotId,
                 sendEmail: !!email,
                 sendTelegram: !!telegramId
             };
@@ -199,7 +224,6 @@ export default class NotificationsService extends BaseService {
                 timestamp: exitDate || entryDate || dayjs.utc().toISOString(),
                 type: "user.trade",
                 data: { ...event, robotCode, userPortfolioId },
-                userRobotId,
                 sendEmail: trading.email && email ? true : false,
                 sendTelegram: trading.telegram && telegramId ? true : false
             };
@@ -232,7 +256,6 @@ export default class NotificationsService extends BaseService {
                     timestamp,
                     type: "order.error",
                     data: { ...event, robotCode },
-                    userRobotId,
                     sendEmail: !!email,
                     sendTelegram: !!telegramId
                 };
@@ -400,6 +423,36 @@ export default class NotificationsService extends BaseService {
             }
         } catch (err) {
             this.log.error("Failed to handleUserSubStatus", err, event);
+            throw err;
+        }
+    }
+
+    async handleSignalSubscriptionTrade(event: SignalSubscriptionTrade) {
+        try {
+            this.log.info(`Handling signal subscription trade event #${event.id}`);
+            const { userId, entryDate, exitDate } = event;
+
+            if (!userId) return;
+            const {
+                telegramId,
+                email,
+                userSettings: {
+                    notifications: { signals }
+                }
+            } = await this.#getUserInfo(userId);
+
+            const notification: Notification<any> = {
+                userId,
+                timestamp: exitDate || entryDate || dayjs.utc().toISOString(),
+                type: "signalSub.trade",
+                data: { ...event },
+                sendEmail: signals.email && email ? true : false,
+                sendTelegram: signals.telegram && telegramId ? true : false
+            };
+
+            await this.#saveNotifications([notification]);
+        } catch (err) {
+            this.log.error("Failed to handleUserTrade", err, event);
             throw err;
         }
     }
