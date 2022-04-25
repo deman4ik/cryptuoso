@@ -876,7 +876,7 @@ export default class UserRobotRunnerService extends HTTPService {
             const startedAt = dayjs.utc().toISOString();
             const status = userPortfolio.status === "starting" ? "started" : null;
 
-            if (status) {
+            if (status && userPortfolio.status !== "started") {
                 await this.db.pg.query(sql`
         UPDATE user_portfolios
         SET status = ${status},

@@ -554,6 +554,14 @@ export default class PortfolioManagerService extends HTTPService {
                 robots = [...portfolioRobots];
             }
 
+            const userPortfolioSettings: PortfolioSettings = {
+                ...userPortfolio.settings,
+                options: newOptions,
+                tradingAmountType: nvl(tradingAmountType, userPortfolio.settings.tradingAmountType),
+                balancePercent: nvl(balancePercent, userPortfolio.settings.balancePercent),
+                tradingAmountCurrency: nvl(tradingAmountCurrency, userPortfolio.settings.tradingAmountCurrency)
+            };
+
             if (tradingAmountType) {
                 let initialBalance = userPortfolio.settings.initialBalance;
 
@@ -591,20 +599,18 @@ export default class PortfolioManagerService extends HTTPService {
             and p.id = ${portfolioId};
             `);
 
-                    leverage = calcUserLeverage(recommendedBalance, defaultLeverage, maxLeverage, portfolioBalance);
+                    userPortfolioSettings.leverage = calcUserLeverage(
+                        recommendedBalance,
+                        defaultLeverage,
+                        maxLeverage,
+                        portfolioBalance
+                    );
                 }
             }
 
-            const userPortfolioSettings: PortfolioSettings = {
-                ...userPortfolio.settings,
-                options: newOptions,
-                tradingAmountType: nvl(tradingAmountType, userPortfolio.settings.tradingAmountType),
-                balancePercent: nvl(balancePercent, userPortfolio.settings.balancePercent),
-                tradingAmountCurrency: nvl(tradingAmountCurrency, userPortfolio.settings.tradingAmountCurrency)
-            };
+            userPortfolioSettings.leverage = leverage ?? userPortfolioSettings.leverage;
 
             if (custom) {
-                userPortfolioSettings.leverage = leverage ?? userPortfolioSettings.leverage;
                 userPortfolioSettings.maxRobotsCount = maxRobotsCount ?? userPortfolioSettings.maxRobotsCount;
                 userPortfolioSettings.minRobotsCount = minRobotsCount ?? userPortfolioSettings.minRobotsCount;
                 userPortfolioSettings.includeAssets = includeAssets ?? userPortfolioSettings.includeAssets;
