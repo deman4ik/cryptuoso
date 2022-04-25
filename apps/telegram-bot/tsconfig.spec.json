@@ -5,7 +5,6 @@
         "module": "commonjs",
         "types": ["jest", "node"]
     },
-    "include": ["**/*.spec.ts", "**/*.d.ts"],
-
+    "include": ["**/*.spec.ts", "**/*.d.ts", "jest.config.ts"],
     "exclude": ["./src/app/legacy"]
 }

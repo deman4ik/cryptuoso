@@ -126,18 +126,18 @@
     "winston": "^3.7.2"
   },
   "devDependencies": {
-    "@nrwl/cli": "13.10.3",
-    "@nrwl/eslint-plugin-nx": "13.10.3",
-    "@nrwl/jest": "13.10.3",
-    "@nrwl/node": "13.10.3",
-    "@nrwl/workspace": "13.10.3",
+    "@nrwl/cli": "14.0.2",
+    "@nrwl/eslint-plugin-nx": "14.0.2",
+    "@nrwl/jest": "14.0.2",
+    "@nrwl/node": "14.0.2",
+    "@nrwl/workspace": "14.0.2",
     "@types/async-retry": "^1.4.3",
     "@types/bcrypt": "^5.0.0",
     "@types/body-parser": "^1.19.2",
     "@types/coinbase-commerce-node": "^1.0.6",
     "@types/cookie": "^0.5.1",
     "@types/helmet": "^4.0.0",
-    "@types/jest": "^27.4.1",
+    "@types/jest": "27.4.1",
     "@types/jsonwebtoken": "^8.5.8",
     "@types/lightship": "^6.6.0",
     "@types/mailgun-js": "^0.22.12",
@@ -154,13 +154,14 @@
     "eslint": "^8.13.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.0.0",
-    "jest": "^27.5.1",
+    "jest": "27.5.1",
     "jest-extended": "^2.0.0",
     "jest-mock-process": "^1.4.1",
     "mockdate": "^3.0.3",
-    "nx": "13.10.3",
+    "nx": "14.0.2",
     "prettier": "2.6.2",
-    "ts-jest": "^27.1.4",
+    "ts-jest": "27.1.4",
     "ts-node": "^10.7.0"
   }
 }
+
