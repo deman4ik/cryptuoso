@@ -27,7 +27,7 @@ import {
 import { SignalEvents, SignalSchema } from "@cryptuoso/robot-events";
 import { UserRobotRunnerEvents, UserRobotRunnerSchema } from "@cryptuoso/user-robot-events";
 import { TradeStatsRunnerEvents, TradeStatsRunnerSignalSubscription } from "@cryptuoso/trade-stats-events";
-import { SignalSubscriptionRobot } from "./signalSubscriptionRobot";
+import { SignalSubscriptionRobot, SignalSubscriptionRobotState } from "./signalSubscriptionRobot";
 import { startZignaly, stopZignaly } from "./zignalyProvider";
 import { SignalEvent } from "@cryptuoso/market";
 
@@ -565,22 +565,7 @@ AND active = true;`);
         this.log.debug("Handling signal", signal);
         const { id, robotId, timestamp, emulated } = signal;
         if (emulated) return;
-        const signalSubscriptionRobots = await this.db.pg.any<{
-            id: SignalRobotDB["id"];
-            signalSubscriptionId: SignalRobotDB["signalSubscriptionId"];
-            robotId: SignalRobotDB["robotId"];
-            active: SignalRobotDB["active"];
-            share: SignalRobotDB["share"];
-            state: SignalRobotDB["state"];
-            exchange: SignalSubscriptionDB["exchange"];
-            userId: SignalSubscriptionDB["userId"];
-            type: SignalSubscriptionDB["type"];
-            url: SignalSubscriptionDB["url"];
-            token: SignalSubscriptionDB["token"];
-            signalSubscriptionStatus: SignalSubscriptionDB["status"];
-            settings: SignalSubscriptionState["settings"];
-            currentPrice: number;
-        }>(
+        const signalSubscriptionRobots = await this.db.pg.any<SignalSubscriptionRobotState>(
             sql`
             SELECT ssr.id, 
             ssr.signal_subscription_id,
@@ -595,12 +580,20 @@ AND active = true;`);
             ss.token,
             ss.status as signal_subscription_status,
             sss.signal_subscription_settings as settings,
-            f_current_price(r.exchange, r.asset, r.currency) AS current_price
-             FROM signal_subscription_robots ssr, signal_subscriptions ss, v_signal_subscription_settings sss, robots r
+            f_current_price(r.exchange, r.asset, r.currency) AS current_price,
+            m.fee_rate
+             FROM signal_subscription_robots ssr,
+              signal_subscriptions ss,
+               v_signal_subscription_settings sss,
+                robots r,
+                markets m
             WHERE ssr.robot_id = ${robotId}
              AND ssr.signal_subscription_id = ss.id
              AND ss.id = sss.signal_subscription_id
              AND ssr.robot_id = r.id
+             AND r.exchange = m.exchange
+             AND r.asset = m.asset
+             AND r.currency = m.currency
              AND ss.status in ('started','stopping')
              AND ((ssr.state->'latestSignal'->>'timestamp')::timestamp is null 
               OR (ssr.state->'latestSignal'->>'timestamp')::timestamp < ${timestamp})

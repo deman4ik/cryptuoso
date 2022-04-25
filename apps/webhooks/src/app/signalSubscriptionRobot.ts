@@ -1,6 +1,6 @@
 import dayjs from "@cryptuoso/dayjs";
 import { Events } from "@cryptuoso/events";
-import { OrderType, SignalEvent, TradeAction } from "@cryptuoso/market";
+import { calcPositionProfit, calcPositionProfitPercent, OrderType, SignalEvent, TradeAction } from "@cryptuoso/market";
 import {
     SignalRobotDB,
     SignalSubscriptionDB,
@@ -11,42 +11,30 @@ import { v4 as uuid } from "uuid";
 import { closeTelegramPosition, openTelegramPosition } from "./telegramProvider";
 import { closeZignalyPosition, openZignalyPosition } from "./zignalyProvider";
 
+export interface SignalSubscriptionRobotState {
+    id: SignalRobotDB["id"];
+    signalSubscriptionId: SignalRobotDB["signalSubscriptionId"];
+    robotId: SignalRobotDB["robotId"];
+    active: SignalRobotDB["active"];
+    share: SignalRobotDB["share"];
+    state: SignalRobotDB["state"];
+    exchange: SignalSubscriptionDB["exchange"];
+    type: SignalSubscriptionDB["type"];
+    url: SignalSubscriptionDB["url"];
+    token: SignalSubscriptionDB["token"];
+    signalSubscriptionStatus: SignalSubscriptionDB["status"];
+    settings: SignalSubscriptionState["settings"];
+    currentPrice: number;
+    feeRate: number;
+    userId?: string;
+}
+
 export class SignalSubscriptionRobot {
-    #robot: {
-        id: SignalRobotDB["id"];
-        signalSubscriptionId: SignalRobotDB["signalSubscriptionId"];
-        robotId: SignalRobotDB["robotId"];
-        active: SignalRobotDB["active"];
-        share: SignalRobotDB["share"];
-        state: SignalRobotDB["state"];
-        exchange: SignalSubscriptionDB["exchange"];
-        type: SignalSubscriptionDB["type"];
-        url: SignalSubscriptionDB["url"];
-        token: SignalSubscriptionDB["token"];
-        settings: SignalSubscriptionState["settings"];
-        currentPrice: number;
-        userId?: string;
-    };
+    #robot: SignalSubscriptionRobotState;
     #openPositions: SignalSubscriptionPosition[] = [];
     #positionsToSave: SignalSubscriptionPosition[] = [];
     #events: Events;
-    constructor(props: {
-        robot: {
-            id: SignalRobotDB["id"];
-            signalSubscriptionId: SignalRobotDB["signalSubscriptionId"];
-            robotId: SignalRobotDB["robotId"];
-            active: SignalRobotDB["active"];
-            share: SignalRobotDB["share"];
-            state: SignalRobotDB["state"];
-            exchange: SignalSubscriptionDB["exchange"];
-            type: SignalSubscriptionDB["type"];
-            url: SignalSubscriptionDB["url"];
-            token: SignalSubscriptionDB["token"];
-            settings: SignalSubscriptionState["settings"];
-            currentPrice: number;
-        };
-        events: Events;
-    }) {
+    constructor(props: { robot: SignalSubscriptionRobotState; events: Events }) {
         this.#robot = props.robot;
         this.#robot.state = this.#robot.state || {};
         this.#openPositions = [];
@@ -140,10 +128,16 @@ export class SignalSubscriptionRobot {
             exitDate: dayjs.utc().toISOString(),
             exitAction:
                 signal?.action || openPosition.direction === "long" ? TradeAction.closeLong : TradeAction.closeShort,
-            exitOrderType: signal?.orderType || OrderType.market
+            exitOrderType: signal?.orderType || OrderType.market,
+            profit: calcPositionProfitPercent(
+                openPosition.direction,
+                openPosition.entryPrice,
+                openPosition.exitPrice,
+                1,
+                this.#robot.feeRate
+            )
         };
 
-        //TODO: profit with fees
         if (this.#robot.type === "zignaly")
             position = await closeZignalyPosition(this.#robot.url, this.#robot.token, position, !signal);
         else if (this.#robot.type === "telegram")

@@ -1,4 +1,4 @@
-import { round } from "@cryptuoso/helpers";
+import { percentBetween, round } from "@cryptuoso/helpers";
 import { TradeAction } from "./market";
 import { OrderType } from "./orders";
 import { ValidTimeframe } from "./timeframe";
@@ -76,4 +76,26 @@ export const calcPositionProfit = (
     profit = round(profit - fee, 6);
 
     return profit;
+};
+
+export const calcPositionProfitPercent = (
+    direction: PositionDirection,
+    entryPrice: number,
+    exitPrice: number,
+    volume: number,
+    feeRate = 0
+): number => {
+    let profit: number;
+    const entryBalance = entryPrice * volume;
+    const entryFee = entryPrice * volume * feeRate;
+    const exitBalance = exitPrice * volume - exitPrice * volume * feeRate;
+    const exitFee = exitPrice * volume * feeRate;
+
+    profit = percentBetween(entryBalance - entryFee, exitBalance - exitFee);
+
+    if (direction === "short") {
+        profit = -profit;
+    }
+
+    return round(profit, 2);
 };

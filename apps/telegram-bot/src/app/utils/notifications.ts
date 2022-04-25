@@ -67,8 +67,7 @@ export function handleSignalSubscriptionTrade(notification: Notification<any> & 
     //TODO: Set lang from DB
     const LANG = "en";
     const info = this.i18n.t(LANG, "signalSubTrade.new", {
-        asset,
-        n: ""
+        asset
     });
     let tradeText;
     if (status === UserPositionStatus.open) {
@@ -76,7 +75,8 @@ export function handleSignalSubscriptionTrade(notification: Notification<any> & 
             entryAction: this.i18n.t(LANG, `tradeAction.${entryAction}`),
             entryPrice: +entryPrice,
             entryDate: dayjs.utc(entryDate).format("YYYY-MM-DD HH:mm UTC"),
-            share
+            share,
+            asset
         });
     } else {
         tradeText = this.i18n.t(LANG, "signalSubTrade.closed", {
@@ -88,13 +88,13 @@ export function handleSignalSubscriptionTrade(notification: Notification<any> & 
             exitAction: this.i18n.t(LANG, `tradeAction.${exitAction}`),
             exitPrice: +exitPrice,
             exitDate: dayjs.utc(exitDate).format("YYYY-MM-DD HH:mm UTC"),
-            profit: round(profit, 2) //TODO
+            profit: round(profit, 2)
         });
     }
 
     return {
         telegramId: notification.telegramId,
-        message: `${info}${tradeText}`
+        message: `${info}${tradeText}${this.i18n.t(LANG, "signalSubTrade.footer")}`
     };
 }
 

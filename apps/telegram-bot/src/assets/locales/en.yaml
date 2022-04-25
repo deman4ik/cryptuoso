@@ -1,7 +1,7 @@
 welcome: >
     Welcome ${username} to <b>Cryptuoso Trading Bot!</b>\n\n
     You can start <b>Manual</b> or fully <b>Automated</b> trading with our robots in <b>Trading</b> section.\n\n
-    By starting this bot you confirm that you have read and accept our <a href='https://cryptuoso.com/info/terms-of-use'>terms of use</a>.\n\n
+    By starting this bot you confirm that you have read and accept our <a href='https://cryptuoso.com/info/terms'>terms of use</a>.\n\n
     ⚠️ Use trading robots at your own risk!
 keyboards:
     backKeyboard:
@@ -22,7 +22,7 @@ dialogs:
     start:
         enter: >
             Greetings ${username}!\n\n
-            By starting this bot you confirm that you have read and accept our <a href='https://cryptuoso.com/info/terms-of-use'>terms of use</a>.
+            By starting this bot you confirm that you have read and accept our <a href='https://cryptuoso.com/info/terms'>terms of use</a>.
         regOrLog: Would you like to <b>create new</b> Cryptuoso Account or to <b>log in</b> to your account with email?
         registration: 🆕  Create new account
         login: ✉️  Log in with email
@@ -363,15 +363,15 @@ dialogs:
             ❌ Failed to link ${formatExchange(exchange)} Account.\n\n
             <b>${error}</b>\n\n
             Please try again!\n\n
-            You can learn how to configure keys in our <a href='https://cryptuoso.com/info/docs/exchange-accounts'>docs</a>
+            You can learn how to configure keys in our <a href='https://cryptuoso.com/docs/exchange-accounts'>docs</a>
     support:
         info1: >
             ❓ Support
 
 
-            📃 You can learn all about Cryptuoso Automated Trading, how to use and configure trading portfolios and exchange accounts in our <a href='https://cryptuoso.com/info/docs/'>Documentation site</a>.
+            📃 You can learn all about Cryptuoso Automated Trading, how to use and configure trading portfolios and exchange accounts in our <a href='https://cryptuoso.com/docs/'>Documentation site</a>.
         info1alt: >
-            📃 You can learn all about Cryptuoso Automated Trading, how to create new account, how to use and configure trading portfolios and exchange accounts in our <a href='https://cryptuoso.com/info/docs/'>Documentation site</a>.
+            📃 You can learn all about Cryptuoso Automated Trading, how to create new account, how to use and configure trading portfolios and exchange accounts in our <a href='https://cryptuoso.com/docs/'>Documentation site</a>.
         info2: >
             ❓ Having common questions with signals or robots? 
             Ask it in our <a href='https://t.me/joinchat/AAAAAEzaWVAzgkDmgOKYHA'>Telegram Community</a> and we will help you.
@@ -554,13 +554,13 @@ userSubscription:
     expired: \n\nAll robots are <b>stopping</b> now! If there are any <b>open positions</b> they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!
 signalSubTrade:
     new: >
-        🤖✅ New ${asset} Signal!\n\n${n}
+        🤖✅ New ${asset} Signal!\n\n
     open: >
         -------\n
         <b>Entry:</b> ${entryAction}\n
         <b>Entry Date:</b> ${entryDate}\n
         <b>Entry Price:</b> ${entryPrice} $\n\n
-        <b>Amount:</b> ${share}% of portfolio balance
+        <b>Amount:</b> ${share}% of portfolio balance in ${asset}
     closed: >
         -------\n
         <b>Entry:</b> ${entryAction}\n
@@ -569,5 +569,8 @@ signalSubTrade:
         <b>Exit:</b> ${exitAction}\n
         <b>Exit Date:</b> ${exitDate}\n
         <b>Exit Price:</b> ${exitPrice} $\n\n
-        <b>Amount:</b> ${share}% of portfolio balance\n
-        <b>Profit:</b> ${profit} $\n
+        <b>Amount:</b> ${share}% of portfolio balance in ${asset}\n
+        <b>Profit:</b> ${plus(profit)}%\n
+    footer: >
+        <a href='https://t.me/cryptuoso'>Cryptuoso Signals Channel</a>\n
+        <a href='https://t.me/cryptuoso_bot'>Cryptuoso Trading Bot</a>
