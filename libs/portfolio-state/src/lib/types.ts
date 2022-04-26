@@ -231,6 +231,7 @@ export interface SignalSubscriptionPosition {
     volume?: number;
     status?: "open" | "canceled" | "closed" | "closedAuto";
     profit?: number;
+    profitPercent?: number;
     providerPositionId?: string;
     share?: number;
     error?: string;

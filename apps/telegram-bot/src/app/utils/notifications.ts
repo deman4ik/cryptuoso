@@ -62,7 +62,7 @@ export function handleUserTrade(notification: Notification<any> & { telegramId: 
 }
 
 export function handleSignalSubscriptionTrade(notification: Notification<any> & { telegramId: number }) {
-    const { status, asset, entryAction, entryPrice, entryDate, share, exitAction, exitPrice, exitDate, profit } =
+    const { status, asset, entryAction, entryPrice, entryDate, share, exitAction, exitPrice, exitDate, profitPercent } =
         notification.data as SignalSubscriptionTrade & { robotCode: string };
     //TODO: Set lang from DB
     const LANG = "en";
@@ -88,7 +88,7 @@ export function handleSignalSubscriptionTrade(notification: Notification<any> & 
             exitAction: this.i18n.t(LANG, `tradeAction.${exitAction}`),
             exitPrice: +exitPrice,
             exitDate: dayjs.utc(exitDate).format("YYYY-MM-DD HH:mm UTC"),
-            profit: round(profit, 2)
+            profit: profitPercent
         });
     }
 

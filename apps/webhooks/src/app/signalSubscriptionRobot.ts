@@ -129,11 +129,11 @@ export class SignalSubscriptionRobot {
             exitAction:
                 signal?.action || openPosition.direction === "long" ? TradeAction.closeLong : TradeAction.closeShort,
             exitOrderType: signal?.orderType || OrderType.market,
-            profit: calcPositionProfitPercent(
+            profitPercent: calcPositionProfitPercent(
                 openPosition.direction,
                 openPosition.entryPrice,
                 openPosition.exitPrice,
-                1,
+                openPosition.volume || 1,
                 this.#robot.feeRate
             )
         };
