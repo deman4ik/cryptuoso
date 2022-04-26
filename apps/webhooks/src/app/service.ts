@@ -2,7 +2,7 @@ import { sql } from "@cryptuoso/postgres";
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import { Webhook } from "coinbase-commerce-node";
 import { UserSubCheckPayment, UserSubInEvents } from "@cryptuoso/user-sub-events";
-import { UserRoles } from "@cryptuoso/user-state";
+import { User, UserRoles } from "@cryptuoso/user-state";
 import {
     calcUserLeverage,
     getPortfolioBalance,
@@ -30,6 +30,7 @@ import { TradeStatsRunnerEvents, TradeStatsRunnerSignalSubscription } from "@cry
 import { SignalSubscriptionRobot, SignalSubscriptionRobotState } from "./signalSubscriptionRobot";
 import { startZignaly, stopZignaly } from "./zignalyProvider";
 import { SignalEvent } from "@cryptuoso/market";
+import { ActionsHandlerError } from "@cryptuoso/errors";
 
 export type WebhooksServiceConfig = HTTPServiceConfig;
 
@@ -64,7 +65,7 @@ export default class WebhooksService extends HTTPService {
                         }
                     },
                     roles: [UserRoles.admin, UserRoles.manager, UserRoles.vip, UserRoles.user],
-                    handler: this.HTTPHandler.bind(this, this.createSignalSubscription.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.createSignalSubscription.bind(this))
                 },
                 signalSubscriptionEdit: {
                     inputSchema: {
@@ -181,23 +182,35 @@ export default class WebhooksService extends HTTPService {
         }
     }
 
-    async createSignalSubscription({
-        exchange,
-        type,
-        initialBalance,
-        leverage,
-        options,
-        url,
-        token
-    }: PortfolioSettings & {
-        exchange: SignalSubscriptionDB["exchange"];
-        type: SignalSubscriptionDB["type"];
-        url: SignalSubscriptionDB["url"];
-        token: SignalSubscriptionDB["token"];
-    }) {
+    async createSignalSubscription(
+        {
+            exchange,
+            type,
+            userId,
+            initialBalance,
+            leverage,
+            options,
+            url,
+            token
+        }: PortfolioSettings & {
+            exchange: SignalSubscriptionDB["exchange"];
+            type: SignalSubscriptionDB["type"];
+            userId: SignalSubscriptionDB["userId"];
+            url: SignalSubscriptionDB["url"];
+            token: SignalSubscriptionDB["token"];
+        },
+        user: User
+    ) {
         if (type === "zignaly" && exchange !== "binance_futures")
             throw new Error("Only Binance futures is supported for Zignaly");
 
+        if (user && user.id !== userId)
+            throw new ActionsHandlerError(
+                "Current user isn't owner of this Signal Subscription",
+                null,
+                "FORBIDDEN",
+                403
+            );
         const {
             portfolioId,
             limits: { recommendedBalance },
@@ -238,6 +251,7 @@ export default class WebhooksService extends HTTPService {
             id: uuid(),
             exchange,
             type,
+            userId,
             status: "stopped",
             url,
             token
@@ -252,13 +266,14 @@ export default class WebhooksService extends HTTPService {
         await this.db.pg.transaction(async (t) => {
             await t.query(sql`
             insert into signal_subscriptions
-            (id, exchange, type, status, url, token)
+            (id, exchange, type, user_id, status, url, token)
             VALUES (${signalSubscription.id},
             ${signalSubscription.exchange},
             ${signalSubscription.type}, 
+            ${signalSubscription.userId || null},
             ${signalSubscription.status},
-            ${signalSubscription.url},
-            ${signalSubscription.token}
+            ${signalSubscription.url || null},
+            ${signalSubscription.token || null}
             );`);
 
             if (portfolioRobots && portfolioRobots.length) {
