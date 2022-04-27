@@ -106,7 +106,7 @@ export function handleSignalSubscriptionTrade(notification: Notification<any> & 
 
     return {
         telegramId: notification.telegramId,
-        message: `${info}${tradeText}${(this.i18n.t(LANG, "signalSubTrade.footer"), { n: "" })}`
+        message: `${info}${tradeText}${this.i18n.t(LANG, "signalSubTrade.footer", { n: "" })}`
     };
 }
 
