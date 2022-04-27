@@ -595,6 +595,7 @@ AND active = true;`);
             ss.token,
             ss.status as signal_subscription_status,
             sss.signal_subscription_settings as settings,
+            (ss.full_stats->'currentBalance')::numeric as current_balance,
             f_current_price(r.exchange, r.asset, r.currency) AS current_price,
             m.fee_rate
              FROM signal_subscription_robots ssr,
@@ -647,19 +648,25 @@ AND active = true;`);
                     (id, signal_subscription_id, subscription_robot_id, robot_id, 
                     exchange, asset, currency, leverage, direction, 
                     entry_price, entry_date, entry_order_type, 
+                    entry_balance,
                     exit_price, exit_date, exit_order_type,
-                    share, status, error
+                    share, volume, profit, profit_percent,
+                    status, error
                     ) VALUES (
                        ${pos.id}, ${pos.signalSubscriptionId}, ${pos.subscriptionRobotId}, ${pos.robotId},
                        ${pos.exchange}, ${pos.asset}, ${pos.currency}, ${pos.leverage}, ${pos.direction},
-                       ${pos.entryPrice || null}, ${pos.entryDate || null}, ${pos.entryOrderType || null},
+                       ${pos.entryPrice || null}, ${pos.entryDate || null}, ${pos.entryOrderType || null}, 
+                       ${pos.entryBalance || null},
                        ${pos.exitPrice || null}, ${pos.exitDate || null}, ${pos.exitOrderType || null},
-                       ${pos.share}, ${pos.status}, ${pos.error || null} 
+                       ${pos.share}, ${pos.volume}, ${pos.profit}, ${pos.profitPercent},
+                        ${pos.status}, ${pos.error || null} 
                     )
                     ON CONFLICT ON CONSTRAINT signal_subscription_positions_pkey
                     DO UPDATE SET exit_price = excluded.exit_price,
                     exit_date = excluded.exit_date,
                     exit_order_type = excluded.exit_order_type,
+                    profit = excluded.profit,
+                    profit_percent = excluded.profit_percent,
                     status = excluded.status,
                     error = excluded.error;
                     `);

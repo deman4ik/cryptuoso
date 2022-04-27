@@ -1,5 +1,6 @@
 import dayjs from "@cryptuoso/dayjs";
 import { Events } from "@cryptuoso/events";
+import { percentBetween } from "@cryptuoso/helpers";
 import { calcPositionProfit, calcPositionProfitPercent, OrderType, SignalEvent, TradeAction } from "@cryptuoso/market";
 import {
     SignalRobotDB,
@@ -7,6 +8,7 @@ import {
     SignalSubscriptionPosition,
     SignalSubscriptionState
 } from "@cryptuoso/portfolio-state";
+import { calcBalancePercent } from "@cryptuoso/robot-settings";
 import { v4 as uuid } from "uuid";
 import { closeTelegramPosition, openTelegramPosition } from "./telegramProvider";
 import { closeZignalyPosition, openZignalyPosition } from "./zignalyProvider";
@@ -24,6 +26,7 @@ export interface SignalSubscriptionRobotState {
     token: SignalSubscriptionDB["token"];
     signalSubscriptionStatus: SignalSubscriptionDB["status"];
     settings: SignalSubscriptionState["settings"];
+    currentBalance: number;
     currentPrice: number;
     feeRate: number;
     userId?: string;
@@ -113,8 +116,13 @@ export class SignalSubscriptionRobot {
             entryDate: dayjs.utc().toISOString(),
             entryOrderType: signal.orderType,
             entryAction: signal.action,
+            entryBalance: this.#robot.currentBalance || this.#robot.settings.initialBalance,
             share: this.#robot.share
         };
+
+        const { volume } = calcBalancePercent(position.share, position.entryBalance, position.entryPrice);
+
+        position.volume = volume;
 
         if (this.#robot.type === "zignaly")
             position = await openZignalyPosition(this.#robot.url, this.#robot.token, position);
@@ -132,14 +140,19 @@ export class SignalSubscriptionRobot {
             exitDate: dayjs.utc().toISOString(),
             exitAction: openPosition.direction === "long" ? TradeAction.closeLong : TradeAction.closeShort,
             exitOrderType: signal?.orderType || OrderType.market,
-            profitPercent: calcPositionProfitPercent(
+            profit: calcPositionProfit(
                 openPosition.direction,
                 openPosition.entryPrice,
                 openPosition.exitPrice,
-                openPosition.volume || 1,
+                openPosition.volume,
                 this.#robot.feeRate
             )
         };
+
+        position.profitPercent = percentBetween(
+            openPosition.entryBalance,
+            openPosition.entryBalance + openPosition.profit
+        );
 
         if (this.#robot.type === "zignaly")
             position = await closeZignalyPosition(this.#robot.url, this.#robot.token, position, !signal);

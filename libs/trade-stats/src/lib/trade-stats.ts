@@ -149,7 +149,7 @@ export class TradeStatsCalc implements TradeStats {
     }
 
     private get hasBalance() {
-        return ["robot", "userRobot", "portfolio", "userPortfolio"].includes(this.meta.job.type);
+        return ["robot", "userRobot", "portfolio", "userPortfolio", "signalSubscription"].includes(this.meta.job.type);
     }
 
     private roundStats(stats: BaseStats | Stats | FullStats) {
@@ -164,8 +164,8 @@ export class TradeStatsCalc implements TradeStats {
 
     private initBaseStats(prevStats?: BaseStats): BaseStats {
         return {
-            initialBalance: nvl(prevStats?.initialBalance),
-            currentBalance: nvl(prevStats?.currentBalance, nvl(prevStats?.initialBalance)),
+            initialBalance: nvl(prevStats?.initialBalance, this.meta.initialBalance),
+            currentBalance: nvl(prevStats?.currentBalance, nvl(prevStats?.initialBalance, this.meta.initialBalance)),
             tradesCount: nvl(prevStats?.tradesCount, 0),
             tradesWinning: nvl(prevStats?.tradesWinning, 0),
             tradesLosing: nvl(prevStats?.tradesLosing, 0),
@@ -197,8 +197,8 @@ export class TradeStatsCalc implements TradeStats {
 
     private initStats(prevStats?: Stats): Stats {
         return {
-            initialBalance: nvl(prevStats?.initialBalance),
-            currentBalance: nvl(prevStats?.currentBalance, nvl(prevStats?.initialBalance)),
+            initialBalance: nvl(prevStats?.initialBalance, this.meta.initialBalance),
+            currentBalance: nvl(prevStats?.currentBalance, nvl(prevStats?.initialBalance, this.meta.initialBalance)),
             tradesCount: nvl(prevStats?.tradesCount, 0),
             tradesWinning: nvl(prevStats?.tradesWinning, 0),
             tradesLosing: nvl(prevStats?.tradesLosing, 0),
@@ -284,7 +284,7 @@ export class TradeStatsCalc implements TradeStats {
             })
         };
         if (!stats.firstPosition) stats.firstPosition = positions[0];
-        if (this.hasBalance && stats.initialBalance === null) {
+        if (this.hasBalance && (stats.initialBalance === null || stats.initialBalance === undefined)) {
             stats.initialBalance =
                 this.meta.initialBalance || stats.firstPosition.volume * stats.firstPosition.entryPrice;
             stats.currentBalance = stats.initialBalance;
@@ -435,7 +435,7 @@ export class TradeStatsCalc implements TradeStats {
         stats.winRate = (stats.tradesWinning / stats.tradesCount) * 100;
         stats.lossRate = (stats.tradesLosing / stats.tradesCount) * 100;
         stats.sumBarsHeld = sum(stats.sumBarsHeld, ...positions.map(({ barsHeld }) => barsHeld));
-        if (!["portfolio", "userPortfolio"].includes(this.meta.job.type))
+        if (!["portfolio", "userPortfolio", "signalSubscription"].includes(this.meta.job.type))
             stats.avgBarsHeld = stats.sumBarsHeld / stats.tradesCount;
         stats.sumBarsHeldWinning = sum(stats.sumBarsHeldWinning, ...winningPositions.map(({ barsHeld }) => barsHeld));
         stats.avgBarsHeldWinning = stats.sumBarsHeldWinning / stats.tradesCount;

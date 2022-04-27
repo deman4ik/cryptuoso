@@ -223,6 +223,7 @@ export interface SignalSubscriptionPosition {
     entryDate: string;
     entryAction: TradeAction;
     entryOrderType: OrderType;
+    entryBalance: number;
     exitPrice?: number;
     exitDate?: string;
     exitAction?: TradeAction;
