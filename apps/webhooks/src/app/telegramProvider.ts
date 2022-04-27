@@ -19,7 +19,7 @@ export async function openTelegramPosition(
         error = err.message;
     }
 
-    return { ...position, error, status: error ? "canceled" : position.status };
+    return { ...position, error, status: error ? "canceled" : "open" };
 }
 
 export async function closeTelegramPosition(
@@ -38,5 +38,5 @@ export async function closeTelegramPosition(
         logger.error(err);
         error = err.message;
     }
-    return { ...position, error, status: error ? "open" : position.status };
+    return { ...position, error, status: error ? "open" : force ? "closedAuto" : "closed" };
 }
