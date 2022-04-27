@@ -42,7 +42,11 @@ export class SignalSubscriptionRobot {
     }
 
     handleOpenPositions(positions: SignalSubscriptionPosition[]) {
-        if (positions && Array.isArray(positions) && positions.length) this.#openPositions = positions;
+        if (positions && Array.isArray(positions) && positions.length)
+            this.#openPositions = positions.map((pos) => ({
+                ...pos,
+                entryAction: pos.direction === "long" ? TradeAction.long : TradeAction.short
+            }));
     }
 
     async handleSignal(signal: SignalEvent) {
