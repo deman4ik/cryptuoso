@@ -17,9 +17,10 @@ import Cache from "ioredis-cache";
 import logger, { Logger } from "@cryptuoso/logger";
 import { sql, pg, pgUtil } from "@cryptuoso/postgres";
 import { Events, EventsConfig } from "@cryptuoso/events";
-import { GenericObject, sleep } from "@cryptuoso/helpers";
+import { GenericObject } from "@cryptuoso/helpers";
 import cron from "node-cron";
 import Redlock from "redlock";
+import { parseURL } from "./utils";
 
 export interface BaseServiceConfig {
     name?: string;
@@ -34,6 +35,7 @@ export class BaseService {
     #onServiceStarted: { (): Promise<void> }[] = [];
     #onServiceStop: { (): Promise<void> }[] = [];
     #redisConnection: Redis;
+    #redisConnectionSettings: GenericObject<string | number | boolean>;
     #redlock: Redlock;
     #cache: Cache;
     #db: { sql: typeof sql; pg: typeof pg; util: typeof pgUtil };
@@ -71,6 +73,7 @@ export class BaseService {
                 pg: pg,
                 util: pgUtil
             };
+            if (process.env.REDISCS) this.#redisConnectionSettings = parseURL(process.env.REDISCS);
             this.#redisConnection = new Redis(process.env.REDISCS, {
                 maxRetriesPerRequest: null,
                 enableReadyCheck: false,
@@ -294,7 +297,7 @@ export class BaseService {
         this.#queues[name] = {
             instance: new Queue(name, {
                 ...queueOpts,
-                connection: new Redis(process.env.REDISCS, { maxRetriesPerRequest: null }),
+                connection: this.#redisConnectionSettings || this.#redisConnection.duplicate(),
                 streams: { events: { maxLen: 1000 } }
             }),
             scheduler: light
@@ -302,13 +305,13 @@ export class BaseService {
                 : new QueueScheduler(name, {
                       stalledInterval: 60000,
                       ...schedulerOpts,
-                      connection: new Redis(process.env.REDISCS, { maxRetriesPerRequest: null })
+                      connection: this.#redisConnectionSettings || this.#redisConnection.duplicate()
                   }),
             events: light
                 ? null
                 : new QueueEvents(name, {
                       ...eventsOpts,
-                      connection: new Redis(process.env.REDISCS, { maxRetriesPerRequest: null })
+                      connection: this.#redisConnectionSettings || this.#redisConnection.duplicate()
                   })
         };
         if (!light && logOpts?.completed !== false)
@@ -380,7 +383,7 @@ export class BaseService {
         if (this.#workers[name]) throw new Error(`Worker ${name} already exists`);
         this.#workers[name] = new Worker(name, processor.bind(this), {
             lockDuration: 60000,
-            connection: new Redis(process.env.REDISCS, { maxRetriesPerRequest: null }),
+            connection: this.#redisConnectionSettings || this.#redisConnection.duplicate(),
             concurrency: this.#workerConcurrency * this.#workerThreads,
             ...opts
         });
