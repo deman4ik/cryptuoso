@@ -292,7 +292,7 @@ export default class TelegramBotService extends HTTPService {
             AND n.send_telegram = true
             AND u.status > 0
             AND u.telegram_id is not null
-            AND u.access in (5,10)
+            AND u.access > 5
             ORDER BY timestamp; 
             `);
 
