@@ -654,12 +654,12 @@ AND active = true;`);
                     status, error
                     ) VALUES (
                        ${pos.id}, ${pos.signalSubscriptionId}, ${pos.subscriptionRobotId}, ${pos.robotId},
-                       ${pos.exchange}, ${pos.asset}, ${pos.currency}, ${pos.leverage}, ${pos.direction},
+                       ${pos.exchange}, ${pos.asset}, ${pos.currency}, ${pos.leverage || 1}, ${pos.direction},
                        ${pos.entryPrice || null}, ${pos.entryDate || null}, ${pos.entryOrderType || null}, 
                        ${pos.entryBalance || null},
                        ${pos.exitPrice || null}, ${pos.exitDate || null}, ${pos.exitOrderType || null},
-                       ${pos.share}, ${pos.volume}, ${pos.profit || null}, ${pos.profitPercent || null},
-                        ${pos.status}, ${pos.error || null} 
+                       ${pos.share || null}, ${pos.volume || null}, ${pos.profit || null}, ${pos.profitPercent || null},
+                        ${pos.status || null}, ${pos.error || null} 
                     )
                     ON CONFLICT ON CONSTRAINT signal_subscription_positions_pkey
                     DO UPDATE SET exit_price = excluded.exit_price,
