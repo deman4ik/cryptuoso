@@ -12,14 +12,14 @@ export async function openTelegramPosition(
     try {
         await events.emit<SignalSubscriptionTrade>({
             type: SignalSubscriptionEvents.TRADE,
-            data: { ...position, userId }
+            data: { ...position, userId, status: "open" }
         });
     } catch (err) {
         logger.error(err);
         error = err.message;
     }
 
-    return { ...position, error, status: error ? "canceled" : "open" };
+    return { ...position, error, status: error ? "canceled" : position.status };
 }
 
 export async function closeTelegramPosition(
@@ -32,11 +32,11 @@ export async function closeTelegramPosition(
     try {
         await events.emit<SignalSubscriptionTrade>({
             type: SignalSubscriptionEvents.TRADE,
-            data: { ...position, userId }
+            data: { ...position, userId, status: force ? "closedAuto" : "closed" }
         });
     } catch (err) {
         logger.error(err);
         error = err.message;
     }
-    return { ...position, error, status: error ? "open" : force ? "closedAuto" : "closed" };
+    return { ...position, error, status: error ? "open" : position.status };
 }

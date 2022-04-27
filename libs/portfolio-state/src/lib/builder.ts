@@ -438,6 +438,7 @@ export class PortfolioBuilder<T extends PortfolioState | UserPortfolioState> {
             this.log.debug(`Portfolio #${this.portfolio.id} - Building portfolio`);
             await this.calculateRobotsStats();
             const robotsList = Object.freeze(await this.sortRobots(this.robots)); // сортировка от лучших к худшим
+            if (!robotsList.length) throw new Error("No profitable robots");
             const steps: {
                 prevPortfolioRobots: string[];
                 currentPortfolioRobots: string[];

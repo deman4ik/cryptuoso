@@ -23,7 +23,7 @@ export const SignalSubscriptionSchema = {
         entryOrderType: { type: "enum", values: ["stop", "limit", "market"] },
         exitPrice: { type: "number", optional: true },
         exitDate: { type: "string", pattern: ISO_DATE_REGEX, optional: true },
-        exitAction: { type: "enum", values: ["closeLong", "closeShort"] },
+        exitAction: { type: "enum", values: ["closeLong", "closeShort"], optional: true },
         exitOrderType: { type: "enum", values: ["stop", "limit", "market"], optional: true },
         volume: { type: "number", optional: true },
         status: { type: "enum", values: ["open", "canceled", "closed", "closedAuto"] },
