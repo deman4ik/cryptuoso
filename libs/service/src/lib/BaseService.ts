@@ -294,7 +294,7 @@ export class BaseService {
         this.#queues[name] = {
             instance: new Queue(name, {
                 ...queueOpts,
-                connection: this.redis.duplicate(),
+                connection: new Redis(process.env.REDISCS, { maxRetriesPerRequest: null }),
                 streams: { events: { maxLen: 1000 } }
             }),
             scheduler: light
@@ -302,13 +302,13 @@ export class BaseService {
                 : new QueueScheduler(name, {
                       stalledInterval: 60000,
                       ...schedulerOpts,
-                      connection: this.redis.duplicate()
+                      connection: new Redis(process.env.REDISCS, { maxRetriesPerRequest: null })
                   }),
             events: light
                 ? null
                 : new QueueEvents(name, {
                       ...eventsOpts,
-                      connection: this.redis.duplicate()
+                      connection: new Redis(process.env.REDISCS, { maxRetriesPerRequest: null })
                   })
         };
         if (!light && logOpts?.completed !== false)
@@ -380,7 +380,7 @@ export class BaseService {
         if (this.#workers[name]) throw new Error(`Worker ${name} already exists`);
         this.#workers[name] = new Worker(name, processor.bind(this), {
             lockDuration: 60000,
-            connection: this.redis.duplicate(),
+            connection: new Redis(process.env.REDISCS, { maxRetriesPerRequest: null }),
             concurrency: this.#workerConcurrency * this.#workerThreads,
             ...opts
         });

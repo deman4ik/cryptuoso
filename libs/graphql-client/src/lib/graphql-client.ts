@@ -5,11 +5,11 @@ export { gql };
 
 export class GraphQLClient {
     #client: Client;
-    #refreshToken: (params: { telegramId: number }) => Promise<{ user: any; accessToken: string }>;
+    #refreshToken: (params: { telegramId: string }) => Promise<{ user: any; accessToken: string }>;
     constructor({
         refreshToken
     }: {
-        refreshToken: (params: { telegramId: number }) => Promise<{ user: any; accessToken: string }>;
+        refreshToken: (params: { telegramId: string }) => Promise<{ user: any; accessToken: string }>;
     }) {
         this.#refreshToken = refreshToken;
         this.#client = new Client(`https://${process.env.HASURA_URL}`);

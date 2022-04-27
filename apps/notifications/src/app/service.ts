@@ -140,7 +140,7 @@ export default class NotificationsService extends BaseService {
             robotCode: string;
             userRobotStatus: UserRobotStatus;
             userId: string;
-            telegramId?: number;
+            telegramId?: string;
             email?: number;
             userSettings: UserSettings;
         }>(sql`
@@ -164,7 +164,7 @@ export default class NotificationsService extends BaseService {
     #getUserInfo = async (userId: string) =>
         this.db.pg.one<{
             userId: string;
-            telegramId?: number;
+            telegramId?: string;
             email?: number;
             userSettings: UserSettings;
         }>(sql`
@@ -276,7 +276,7 @@ WHERE u.id = ${userId};
             const { userId, name, telegramId, email } = await this.db.pg.one<{
                 userId: string;
                 name: string;
-                telegramId?: number;
+                telegramId?: string;
                 email?: string;
             }>(sql`
         SELECT 
@@ -310,7 +310,7 @@ WHERE u.id = ${userId};
             const { userId, timestamp } = event;
 
             const { telegramId, email } = await this.db.pg.one<{
-                telegramId?: number;
+                telegramId?: string;
                 email?: string;
             }>(sql`
                     SELECT 
@@ -341,7 +341,7 @@ WHERE u.id = ${userId};
             const { userId, timestamp } = event;
 
             const { telegramId, email } = await this.db.pg.one<{
-                telegramId?: number;
+                telegramId?: string;
                 email?: string;
             }>(sql`
                     SELECT 
@@ -372,7 +372,7 @@ WHERE u.id = ${userId};
             const { userId, timestamp, subscriptionName, activeTo, trialEnded, status } = event;
 
             const { telegramId, email } = await this.db.pg.one<{
-                telegramId?: number;
+                telegramId?: string;
                 email?: string;
             }>(sql`
                     SELECT 
@@ -464,7 +464,7 @@ WHERE u.id = ${userId};
 
         const { userId, telegramId } = await this.db.pg.one<{
             userId: string;
-            telegramId?: number;
+            telegramId?: string;
         }>(sql`
         SELECT u.id as user_id, u.telegram_id
         FROM user_portfolios up, users u 
@@ -491,7 +491,7 @@ WHERE u.id = ${userId};
 
         const { userId, telegramId } = await this.db.pg.one<{
             userId: string;
-            telegramId?: number;
+            telegramId?: string;
         }>(sql`
         SELECT u.id as user_id, u.telegram_id
         FROM user_portfolios up, users u 
@@ -518,7 +518,7 @@ WHERE u.id = ${userId};
 
         const { userId, telegramId } = await this.db.pg.one<{
             userId: string;
-            telegramId?: number;
+            telegramId?: string;
         }>(sql`
         SELECT u.id as user_id, u.telegram_id
         FROM user_portfolios up, users u 

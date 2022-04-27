@@ -286,13 +286,13 @@ export default class TelegramBotService extends HTTPService {
 
     async checkNotifications() {
         try {
-            const notifications = await this.db.pg.any<Notification<any> & { telegramId: number }[]>(sql`
+            const notifications = await this.db.pg.any<Notification<any> & { telegramId: string }[]>(sql`
             SELECT u.telegram_id, n.* FROM notifications n, users u
             WHERE n.user_id = u.id 
             AND n.send_telegram = true
             AND u.status > 0
             AND u.telegram_id is not null
-            AND u.access > 5
+            AND u.access >= 5
             ORDER BY timestamp; 
             `);
 
@@ -364,7 +364,7 @@ export default class TelegramBotService extends HTTPService {
         }
     }
 
-    async sendMessage({ telegramId, message, options }: { telegramId: number; message: string; options: any }) {
+    async sendMessage({ telegramId, message, options }: { telegramId: string; message: string; options: any }) {
         try {
             this.log.debug(`Sending ${message} to ${telegramId}`);
             await this.bot.api.sendMessage(telegramId, message, { ...options, parse_mode: "HTML" });
@@ -375,7 +375,7 @@ export default class TelegramBotService extends HTTPService {
         }
     }
 
-    async blockHandler(telegramId: number, error: GrammyError) {
+    async blockHandler(telegramId: string, error: GrammyError) {
         try {
             this.log.warn(`${telegramId}`, error);
             if (error && error.ok === false && (error.error_code === 403 || error.error_code === 400)) {

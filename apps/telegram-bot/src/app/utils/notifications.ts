@@ -13,7 +13,7 @@ import { round } from "@cryptuoso/helpers";
 
 //TODO: Notifications typings
 
-export function handleUserTrade(notification: Notification<any> & { telegramId: number }) {
+export function handleUserTrade(notification: Notification<any> & { telegramId: string }) {
     const {
         status,
         asset,
@@ -61,13 +61,25 @@ export function handleUserTrade(notification: Notification<any> & { telegramId: 
     };
 }
 
-export function handleSignalSubscriptionTrade(notification: Notification<any> & { telegramId: number }) {
-    const { status, asset, entryAction, entryPrice, entryDate, share, exitAction, exitPrice, exitDate, profitPercent } =
-        notification.data as SignalSubscriptionTrade & { robotCode: string };
+export function handleSignalSubscriptionTrade(notification: Notification<any> & { telegramId: string }) {
+    const {
+        status,
+        asset,
+        currency,
+        entryAction,
+        entryPrice,
+        entryDate,
+        share,
+        exitAction,
+        exitPrice,
+        exitDate,
+        profitPercent
+    } = notification.data as SignalSubscriptionTrade & { robotCode: string };
     //TODO: Set lang from DB
     const LANG = "en";
     const info = this.i18n.t(LANG, "signalSubTrade.new", {
-        asset
+        asset,
+        currency
     });
     let tradeText;
     if (status === UserPositionStatus.open) {
@@ -94,11 +106,11 @@ export function handleSignalSubscriptionTrade(notification: Notification<any> & 
 
     return {
         telegramId: notification.telegramId,
-        message: `${info}${tradeText}${this.i18n.t(LANG, "signalSubTrade.footer")}`
+        message: `${info}${tradeText}${(this.i18n.t(LANG, "signalSubTrade.footer"), { n: "" })}`
     };
 }
 
-export function handleUserExAccError(notification: Notification<any> & { telegramId: number }) {
+export function handleUserExAccError(notification: Notification<any> & { telegramId: string }) {
     const { name, error } = notification.data as UserExchangeAccountErrorEvent & { name: string };
     //TODO: Set lang from DB
     const LANG = "en";
@@ -111,7 +123,7 @@ export function handleUserExAccError(notification: Notification<any> & { telegra
     };
 }
 
-export function handleUserRobotError(notification: Notification<any> & { telegramId: number }) {
+export function handleUserRobotError(notification: Notification<any> & { telegramId: string }) {
     const { userRobotId, robotCode, error } = notification.data as {
         userRobotId: string;
         robotCode: string;
@@ -129,7 +141,7 @@ export function handleUserRobotError(notification: Notification<any> & { telegra
     };
 }
 
-export function handleOrderError(notification: Notification<any> & { telegramId: number }) {
+export function handleOrderError(notification: Notification<any> & { telegramId: string }) {
     const {
         userRobotId,
         error,
@@ -151,7 +163,7 @@ export function handleOrderError(notification: Notification<any> & { telegramId:
     };
 }
 
-export function handleBroadcastMessage(notification: Notification<any> & { telegramId: number }) {
+export function handleBroadcastMessage(notification: Notification<any> & { telegramId: string }) {
     const { message } = notification.data as { message: string };
 
     return {
@@ -160,7 +172,7 @@ export function handleBroadcastMessage(notification: Notification<any> & { teleg
     };
 }
 
-export function handleMessageSupportReply(notification: Notification<any> & { telegramId: number }) {
+export function handleMessageSupportReply(notification: Notification<any> & { telegramId: string }) {
     const {
         data: { message }
     } = notification.data as { data: { message: string } };
@@ -171,7 +183,7 @@ export function handleMessageSupportReply(notification: Notification<any> & { te
     };
 }
 
-export function handleUserSubStatus(notification: Notification<UserSubStatusEvent> & { telegramId: number }) {
+export function handleUserSubStatus(notification: Notification<UserSubStatusEvent> & { telegramId: string }) {
     const { subscriptionName, trialEnded, activeTo, status } = notification.data;
     const LANG = "en";
     let message = "";
@@ -192,7 +204,7 @@ export function handleUserSubStatus(notification: Notification<UserSubStatusEven
     };
 }
 
-export function handleUserSubError(notification: Notification<UserSubErrorEvent> & { telegramId: number }) {
+export function handleUserSubError(notification: Notification<UserSubErrorEvent> & { telegramId: string }) {
     const { error } = notification.data;
     const LANG = "en";
 
@@ -204,7 +216,7 @@ export function handleUserSubError(notification: Notification<UserSubErrorEvent>
     };
 }
 
-export function handlePaymentStatus(notification: Notification<UserSubPaymentStatusEvent> & { telegramId: number }) {
+export function handlePaymentStatus(notification: Notification<UserSubPaymentStatusEvent> & { telegramId: string }) {
     const { subscriptionName, status, code, context } = notification.data;
     const LANG = "en";
 
@@ -220,7 +232,7 @@ export function handlePaymentStatus(notification: Notification<UserSubPaymentSta
 }
 
 export function handleUserPortfolioBuilded(
-    notification: Notification<PortfolioManagerUserPortfolioBuilded> & { telegramId: number }
+    notification: Notification<PortfolioManagerUserPortfolioBuilded> & { telegramId: string }
 ) {
     const LANG = "en";
 
@@ -234,7 +246,7 @@ export function handleUserPortfolioBuilded(
 }
 
 export function handleUserPortfolioBuildError(
-    notification: Notification<PortfolioManagerUserPortfolioBuildError> & { telegramId: number }
+    notification: Notification<PortfolioManagerUserPortfolioBuildError> & { telegramId: string }
 ) {
     const LANG = "en";
 
@@ -246,7 +258,7 @@ export function handleUserPortfolioBuildError(
     };
 }
 
-export function handleUserPortfolioStatus(notification: Notification<UserPortfolioStatus> & { telegramId: number }) {
+export function handleUserPortfolioStatus(notification: Notification<UserPortfolioStatus> & { telegramId: string }) {
     const { status, message } = notification.data;
     const LANG = "en";
 

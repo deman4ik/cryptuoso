@@ -59,7 +59,7 @@ export interface User extends BaseUser {
     name?: string;
     email?: string;
     emailNew?: string;
-    telegramId?: number;
+    telegramId?: string;
     telegramUsername?: string;
     passwordHash?: string;
     passwordHashNew?: string;

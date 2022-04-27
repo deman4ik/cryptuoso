@@ -302,7 +302,7 @@ export class Auth {
         return newUser.id;
     }
 
-    async registerTg(params: { telegramId: number; telegramUsername: string; name: string }) {
+    async registerTg(params: { telegramId: string; telegramUsername: string; name: string }) {
         const { telegramId, telegramUsername, name } = params;
 
         const userExists: User = await pg.maybeOne<User>(sql`
@@ -360,7 +360,7 @@ export class Auth {
         return { user: newUser, accessToken: this.generateAccessToken(newUser) };
     }
 
-    async registerTgWithEmail(params: { email: string; telegramId: number; telegramUsername: string; name: string }) {
+    async registerTgWithEmail(params: { email: string; telegramId: string; telegramUsername: string; name: string }) {
         const { email, telegramId, telegramUsername, name } = params;
 
         const userExistsWithEmail: User = await pg.maybeOne<User>(sql`
@@ -501,7 +501,7 @@ export class Auth {
         return { secretCode };
     }
 
-    async setTelegramWithEmail(params: { email: string; telegramId: number; telegramUsername: string; name: string }) {
+    async setTelegramWithEmail(params: { email: string; telegramId: string; telegramUsername: string; name: string }) {
         const { email, telegramId, telegramUsername, name } = params;
         const userExists: User = await pg.maybeOne<User>(sql`
         SELECT id, email FROM users
@@ -588,7 +588,7 @@ export class Auth {
         };
     }
 
-    async refreshTokenTg(params: { telegramId: number }) {
+    async refreshTokenTg(params: { telegramId: string }) {
         const { telegramId } = params;
         const user: User = await pg.maybeOne<User>(sql`
         SELECT id, email, name, telegram_id, telegram_username, roles, access, status, settings FROM users
@@ -918,7 +918,7 @@ export class Auth {
         };
     }
 
-    async confirmEmailFromTg(params: { telegramId: number; secretCode: string }) {
+    async confirmEmailFromTg(params: { telegramId: string; secretCode: string }) {
         const { telegramId, secretCode } = params;
         const user: User = await pg.maybeOne<User>(sql`
         SELECT id, roles, access, status, email_new, secret_code, secret_code_expire_at FROM users

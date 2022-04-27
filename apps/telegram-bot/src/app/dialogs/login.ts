@@ -59,7 +59,7 @@ const input = async (ctx: BotContext) => {
             );
             return;
         }
-        const accountExists = await pg.maybeOne<{ id: string; telegramId: number }>(sql`
+        const accountExists = await pg.maybeOne<{ id: string; telegramId: string }>(sql`
             SELECT id, telegram_id FROM users
             WHERE email = ${data.email};
         `);
@@ -97,7 +97,7 @@ const input = async (ctx: BotContext) => {
         }
         const { user, accessToken } = await ctx.authUtils.setTelegramWithEmail({
             email,
-            telegramId: ctx.from.id,
+            telegramId: `${ctx.from.id}`,
             telegramUsername: ctx.from.username,
             name: ctx.utils.formatName(ctx)
         });

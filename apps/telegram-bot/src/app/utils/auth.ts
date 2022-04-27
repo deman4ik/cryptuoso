@@ -10,7 +10,7 @@ export const auth = async (ctx: BotContext, next: NextFunction) => {
 
     if (!ctx.session?.user) {
         try {
-            const { user, accessToken } = await ctx.authUtils.refreshTokenTg({ telegramId: ctx.from.id });
+            const { user, accessToken } = await ctx.authUtils.refreshTokenTg({ telegramId: `${ctx.from.id}` });
             ctx.session.user = { ...user, accessToken };
         } catch (err) {
             logger.warn("Auth middleware -", err.message);

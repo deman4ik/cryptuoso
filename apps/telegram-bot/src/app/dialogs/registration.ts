@@ -51,7 +51,7 @@ const login = async (ctx: BotContext) => {
 const confirm = async (ctx: BotContext) => {
     const name = ctx.utils.formatName(ctx);
     const { user, accessToken } = await ctx.authUtils.registerTg({
-        telegramId: ctx.from.id,
+        telegramId: `${ctx.from.id}`,
         telegramUsername: ctx.from.username,
         name
     });
@@ -83,7 +83,7 @@ const input = async (ctx: BotContext) => {
             ctx.dialog.next(registrationActions.input);
             return;
         }
-        const accountExists = await pg.maybeOne<{ id: string; telegramId: number }>(sql`
+        const accountExists = await pg.maybeOne<{ id: string; telegramId: string }>(sql`
         SELECT id, telegram_id FROM users
         WHERE email = ${data.email}
     `);
@@ -140,7 +140,7 @@ const input = async (ctx: BotContext) => {
 
         const { user, accessToken } = await ctx.authUtils.registerTgWithEmail({
             email: data.email,
-            telegramId: ctx.from.id,
+            telegramId: `${ctx.from.id}`,
             telegramUsername: ctx.from.username,
             name: ctx.utils.formatName(ctx)
         });
@@ -151,7 +151,7 @@ const input = async (ctx: BotContext) => {
         await ctx.reply(ctx.i18n.t("dialogs.registration.enterCode", data));
     } else if (emailRequired && secretCodeSent) {
         try {
-            await ctx.authUtils.confirmEmailFromTg({ telegramId: ctx.from.id, secretCode: payload });
+            await ctx.authUtils.confirmEmailFromTg({ telegramId: `${ctx.from.id}`, secretCode: payload });
         } catch (error) {
             await ctx.reply(
                 ctx.i18n.t("dialogs.registration.wrongCode", {
