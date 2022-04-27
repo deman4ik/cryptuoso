@@ -130,8 +130,7 @@ export class SignalSubscriptionRobot {
             ...openPosition,
             exitPrice: signal?.price || this.#robot.currentPrice,
             exitDate: dayjs.utc().toISOString(),
-            exitAction:
-                signal?.action || openPosition.direction === "long" ? TradeAction.closeLong : TradeAction.closeShort,
+            exitAction: openPosition.direction === "long" ? TradeAction.closeLong : TradeAction.closeShort,
             exitOrderType: signal?.orderType || OrderType.market,
             profitPercent: calcPositionProfitPercent(
                 openPosition.direction,
