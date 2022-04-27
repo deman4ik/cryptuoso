@@ -33,7 +33,8 @@ import {
     handleUserSubStatus,
     handleUserPortfolioBuilded,
     handleUserPortfolioBuildError,
-    handleUserPortfolioStatus
+    handleUserPortfolioStatus,
+    handleSignalSubscriptionTrade
 } from "./utils/notifications";
 import { startActions } from "./dialogs/start";
 import { Request, Response, Protocol } from "restana";
@@ -301,6 +302,9 @@ export default class TelegramBotService extends HTTPService {
                     switch (notification.type) {
                         case "user.trade":
                             messageToSend = handleUserTrade.call(this, notification);
+                            break;
+                        case "signal_sub.trade":
+                            messageToSend = handleSignalSubscriptionTrade.call(this, notification);
                             break;
                         case "user_portfolio.builded":
                             messageToSend = handleUserPortfolioBuilded.call(this, notification);

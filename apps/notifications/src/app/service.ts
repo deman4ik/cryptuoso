@@ -444,7 +444,7 @@ WHERE u.id = ${userId};
             const notification: Notification<any> = {
                 userId,
                 timestamp: exitDate || entryDate || dayjs.utc().toISOString(),
-                type: "signalSub.trade",
+                type: "signal_sub.trade",
                 data: { ...event },
                 sendEmail: signals.email && email ? true : false,
                 sendTelegram: signals.telegram && telegramId ? true : false
