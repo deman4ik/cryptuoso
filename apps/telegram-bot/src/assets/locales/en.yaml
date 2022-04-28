@@ -576,7 +576,7 @@ signalSubTrade:
         <b>Exit Price:</b> ${exitPrice} $\n\n
         <b>Amount:</b> ${share}%\n
         <i>of portfolio balance in ${asset}</i>\n\n
-        <b>Profit:</b> ${plus(profit)}%
+        <b>Profit/Loss:</b> ${plus(profit)}%
     footer: >
         \n-------\n
         Cryptuoso Signals Channel @cryptuoso\n

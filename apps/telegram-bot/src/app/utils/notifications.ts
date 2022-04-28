@@ -82,8 +82,8 @@ export function handleSignalSubscriptionTrade(notification: Notification<any> & 
         currency,
         direction:
             status === UserPositionStatus.open
-                ? this.i18n.t(LANG, "directionOpen")
-                : this.i18n.t(LANG, "directionClose")
+                ? this.i18n.t(LANG, "signalSubTrade.directionOpen")
+                : this.i18n.t(LANG, "signalSubTrade.directionClose")
     });
     let tradeText;
     if (status === UserPositionStatus.open) {

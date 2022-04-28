@@ -115,7 +115,7 @@ class StatsCalcWorker {
 
                 if (!prevStats) throw new Error(`The robot doesn't exists (robotId: ${robotId})`);
 
-                if (!prevStats.emulatedFullStats) recalc = true;
+                if (!prevStats.emulatedFullStats || !Object.keys(prevStats.emulatedFullStats).length) recalc = true;
                 else {
                     initialEmulatedStats = {
                         fullStats: prevStats.emulatedFullStats,
@@ -226,7 +226,7 @@ class StatsCalcWorker {
                 return;
             }
             if (!recalc) {
-                if (!portfolio.fullStats) recalc = true;
+                if (!portfolio.fullStats || !Object.keys(portfolio.fullStats).length) recalc = true;
                 else {
                     let periodStats;
                     if (portfolio.fullStats && portfolio.fullStats?.lastPosition) {
@@ -447,7 +447,7 @@ class StatsCalcWorker {
 
                 if (!prevStats) throw new Error(`The user robot doesn't exists (userRobotId: ${userRobotId})`);
 
-                if (!prevStats.fullStats) recalc = true;
+                if (!prevStats.fullStats || !Object.keys(prevStats.fullStats).length) recalc = true;
                 else
                     initialStats = {
                         fullStats: prevStats.fullStats,
@@ -532,7 +532,7 @@ class StatsCalcWorker {
                 throw new Error(`The user portfolio doesn't exists (userPortfolioId: ${userPortfolioId})`);
 
             if (!recalc) {
-                if (!userPortfolio.fullStats) recalc = true;
+                if (!userPortfolio.fullStats || !Object.keys(userPortfolio.fullStats).length) recalc = true;
                 else {
                     let periodStats;
                     if (userPortfolio.fullStats && userPortfolio.fullStats?.lastPosition) {
@@ -699,7 +699,7 @@ class StatsCalcWorker {
                 );
 
             if (!recalc) {
-                if (!signalSubscription.fullStats) recalc = true;
+                if (!signalSubscription.fullStats || !Object.keys(signalSubscription.fullStats).length) recalc = true;
                 else {
                     let periodStats;
                     if (signalSubscription.fullStats && signalSubscription.fullStats?.lastPosition) {
