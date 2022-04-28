@@ -1,6 +1,6 @@
 import dayjs from "@cryptuoso/dayjs";
 import { Events } from "@cryptuoso/events";
-import { percentBetween } from "@cryptuoso/helpers";
+import { percentBetween, round } from "@cryptuoso/helpers";
 import { calcPositionProfit, calcPositionProfitPercent, OrderType, SignalEvent, TradeAction } from "@cryptuoso/market";
 import {
     SignalRobotDB,
@@ -149,7 +149,10 @@ export class SignalSubscriptionRobot {
             )
         };
 
-        position.profitPercent = percentBetween(openPosition.entryBalance, openPosition.entryBalance + position.profit);
+        position.profitPercent = round(
+            percentBetween(openPosition.entryBalance, openPosition.entryBalance + position.profit),
+            2
+        );
 
         if (this.#robot.type === "zignaly")
             position = await closeZignalyPosition(this.#robot.url, this.#robot.token, position, !signal);
