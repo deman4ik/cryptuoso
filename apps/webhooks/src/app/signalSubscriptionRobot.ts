@@ -140,18 +140,18 @@ export class SignalSubscriptionRobot {
             exitPrice: signal?.price || this.#robot.currentPrice,
             exitDate: dayjs.utc().toISOString(),
             exitAction: openPosition.direction === "long" ? TradeAction.closeLong : TradeAction.closeShort,
-            exitOrderType: signal?.orderType || OrderType.market,
-            profit: calcPositionProfit(
-                openPosition.direction,
-                openPosition.entryPrice,
-                openPosition.exitPrice,
-                openPosition.volume,
-                this.#robot.feeRate
-            )
+            exitOrderType: signal?.orderType || OrderType.market
         };
 
+        position.profit = calcPositionProfit(
+            position.direction,
+            position.entryPrice,
+            position.exitPrice,
+            position.volume,
+            this.#robot.feeRate
+        );
         position.profitPercent = round(
-            percentBetween(openPosition.entryBalance, openPosition.entryBalance + position.profit),
+            percentBetween(position.entryBalance, position.entryBalance + position.profit),
             2
         );
         logger.info(position);
