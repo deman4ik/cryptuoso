@@ -554,13 +554,18 @@ userSubscription:
     expired: \n\nAll robots are <b>stopping</b> now! If there are any <b>open positions</b> they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!
 signalSubTrade:
     new: >
-        🤖✅ New ${asset}/${currency} Signal!\n
+        🚨✅ New ${direction} ${asset}/${currency} Signal!\n
+    directionOpen: >
+        open
+    directionClose: >
+        close
     open: >
         -------\n
         <b>Entry:</b> ${entryAction}\n
         <b>Entry Date:</b> ${entryDate}\n
         <b>Entry Price:</b> ${entryPrice} $\n\n
-        <b>Amount:</b> ${share}% of portfolio balance in ${asset}
+        <b>Amount:</b> ${share}%\n
+        <i>of portfolio balance in ${asset}</i>
     closed: >
         -------\n
         <b>Entry:</b> ${entryAction}\n
@@ -569,9 +574,10 @@ signalSubTrade:
         <b>Exit:</b> ${exitAction}\n
         <b>Exit Date:</b> ${exitDate}\n
         <b>Exit Price:</b> ${exitPrice} $\n\n
-        <b>Amount:</b> ${share}% of portfolio balance in ${asset}\n
-        <b>Profit:</b> ${plus(profit)}%\n
+        <b>Amount:</b> ${share}%\n
+        <i>of portfolio balance in ${asset}</i>\n\n
+        <b>Profit:</b> ${plus(profit)}%
     footer: >
         \n-------\n
-        @cryptuoso - Cryptuoso Signals Channel\n
-        @cryptuoso_bot - Cryptuoso Trading Bot${n}
+        Cryptuoso Signals Channel @cryptuoso\n
+        Cryptuoso Trading Bot @cryptuoso_bot${n}

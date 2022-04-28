@@ -149,10 +149,7 @@ export class SignalSubscriptionRobot {
             )
         };
 
-        position.profitPercent = percentBetween(
-            openPosition.entryBalance,
-            openPosition.entryBalance + openPosition.profit
-        );
+        position.profitPercent = percentBetween(openPosition.entryBalance, openPosition.entryBalance + position.profit);
 
         if (this.#robot.type === "zignaly")
             position = await closeZignalyPosition(this.#robot.url, this.#robot.token, position, !signal);

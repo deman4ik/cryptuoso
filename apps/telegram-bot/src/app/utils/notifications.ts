@@ -79,7 +79,11 @@ export function handleSignalSubscriptionTrade(notification: Notification<any> & 
     const LANG = "en";
     const info = this.i18n.t(LANG, "signalSubTrade.new", {
         asset,
-        currency
+        currency,
+        direction:
+            status === UserPositionStatus.open
+                ? this.i18n.t(LANG, "directionOpen")
+                : this.i18n.t(LANG, "directionClose")
     });
     let tradeText;
     if (status === UserPositionStatus.open) {
