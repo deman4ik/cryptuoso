@@ -154,7 +154,7 @@ export class SignalSubscriptionRobot {
             percentBetween(position.entryBalance, position.entryBalance + position.profit),
             2
         );
-        logger.info(position);
+
         if (this.#robot.type === "zignaly")
             position = await closeZignalyPosition(this.#robot.url, this.#robot.token, position, !signal);
         else if (this.#robot.type === "telegram")
