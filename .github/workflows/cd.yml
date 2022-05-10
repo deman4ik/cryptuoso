@@ -133,6 +133,6 @@ jobs:
                     do 
                     if [[ "${i}" != *"user-robot-dedicated"* ]];
                     then
-                    kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig --namespace=prod rollout status deployment/${i}-prod; 
+                    kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig --namespace=prod rollout status deployment/${i}; 
                     fi
                   done;
