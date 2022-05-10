@@ -2,7 +2,7 @@ name: Check
 
 on:
     pull_request:
-        branches: [master, dev]
+        branches: [dev]
 
 jobs:
     build:
@@ -13,7 +13,10 @@ jobs:
                 node-version: [14.x]
 
         steps:
-            - uses: actions/checkout@v2
+            - name: Checkout
+              uses: actions/checkout@master
+              with:
+                  fetch-depth: 0
             - name: Use Node.js ${{ matrix.node-version }}
               uses: actions/setup-node@v1
               with:
@@ -23,5 +26,4 @@ jobs:
                   ssh-private-key: ${{ secrets.GH_SSH_KEY }}
             - run: npm install
             - run: npm run build
-            - run: npm run test
             - run: npm run lint

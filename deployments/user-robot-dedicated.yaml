@@ -20,8 +20,6 @@ spec:
                 app: <APP>
                 env: <ENV>
         spec:
-            imagePullSecrets:
-                - name: cpz-registry
             containers:
                 - image: <IMAGE>
                   imagePullPolicy: IfNotPresent

@@ -110,10 +110,7 @@ export class Importer {
     #init = () => {
         if (this.#type === "history") {
             if (this.#exchange === "kraken") {
-                const dateFrom = dayjs
-                    .utc(this.#params.dateFrom)
-                    .startOf("day")
-                    .toISOString();
+                const dateFrom = dayjs.utc(this.#params.dateFrom).startOf("day").toISOString();
                 const dateTo = getValidDate(this.#params.dateTo);
                 this.#currentState.trades = {
                     dateFrom,
