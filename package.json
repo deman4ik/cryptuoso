@@ -74,6 +74,7 @@
   "dependencies": {
     "@grammyjs/hydrate": "^1.1.0",
     "@grammyjs/i18n": "^0.5.1",
+    "@grammyjs/parse-mode": "^1.1.2",
     "@grammyjs/router": "^1.1.1",
     "@ivaniuk/telegraf-session-redis": "^2.1.0",
     "@satont/grammy-redis-storage": "^1.2.0",
@@ -105,7 +106,6 @@
     "node-cron": "^3.0.0",
     "node-fetch": "^2.6.7",
     "npm": "^8.1.4",
-    "parse-mode": "^0.1.4",
     "quickchart-js": "^3.0.1",
     "redlock": "^5.0.0-beta.2",
     "require-from-string": "^2.0.2",
@@ -164,4 +164,3 @@
     "ts-node": "^10.7.0"
   }
 }
-

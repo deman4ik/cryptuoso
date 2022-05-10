@@ -3,7 +3,7 @@ import { Bot, BotError, GrammyError, HttpError, NextFunction, session, webhookCa
 import { RedisAdapter } from "@satont/grammy-redis-storage";
 import Redis from "ioredis";
 import { I18n } from "@grammyjs/i18n";
-import { hydrateReply, parseMode } from "parse-mode";
+import { hydrateReply, parseMode } from "@grammyjs/parse-mode";
 import path from "path";
 import { auth } from "./utils/auth";
 import { Auth } from "@cryptuoso/auth-utils";

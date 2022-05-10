@@ -6,7 +6,7 @@ import { User, UserExchangeAccountInfo } from "@cryptuoso/user-state";
 import { I18nContext } from "@grammyjs/i18n/dist/source";
 import { Router } from "@grammyjs/router";
 import { Context, NextFunction } from "grammy";
-import { ParseModeContext } from "parse-mode";
+import type { ParseModeContext } from "@grammyjs/parse-mode";
 import { GraphQLClient } from "./utils/graphql-client";
 
 export type defaultHandler = (ctx: BotContext) => Promise<void>;
