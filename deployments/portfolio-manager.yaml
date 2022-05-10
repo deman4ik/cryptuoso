@@ -57,37 +57,37 @@ spec:
                       - name: API_KEY
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: API_KEY
                       - name: PGCS
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: PGCS
                       - name: REDISCS
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: REDISCS
                       - name: GA_UA_TRACKING_ID
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: GA_UA_TRACKING_ID
                       - name: WORKER_CONCURRENCY
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: PORTFOLIO_MANAGER_WORKER_CONCURRENCY
                       - name: WORKER_THREADS
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: PORTFOLIO_MANAGER_WORKER_THREADS
                       - name: THREADS_WORKER_INIT_TIMEOUT
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: THREADS_WORKER_INIT_TIMEOUT
                   ports:
                       - containerPort: 3000

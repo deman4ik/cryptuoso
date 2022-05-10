@@ -57,17 +57,17 @@ spec:
                       - name: API_KEY
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: API_KEY
                       - name: PGCS
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: PGCS
                       - name: REDISCS
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: REDISCS
                   ports:
                       - containerPort: 3000

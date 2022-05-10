@@ -57,52 +57,52 @@ spec:
                       - name: API_KEY
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: API_KEY
                       - name: PGCS
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: PGCS
                       - name: REDISCS
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: REDISCS
                       - name: REFRESH_TOKEN_EXPIRES
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: REFRESH_TOKEN_EXPIRES
                       - name: JWT_SECRET
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: JWT_SECRET
                       - name: JWT_TOKEN_EXPIRES
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: JWT_TOKEN_EXPIRES
                       - name: BOT_TOKEN
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: BOT_TOKEN
                       - name: MAILGUN_API_KEY
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: MAILGUN_API_KEY
                       - name: MAILGUN_DOMAIN
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: MAILGUN_DOMAIN
                       - name: GA_UA_TRACKING_ID
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: GA_UA_TRACKING_ID
                   ports:
                       - containerPort: 3000

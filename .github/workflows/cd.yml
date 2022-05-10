@@ -81,47 +81,38 @@ jobs:
             - name: Echo services
               run: echo ${{ steps.services.outputs.list }}
 
-            #- name: Check services
-            #  if: steps.services.outputs.list == null || steps.services.outputs.list == ${{ ' ' }}
-            #  run: exit 1
+            - name: Login to Yandex Cloud Container Registry
+              id: login-cr
+              uses: yc-actions/yc-cr-login@v1
+              with:
+                  yc-sa-json-credentials: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
 
             - name: Build base container
               run: docker build --build-arg GITHUB_SSH_KEY="${{ secrets.GH_SSH_KEY }}" -t cryptuoso-build:latest -f build.Dockerfile .
 
             - name: Build containers
-              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do docker build --build-arg SERVICE_NAME="${i}"  -t registry.digitalocean.com/cpz/$i:$(echo $GITHUB_SHA | head -c7) .; done;
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do docker build --build-arg SERVICE_NAME="${i}"  -t cr.yandex/crpcpbvo3bat5t2m515o/$i:$(echo $GITHUB_SHA | head -c7) .; done;
 
-            - name: Install doctl
-              uses: digitalocean/action-doctl@v2
-              with:
-                  token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+            - name: Save YC CA
+              env:
+                  YC_CA: ${{ secrets.YC_CA }}
+              run: echo $YC_CA | base64 -d > $GITHUB_WORKSPACE/ca.pem
 
-            - name: Save DigitalOcean kubeconfig
-              run: doctl kubernetes cluster kubeconfig show cpz-cluster > $GITHUB_WORKSPACE/.kubeconfig
-
-            - name: Login to Docker
-              run: doctl registry login --expiry-seconds 3600
+            - name: Save YC kubeconfig
+              env:
+                  YC_KUBECONFIG: ${{ secrets.YC_KUBECONFIG }}
+              run: echo $YC_KUBECONFIG | base64 -d > $GITHUB_WORKSPACE/.kubeconfig
 
             - name: Push image to Docker Hub
-              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do docker push registry.digitalocean.com/cpz/${i}:$(echo $GITHUB_SHA | head -c7); done;
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do docker push cr.yandex/crpcpbvo3bat5t2m515o/${i}:$(echo $GITHUB_SHA | head -c7); done;
 
             - name: Update deployment file IMAGE and TAG
-              run: services=(${{ steps.services.outputs.list }}); TAG=$(echo $GITHUB_SHA | head -c7); for i in "${services[@]}"; do sed -i 's|<IMAGE>|registry.digitalocean.com/cpz/'${i}':'${TAG}'|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
+              run: services=(${{ steps.services.outputs.list }}); TAG=$(echo $GITHUB_SHA | head -c7); for i in "${services[@]}"; do sed -i 's|<IMAGE>|cr.yandex/crpcpbvo3bat5t2m515o/'${i}':'${TAG}'|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
 
-            - name: Update deployment file APP dev
-              if: contains(github.ref, 'dev')
-              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do sed -i 's|<APP>|'${i}'-dev|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
+            - name: Update deployment file APP
+              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do sed -i 's|<APP>|'${i}'|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
 
-            - name: Update deployment file APP prod
-              if: contains(github.ref, 'master')
-              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do sed -i 's|<APP>|'${i}'-prod|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
-
-            - name: Update deployment file ENV dev
-              if: contains(github.ref, 'dev')
-              run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do sed -i 's|<ENV>|dev|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
-
-            - name: Update deployment file ENV prod
-              if: contains(github.ref, 'master')
+            - name: Update deployment file ENV
               run: services=(${{ steps.services.outputs.list }}); for i in "${services[@]}"; do sed -i 's|<ENV>|prod|' $GITHUB_WORKSPACE/deployments/${i}.yaml; done;
 
             - name: Deploy deployment to DigitalOcean Kubernetes
@@ -135,20 +126,7 @@ jobs:
                     fi
                   done;
 
-            - name: Verify deployment dev
-              if: contains(github.ref, 'dev')
-              run: |
-                  services=(${{ steps.services.outputs.list }});
-                   for i in "${services[@]}"; 
-                    do 
-                      if [[ "${i}" != *"user-robot-dedicated"* ]];
-                      then
-                       kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig --namespace=dev rollout status deployment/${i}-dev;
-                      fi
-                    done;
-
-            - name: Verify deployment prod
-              if: contains(github.ref, 'master')
+            - name: Verify deployment
               run: |
                   services=(${{ steps.services.outputs.list }}); 
                   for i in "${services[@]}"; 

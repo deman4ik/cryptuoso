@@ -57,32 +57,32 @@ spec:
                       - name: API_KEY
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: API_KEY
                       - name: PGCS
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: PGCS
                       - name: REDISCS
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: REDISCS
                       - name: WORKER_CONCURRENCY
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: USER_ROBOT_WORKER_CONCURRENCY
                       - name: WORKER_THREADS
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: USER_ROBOT_WORKER_THREADS
                       - name: THREADS_WORKER_INIT_TIMEOUT
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: THREADS_WORKER_INIT_TIMEOUT
                   ports:
                       - containerPort: 9000

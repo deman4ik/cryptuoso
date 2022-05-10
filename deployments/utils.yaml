@@ -57,22 +57,22 @@ spec:
                       - name: API_KEY
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: API_KEY
                       - name: PGCS
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: PGCS
                       - name: REDISCS
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: REDISCS
                       - name: PROXY_ENDPOINT
                         valueFrom:
                             secretKeyRef:
-                                name: cpz-env-<ENV>
+                                name: service-secrets
                                 key: PROXY_ENDPOINT
                       - name: NODE_TLS_REJECT_UNAUTHORIZED
                         value: "0"
