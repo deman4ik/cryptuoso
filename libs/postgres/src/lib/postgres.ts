@@ -48,7 +48,8 @@ const config: ClientConfigurationInput = {
     typeParsers,
     ssl: {
         rejectUnauthorized: false
-    }
+    },
+    maximumPoolSize: +process.env.PG_MAX_POOL_SIZE || 10
 };
 
 const pg = createPool(process.env.PGCS, config);
