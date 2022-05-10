@@ -9,7 +9,7 @@ export function getChartUrl(config: any, width = 600, height = 300, backgroundCo
     qc.setDevicePixelRatio(2);
     qc.setWidth(width).setHeight(height).setBackgroundColor(backgroundColor);
 
-    return qc.getUrl().replace("quickchart.io", "api.dev.cryptuoso.com/qc");
+    return qc.getUrl().replace("quickchart.io", "api.prod.cryptuoso.com/qc");
 }
 
 export async function getEquityChartUrl(data: PerformanceVals): Promise<string> {
