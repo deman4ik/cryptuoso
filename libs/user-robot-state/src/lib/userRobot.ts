@@ -202,7 +202,6 @@ export class UserRobot {
 
     disable() {
         this._settings.active = false;
-        this._status = UserRobotStatus.stopping;
     }
 
     setStop() {

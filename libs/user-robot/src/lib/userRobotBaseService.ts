@@ -255,7 +255,7 @@ export class UserRobotBaseService extends RobotBaseService {
         SELECT DISTINCT r.asset, r.currency 
         FROM user_robots ur, robots r
         WHERE ur.robot_id = r.id
-        AND ur.status = 'started'
+        AND ur.status in ('started','stopping')
         AND ur.allocation = 'dedicated'
         AND ur.user_portfolio_id = ${this.userPortfolioId};`);
 
