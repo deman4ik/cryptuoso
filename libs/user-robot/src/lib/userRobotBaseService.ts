@@ -935,7 +935,7 @@ export class UserRobotBaseService extends RobotBaseService {
     async resubscribeUserRobots() {
         const rawData = await this.db.pg.any<UserRobotStateExt>(sql`
         SELECT * FROM v_user_robot_state WHERE 
-        (status = 'started'
+        (status in ('started','stopping')
         OR (settings->'active')::boolean = true)
          AND user_portfolio_id = ${this.userPortfolioId}
          AND allocation = 'dedicated'
