@@ -913,7 +913,7 @@ export class UserRobotBaseService extends RobotBaseService {
 
     async subscribeRobots({ asset, currency }: Exwatcher) {
         const rawData = await this.db.pg.any<UserRobotStateExt>(sql`
-        SELECT * FROM v_user_robot_state WHERE (status = 'started'
+        SELECT * FROM v_user_robot_state WHERE (status in ('started','stopping')
         OR (settings->'active')::boolean = true)
          AND user_portfolio_id = ${this.userPortfolioId}
          AND asset = ${asset}
@@ -1032,7 +1032,7 @@ export class UserRobotBaseService extends RobotBaseService {
                 this.robots[robotId].robot.start();
             }
             this.robots[robotId].locked = false;
-            this.log.info(`Robot #${robotId} is subscribed!`);
+            this.log.info(`Robot #${robotId} is subscribed! Total: ${Object.keys(this.robots).length}`);
         } catch (err) {
             this.log.error(`Failed to subscribe #${userRobot.id} user robot ${err.message}`);
 
