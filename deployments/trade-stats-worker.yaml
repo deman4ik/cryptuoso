@@ -18,6 +18,8 @@ spec:
                 app: <APP>
                 env: <ENV>
         spec:
+            imagePullSecrets:
+                - name: regcred
             containers:
                 - image: <IMAGE>
                   imagePullPolicy: IfNotPresent
