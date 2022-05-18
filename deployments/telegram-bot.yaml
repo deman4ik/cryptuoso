@@ -154,7 +154,7 @@ spec:
     type: ClusterIP
 ---
 kind: HorizontalPodAutoscaler
-apiVersion: autoscaling/v2
+apiVersion: autoscaling/v2beta2
 metadata:
     name: <APP>
     namespace: <ENV>
@@ -169,8 +169,12 @@ spec:
         - type: Resource
           resource:
               name: cpu
-              targetAverageUtilization: 200
+              target:
+                  type: AverageValue
+                  averageValue: 200
         - type: Resource
           resource:
               name: memory
-              targetAverageUtilization: 200
+              target:
+                  type: AverageValue
+                  averageValue: 200
