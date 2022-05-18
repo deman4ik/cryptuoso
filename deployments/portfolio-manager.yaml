@@ -145,11 +145,11 @@ spec:
           resource:
               name: cpu
               target:
-                  type: AverageValue
-                  averageValue: 200
+                  type: Utilization
+                  averageUtilization: 200
         - type: Resource
           resource:
               name: memory
               target:
-                  type: AverageValue
-                  averageValue: 200
+                  type: Utilization
+                  averageUtilization: 200
