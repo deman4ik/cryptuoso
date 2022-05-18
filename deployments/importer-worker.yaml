@@ -89,6 +89,11 @@ spec:
                                 key: THREADS_WORKER_INIT_TIMEOUT
                       - name: NODE_TLS_REJECT_UNAUTHORIZED
                         value: "0"
+                      - name: PG_MAX_POOL_SIZE
+                        valueFrom:
+                            secretKeyRef:
+                                name: service-secrets
+                                key: PG_MAX_POOL_SIZE
                   ports:
                       - containerPort: 9000
                         protocol: TCP
