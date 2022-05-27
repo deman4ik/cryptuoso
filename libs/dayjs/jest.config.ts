@@ -1,6 +1,6 @@
-module.exports = {
+export default {
     displayName: "dayjs",
 
     coverageDirectory: "../../coverage/libs/dayjs",
-    preset: "../../jest.preset.ts"
+    preset: "../../jest.preset.js"
 };

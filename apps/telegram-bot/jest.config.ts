@@ -1,4 +1,4 @@
-module.exports = {
+export default {
     displayName: "telegram-bot",
 
     globals: {
@@ -12,5 +12,5 @@ module.exports = {
     moduleFileExtensions: ["ts", "js", "html"],
     coverageDirectory: "../../coverage/apps/telegram-bot",
     testEnvironment: "node",
-    preset: "../../jest.preset.ts"
+    preset: "../../jest.preset.js"
 };

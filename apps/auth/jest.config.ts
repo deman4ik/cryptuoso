@@ -1,7 +1,7 @@
-module.exports = {
+export default {
     displayName: "auth",
 
     coverageDirectory: "../../coverage/apps/auth",
     testEnvironment: "node",
-    preset: "../../jest.preset.ts"
+    preset: "../../jest.preset.js"
 };

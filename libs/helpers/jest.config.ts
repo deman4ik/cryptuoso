@@ -1,6 +1,6 @@
-module.exports = {
+export default {
     displayName: "helpers",
 
     coverageDirectory: "../../coverage/libs/helpers",
-    preset: "../../jest.preset.ts"
+    preset: "../../jest.preset.js"
 };

@@ -1,4 +1,4 @@
-module.exports = {
+export default {
     displayName: "portfolio-manager",
 
     globals: {
@@ -10,5 +10,5 @@ module.exports = {
     moduleFileExtensions: ["ts", "js", "html"],
     coverageDirectory: "../../coverage/apps/portfolio-manager",
     testEnvironment: "node",
-    preset: "../../jest.preset.ts"
+    preset: "../../jest.preset.js"
 };

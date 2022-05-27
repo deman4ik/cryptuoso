@@ -1,7 +1,7 @@
-module.exports = {
+export default {
     displayName: "user-robot-worker",
 
     coverageDirectory: "../../coverage/apps/user-robot-worker",
     testEnvironment: "node",
-    preset: "../../jest.preset.ts"
+    preset: "../../jest.preset.js"
 };

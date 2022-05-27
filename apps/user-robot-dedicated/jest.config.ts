@@ -1,4 +1,4 @@
-module.exports = {
+export default {
     displayName: "user-robot-dedicated",
 
     globals: {
@@ -12,5 +12,5 @@ module.exports = {
     },
     moduleFileExtensions: ["ts", "js", "html"],
     coverageDirectory: "../../coverage/apps/user-robot-dedicated",
-    preset: "../../jest.preset.ts"
+    preset: "../../jest.preset.js"
 };

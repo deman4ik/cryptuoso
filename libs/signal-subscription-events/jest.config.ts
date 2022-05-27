@@ -1,4 +1,4 @@
-module.exports = {
+export default {
     displayName: "signal-subscription-events",
 
     globals: {
@@ -12,5 +12,5 @@ module.exports = {
     },
     moduleFileExtensions: ["ts", "tsx", "js", "jsx"],
     coverageDirectory: "../../coverage/libs/signal-subscription-events",
-    preset: "../../jest.preset.ts"
+    preset: "../../jest.preset.js"
 };

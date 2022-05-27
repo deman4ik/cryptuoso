@@ -1,6 +1,6 @@
-module.exports = {
+export default {
     displayName: "mail",
 
     coverageDirectory: "../../coverage/libs/mail",
-    preset: "../../jest.preset.ts"
+    preset: "../../jest.preset.js"
 };

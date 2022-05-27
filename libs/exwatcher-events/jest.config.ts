@@ -1,6 +1,6 @@
-module.exports = {
+export default {
     displayName: "exwatcher-events",
 
     coverageDirectory: "../../coverage/libs/exwatcher-events",
-    preset: "../../jest.preset.ts"
+    preset: "../../jest.preset.js"
 };

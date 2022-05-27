@@ -1,6 +1,6 @@
-module.exports = {
+export default {
     displayName: "user-state",
 
     coverageDirectory: "../../coverage/libs/user-state",
-    preset: "../../jest.preset.ts"
+    preset: "../../jest.preset.js"
 };

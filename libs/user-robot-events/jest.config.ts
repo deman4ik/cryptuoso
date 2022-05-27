@@ -1,6 +1,6 @@
-module.exports = {
+export default {
     displayName: "user-robot-events",
 
     coverageDirectory: "../../coverage/libs/user-robot-events",
-    preset: "../../jest.preset.ts"
+    preset: "../../jest.preset.js"
 };

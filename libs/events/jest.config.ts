@@ -1,6 +1,6 @@
-module.exports = {
+export default {
     displayName: "events",
 
     coverageDirectory: "../../coverage/libs/events",
-    preset: "../../jest.preset.ts"
+    preset: "../../jest.preset.js"
 };

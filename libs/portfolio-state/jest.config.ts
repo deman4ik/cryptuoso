@@ -1,4 +1,4 @@
-module.exports = {
+export default {
     displayName: "portfolio-state",
 
     globals: {
@@ -9,5 +9,5 @@ module.exports = {
     },
     moduleFileExtensions: ["ts", "tsx", "js", "jsx"],
     coverageDirectory: "../../coverage/libs/portfolio-state",
-    preset: "../../jest.preset.ts"
+    preset: "../../jest.preset.js"
 };

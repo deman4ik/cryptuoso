@@ -1,6 +1,6 @@
-module.exports = {
+export default {
     displayName: "service",
 
     coverageDirectory: "../../coverage/libs/service",
-    preset: "../../jest.preset.ts"
+    preset: "../../jest.preset.js"
 };

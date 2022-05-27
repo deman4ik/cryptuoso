@@ -1,4 +1,4 @@
-module.exports = {
+export default {
     displayName: "trade-stats-worker",
 
     globals: {
@@ -10,5 +10,5 @@ module.exports = {
     moduleFileExtensions: ["ts", "js", "html"],
     coverageDirectory: "../../coverage/apps/trade-stats-worker",
     testEnvironment: "node",
-    preset: "../../jest.preset.ts"
+    preset: "../../jest.preset.js"
 };

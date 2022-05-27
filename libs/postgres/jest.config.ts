@@ -1,6 +1,6 @@
-module.exports = {
+export default {
     displayName: "postgres",
 
     coverageDirectory: "../../coverage/libs/postgres",
-    preset: "../../jest.preset.ts"
+    preset: "../../jest.preset.js"
 };

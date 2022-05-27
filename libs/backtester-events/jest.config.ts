@@ -1,6 +1,6 @@
-module.exports = {
+export default {
     displayName: "backtester-events",
 
     coverageDirectory: "../../coverage/libs/backtester-events",
-    preset: "../../jest.preset.ts"
+    preset: "../../jest.preset.js"
 };

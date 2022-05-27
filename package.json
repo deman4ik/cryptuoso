@@ -126,12 +126,12 @@
     "winston": "^3.7.2"
   },
   "devDependencies": {
-    "@nrwl/cli": "14.1.4",
-    "@nrwl/eslint-plugin-nx": "14.1.4",
-    "@nrwl/jest": "14.1.4",
-    "@nrwl/linter": "^14.1.4",
-    "@nrwl/node": "14.1.4",
-    "@nrwl/workspace": "14.1.4",
+    "@nrwl/cli": "14.1.9",
+    "@nrwl/eslint-plugin-nx": "14.1.9",
+    "@nrwl/jest": "14.1.9",
+    "@nrwl/linter": "14.1.9",
+    "@nrwl/node": "14.1.9",
+    "@nrwl/workspace": "14.1.9",
     "@types/async-retry": "^1.4.4",
     "@types/bcrypt": "^5.0.0",
     "@types/body-parser": "^1.19.2",
@@ -159,9 +159,10 @@
     "jest-extended": "^2.0.0",
     "jest-mock-process": "^1.4.1",
     "mockdate": "^3.0.3",
-    "nx": "14.1.4",
+    "nx": "14.1.9",
     "prettier": "2.6.2",
     "ts-jest": "27.1.4",
     "ts-node": "^10.7.0"
   }
 }
+

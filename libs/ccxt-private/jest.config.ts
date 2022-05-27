@@ -1,6 +1,6 @@
-module.exports = {
+export default {
     displayName: "ccxt-private",
 
     coverageDirectory: "../../coverage/libs/ccxt-private",
-    preset: "../../jest.preset.ts"
+    preset: "../../jest.preset.js"
 };

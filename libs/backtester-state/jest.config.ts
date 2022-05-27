@@ -1,6 +1,6 @@
-module.exports = {
+export default {
     displayName: "backtester-state",
 
     coverageDirectory: "../../coverage/libs/backtester-state",
-    preset: "../../jest.preset.ts"
+    preset: "../../jest.preset.js"
 };

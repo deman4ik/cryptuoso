@@ -1,4 +1,4 @@
-const nxPreset = require("@nrwl/jest/preset");
+const nxPreset = require('@nrwl/jest/preset').default;
 const yargs = require("yargs");
 
 let e2eRule;
