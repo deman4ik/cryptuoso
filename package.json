@@ -104,7 +104,7 @@
     "mailgun.js": "^7.0.0",
     "middleware-if-unless": "^1.3.0",
     "node-cron": "^3.0.0",
-    "node-fetch": "^2.6.7",
+    "node-fetch": "^3.2.4",
     "npm": "^8.1.4",
     "quickchart-js": "^3.0.1",
     "redlock": "^5.0.0-beta.2",
@@ -120,7 +120,7 @@
     "tinyurl": "^1.1.7",
     "tslib": "^2.4.0",
     "tulind": "github:deman4ik/tulipnode",
-    "typescript": "^4.6.4",
+    "typescript": "^4.7.2",
     "universal-analytics": "^0.5.3",
     "uuid": "^8.3.2",
     "winston": "^3.7.2"

@@ -11,7 +11,7 @@
         "esModuleInterop": true,
         "noImplicitAny": true,
         "pretty": true,
-        "target": "ES2019",
+        "target": "esnext",
         "module": "esnext",
         "typeRoots": ["node_modules/@types", "@types"],
         "skipLibCheck": true,
