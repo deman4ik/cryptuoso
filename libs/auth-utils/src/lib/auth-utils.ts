@@ -949,7 +949,7 @@ export class Auth {
         };
     }
 
-    generateAccessToken(user: User, jwtTokenExpires = `${process.env.JWT_TOKEN_EXPIRES}m`) {
+    generateAccessToken(user: User, jwtTokenExpires = `${process.env.JWT_TOKEN_EXPIRES}d`) {
         const {
             id,
             roles: { defaultRole, allowedRoles },
