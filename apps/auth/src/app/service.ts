@@ -90,7 +90,7 @@ export default class AuthService extends HTTPService {
                     handler: this.activateAccount.bind(this),
                     roles: [UserRoles.anonymous, UserRoles.manager, UserRoles.admin],
                     inputSchema: {
-                        userId: "string",
+                        email: { type: "email", normalize: true },
                         secretCode: { type: "string", empty: false, trim: true }
                     }
                 },

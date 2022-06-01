@@ -284,7 +284,7 @@ export class Auth {
     `);
 
         const urlData = this.encodeData({
-            userId: newUser.id,
+            email: newUser.email,
             secretCode: newUser.secretCode
         });
         GA.event(newUser.id, "auth", "register");
@@ -605,12 +605,12 @@ export class Auth {
         };
     }
 
-    async activateAccount(params: { userId: string; secretCode: string }) {
-        const { userId, secretCode } = params;
+    async activateAccount(params: { email: string; secretCode: string }) {
+        const { email, secretCode } = params;
 
         const user: User = await pg.maybeOne<User>(sql`
         SELECT  id, email, roles, access, status, secret_code, secret_code_expire_at, refresh_token, refresh_token_expire_at FROM users
-        WHERE id = ${userId}
+        WHERE email = ${email}
     `);
 
         if (!user) throw new ActionsHandlerError("User account not found.", null, "NOT_FOUND", 404);
@@ -635,7 +635,7 @@ export class Auth {
                 status = ${UserStatus.enabled},
                 refresh_token = ${refreshToken},
                 refresh_token_expire_at = ${refreshTokenExpireAt}
-            WHERE id = ${userId};
+            WHERE id = ${user.id};
         `);
 
         /*  await this.#mailUtil.subscribeToList({
