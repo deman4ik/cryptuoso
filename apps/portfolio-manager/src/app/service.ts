@@ -492,7 +492,7 @@ export default class PortfolioManagerService extends HTTPService {
         },
         user: User
     ) {
-        await this.redlock.using([`userPortfolioEdit:${userPortfolioId}`], 5000, async (signal) => {
+        await this.redlock.using([`userPortfolioEdit:${userPortfolioId}`], 3000, async (signal) => {
             if (signal.aborted) {
                 throw signal.error;
             }

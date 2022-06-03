@@ -83,7 +83,11 @@ export class BaseService {
             });
             this.#redisConnection.on("error", this.#hanleRedisError.bind(this));
 
-            this.#redlock = new Redlock([this.#redisConnection]);
+            this.#redlock = new Redlock([this.#redisConnection], {
+                retryCount: 2,
+                retryDelay: 1000,
+                driftFactor: 0.02
+            });
         } catch (err) {
             console.error(err);
             process.exit(1);

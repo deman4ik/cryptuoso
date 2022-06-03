@@ -64,9 +64,9 @@ export class Auth {
     `);
         if (!user) throw new ActionsHandlerError("User account is not found.", null, "NOT_FOUND", 404);
         if (user.status === UserStatus.blocked)
-            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
+            throw new ActionsHandlerError("User account is blocked.", null, "BLOCKED", 403);
         if (user.status === UserStatus.new)
-            throw new ActionsHandlerError("User account is not activated.", null, "FORBIDDEN", 403);
+            throw new ActionsHandlerError("User account is not activated.", null, "NOT_ACTIVATED", 403);
         if (!user.passwordHash)
             throw new ActionsHandlerError(
                 "Password is not set. Login with Telegram and change password.",
@@ -130,7 +130,7 @@ export class Auth {
             name
         });
         if (user.status === UserStatus.blocked)
-            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
+            throw new ActionsHandlerError("User account is blocked.", null, "BLOCKED", 403);
 
         let refreshToken = null;
         let refreshTokenExpireAt = null;
@@ -197,7 +197,7 @@ export class Auth {
         if (!user) throw new ActionsHandlerError("User account is not found.", null, "NOT_FOUND", 404);
 
         if (user.status === UserStatus.blocked)
-            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
+            throw new ActionsHandlerError("User account is blocked.", null, "BLOCKED", 403);
 
         const notifications = user.settings?.notifications;
 
@@ -520,7 +520,7 @@ export class Auth {
         if (!user) throw new ActionsHandlerError("User account is not found.", null, "NOT_FOUND", 404);
 
         if (user.status === UserStatus.blocked)
-            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
+            throw new ActionsHandlerError("User account is blocked.", null, "BLOCKED", 403);
 
         if (user.telegramId)
             throw new ActionsHandlerError("User has already linked telegram account.", null, "FORBIDDEN", 403);
@@ -576,7 +576,7 @@ export class Auth {
                 404
             );
         if (user.status === UserStatus.blocked)
-            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
+            throw new ActionsHandlerError("User account is blocked.", null, "BLOCKED", 403);
         if (user.status === UserStatus.new)
             throw new ActionsHandlerError("User account is not activated.", null, "FORBIDDEN", 403);
 
@@ -597,7 +597,7 @@ export class Auth {
 
         if (!user) throw new ActionsHandlerError("User account is not found.", null, "NOT_FOUND", 404);
         if (user.status === UserStatus.blocked)
-            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
+            throw new ActionsHandlerError("User account is blocked.", null, "BLOCKED", 403);
 
         return {
             user,
@@ -609,13 +609,13 @@ export class Auth {
         const { email, secretCode } = params;
 
         const user: User = await pg.maybeOne<User>(sql`
-        SELECT  id, email, roles, access, status, secret_code, secret_code_expire_at, refresh_token, refresh_token_expire_at FROM users
+        SELECT id, email, roles, access, status, secret_code, secret_code_expire_at, refresh_token, refresh_token_expire_at FROM users
         WHERE email = ${email}
     `);
 
         if (!user) throw new ActionsHandlerError("User account not found.", null, "NOT_FOUND", 404);
         if (user.status === UserStatus.blocked)
-            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
+            throw new ActionsHandlerError("User account is blocked.", null, "BLOCKED", 403);
         if (user.status === UserStatus.enabled)
             throw new ActionsHandlerError("User account is already activated.", null, "FORBIDDEN", 403);
         if (!user.secretCode) throw new ActionsHandlerError("Confirmation code is not set.", null, "FORBIDDEN", 403);
@@ -673,7 +673,7 @@ export class Auth {
         if (!user) throw new ActionsHandlerError("User account not found.", null, "NOT_FOUND", 404);
 
         if (user.status === UserStatus.blocked)
-            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
+            throw new ActionsHandlerError("User account is blocked.", null, "BLOCKED", 403);
 
         if (user.passwordHash) {
             if (!oldPassword) throw new ActionsHandlerError("Old password is required.", null, "VALIDATION", 400);
@@ -712,7 +712,7 @@ export class Auth {
 
         if (!user) throw new ActionsHandlerError("User account not found.", null, "NOT_FOUND", 404);
         if (user.status === UserStatus.blocked)
-            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
+            throw new ActionsHandlerError("User account is blocked.", null, "BLOCKED", 403);
 
         let secretCode;
         let secretCodeExpireAt;
@@ -763,7 +763,7 @@ export class Auth {
 
         if (!user) throw new ActionsHandlerError("User account not found.", null, "NOT_FOUND", 404);
         if (user.status === UserStatus.blocked)
-            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
+            throw new ActionsHandlerError("User account is blocked.", null, "BLOCKED", 403);
         if (!user.secretCode) throw new ActionsHandlerError("Confirmation code is not set.", null, "FORBIDDEN", 403);
         if (user.secretCode !== secretCode.trim())
             throw new ActionsHandlerError("Wrong confirmation code.", null, "FORBIDDEN", 403);
@@ -821,12 +821,12 @@ export class Auth {
         if (userExists) throw new ActionsHandlerError("User already exists.", null, "CONFLICT", 409);
 
         const user: User = await pg.maybeOne<User>(sql`
-        SELECT id, roles, access, status, secret_code, secret_code_expire_at FROM users
+        SELECT id, email, roles, access, status, secret_code, secret_code_expire_at FROM users
         WHERE id = ${userId}
     `);
         if (!user) throw new ActionsHandlerError("User account not found.", null, "NOT_FOUND", 404);
         if (user.status === UserStatus.blocked)
-            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
+            throw new ActionsHandlerError("User account is blocked.", null, "BLOCKED", 403);
 
         let secretCode;
         let secretCodeExpireAt;
@@ -866,14 +866,14 @@ export class Auth {
     async confirmChangeEmail(params: { userId: string; secretCode: string }) {
         const { userId, secretCode } = params;
         const user: User = await pg.maybeOne<User>(sql`
-        SELECT id, roles, access, status, email_new, secret_code, secret_code_expire_at
+        SELECT id, email, roles, access, status, email_new, secret_code, secret_code_expire_at
         FROM users
         WHERE id = ${userId}
     `);
 
         if (!user) throw new ActionsHandlerError("User account not found.", null, "NOT_FOUND", 404);
         if (user.status === UserStatus.blocked)
-            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
+            throw new ActionsHandlerError("User account is blocked.", null, "BLOCKED", 403);
         if (!user.emailNew) throw new ActionsHandlerError("New email is not set.", null, "FORBIDDEN", 403);
         if (!user.secretCode) throw new ActionsHandlerError("Confirmation code is not set.", null, "FORBIDDEN", 403);
         if (user.secretCode !== secretCode.trim())
@@ -920,13 +920,13 @@ export class Auth {
     async confirmEmailFromTg(params: { telegramId: string; secretCode: string }) {
         const { telegramId, secretCode } = params;
         const user: User = await pg.maybeOne<User>(sql`
-        SELECT id, roles, access, status, email_new, secret_code, secret_code_expire_at FROM users
+        SELECT id, email, roles, access, status, email_new, secret_code, secret_code_expire_at FROM users
         WHERE telegram_id = ${telegramId}
     `);
 
         if (!user) throw new ActionsHandlerError("User account not found.", null, "NOT_FOUND", 404);
         if (user.status === UserStatus.blocked)
-            throw new ActionsHandlerError("User account is blocked.", null, "FORBIDDEN", 403);
+            throw new ActionsHandlerError("User account is blocked.", null, "BLOCKED", 403);
         if (!user.emailNew) throw new ActionsHandlerError("New email is not set.", null, "FORBIDDEN", 403);
         if (!user.secretCode) throw new ActionsHandlerError("Confirmation code is not set.", null, "FORBIDDEN", 403);
         if (user.secretCode !== secretCode.trim())
