@@ -751,7 +751,6 @@ export class Auth {
             },
             tags: ["auth"]
         });
-        return user.id;
     }
 
     async confirmPasswordReset(params: { email: string; secretCode: string; password: string }) {

@@ -259,8 +259,8 @@ export default class AuthService extends HTTPService {
     }
 
     async resetPassword(req: RequestExtended, res: HttpResponse) {
-        const userId = await this.auth.passwordReset(req.body.input);
-        res.send({ userId });
+        await this.auth.passwordReset(req.body.input);
+        res.send({ result: "OK" });
         res.end();
     }
 
