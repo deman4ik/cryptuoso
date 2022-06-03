@@ -706,7 +706,7 @@ export class Auth {
     async passwordReset(params: { email: string }) {
         const { email } = params;
         const user: User = await pg.maybeOne<User>(sql`
-        SELECT id, roles, access, status, secret_code, secret_code_expire_at FROM users
+        SELECT id, email, roles, access, status, secret_code, secret_code_expire_at FROM users
         WHERE email = ${email}
     `);
 
@@ -746,7 +746,7 @@ export class Auth {
                 body: `
                 <p>We received a request to reset your password. Please create a new password by clicking <a href="https://cryptuoso.com/auth/confirm-password-reset/${urlData}">this link</a></p>
                 <p>or enter this code <b>${secretCode}</b> manually on reset password confirmation page.</p>
-                <p>This request will expire in 1 hour.</p>
+                <p>This request will expire ${dayjs.utc().to(secretCodeExpireAt)}.</p>
                 <p>If you did not request this change, no changes have been made to your user account.</p>`
             },
             tags: ["auth"]
