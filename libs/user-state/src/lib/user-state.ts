@@ -67,6 +67,7 @@ export interface User extends BaseUser {
     secretCodeExpireAt?: string;
     refreshToken?: string;
     refreshTokenExpireAt?: string;
+    createdAt?: string;
 }
 
 export interface Notification<T> {

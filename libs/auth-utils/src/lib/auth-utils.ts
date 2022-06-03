@@ -58,15 +58,53 @@ export class Auth {
         const { email, password } = params;
 
         const user: User = await pg.maybeOne<User>(sql`
-        SELECT id, roles, access, status, password_hash, refresh_token, refresh_token_expire_at
+        SELECT id, roles, access, status, password_hash, refresh_token, refresh_token_expire_at, secret_code, secret_code_expire_at
         FROM users
         WHERE email = ${email}
     `);
         if (!user) throw new ActionsHandlerError("User account is not found.", null, "NOT_FOUND", 404);
         if (user.status === UserStatus.blocked)
             throw new ActionsHandlerError("User account is blocked.", null, "BLOCKED", 403);
-        if (user.status === UserStatus.new)
-            throw new ActionsHandlerError("User account is not activated.", null, "NOT_ACTIVATED", 403);
+        if (user.status === UserStatus.new) {
+            if (
+                !user.secretCode ||
+                !user.secretCodeExpireAt ||
+                (user.secretCodeExpireAt && dayjs.utc().valueOf() > dayjs.utc(user.secretCodeExpireAt).valueOf())
+            ) {
+                user.secretCode = this.generateCode();
+                user.secretCodeExpireAt = dayjs.utc().add(1, "hour").toISOString();
+
+                await pg.query(sql`UPDATE users 
+                SET 
+                    secret_code = ${user.secretCode},
+                    secret_code_expire_at = ${user.secretCodeExpireAt}
+                WHERE id = ${user.id};`);
+
+                const urlData = this.encodeData({
+                    email: user.email,
+                    secretCode: user.secretCode
+                });
+
+                await this.#mailUtil.send({
+                    to: user.email,
+                    subject: "🚀 Welcome to Cryptuoso - Please confirm your email.",
+                    variables: {
+                        body: `<p>Greetings!</p>
+                        <p>Your user account is successfully created!</p>
+                        <p>Activate your account by confirming your email please click <b><a href="https://cryptuoso.com/auth/activate-account/${urlData}">this link</a></b></p>
+                        <p>or enter this code <b>${user.secretCode}</b> manually on confirmation page.</p>
+                        <p>This code will expire ${dayjs.utc().to(user.secretCodeExpireAt)}.</p>`
+                    },
+                    tags: ["auth"]
+                });
+            }
+            throw new ActionsHandlerError(
+                "User account is not activated. Please check your email.",
+                null,
+                "NOT_ACTIVATED",
+                403
+            );
+        }
         if (!user.passwordHash)
             throw new ActionsHandlerError(
                 "Password is not set. Login with Telegram and change password.",
@@ -232,74 +270,114 @@ export class Auth {
     async register(params: { email: string; password: string; name: string }) {
         const { email, password, name } = params;
 
-        const userExists: User = await pg.maybeOne<User>(sql`
-        SELECT id FROM users
+        let user: User = await pg.maybeOne<User>(sql`
+        SELECT id, email, status, secret_code, secret_code_expire_at FROM users
         WHERE email = ${email}
     `);
-        if (userExists) throw new ActionsHandlerError("User account already exists.", { email }, "CONFLICT", 409);
-        const newUser: User = {
-            id: uuid(),
-            name,
-            email,
-            status: UserStatus.new,
-            passwordHash: await this.#bcrypt.hash(password, 10),
-            secretCode: this.generateCode(),
-            roles: {
-                allowedRoles: [UserRoles.user],
-                defaultRole: UserRoles.user
-            },
-            access: UserAccessValues.user,
-            settings: {
-                notifications: {
-                    signals: {
-                        telegram: false,
-                        email: true
-                    },
-                    trading: {
-                        telegram: false,
-                        email: true
-                    },
-                    news: {
-                        telegram: false,
-                        email: true
+        const userExists = !!user;
+
+        if (!userExists) {
+            user = {
+                id: uuid(),
+                name,
+                email,
+                status: UserStatus.new,
+                passwordHash: await this.#bcrypt.hash(password, 10),
+                secretCode: this.generateCode(),
+                secretCodeExpireAt: dayjs.utc().add(1, "hour").toISOString(),
+                roles: {
+                    allowedRoles: [UserRoles.user],
+                    defaultRole: UserRoles.user
+                },
+                access: UserAccessValues.user,
+                settings: {
+                    notifications: {
+                        signals: {
+                            telegram: false,
+                            email: true
+                        },
+                        trading: {
+                            telegram: false,
+                            email: true
+                        },
+                        news: {
+                            telegram: false,
+                            email: true
+                        }
                     }
-                }
-            },
-            lastActiveAt: dayjs.utc().toISOString()
-        };
-        await pg.query(sql`
+                },
+                lastActiveAt: dayjs.utc().toISOString()
+            };
+            await pg.query(sql`
         INSERT INTO users
-            (id, name, email, status, password_hash, secret_code, roles, access, settings)
+            (id, name, email, status, password_hash, secret_code, secret_code_expire_at, roles, access, settings)
             VALUES(
-                ${newUser.id},
-                ${newUser.name || null},
-                ${newUser.email},
-                ${newUser.status},
-                ${newUser.passwordHash},
-                ${newUser.secretCode},
-                ${JSON.stringify(newUser.roles)},
-                ${newUser.access},
-                ${JSON.stringify(newUser.settings)}
+                ${user.id},
+                ${user.name || null},
+                ${user.email},
+                ${user.status},
+                ${user.passwordHash},
+                ${user.secretCode},
+                ${user.secretCodeExpireAt},
+                ${JSON.stringify(user.roles)},
+                ${user.access},
+                ${JSON.stringify(user.settings)}
             );
+        GA.event(user.id, "auth", "register");
     `);
+        } else {
+            if (user.status === UserStatus.enabled)
+                throw new ActionsHandlerError("User account already exists.", { email }, "CONFLICT", 409);
+
+            if (user.status === UserStatus.new) {
+                if (
+                    !user.secretCode ||
+                    !user.secretCodeExpireAt ||
+                    (user.secretCodeExpireAt && dayjs.utc().valueOf() > dayjs.utc(user.secretCodeExpireAt).valueOf())
+                ) {
+                    user.secretCode = this.generateCode();
+                    user.secretCodeExpireAt = dayjs.utc().add(1, "hour").toISOString();
+
+                    await pg.query(sql`UPDATE users 
+            SET 
+                secret_code = ${user.secretCode},
+                secret_code_expire_at = ${user.secretCodeExpireAt}
+            WHERE id = ${user.id};`);
+                } else
+                    throw new ActionsHandlerError(
+                        "User account is not activated. Please check your email.",
+                        null,
+                        "NOT_ACTIVATED",
+                        403
+                    );
+            }
+        }
 
         const urlData = this.encodeData({
-            email: newUser.email,
-            secretCode: newUser.secretCode
+            email: user.email,
+            secretCode: user.secretCode
         });
-        GA.event(newUser.id, "auth", "register");
+
         await this.#mailUtil.send({
-            to: email,
+            to: user.email,
             subject: "🚀 Welcome to Cryptuoso - Please confirm your email.",
             variables: {
                 body: `<p>Greetings!</p>
                 <p>Your user account is successfully created!</p>
                 <p>Activate your account by confirming your email please click <b><a href="https://cryptuoso.com/auth/activate-account/${urlData}">this link</a></b></p>
-                <p>or enter this code <b>${newUser.secretCode}</b> manually on confirmation page.</p>`
+                <p>or enter this code <b>${user.secretCode}</b> manually on confirmation page.</p>
+                <p>This code will expire ${dayjs.utc().to(user.secretCodeExpireAt)}.</p>`
             },
             tags: ["auth"]
         });
-        return newUser.id;
+        if (userExists && user.status === UserStatus.new)
+            throw new ActionsHandlerError(
+                "User account is not activated. Please check your email.",
+                null,
+                "NOT_ACTIVATED",
+                403
+            );
+        return user.id;
     }
 
     async registerTg(params: { telegramId: string; telegramUsername: string; name: string }) {
@@ -475,8 +553,10 @@ export class Auth {
             subject: "🚀 Cryptuoso - Please confirm your email.",
             variables: {
                 body: `<p>Greetings!</p>
-                <p>Please send this code <b>${user.secretCode}</b> to Cryptuoso Trading Bot in Telegram to confirm your email.</p>
-                <p>This request will expire in 1 hour.</p>
+                <p>Please send this code <b>${
+                    user.secretCode
+                }</b> to Cryptuoso Trading Bot in Telegram to confirm your email.</p>
+                <p>This request will expire ${dayjs.utc().to(user.secretCodeExpireAt)}.</p>
                 <p>If you did not request this change, no changes have been made to your user account.</p>`
             },
             tags: ["auth"]
@@ -856,7 +936,7 @@ export class Auth {
             variables: {
                 body: `<p>We received a request to change your email.</p>
                 <p>Please enter this code <b>${secretCode}</b> to confirm.</p>
-                <p>This request will expire in 1 hour.</p>
+                <p>This request will expire ${dayjs.utc().to(secretCodeExpireAt)}.</p>
                 <p>If you did not request this change, no changes have been made to your user account.</p>`
             },
             tags: ["auth"]
