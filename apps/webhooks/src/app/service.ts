@@ -107,6 +107,13 @@ export default class WebhooksService extends HTTPService {
                     roles: [UserRoles.admin, UserRoles.manager],
                     handler: this.HTTPHandler.bind(this, this.stopSignalSubscription.bind(this))
                 },
+                signalSubscriptionPortfolioBuilded: {
+                    inputSchema: {
+                        portfolioId: "uuid"
+                    },
+                    roles: [UserRoles.admin, UserRoles.manager],
+                    handler: this.HTTPHandler.bind(this, this.handlePortfolioBuilded.bind(this))
+                },
                 signalSubscriptionSyncPortfolioRobots: {
                     roles: [UserRoles.admin, UserRoles.manager],
                     inputSchema: UserRobotRunnerSchema[UserRobotRunnerEvents.SYNC_SIGNAL_PORTFOLIO_ROBOTS],
@@ -260,7 +267,8 @@ export default class WebhooksService extends HTTPService {
         const signalSubscriptionSettings: PortfolioSettings = {
             options,
             initialBalance,
-            leverage: signalSubscriptionLeverage
+            leverage: signalSubscriptionLeverage,
+            custom: false
         };
 
         await this.db.pg.transaction(async (t) => {
@@ -463,7 +471,7 @@ AND active = true;`);
             SELECT exchange, settings, status, base 
             FROM portfolios 
             WHERE id = ${portfolioId};`);
-
+            this.log.debug(portfolio);
             if (!portfolio.base || portfolio.status !== "started") return;
 
             const { options } = portfolio.settings;
@@ -477,7 +485,7 @@ AND active = true;`);
             AND p.option_efficiency = ${options.efficiency}
             AND p.option_money_management = ${options.moneyManagement}
             AND p.custom = false;`);
-
+            this.log.debug(signalSubscriptions);
             if (!signalSubscriptions || !Array.isArray(signalSubscriptions) || !signalSubscriptions.length) return;
 
             const robots = await this.db.pg.any<PortfolioRobotDB>(sql`
@@ -504,7 +512,7 @@ AND active = true;`);
                 }
             }
             this.log.info(
-                `Synced ${signalSubscriptions.length} user portfolio ${robots.length} robots with ${portfolioId} portfolio`
+                `Synced ${signalSubscriptions.length} signal subscription ${robots.length} robots with ${portfolioId} portfolio`
             );
         } catch (error) {
             this.log.error(`Failed to handle portfolio's #${portfolioId} builded event`, error);
