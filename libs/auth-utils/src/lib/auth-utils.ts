@@ -850,27 +850,27 @@ export class Auth {
         if (dayjs.utc().valueOf() > dayjs.utc(user.secretCodeExpireAt).valueOf())
             throw new ActionsHandlerError("Confirmation code is expired.", null, "FORBIDDEN", 403);
 
-        const refreshToken = uuid();
-        const refreshTokenExpireAt = dayjs
+        user.refreshToken = uuid();
+        user.refreshTokenExpireAt = dayjs
             .utc()
             .add(+process.env.REFRESH_TOKEN_EXPIRES, "day")
             .toISOString();
 
-        let newSecretCode = null;
-        let newSecretCodeExpireAt = null;
+        user.secretCode = null;
+        user.secretCodeExpireAt = null;
         if (user.status === UserStatus.new) {
-            newSecretCode = user.secretCode;
-            newSecretCodeExpireAt = user.secretCodeExpireAt;
+            user.status = UserStatus.enabled;
         }
 
-        const passwordHash = await this.#bcrypt.hash(password, 10);
+        user.passwordHash = await this.#bcrypt.hash(password, 10);
         await pg.query(sql`
         UPDATE users
-        SET password_hash = ${passwordHash},
-            secret_code = ${newSecretCode},
-            secret_code_expire_at = ${newSecretCodeExpireAt},
-            refresh_token = ${refreshToken},
-            refresh_token_expire_at = ${refreshTokenExpireAt}
+        SET password_hash = ${user.passwordHash},
+            secret_code = ${user.secretCode},
+            secret_code_expire_at = ${user.secretCodeExpireAt},
+            refresh_token = ${user.refreshToken},
+            refresh_token_expire_at = ${user.refreshTokenExpireAt},
+            status = ${user.status}
         WHERE id = ${user.id};
     `);
 
@@ -887,8 +887,8 @@ export class Auth {
 
         return {
             accessToken: this.generateAccessToken(user),
-            refreshToken,
-            refreshTokenExpireAt
+            refreshToken: user.refreshToken,
+            refreshTokenExpireAt: user.refreshTokenExpireAt
         };
     }
 
@@ -907,7 +907,8 @@ export class Auth {
         if (!user) throw new ActionsHandlerError("User account not found.", null, "NOT_FOUND", 404);
         if (user.status === UserStatus.blocked)
             throw new ActionsHandlerError("User account is blocked.", null, "BLOCKED", 403);
-
+        if (user.status === UserStatus.new)
+            throw new ActionsHandlerError("User account is not activated.", null, "NOT_ACTIVATED", 403);
         let secretCode;
         let secretCodeExpireAt;
         if (
@@ -954,6 +955,8 @@ export class Auth {
         if (!user) throw new ActionsHandlerError("User account not found.", null, "NOT_FOUND", 404);
         if (user.status === UserStatus.blocked)
             throw new ActionsHandlerError("User account is blocked.", null, "BLOCKED", 403);
+        if (user.status === UserStatus.new)
+            throw new ActionsHandlerError("User account is not activated.", null, "NOT_ACTIVATED", 403);
         if (!user.emailNew) throw new ActionsHandlerError("New email is not set.", null, "FORBIDDEN", 403);
         if (!user.secretCode) throw new ActionsHandlerError("Confirmation code is not set.", null, "FORBIDDEN", 403);
         if (user.secretCode !== secretCode.trim())
