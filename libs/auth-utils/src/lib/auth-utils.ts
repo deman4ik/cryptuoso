@@ -757,7 +757,7 @@ export class Auth {
         const { email, secretCode, password } = params;
 
         const user: User = await pg.maybeOne<User>(sql`
-        SELECT id, roles, access, status, secret_code, secret_code_expire_at FROM users
+        SELECT id, email, roles, access, status, secret_code, secret_code_expire_at FROM users
         WHERE email = ${email}
     `);
 
