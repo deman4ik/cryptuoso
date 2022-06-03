@@ -290,7 +290,7 @@ export class Auth {
         GA.event(newUser.id, "auth", "register");
         await this.#mailUtil.send({
             to: email,
-            subject: "🚀 Welcome to Cryptuoso Robots - Please confirm your email.",
+            subject: "🚀 Welcome to Cryptuoso - Please confirm your email.",
             variables: {
                 body: `<p>Greetings!</p>
                 <p>Your user account is successfully created!</p>
@@ -472,7 +472,7 @@ export class Auth {
         GA.event(user.id, "auth", "register");
         await this.#mailUtil.send({
             to: email,
-            subject: "🚀 Cryptuoso Robots - Please confirm your email.",
+            subject: "🚀 Cryptuoso - Please confirm your email.",
             variables: {
                 body: `<p>Greetings!</p>
                 <p>Please send this code <b>${user.secretCode}</b> to Cryptuoso Trading Bot in Telegram to confirm your email.</p>
@@ -489,7 +489,7 @@ export class Auth {
         const secretCode = this.generateCode();
         await this.#mailUtil.send({
             to: email,
-            subject: "🚀 Cryptuoso Robots - Telegram Login Request.",
+            subject: "🚀 Cryptuoso - Telegram Login Request.",
             variables: {
                 body: `<p>Greetings!</p>
                 <p>We received a request to Login with your email from Cryptuoso Telegram Trading Bot.</p>
@@ -646,12 +646,12 @@ export class Auth {
 
         await this.#mailUtil.send({
             to: user.email,
-            subject: "🚀 Welcome to Cryptuoso Robots - User Account Activated.",
+            subject: "🚀 Welcome to Cryptuoso - User Account Activated.",
             variables: {
                 body: `<p>Congratulations!</p>
                 <p>Your user account is successfully activated!</p>
-                <p>Now you can login to <b><a href="https://cryptuoso.com/auth/login">your account</a></b> using your email and password.</p>
-                <p>Please check out our <b><a href="https://cryptuoso.com/info/docs">Documentation</a></b> to get started!</p>`
+                <p>Now you can login to <b><a href="https://cryptuoso.com/app">your account</a></b> using your email and password.</p>
+                <p>Please check out our <b><a href="https://cryptuoso.com/docs">Documentation</a></b> to get started!</p>`
             },
             tags: ["auth"]
         });
@@ -736,7 +736,7 @@ export class Auth {
         `);
 
         const urlData = this.encodeData({
-            userId: user.id,
+            email: user.email,
             secretCode
         });
         await this.#mailUtil.send({
@@ -754,12 +754,12 @@ export class Auth {
         return user.id;
     }
 
-    async confirmPasswordReset(params: { userId: string; secretCode: string; password: string }) {
-        const { userId, secretCode, password } = params;
+    async confirmPasswordReset(params: { email: string; secretCode: string; password: string }) {
+        const { email, secretCode, password } = params;
 
         const user: User = await pg.maybeOne<User>(sql`
         SELECT id, roles, access, status, secret_code, secret_code_expire_at FROM users
-        WHERE id = ${userId}
+        WHERE email = ${email}
     `);
 
         if (!user) throw new ActionsHandlerError("User account not found.", null, "NOT_FOUND", 404);
@@ -792,7 +792,7 @@ export class Auth {
             secret_code_expire_at = ${newSecretCodeExpireAt},
             refresh_token = ${refreshToken},
             refresh_token_expire_at = ${refreshTokenExpireAt}
-        WHERE id = ${userId};
+        WHERE id = ${user.id};
     `);
 
         await this.#mailUtil.send({

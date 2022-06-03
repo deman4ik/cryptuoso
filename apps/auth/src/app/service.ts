@@ -119,7 +119,7 @@ export default class AuthService extends HTTPService {
                 authConfirmPasswordReset: {
                     handler: this.confirmPasswordReset.bind(this),
                     inputSchema: {
-                        userId: "string",
+                        email: { type: "email", normalize: true },
                         secretCode: { type: "string", empty: false, trim: true },
                         password: {
                             type: "string",
