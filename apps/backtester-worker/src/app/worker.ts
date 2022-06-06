@@ -91,7 +91,7 @@ class BacktesterWorker {
 
     #saveState = async (state: BacktesterState) => {
         try {
-            this.log.info(`Backtester #${state.id} - Saving state`);
+            this.log.info(`Backtester #${state.id} - Saving state`, state);
 
             await this.db.pg.query(sql`
         INSERT INTO backtests
@@ -104,10 +104,12 @@ class BacktesterWorker {
             ${state.id}, ${state.robotId}, ${state.exchange}, ${state.asset}, ${state.currency}, 
             ${state.timeframe}, ${state.strategy},
             ${state.dateFrom}, ${state.dateTo}, ${JSON.stringify(state.settings)}, 
-            ${state.totalBars}, ${state.processedBars}, ${state.leftBars},${state.completedPercent}, 
-            ${state.status}, ${state.startedAt}, ${state.finishedAt}, ${state.error}, ${JSON.stringify(
-                state.robotState || {}
-            )}
+            ${state.totalBars || null}, ${state.processedBars || null}, ${state.leftBars || null},${
+                state.completedPercent || null
+            }, 
+            ${state.status}, ${state.startedAt || null}, ${state.finishedAt || null}, ${
+                state.error || null
+            }, ${JSON.stringify(state.robotState || {})}
         )
         ON CONFLICT ON CONSTRAINT backtests_pkey
         DO UPDATE SET robot_id = excluded.robot_id,

@@ -111,13 +111,12 @@ export class TrendlineLong extends BaseStrategy {
             max: 75
         }
     };
-    TLs: TrendlineState[];
+    TLs: TrendlineState[] = [];
+    bar = 0;
+    target = -1;
+    riskStopLevel: number = null;
     init() {
         this.log("TrendlineLong Parameters", this.parameters);
-        this.bar = 0;
-        this.TLs = [];
-        this.target = -1;
-        this.riskStopLevel = null;
         this.addIndicator("peak", "peak", {
             reversalAmount: this.parameters.peaks,
             candleProp: "high"

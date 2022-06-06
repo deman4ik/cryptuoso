@@ -1309,6 +1309,7 @@ export class RobotBaseService extends HTTPService {
                 robot: new Robot(robot),
                 locked: true
             };
+
             if (!this.robots[robot.id].robot.state.initialized) {
                 this.robots[robot.id].robot.initStrategy();
                 this.robots[robot.id].robot.initIndicators();
