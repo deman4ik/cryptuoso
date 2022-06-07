@@ -1031,7 +1031,7 @@ export class Auth {
         };
     }
 
-    generateAccessToken(user: User, jwtTokenExpires = `${process.env.JWT_TOKEN_EXPIRES}d`) {
+    generateAccessToken(user: User, jwtTokenExpires = `${process.env.JWT_TOKEN_EXPIRES}`) {
         const {
             id,
             roles: { defaultRole, allowedRoles },
