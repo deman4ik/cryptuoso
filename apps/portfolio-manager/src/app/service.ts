@@ -41,6 +41,7 @@ import { Timeframe } from "@cryptuoso/market";
 
 export type PortfolioManagerServiceConfig = HTTPServiceConfig;
 
+//TODO: move User Portfolio actions to User Service
 export default class PortfolioManagerService extends HTTPService {
     constructor(config?: PortfolioManagerServiceConfig) {
         super(config);

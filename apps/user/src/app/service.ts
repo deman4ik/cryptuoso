@@ -92,7 +92,7 @@ export default class UserService extends HTTPService {
                             optional: true
                         }
                     },
-                    handler: this.HTTPHandler.bind(this, this.userSetNotificationSettings.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.userSetNotificationSettings.bind(this))
                 },
                 userChangeName: {
                     auth: true,
@@ -104,7 +104,7 @@ export default class UserService extends HTTPService {
                             empty: false
                         }
                     },
-                    handler: this.HTTPHandler.bind(this, this.userChangeName.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.userChangeName.bind(this))
                 },
                 //#endregion "User Settings Schemes"
 
@@ -139,7 +139,7 @@ export default class UserService extends HTTPService {
                             default: "shared"
                         }
                     },
-                    handler: this.HTTPHandler.bind(this, this.userExchangeAccUpsert.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.userExchangeAccUpsert.bind(this))
                 },
                 userExchangeAccChangeName: {
                     auth: true,
@@ -148,7 +148,7 @@ export default class UserService extends HTTPService {
                         id: "uuid",
                         name: { type: "string", empty: false, trim: true }
                     },
-                    handler: this.HTTPHandler.bind(this, this.userExchangeAccChangeName.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.userExchangeAccChangeName.bind(this))
                 },
                 userExchangeAccDelete: {
                     auth: true,
@@ -156,7 +156,7 @@ export default class UserService extends HTTPService {
                     inputSchema: {
                         id: "uuid"
                     },
-                    handler: this.HTTPHandler.bind(this, this.userExchangeAccDelete.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.userExchangeAccDelete.bind(this))
                 },
                 //#endregion "User Exchange Account Schemes"
 
@@ -165,37 +165,37 @@ export default class UserService extends HTTPService {
                     inputSchema: UserSubInSchema[UserSubInEvents.CREATE],
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
-                    handler: this.HTTPHandler.bind(this, this.userSubCreate.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.userSubCreate.bind(this))
                 },
                 userSubCancel: {
                     inputSchema: UserSubInSchema[UserSubInEvents.CANCEL],
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
-                    handler: this.HTTPHandler.bind(this, this.userSubCancel.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.userSubCancel.bind(this))
                 },
                 userSubCheckout: {
                     inputSchema: UserSubInSchema[UserSubInEvents.CHECKOUT],
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager],
-                    handler: this.HTTPHandler.bind(this, this.userSubCheckout.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.userSubCheckout.bind(this))
                 },
                 userSubCheckPayment: {
                     inputSchema: UserSubInSchema[UserSubInEvents.CHECK_PAYMENT],
                     auth: true,
                     roles: [UserRoles.user, UserRoles.vip, UserRoles.manager, UserRoles.admin],
-                    handler: this.HTTPHandler.bind(this, this.userSubCheckPayment.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.userSubCheckPayment.bind(this))
                 },
                 userSubCheckExpiration: {
                     roles: [UserRoles.admin],
-                    handler: this.HTTPHandler.bind(this, this.userSubCheckExpiration.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.userSubCheckExpiration.bind(this))
                 },
                 userSubCheckTrial: {
                     roles: [UserRoles.admin],
-                    handler: this.HTTPHandler.bind(this, this.userSubCheckTrial.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.userSubCheckTrial.bind(this))
                 },
                 userSubCheckPending: {
                     roles: [UserRoles.admin],
-                    handler: this.HTTPHandler.bind(this, this.userSubCheckPending.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.userSubCheckPending.bind(this))
                 },
                 //#endregion "User Subscription Schemes"
 
@@ -206,7 +206,7 @@ export default class UserService extends HTTPService {
                     inputSchema: {
                         message: "string"
                     },
-                    handler: this.HTTPHandler.bind(this, this.userSupportMessage.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.userSupportMessage.bind(this))
                 },
                 managerReplySupportMessage: {
                     auth: true,
@@ -215,7 +215,7 @@ export default class UserService extends HTTPService {
                         to: "uuid",
                         message: "string"
                     },
-                    handler: this.HTTPHandler.bind(this, this.managerReplySupportMessage.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.managerReplySupportMessage.bind(this))
                 },
                 managerBroadcastNews: {
                     auth: true,
@@ -223,7 +223,7 @@ export default class UserService extends HTTPService {
                     inputSchema: {
                         message: "string"
                     },
-                    handler: this.HTTPHandler.bind(this, this.managerBroadcastNews.bind(this))
+                    handler: this.HTTPWithAuthHandler.bind(this, this.managerBroadcastNews.bind(this))
                 }
                 //#endregion "Support Schemes"
             });
@@ -294,7 +294,6 @@ export default class UserService extends HTTPService {
     //#region "User Settings"
 
     async userSetNotificationSettings(
-        user: User,
         {
             signalsTelegram,
             signalsEmail,
@@ -309,7 +308,8 @@ export default class UserService extends HTTPService {
             tradingEmail?: boolean;
             newsTelegram?: boolean;
             newsEmail?: boolean;
-        }
+        },
+        user: User
     ) {
         const { settings } = user;
 
@@ -355,7 +355,7 @@ export default class UserService extends HTTPService {
         return newSettings;
     }
 
-    async userChangeName(user: User, { name }: { name: string }) {
+    async userChangeName({ name }: { name: string }, user: User) {
         await this.db.pg.query(sql`
             UPDATE users
             SET name = ${name}
@@ -368,14 +368,14 @@ export default class UserService extends HTTPService {
     //#region "User Exchange Account"
 
     async userExchangeAccUpsert(
-        user: User,
         params: {
             id?: string;
             exchange: string;
             name?: string;
             allocation?: UserExchangeAccount["allocation"];
             keys: { key: string; secret: string; pass?: string };
-        }
+        },
+        user: User
     ) {
         const {
             exchange,
@@ -566,14 +566,14 @@ export default class UserService extends HTTPService {
     }
 
     async userExchangeAccChangeName(
-        user: User,
         {
             id,
             name
         }: {
             id: string;
             name: string;
-        }
+        },
+        user: User
     ) {
         const { id: userId } = user;
 
@@ -620,7 +620,7 @@ export default class UserService extends HTTPService {
         `);
     }
 
-    async userExchangeAccDelete(user: User, { id }: { id: string }) {
+    async userExchangeAccDelete({ id }: { id: string }, user: User) {
         const { id: userId } = user;
 
         const userExchangeAcc = await this.db.pg.maybeOne<{
@@ -1399,7 +1399,7 @@ INSERT into messages ( timestamp, "from", "to", data ) VALUES (
         }
     };
 
-    async userSupportMessage(user: User, { message }: { message: string }) {
+    async userSupportMessage({ message }: { message: string }, user: User) {
         const newMessage: SupportMessage = {
             from: user.id,
             to: null,
@@ -1422,7 +1422,7 @@ INSERT into messages ( timestamp, "from", "to", data ) VALUES (
         });
     }
 
-    async managerReplySupportMessage(user: User, { to, message }: { to: string; message: string }) {
+    async managerReplySupportMessage({ to, message }: { to: string; message: string }, user: User) {
         const { telegramId, email } = await this.db.pg.one<{ telegramId: string; email: string }>(
             sql`SELECT telegram_id, email from users where id = ${to}`
         );
@@ -1447,7 +1447,7 @@ INSERT into messages ( timestamp, "from", "to", data ) VALUES (
         await this.#saveNotifications([notification]);
     }
 
-    async managerBroadcastNews(user: User, { message }: { message: string }) {
+    async managerBroadcastNews({ message }: { message: string }, user: User) {
         const users = await this.db.pg.many<{
             userId: string;
             telegramId: string;
