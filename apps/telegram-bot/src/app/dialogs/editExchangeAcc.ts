@@ -14,7 +14,7 @@ const chooseExchange = async (ctx: BotContext) => {
         const { exchanges } = await ctx.gql.request<{ exchanges: { code: string; name: string }[] }>(
             ctx,
             gql`
-                query {
+                query Exchanges {
                     exchanges {
                         code
                         name

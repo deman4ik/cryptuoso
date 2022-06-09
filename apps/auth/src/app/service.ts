@@ -171,9 +171,7 @@ export default class AuthService extends HTTPService {
                 Cookie.serialize("refresh_token", refreshToken, this._makeCookieProps(refreshTokenExpireAt))
             );
             res.send({
-                accessToken,
-                refreshToken,
-                refreshTokenExpireAt
+                accessToken
             });
             res.end();
         } catch (err) {
@@ -190,9 +188,7 @@ export default class AuthService extends HTTPService {
             Cookie.serialize("refresh_token", refreshToken, this._makeCookieProps(refreshTokenExpireAt))
         );
         res.send({
-            accessToken,
-            refreshToken,
-            refreshTokenExpireAt
+            accessToken
         });
         res.end();
     }
@@ -238,9 +234,7 @@ export default class AuthService extends HTTPService {
             Cookie.serialize("refresh_token", refreshToken, this._makeCookieProps(refreshTokenExpireAt))
         );
         res.send({
-            accessToken,
-            refreshToken,
-            refreshTokenExpireAt
+            accessToken
         });
         res.end();
     }
