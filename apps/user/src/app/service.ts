@@ -284,7 +284,7 @@ export default class UserService extends HTTPService {
         await this.addJob("user-sub", "userSubCheckNewPayments", null, {
             jobId: "userSubCheckNewPayments",
             repeat: {
-                cron: "0 5 * * * *"
+                cron: "0 */5 * * * *"
             },
             attempts: 5,
             backoff: { type: "exponential", delay: 60000 * 10 },
