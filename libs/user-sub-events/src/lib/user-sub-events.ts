@@ -82,7 +82,7 @@ export interface UserSubCancel {
 
 export interface UserSubCheckPayment {
     chargeId: string;
-    provider: string;
+    provider?: string;
 }
 
 export interface UserSubErrorEvent {

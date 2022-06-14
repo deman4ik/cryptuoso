@@ -281,6 +281,16 @@ export default class UserService extends HTTPService {
             removeOnComplete: 1,
             removeOnFail: 5
         });
+        await this.addJob("user-sub", "userSubCheckNewPayments", null, {
+            jobId: "userSubCheckNewPayments",
+            repeat: {
+                cron: "0 5 * * * *"
+            },
+            attempts: 5,
+            backoff: { type: "exponential", delay: 60000 * 10 },
+            removeOnComplete: 1,
+            removeOnFail: 5
+        });
     }
 
     private async _onServiceStop(): Promise<void> {
@@ -677,6 +687,9 @@ export default class UserService extends HTTPService {
             case "userSubCheckPending":
                 await this.userSubCheckPending();
                 break;
+            case "userSubCheckNewPayments":
+                await this.userSubCheckNewPayments();
+                break;
             default:
                 this.log.error(`Unknow job ${job.name}`);
         }
@@ -885,6 +898,19 @@ export default class UserService extends HTTPService {
             }
         } catch (error) {
             this.log.error(`Failed to check pending subscriptions ${error.message}`, error);
+            throw error;
+        }
+    }
+
+    async userSubCheckNewPayments() {
+        try {
+            const newPayments = await this.db.pg.any<{ id: string }>(sql`
+             SELECT id FROM user_payments
+             WHERE status not in ('COMPLETED', 'CANCELLED', 'EXPIRED', 'RESOLVED');
+            `);
+            await Promise.all(newPayments.map(async ({ id }) => this.userSubCheckPayment({ chargeId: id }, null)));
+        } catch (error) {
+            this.log.error(`Failed to check new payments ${error.message}`, error);
             throw error;
         }
     }
@@ -1212,7 +1238,7 @@ export default class UserService extends HTTPService {
         }
     }
 
-    async userSubCheckPayment({ chargeId, provider }: UserSubCheckPayment, user: User) {
+    async userSubCheckPayment({ chargeId, provider = "coinbase.commerce" }: UserSubCheckPayment, user: User) {
         try {
             if (provider != "coinbase.commerce") throw new BaseError("Unknown provider");
 
@@ -1447,7 +1473,7 @@ INSERT into messages ( timestamp, "from", "to", data ) VALUES (
         await this.#saveNotifications([notification]);
     }
 
-    async managerBroadcastNews({ message }: { message: string }, user: User) {
+    async managerBroadcastNews({ message }: { message: string }) {
         const users = await this.db.pg.many<{
             userId: string;
             telegramId: string;
