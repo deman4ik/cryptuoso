@@ -5,11 +5,9 @@ import { UserSubCheckPayment, UserSubInEvents } from "@cryptuoso/user-sub-events
 import { User, UserRoles } from "@cryptuoso/user-state";
 import {
     calcUserLeverage,
-    getPortfolioBalance,
     PortfolioDB,
     PortfolioRobotDB,
     PortfolioSettings,
-    SignalRobotDB,
     SignalSubscriptionDB,
     SignalSubscriptionPosition,
     SignalSubscriptionState

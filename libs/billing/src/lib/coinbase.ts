@@ -110,8 +110,8 @@ class CoinbaseCommerce {
                         }
                     });
                 } catch (e) {
-                    if (e.message?.includes("limit")) bail(e);
-                    else throw e;
+                    if (e.message?.includes("limit")) throw e;
+                    bail(e);
                 }
             };
             const result = await retry(call, this.retryOptions);
