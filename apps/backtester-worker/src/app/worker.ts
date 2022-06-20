@@ -665,7 +665,7 @@ class BacktesterWorker {
                 .each(async (candle: Candle) => {
                     await this.backtester.handleCandle(candle);
                     const percentUpdated = this.backtester.incrementProgress();
-                    if (percentUpdated) subject.next(this.backtester.state);
+                    if (percentUpdated) subject.next(this.backtester.completedPercent);
                 })
                 .catch((err: Error) => {
                     this.log.error(`Backtester #${this.backtester.id} - Error`, err.message);
