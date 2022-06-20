@@ -78,10 +78,8 @@ export class RobotBaseService extends HTTPService {
     #candlesToSave: Map<string, ExchangeCandle> = new Map();
     #candlesSaveTimer: NodeJS.Timer;
     #checkAlertsTimer: NodeJS.Timer;
+    #checkSubsTimer: NodeJS.Timer;
     #lastTick: { [key: string]: ExchangePrice } = {};
-    #cronCheck: cron.ScheduledTask = cron.schedule("*/30 * * * * *", this.check.bind(this), {
-        scheduled: false
-    });
     #cronWatch: cron.ScheduledTask = cron.schedule("0 */5 * * * *", this.watch.bind(this), {
         scheduled: false
     });
@@ -170,7 +168,7 @@ export class RobotBaseService extends HTTPService {
     async startRobotService() {
         await this.resubscribe();
         this.#cronHandleChanges.start();
-        this.#cronCheck.start();
+        await this.checkSubs();
         this.#cronRunRobots.start();
         this.#cronWatch.start();
         if (this.isRobotService) this.#candlesSaveTimer = setTimeout(this.handleCandlesToSave.bind(this), 0);
@@ -180,7 +178,7 @@ export class RobotBaseService extends HTTPService {
     async onServiceStop() {
         try {
             this.#cronHandleChanges.stop();
-            this.#cronCheck.stop();
+
             this.#cronRunRobots.stop();
             this.#cronWatch.stop();
 
@@ -248,12 +246,13 @@ export class RobotBaseService extends HTTPService {
                     (sub.importerId === importerId || (sub.asset === asset && sub.currency === currency))
             );
             if (subscription && status === Status.finished) {
-                this.log.info(`Importer ${importerId} finished!`);
-                const exwatcherSubscribed = await this.subscribe(subscription); //TODO: subscribe robots
-                if (exwatcherSubscribed) await this.subscribeRobots(subscription);
+                this.log.info(`Importer ${importerId} ${asset}/${currency} finished!`);
+                this.#subscriptions[subscription.id].status = ExwatcherStatus.imported;
+
+                await this.saveSubscription(this.#subscriptions[subscription.id]);
             } else if (subscription && subscription.id && status === Status.failed) {
                 const { error } = event as ImporterWorkerFailed;
-                this.log.warn(`Importer ${importerId} failed!`, error);
+                this.log.warn(`Importer ${importerId} ${asset}/${currency} failed!`, error);
                 this.#subscriptions[subscription.id].status = ExwatcherStatus.failed;
                 this.#subscriptions[subscription.id].importStartedAt = null;
                 this.#subscriptions[subscription.id].error = error;
@@ -303,7 +302,10 @@ export class RobotBaseService extends HTTPService {
     }
 
     get allSubscriptionsIsActive() {
-        return this.activeSubscriptions.length === Object.keys(this.#subscriptions).length;
+        return (
+            Object.keys(this.#subscriptions).length &&
+            this.activeSubscriptions.length === Object.keys(this.#subscriptions).length
+        );
     }
 
     get candlesCurrent() {
@@ -372,7 +374,7 @@ export class RobotBaseService extends HTTPService {
         } else throw new Error("Unsupported exchange");
     }
 
-    async check(): Promise<void> {
+    async checkSubs(): Promise<void> {
         try {
             const pendingSubscriptions = Object.values(this.#subscriptions).filter(
                 ({ status, importStartedAt }) =>
@@ -381,6 +383,7 @@ export class RobotBaseService extends HTTPService {
                         importStartedAt &&
                         dayjs.utc().diff(dayjs.utc(importStartedAt), "minute") > 4)
             );
+            this.log.debug(`Checking ${pendingSubscriptions.length} pending subscriptions`);
             if (pendingSubscriptions.length > 0)
                 await Promise.all(
                     pendingSubscriptions.map(async (subscription: Exwatcher) => {
@@ -391,7 +394,8 @@ export class RobotBaseService extends HTTPService {
                                 startedAt: ImporterState["startedAt"];
                             }>(sql`SELECT status, started_at FROM importers WHERE id = ${importerId};`);
                             if (importer && importer?.status === Status.finished) {
-                                await this.subscribe(subscription);
+                                this.#subscriptions[subscription.id].status === ExwatcherStatus.imported;
+                                await this.saveSubscription(subscription);
                                 return;
                             } else if (
                                 importer &&
@@ -405,84 +409,111 @@ export class RobotBaseService extends HTTPService {
                     })
                 );
 
-            if (this.allSubscriptionsIsActive) this.#cronCheck.stop();
-            //   await this.watch();
+            const importedSubscriptions = Object.values(this.#subscriptions).filter(
+                ({ status }) => status === ExwatcherStatus.imported
+            );
+            this.log.debug(`Checking ${importedSubscriptions.length} imported subscriptions`);
+            await Promise.all(
+                importedSubscriptions.map(async (subscription: Exwatcher) => {
+                    const exwatcherSubscribed = await this.subscribe(subscription);
+                    if (exwatcherSubscribed) await this.subscribeRobots(subscription);
+                })
+            );
         } catch (e) {
             this.log.error(e);
+        } finally {
+            if (!this.lightship.isServerShuttingDown() && !this.allSubscriptionsIsActive) {
+                this.#checkSubsTimer = setTimeout(this.checkSubs.bind(this), 5000);
+            } else this.#checkSubsTimer = null;
         }
     }
 
     async watch(): Promise<void> {
         try {
-            for (const { id, exchange, asset, currency } of this.activeSubscriptions) {
-                const symbol = this.getSymbol(asset, currency);
-                if (this.#exchange === "binance_futures") {
-                    for (const timeframe of Timeframe.validArray) {
-                        try {
-                            const call = async (bail: (e: Error) => void) => {
-                                try {
-                                    return await this.#connector.watchOHLCV(
-                                        symbol,
-                                        Timeframe.timeframes[timeframe].str
-                                    );
-                                } catch (e) {
-                                    if (e instanceof ccxtpro.NetworkError) {
-                                        throw e;
-                                    }
-                                    bail(e);
-                                }
-                            };
-                            await retry(call, this.#retryOptions);
-                            await sleep(1000);
-                        } catch (e) {
-                            this.log.warn(e.message);
-                            if (!e.message?.includes("connection closed") && !e.message.includes("timed out"))
-                                await this.events.emit<ExwatcherErrorEvent>({
-                                    type: ExwatcherEvents.ERROR,
-                                    data: {
-                                        exchange,
-                                        asset,
-                                        currency,
-                                        exwatcherId: id,
-                                        timestamp: dayjs.utc().toISOString(),
-                                        error: `${e.message}`
-                                    }
-                                });
-                            //  await this.initConnector();
-                        }
-                    }
-                } else {
+            await Promise.all(
+                this.activeSubscriptions.map(async ({ id, exchange, asset, currency }) => {
+                    if (this.#subscriptions[id].locked) return;
+                    this.#subscriptions[id].locked = true;
                     try {
-                        const call = async (bail: (e: Error) => void) => {
+                        const symbol = this.getSymbol(asset, currency);
+                        if (this.#exchange === "binance_futures") {
+                            await Promise.all(
+                                Timeframe.validArray.map(async (timeframe) => {
+                                    try {
+                                        const call = async (bail: (e: Error) => void) => {
+                                            try {
+                                                return await this.#connector.watchOHLCV(
+                                                    symbol,
+                                                    Timeframe.timeframes[timeframe].str
+                                                );
+                                            } catch (e) {
+                                                if (e instanceof ccxtpro.NetworkError) {
+                                                    throw e;
+                                                }
+                                                bail(e);
+                                            }
+                                        };
+                                        await retry(call, this.#retryOptions);
+                                        await sleep(1000);
+                                    } catch (e) {
+                                        this.log.warn(e.message);
+                                        if (
+                                            !e.message?.includes("connection closed") &&
+                                            !e.message.includes("timed out")
+                                        )
+                                            await this.events.emit<ExwatcherErrorEvent>({
+                                                type: ExwatcherEvents.ERROR,
+                                                data: {
+                                                    exchange,
+                                                    asset,
+                                                    currency,
+                                                    exwatcherId: id,
+                                                    timestamp: dayjs.utc().toISOString(),
+                                                    error: `${e.message}`
+                                                }
+                                            });
+                                        //  await this.initConnector();
+                                    }
+                                })
+                            );
+                        } else {
                             try {
-                                return await this.#connector.watchTrades(symbol);
+                                const call = async (bail: (e: Error) => void) => {
+                                    try {
+                                        return await this.#connector.watchTrades(symbol);
+                                    } catch (e) {
+                                        if (e instanceof ccxtpro.NetworkError) {
+                                            throw e;
+                                        }
+                                        bail(e);
+                                    }
+                                };
+                                await retry(call, this.#retryOptions);
+                                await sleep(1000);
                             } catch (e) {
-                                if (e instanceof ccxtpro.NetworkError) {
-                                    throw e;
-                                }
-                                bail(e);
+                                this.log.warn(e.message);
+                                if (!e.message?.includes("connection closed") && !e.message.includes("timed out"))
+                                    await this.events.emit<ExwatcherErrorEvent>({
+                                        type: ExwatcherEvents.ERROR,
+                                        data: {
+                                            exchange,
+                                            asset,
+                                            currency,
+                                            exwatcherId: id,
+                                            timestamp: dayjs.utc().toISOString(),
+                                            error: `${e.message}`
+                                        }
+                                    });
+                                //  await this.initConnector();
                             }
-                        };
-                        await retry(call, this.#retryOptions);
-                        await sleep(1000);
+                        }
                     } catch (e) {
-                        this.log.warn(e.message);
-                        if (!e.message?.includes("connection closed") && !e.message.includes("timed out"))
-                            await this.events.emit<ExwatcherErrorEvent>({
-                                type: ExwatcherEvents.ERROR,
-                                data: {
-                                    exchange,
-                                    asset,
-                                    currency,
-                                    exwatcherId: id,
-                                    timestamp: dayjs.utc().toISOString(),
-                                    error: `${e.message}`
-                                }
-                            });
-                        //  await this.initConnector();
+                        this.log.error(e);
+                    } finally {
+                        this.#subscriptions[id].locked = false;
                     }
-                }
-            }
+                })
+            );
         } catch (e) {
             this.log.error(e);
         }
@@ -553,7 +584,8 @@ export class RobotBaseService extends HTTPService {
                     status: ExwatcherStatus.pending,
                     importerId: this.#subscriptions[id]?.importerId || null,
                     importStartedAt: null,
-                    error: null
+                    error: null,
+                    locked: false
                 };
 
                 if (this.#subscriptions[id].status === ExwatcherStatus.pending && this.isRobotService) {
@@ -563,10 +595,12 @@ export class RobotBaseService extends HTTPService {
                         this.#subscriptions[id].importerId = importerId;
                         this.#subscriptions[id].importStartedAt = dayjs.utc().toISOString();
                         await this.saveSubscription(this.#subscriptions[id]);
+                        if (!this.#checkSubsTimer) {
+                            this.log.debug(`Starting checkSubs timer`);
+                            this.#checkSubsTimer = setTimeout(this.checkSubs.bind(this), 5000);
+                        }
                     }
-                }
-
-                if (this.userPortfolioId) {
+                } else if (!this.isRobotService) {
                     const exwatcherSubscribed = await this.subscribe(this.#subscriptions[id]);
                     if (exwatcherSubscribed) {
                         this.#subscriptions[id].status = ExwatcherStatus.subscribed;
@@ -574,7 +608,6 @@ export class RobotBaseService extends HTTPService {
                     }
                 }
             }
-            this.#cronCheck.start();
         } catch (e) {
             this.log.error(e);
             throw e;
@@ -623,6 +656,7 @@ export class RobotBaseService extends HTTPService {
     }
 
     async initCandlesHistory(subscription: Exwatcher) {
+        this.log.debug(`Initializing candles history for ${subscription.asset}/${subscription.currency}`);
         const { id, asset, currency } = subscription;
         this.#candlesHistory[id] = {};
         await Promise.all(
@@ -634,31 +668,31 @@ export class RobotBaseService extends HTTPService {
 
     async subscribe(subscription: Exwatcher) {
         //this.log.debug(subscription);
+        const { id, status } = subscription;
         try {
-            if (subscription) {
-                const { id, status } = subscription;
-                if (status === ExwatcherStatus.subscribed) return true;
+            if (this.#subscriptions[id].locked) return false;
+            if (status === ExwatcherStatus.subscribed) return true;
+            this.#subscriptions[id].locked = true;
+            try {
+                this.log.info(`Subscribing ${id}`);
+                this.#candlesCurrent[id] = {};
+                await this.subscribeCCXT(id);
 
-                try {
-                    this.#candlesCurrent[id] = {};
-                    await this.subscribeCCXT(id);
+                this.#subscriptions[id].status = ExwatcherStatus.subscribed;
+                this.#subscriptions[id].importStartedAt = null;
+                this.#subscriptions[id].error = null;
 
-                    this.#subscriptions[id].status = ExwatcherStatus.subscribed;
-                    this.#subscriptions[id].importStartedAt = null;
-                    this.#subscriptions[id].error = null;
-                    this.log.info(`Subscribed ${id}`);
+                await this.saveSubscription(this.#subscriptions[id]);
 
-                    await this.saveSubscription(this.#subscriptions[id]);
-
-                    await this.initCandlesHistory(this.#subscriptions[id]);
-                    return true;
-                } catch (e) {
-                    // this.log.error(e);
-                    this.#subscriptions[id].status = ExwatcherStatus.failed;
-                    this.#subscriptions[id].importStartedAt = null;
-                    this.#subscriptions[id].error = e.message;
-                    await this.saveSubscription(this.#subscriptions[id]);
-                }
+                await this.initCandlesHistory(this.#subscriptions[id]);
+                this.log.info(`Subscribed ${id}`);
+                return true;
+            } catch (e) {
+                // this.log.error(e);
+                this.#subscriptions[id].status = ExwatcherStatus.failed;
+                this.#subscriptions[id].importStartedAt = null;
+                this.#subscriptions[id].error = e.message;
+                await this.saveSubscription(this.#subscriptions[id]);
             }
         } catch (err) {
             this.log.error(`Failed to subscribe ${subscription.id}`, err);
@@ -673,29 +707,36 @@ export class RobotBaseService extends HTTPService {
                     error: `Failed to subscribe ${subscription?.id} - ${err.message}`
                 }
             });
+        } finally {
+            this.#subscriptions[id].locked = false;
         }
         return false;
     }
 
     async subscribeCCXT(id: string) {
         // this.log.debug(id);
+
         try {
             const symbol = this.getSymbol(this.#subscriptions[id].asset, this.#subscriptions[id].currency);
             if (["binance_futures"].includes(this.#exchange)) {
-                for (const timeframe of Timeframe.validArray) {
-                    const call = async (bail: (e: Error) => void) => {
-                        try {
-                            return await this.#connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
-                        } catch (e) {
-                            if (e instanceof ccxtpro.NetworkError) {
-                                throw e;
+                await Promise.all(
+                    Timeframe.validArray.map(async (timeframe) => {
+                        this.log.debug(`Watching OHLCV ${id}/${timeframe}`);
+                        const call = async (bail: (e: Error) => void) => {
+                            try {
+                                return await this.#connector.watchOHLCV(symbol, Timeframe.timeframes[timeframe].str);
+                            } catch (e) {
+                                if (e instanceof ccxtpro.NetworkError) {
+                                    throw e;
+                                }
+                                bail(e);
                             }
-                            bail(e);
-                        }
-                    };
-                    await retry(call, this.#retryOptions);
-                    await sleep(1000);
-                }
+                        };
+                        await retry(call, this.#retryOptions);
+                        //await sleep(1000);
+                        this.log.debug(`OHLCV watch started ${id}/${timeframe}`);
+                    })
+                );
             } else if (["bitfinex", "kraken", "kucoin", "huobipro"].includes(this.#exchange)) {
                 const call = async (bail: (e: Error) => void) => {
                     try {
@@ -1239,8 +1280,13 @@ export class RobotBaseService extends HTTPService {
 
     async subscribeRobots(subscription: Exwatcher) {
         this.log.info(`Subscribing ${subscription.id} robots`);
-        const existedRobotsCondition = Object.keys(this.robots).length
-            ? sql`AND r.id not in (${sql.join(Object.keys(this.robots), sql`, `)})`
+        const existedRobotIds = Object.values(this.robots)
+            .filter(
+                ({ robot: { asset, currency } }) => asset === subscription.asset && currency === subscription.currency
+            )
+            .map(({ robot: { id } }) => id);
+        const existedRobotsCondition = existedRobotIds.length
+            ? sql`AND r.id not in (${sql.join(existedRobotIds, sql`, `)})`
             : sql``;
         const robots = await this.db.pg.any<RobotState>(sql`
         SELECT r.id, 
@@ -1266,11 +1312,13 @@ export class RobotBaseService extends HTTPService {
         ${existedRobotsCondition};`);
 
         if (robots && Array.isArray(robots) && robots.length) {
-            for (const robot of robots) {
-                if (!this.robots[robot.id]) {
-                    await this.#subscribeRobot(robot);
-                }
-            }
+            await Promise.all(
+                robots.map(async (robot) => {
+                    if (!this.robots[robot.id]) {
+                        await this.#subscribeRobot(robot);
+                    }
+                })
+            );
         }
     }
 
@@ -1305,6 +1353,9 @@ export class RobotBaseService extends HTTPService {
 
     #subscribeRobot = async (robot: RobotState) => {
         try {
+            this.log.info(
+                `Subscribing #${robot.id} ${robot.strategy}/${robot.asset}/${robot.currency}/${robot.timeframe} robot`
+            );
             this.robots[robot.id] = {
                 robot: new Robot(robot),
                 locked: true
@@ -1332,7 +1383,11 @@ export class RobotBaseService extends HTTPService {
                 await this.db.pg.query(sql`UPDATE robot SET status = 'started' WHERE id = ${robot.id}`);
             }
             this.robots[robot.id].locked = false;
-            this.log.info(`Robot #${robot.id} is subscribed!`);
+            this.log.info(
+                `Robot #${robot.id} is subscribed! Total started ${
+                    Object.values(this.robots).filter(({ robot: { status } }) => status === RobotStatus.started).length
+                }/${Object.keys(this.robots).length}`
+            );
         } catch (err) {
             this.log.error(`Failed to subscribe #${robot.id} robot ${err.message}`);
             this.log.error(err);

@@ -1,6 +1,7 @@
 export const enum ExwatcherStatus {
     pending = "pending",
     importing = "importing",
+    imported = "imported",
     subscribed = "subscribed",
     unsubscribed = "unsubscribed",
     failed = "failed"
@@ -15,6 +16,7 @@ export interface Exwatcher {
     importerId: string;
     importStartedAt: string;
     error?: string;
+    locked?: boolean;
 }
 
 export interface Trade {
