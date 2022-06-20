@@ -1848,6 +1848,8 @@ export class RobotBaseService extends HTTPService {
             VALUES (${id}, ${robotId}, ${action}, ${orderType}, ${price || null}, ${type},
             ${positionId}, ${positionPrefix}, ${positionCode}, ${positionParentId || null}, ${candleTimestamp},
             ${timestamp}, ${emulated || false})
+            ON CONFLICT ON CONSTRAINT robot_signals_pkey
+            DO NOTHING;
         `);
         }
     };
