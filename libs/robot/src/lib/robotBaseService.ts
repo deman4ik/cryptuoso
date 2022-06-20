@@ -410,7 +410,11 @@ export class RobotBaseService extends HTTPService {
                 );
 
             const importedSubscriptions = Object.values(this.#subscriptions).filter(
-                ({ status }) => status === ExwatcherStatus.imported
+                ({ status, importStartedAt }) =>
+                    status === ExwatcherStatus.imported ||
+                    (status === ExwatcherStatus.subscribing &&
+                        importStartedAt &&
+                        dayjs.utc().diff(dayjs.utc(importStartedAt), "minute") > 10)
             );
             this.log.debug(`Checking ${importedSubscriptions.length} imported subscriptions`);
             await Promise.all(
@@ -675,6 +679,7 @@ export class RobotBaseService extends HTTPService {
             this.#subscriptions[id].locked = true;
             try {
                 this.log.info(`Subscribing ${id}`);
+                this.#subscriptions[id].status = ExwatcherStatus.subscribing;
                 this.#candlesCurrent[id] = {};
                 await this.subscribeCCXT(id);
 
@@ -685,7 +690,12 @@ export class RobotBaseService extends HTTPService {
                 await this.saveSubscription(this.#subscriptions[id]);
 
                 await this.initCandlesHistory(this.#subscriptions[id]);
-                this.log.info(`Subscribed ${id}`);
+                this.log.info(
+                    `Subscribed ${id} Total ${
+                        Object.values(this.#subscriptions).filter(({ status }) => status === ExwatcherStatus.subscribed)
+                            .length
+                    }/${Object.keys(this.#subscriptions).length}`
+                );
                 return true;
             } catch (e) {
                 // this.log.error(e);
