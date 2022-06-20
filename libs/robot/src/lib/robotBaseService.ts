@@ -79,6 +79,7 @@ export class RobotBaseService extends HTTPService {
     #candlesSaveTimer: NodeJS.Timer;
     #checkAlertsTimer: NodeJS.Timer;
     #checkSubsTimer: NodeJS.Timer;
+    #checkSubsTimerActive = false;
     #watchTimer: NodeJS.Timer;
     #lastTick: { [key: string]: ExchangePrice } = {};
     #cronHandleChanges: cron.ScheduledTask;
@@ -245,6 +246,10 @@ export class RobotBaseService extends HTTPService {
                 this.#subscriptions[subscription.id].status = ExwatcherStatus.imported;
 
                 await this.saveSubscription(this.#subscriptions[subscription.id]);
+                if (!this.#checkSubsTimerActive) {
+                    this.log.debug(`Starting checkSubs timer`);
+                    this.#checkSubsTimer = setTimeout(this.checkSubs.bind(this), 5000);
+                }
             } else if (subscription && subscription.id && status === Status.failed) {
                 const { error } = event as ImporterWorkerFailed;
                 this.log.warn(`Importer ${importerId} ${asset}/${currency} failed!`, error);
@@ -371,6 +376,7 @@ export class RobotBaseService extends HTTPService {
 
     async checkSubs(): Promise<void> {
         try {
+            this.#checkSubsTimerActive = true;
             const pendingSubscriptions = Object.values(this.#subscriptions).filter(
                 ({ status, importStartedAt }) =>
                     [ExwatcherStatus.pending, ExwatcherStatus.unsubscribed, ExwatcherStatus.failed].includes(status) ||
@@ -423,7 +429,7 @@ export class RobotBaseService extends HTTPService {
         } finally {
             if (!this.lightship.isServerShuttingDown() && !this.allSubscriptionsIsActive) {
                 this.#checkSubsTimer = setTimeout(this.checkSubs.bind(this), 5000);
-            } else this.#checkSubsTimer = null;
+            } else this.#checkSubsTimerActive = false;
         }
     }
 
@@ -436,45 +442,40 @@ export class RobotBaseService extends HTTPService {
                     try {
                         const symbol = this.getSymbol(asset, currency);
                         if (this.#exchange === "binance_futures") {
-                            await Promise.all(
-                                Timeframe.validArray.map(async (timeframe) => {
-                                    try {
-                                        const call = async (bail: (e: Error) => void) => {
-                                            try {
-                                                return await this.#connector.watchOHLCV(
-                                                    symbol,
-                                                    Timeframe.timeframes[timeframe].str
-                                                );
-                                            } catch (e) {
-                                                if (e instanceof ccxtpro.NetworkError) {
-                                                    throw e;
-                                                }
-                                                bail(e);
+                            for (const timeframe of Timeframe.validArray) {
+                                try {
+                                    const call = async (bail: (e: Error) => void) => {
+                                        try {
+                                            return await this.#connector.watchOHLCV(
+                                                symbol,
+                                                Timeframe.timeframes[timeframe].str
+                                            );
+                                        } catch (e) {
+                                            if (e instanceof ccxtpro.NetworkError) {
+                                                throw e;
                                             }
-                                        };
-                                        await retry(call, this.#retryOptions);
-                                        await sleep(1000);
-                                    } catch (e) {
-                                        this.log.warn(e.message);
-                                        if (
-                                            !e.message?.includes("connection closed") &&
-                                            !e.message.includes("timed out")
-                                        )
-                                            await this.events.emit<ExwatcherErrorEvent>({
-                                                type: ExwatcherEvents.ERROR,
-                                                data: {
-                                                    exchange,
-                                                    asset,
-                                                    currency,
-                                                    exwatcherId: id,
-                                                    timestamp: dayjs.utc().toISOString(),
-                                                    error: `${e.message}`
-                                                }
-                                            });
-                                        //  await this.initConnector();
-                                    }
-                                })
-                            );
+                                            bail(e);
+                                        }
+                                    };
+                                    await retry(call, this.#retryOptions);
+                                    await sleep(1000);
+                                } catch (e) {
+                                    this.log.warn(e.message);
+                                    if (!e.message?.includes("connection closed") && !e.message.includes("timed out"))
+                                        await this.events.emit<ExwatcherErrorEvent>({
+                                            type: ExwatcherEvents.ERROR,
+                                            data: {
+                                                exchange,
+                                                asset,
+                                                currency,
+                                                exwatcherId: id,
+                                                timestamp: dayjs.utc().toISOString(),
+                                                error: `${e.message}`
+                                            }
+                                        });
+                                    //  await this.initConnector();
+                                }
+                            }
                         } else {
                             try {
                                 const call = async (bail: (e: Error) => void) => {
@@ -596,10 +597,6 @@ export class RobotBaseService extends HTTPService {
                         this.#subscriptions[id].importerId = importerId;
                         this.#subscriptions[id].importStartedAt = dayjs.utc().toISOString();
                         await this.saveSubscription(this.#subscriptions[id]);
-                        if (!this.#checkSubsTimer) {
-                            this.log.debug(`Starting checkSubs timer`);
-                            this.#checkSubsTimer = setTimeout(this.checkSubs.bind(this), 5000);
-                        }
                     }
                 } else if (!this.isRobotService) {
                     const exwatcherSubscribed = await this.subscribe(this.#subscriptions[id]);
