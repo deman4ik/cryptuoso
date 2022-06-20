@@ -1,4 +1,4 @@
-import { spawn, Worker as ThreadsWorker, Thread } from "threads";
+import { spawn, Worker as ThreadsWorker, Thread, Pool } from "threads";
 import { Job } from "bullmq";
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import { Importer, ImporterParams, ImporterState, Status } from "@cryptuoso/importer-state";
@@ -25,6 +25,7 @@ import dayjs from "@cryptuoso/dayjs";
 export type ImporterWorkerServiceConfig = HTTPServiceConfig;
 
 export default class ImporterWorkerService extends HTTPService {
+    #pool: Pool<any>;
     abort: { [key: string]: boolean } = {};
     constructor(config?: ImporterWorkerServiceConfig) {
         super(config);
@@ -55,6 +56,14 @@ export default class ImporterWorkerService extends HTTPService {
     }
 
     async onServiceStart(): Promise<void> {
+        this.#pool = await Pool(
+            async () => await spawn<ImportWorker>(new ThreadsWorker("./worker"), { timeout: 60000 }),
+            {
+                name: "worker",
+                concurrency: this.workerConcurrency,
+                size: this.workerThreads
+            }
+        );
         this.events.subscribe({
             [ImporterRunnerEvents.START]: {
                 handler: this.start.bind(this),
@@ -213,31 +222,20 @@ export default class ImporterWorkerService extends HTTPService {
         `);
     }
 
+    async importerWorker(robotState: ImporterState): Promise<ImporterState> {
+        return await this.#pool.queue(async (worker: ImportWorker) => worker.process(robotState));
+    }
+
     async process(job: Job<ImporterState, Status>): Promise<Status> {
         try {
             this.log.info(`Processing job ${job.id}`);
             const beacon = this.lightship.createBeacon();
-            const importerWorker = await spawn<ImportWorker>(new ThreadsWorker("./worker"));
-            this.log.info(`Worker spawned ${job.id}`);
             try {
                 let importer = new Importer(job.data);
 
                 importer.start();
-                importerWorker.progress().subscribe(async (state: ImporterState) => {
-                    await job.updateProgress(state.progress);
 
-                    if (this.abort[importer.id]) {
-                        importer = new Importer(state);
-                        importer.finish(true);
-                        await this.saveState(importer.state);
-                        delete this.abort[importer.id];
-                        throw new Error(`Importer #${importer.id} is canceled`);
-                    }
-                });
-
-                const initState = await importerWorker.init(importer.state);
-                importer = new Importer(initState);
-                const finalState = await importerWorker.process();
+                const finalState = await this.importerWorker(importer.state);
                 importer = new Importer(finalState);
 
                 await this.saveState(importer.state);
@@ -299,7 +297,6 @@ export default class ImporterWorkerService extends HTTPService {
                 this.log.info(`Job ${job.id} processed - Importer is ${importer.status}!`);
                 return importer.status;
             } finally {
-                await Thread.terminate(importerWorker);
                 await beacon.die();
             }
         } catch (err) {

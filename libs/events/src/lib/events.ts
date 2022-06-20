@@ -21,6 +21,8 @@ export interface EventsConfig {
     pendingRetryRate?: number;
     pendingMinIdleTime?: number;
     pendingMaxRetries?: number;
+    groupMessagesCount?: number;
+    unbalancedMessagesCount?: number;
     deadLetterTopic?: string;
 }
 
@@ -36,6 +38,8 @@ const BLOCK_TIMEOUT = 60000;
 const PENDING_INTERVAL = 15000;
 const PENDING_RETRY_RATE = 30;
 const PENDING_MAX_RETRIES = 3;
+const GROUP_MESSAGES_COUNT = 30;
+const UNBALANCED_MESSAGES_COUNT = 20;
 export const DEAD_LETTER_TOPIC = "dead-letter";
 
 type StreamMsgVals = string[];
@@ -51,6 +55,8 @@ export class Events {
     #pendingRetryRate: number;
     #pendingMinIdleTime: number;
     #pendingMaxRetries: number;
+    #groupMessagesCount: number;
+    #unbalancedMessagesCount: number;
     #deadLetterTopic: string;
     #state: {
         [topic: string]: {
@@ -83,6 +89,8 @@ export class Events {
         this.#pendingRetryRate = config?.pendingRetryRate || PENDING_RETRY_RATE;
         this.#pendingMaxRetries = config?.pendingMaxRetries || PENDING_MAX_RETRIES;
         this.#deadLetterTopic = config?.deadLetterTopic || DEAD_LETTER_TOPIC;
+        this.#groupMessagesCount = config?.groupMessagesCount || GROUP_MESSAGES_COUNT;
+        this.#unbalancedMessagesCount = config?.unbalancedMessagesCount || UNBALANCED_MESSAGES_COUNT;
     }
 
     _parseObjectResponse(reply: StreamMsgVals): { [key: string]: any } {
@@ -222,7 +230,7 @@ export class Events {
             this.#state[topic].unbalanced = {
                 redis: this.#redis.duplicate(),
                 lastId: "$",
-                count: 10,
+                count: this.#unbalancedMessagesCount,
                 timerId: setTimeout(this._receiveMessagesTick.bind(this, topic), 0)
             };
         } catch (error) {
@@ -310,7 +318,7 @@ export class Events {
             if (!this.#state[`${topic}-${group}`]) this.#state[`${topic}-${group}`] = {};
             this.#state[`${topic}-${group}`].grouped = {
                 redis: this.#redis.duplicate(),
-                count: 20,
+                count: this.#groupMessagesCount,
                 timerId: setTimeout(this._receiveGroupMessagesTick.bind(this, topic, group), 0)
             };
         } catch (error) {
@@ -427,7 +435,7 @@ export class Events {
         try {
             if (!this.#state[`${topic}-${group}`]) this.#state[`${topic}-${group}`] = {};
             this.#state[`${topic}-${group}`].pending = {
-                count: 10,
+                count: this.#groupMessagesCount,
                 timerId: setTimeout(this._receivePendingGroupMessagesTick.bind(this, topic, group), 0)
             };
         } catch (error) {

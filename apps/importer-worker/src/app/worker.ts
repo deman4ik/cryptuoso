@@ -1,4 +1,3 @@
-import { Observable, Subject } from "threads/observable";
 import { expose } from "threads/worker";
 import { DataStream } from "scramjet";
 import dayjs from "@cryptuoso/dayjs";
@@ -14,9 +13,6 @@ import logger, { Logger } from "@cryptuoso/logger";
 import { sql, pg, pgUtil } from "@cryptuoso/postgres";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { uniqueElementsBy, sortAsc } from "@cryptuoso/helpers";
-
-const subject = new Subject();
-let importerWorker: ImporterWorker;
 
 class ImporterWorker {
     #connector: PublicConnector;
@@ -366,8 +362,6 @@ class ImporterWorker {
             }
             const progressChanged = this.#importer.setCandlesProgress(chunk.timeframe, chunk.id);
             if (progressChanged) {
-                subject.next(this.#importer.state);
-
                 this.log.info(`Importer #${this.#importer.id} - ${this.#importer.progress} %`);
             }
         } catch (err) {
@@ -401,8 +395,6 @@ class ImporterWorker {
 
             const progressChanged = this.#importer.setTradesProgress(chunk.id);
             if (progressChanged) {
-                subject.next(this.#importer.state);
-
                 this.log.info(`Importer #${this.#importer.id} - ${this.#importer.progress} %`);
             }
         } catch (err) {
@@ -416,17 +408,10 @@ class ImporterWorker {
 }
 
 const worker = {
-    async init(state: ImporterState) {
-        importerWorker = new ImporterWorker(state);
-        return importerWorker.importer.state;
-    },
-    async process() {
+    async process(state: ImporterState) {
+        const importerWorker = new ImporterWorker(state);
         await importerWorker.process();
-        subject.complete();
         return importerWorker.importer.state;
-    },
-    progress() {
-        return Observable.from(subject);
     }
 };
 export type ImportWorker = typeof worker;
