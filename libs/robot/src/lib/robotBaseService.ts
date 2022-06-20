@@ -79,10 +79,8 @@ export class RobotBaseService extends HTTPService {
     #candlesSaveTimer: NodeJS.Timer;
     #checkAlertsTimer: NodeJS.Timer;
     #checkSubsTimer: NodeJS.Timer;
+    #watchTimer: NodeJS.Timer;
     #lastTick: { [key: string]: ExchangePrice } = {};
-    #cronWatch: cron.ScheduledTask = cron.schedule("0 */5 * * * *", this.watch.bind(this), {
-        scheduled: false
-    });
     #cronHandleChanges: cron.ScheduledTask;
     #cronRunRobots: cron.ScheduledTask = cron.schedule("0 */5 * * * *", this.runRobots.bind(this), {
         scheduled: false
@@ -96,8 +94,8 @@ export class RobotBaseService extends HTTPService {
     } = {};
     #retryOptions = {
         retries: 10,
-        minTimeout: 500,
-        maxTimeout: 10000,
+        minTimeout: 5000,
+        maxTimeout: 30000,
         onRetry: (err: any, i: number) => {
             if (err) {
                 this.log.warn(`Retry ${i} - ${err.message}`);
@@ -170,7 +168,7 @@ export class RobotBaseService extends HTTPService {
         this.#cronHandleChanges.start();
         await this.checkSubs();
         this.#cronRunRobots.start();
-        this.#cronWatch.start();
+        await this.watch();
         if (this.isRobotService) this.#candlesSaveTimer = setTimeout(this.handleCandlesToSave.bind(this), 0);
         this.#checkAlertsTimer = setTimeout(this.checkRobotAlerts.bind(this), 0);
     }
@@ -178,10 +176,7 @@ export class RobotBaseService extends HTTPService {
     async onServiceStop() {
         try {
             this.#cronHandleChanges.stop();
-
             this.#cronRunRobots.stop();
-            this.#cronWatch.stop();
-
             await this.unsubscribeAll();
             await sleep(5000);
             await this.#pool.terminate();
@@ -520,6 +515,8 @@ export class RobotBaseService extends HTTPService {
             );
         } catch (e) {
             this.log.error(e);
+        } finally {
+            if (!this.lightship.isServerShuttingDown()) this.#watchTimer = setTimeout(this.watch.bind(this), 60000 * 5);
         }
     }
 

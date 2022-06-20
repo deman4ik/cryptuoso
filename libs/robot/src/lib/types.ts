@@ -2,6 +2,7 @@ export const enum ExwatcherStatus {
     pending = "pending",
     importing = "importing",
     imported = "imported",
+    subscribing = "subscribing",
     subscribed = "subscribed",
     unsubscribed = "unsubscribed",
     failed = "failed"
