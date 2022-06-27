@@ -351,7 +351,8 @@ export default class TelegramBotService extends HTTPService {
                         if (success) {
                             await this.db.pg.query(sql`
                         UPDATE notifications 
-                        SET send_telegram = false 
+                        SET send_telegram = false,
+                        readed = true 
                         WHERE id = ${notification.id};`);
                         }
                     }

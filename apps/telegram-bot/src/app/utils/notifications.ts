@@ -13,7 +13,9 @@ import { round } from "@cryptuoso/helpers";
 
 //TODO: Notifications typings
 
-export function handleUserTrade(notification: Notification<any> & { telegramId: string }) {
+export function handleUserTrade(
+    notification: Notification<UserTradeEvent & { robotCode: string }> & { telegramId: string }
+) {
     const {
         status,
         asset,
@@ -26,7 +28,7 @@ export function handleUserTrade(notification: Notification<any> & { telegramId: 
         exitDate,
         exitExecuted,
         profit
-    } = notification.data as UserTradeEvent & { robotCode: string };
+    } = notification.data;
     //TODO: Set lang from DB
     const LANG = "en";
     const info = this.i18n.t(LANG, "userTrade.new", {
@@ -61,7 +63,9 @@ export function handleUserTrade(notification: Notification<any> & { telegramId: 
     };
 }
 
-export function handleSignalSubscriptionTrade(notification: Notification<any> & { telegramId: string }) {
+export function handleSignalSubscriptionTrade(
+    notification: Notification<SignalSubscriptionTrade & { robotCode: string }> & { telegramId: string }
+) {
     const {
         status,
         asset,
@@ -74,7 +78,7 @@ export function handleSignalSubscriptionTrade(notification: Notification<any> & 
         exitPrice,
         exitDate,
         profitPercent
-    } = notification.data as SignalSubscriptionTrade & { robotCode: string };
+    } = notification.data;
     //TODO: Set lang from DB
     const LANG = "en";
     const info = this.i18n.t(LANG, "signalSubTrade.new", {
@@ -114,8 +118,10 @@ export function handleSignalSubscriptionTrade(notification: Notification<any> & 
     };
 }
 
-export function handleUserExAccError(notification: Notification<any> & { telegramId: string }) {
-    const { name, error } = notification.data as UserExchangeAccountErrorEvent & { name: string };
+export function handleUserExAccError(
+    notification: Notification<UserExchangeAccountErrorEvent & { name: string }> & { telegramId: string }
+) {
+    const { name, error } = notification.data;
     //TODO: Set lang from DB
     const LANG = "en";
     return {
@@ -127,12 +133,14 @@ export function handleUserExAccError(notification: Notification<any> & { telegra
     };
 }
 
-export function handleUserRobotError(notification: Notification<any> & { telegramId: string }) {
-    const { userRobotId, robotCode, error } = notification.data as {
+export function handleUserRobotError(
+    notification: Notification<{
         userRobotId: string;
         robotCode: string;
         error: string;
-    };
+    }> & { telegramId: string }
+) {
+    const { userRobotId, robotCode, error } = notification.data;
     //TODO: Set lang from DB
     const LANG = "en";
     return {
@@ -145,15 +153,14 @@ export function handleUserRobotError(notification: Notification<any> & { telegra
     };
 }
 
-export function handleOrderError(notification: Notification<any> & { telegramId: string }) {
-    const {
-        userRobotId,
-        error,
-        orderId,
-        robotCode: code
-    } = notification.data as OrdersErrorEvent & {
-        robotCode: string;
-    };
+export function handleOrderError(
+    notification: Notification<
+        OrdersErrorEvent & {
+            robotCode: string;
+        }
+    > & { telegramId: string }
+) {
+    const { userRobotId, error, orderId, robotCode: code } = notification.data;
     //TODO: Set lang from DB
     const LANG = "en";
     return {
@@ -167,8 +174,8 @@ export function handleOrderError(notification: Notification<any> & { telegramId:
     };
 }
 
-export function handleBroadcastMessage(notification: Notification<any> & { telegramId: string }) {
-    const { message } = notification.data as { message: string };
+export function handleBroadcastMessage(notification: Notification<{ message: string }> & { telegramId: string }) {
+    const { message } = notification.data;
 
     return {
         telegramId: notification.telegramId,
@@ -176,10 +183,12 @@ export function handleBroadcastMessage(notification: Notification<any> & { teleg
     };
 }
 
-export function handleMessageSupportReply(notification: Notification<any> & { telegramId: string }) {
+export function handleMessageSupportReply(
+    notification: Notification<{ data: { message: string } }> & { telegramId: string }
+) {
     const {
         data: { message }
-    } = notification.data as { data: { message: string } };
+    } = notification.data;
     const LANG = "en";
     return {
         telegramId: notification.telegramId,
