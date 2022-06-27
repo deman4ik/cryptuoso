@@ -2,6 +2,7 @@
     "version": 1,
     "projects": {
         "analytics": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/analytics",
             "sourceRoot": "libs/analytics/src",
             "projectType": "library",
@@ -24,6 +25,7 @@
             "tags": []
         },
         "auth": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "apps/auth",
             "sourceRoot": "apps/auth/src",
             "projectType": "application",
@@ -78,6 +80,7 @@
             "tags": []
         },
         "auth-utils": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/auth-utils",
             "sourceRoot": "libs/auth-utils/src",
             "projectType": "library",
@@ -102,6 +105,7 @@
             "tags": []
         },
         "backtester-events": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/backtester-events",
             "sourceRoot": "libs/backtester-events/src",
             "projectType": "library",
@@ -126,6 +130,7 @@
             "tags": []
         },
         "backtester-state": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/backtester-state",
             "sourceRoot": "libs/backtester-state/src",
             "projectType": "library",
@@ -150,6 +155,7 @@
             "tags": []
         },
         "backtester-worker": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "apps/backtester-worker",
             "sourceRoot": "apps/backtester-worker/src",
             "projectType": "application",
@@ -205,6 +211,7 @@
             "tags": []
         },
         "billing": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/billing",
             "sourceRoot": "libs/billing/src",
             "projectType": "library",
@@ -227,6 +234,7 @@
             "tags": []
         },
         "ccxt-private": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/ccxt-private",
             "sourceRoot": "libs/ccxt-private/src",
             "projectType": "library",
@@ -251,6 +259,7 @@
             "tags": []
         },
         "ccxt-public": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/ccxt-public",
             "sourceRoot": "libs/ccxt-public/src",
             "projectType": "library",
@@ -275,6 +284,7 @@
             "tags": []
         },
         "connector-events": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/connector-events",
             "sourceRoot": "libs/connector-events/src",
             "projectType": "library",
@@ -299,6 +309,7 @@
             "tags": []
         },
         "connector-state": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/connector-state",
             "sourceRoot": "libs/connector-state/src",
             "projectType": "library",
@@ -323,6 +334,7 @@
             "tags": []
         },
         "connector-worker": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "apps/connector-worker",
             "sourceRoot": "apps/connector-worker/src",
             "projectType": "application",
@@ -378,6 +390,7 @@
             "tags": []
         },
         "dayjs": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/dayjs",
             "sourceRoot": "libs/dayjs/src",
             "projectType": "library",
@@ -402,6 +415,7 @@
             "tags": []
         },
         "errors": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/errors",
             "sourceRoot": "libs/errors/src",
             "projectType": "library",
@@ -426,6 +440,7 @@
             "tags": []
         },
         "events": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/events",
             "sourceRoot": "libs/events/src",
             "projectType": "library",
@@ -450,6 +465,7 @@
             "tags": []
         },
         "events-manager": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "apps/events-manager",
             "sourceRoot": "apps/events-manager/src",
             "projectType": "application",
@@ -504,6 +520,7 @@
             "tags": []
         },
         "exwatcher-events": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/exwatcher-events",
             "sourceRoot": "libs/exwatcher-events/src",
             "projectType": "library",
@@ -528,6 +545,7 @@
             "tags": []
         },
         "graphql-client": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/graphql-client",
             "sourceRoot": "libs/graphql-client/src",
             "projectType": "library",
@@ -551,6 +569,7 @@
             "tags": []
         },
         "helpers": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/helpers",
             "sourceRoot": "libs/helpers/src",
             "projectType": "library",
@@ -575,6 +594,7 @@
             "tags": []
         },
         "importer-events": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/importer-events",
             "sourceRoot": "libs/importer-events/src",
             "projectType": "library",
@@ -599,6 +619,7 @@
             "tags": []
         },
         "importer-state": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/importer-state",
             "sourceRoot": "libs/importer-state/src",
             "projectType": "library",
@@ -623,6 +644,7 @@
             "tags": []
         },
         "importer-worker": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "apps/importer-worker",
             "sourceRoot": "apps/importer-worker/src",
             "projectType": "application",
@@ -678,6 +700,7 @@
             "tags": []
         },
         "logger": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/logger",
             "sourceRoot": "libs/logger/src",
             "projectType": "library",
@@ -702,6 +725,7 @@
             "tags": []
         },
         "mail": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/mail",
             "sourceRoot": "libs/mail/src",
             "projectType": "library",
@@ -726,6 +750,7 @@
             "tags": []
         },
         "market": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/market",
             "sourceRoot": "libs/market/src",
             "projectType": "library",
@@ -750,6 +775,7 @@
             "tags": []
         },
         "notifications": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "apps/notifications",
             "sourceRoot": "apps/notifications/src",
             "projectType": "application",
@@ -804,6 +830,7 @@
             "tags": []
         },
         "portfolio-events": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/portfolio-events",
             "sourceRoot": "libs/portfolio-events/src",
             "projectType": "library",
@@ -826,6 +853,7 @@
             "tags": []
         },
         "portfolio-manager": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "apps/portfolio-manager",
             "sourceRoot": "apps/portfolio-manager/src",
             "projectType": "application",
@@ -879,6 +907,7 @@
             "tags": []
         },
         "portfolio-state": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/portfolio-state",
             "sourceRoot": "libs/portfolio-state/src",
             "projectType": "library",
@@ -901,6 +930,7 @@
             "tags": []
         },
         "postgres": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/postgres",
             "sourceRoot": "libs/postgres/src",
             "projectType": "library",
@@ -925,6 +955,7 @@
             "tags": []
         },
         "quickchart": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/quickchart",
             "sourceRoot": "libs/quickchart/src",
             "projectType": "library",
@@ -947,6 +978,7 @@
             "tags": []
         },
         "robot": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/robot",
             "sourceRoot": "libs/robot/src",
             "projectType": "library",
@@ -970,6 +1002,7 @@
             "tags": []
         },
         "robot-binance": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "apps/robot-binance",
             "sourceRoot": "apps/robot-binance/src",
             "projectType": "application",
@@ -1023,6 +1056,7 @@
             "tags": []
         },
         "robot-events": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/robot-events",
             "sourceRoot": "libs/robot-events/src",
             "projectType": "library",
@@ -1047,6 +1081,7 @@
             "tags": []
         },
         "robot-indicators": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/robot-indicators",
             "sourceRoot": "libs/robot-indicators/src",
             "projectType": "library",
@@ -1071,6 +1106,7 @@
             "tags": []
         },
         "robot-runner": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "apps/robot-runner",
             "sourceRoot": "apps/robot-runner/src",
             "projectType": "application",
@@ -1125,6 +1161,7 @@
             "tags": []
         },
         "robot-settings": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/robot-settings",
             "sourceRoot": "libs/robot-settings/src",
             "projectType": "library",
@@ -1149,6 +1186,7 @@
             "tags": []
         },
         "robot-state": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/robot-state",
             "sourceRoot": "libs/robot-state/src",
             "projectType": "library",
@@ -1173,6 +1211,7 @@
             "tags": []
         },
         "robot-thread": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/robot-thread",
             "sourceRoot": "libs/robot-thread/src",
             "projectType": "library",
@@ -1196,6 +1235,7 @@
             "tags": []
         },
         "robot-types": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/robot-types",
             "sourceRoot": "libs/robot-types/src",
             "projectType": "library",
@@ -1219,6 +1259,7 @@
             "tags": []
         },
         "service": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/service",
             "sourceRoot": "libs/service/src",
             "projectType": "library",
@@ -1243,6 +1284,7 @@
             "tags": []
         },
         "signal-subscription-events": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/signal-subscription-events",
             "sourceRoot": "libs/signal-subscription-events/src",
             "projectType": "library",
@@ -1266,6 +1308,7 @@
             "tags": []
         },
         "telegram-bot": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "apps/telegram-bot",
             "sourceRoot": "apps/telegram-bot/src",
             "projectType": "application",
@@ -1320,6 +1363,7 @@
             "tags": []
         },
         "test-helpers": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/test-helpers",
             "sourceRoot": "libs/test-helpers/src",
             "projectType": "library",
@@ -1344,6 +1388,7 @@
             "tags": []
         },
         "trade-stats": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/trade-stats",
             "sourceRoot": "libs/trade-stats/src",
             "projectType": "library",
@@ -1366,6 +1411,7 @@
             "tags": []
         },
         "trade-stats-events": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/trade-stats-events",
             "sourceRoot": "libs/trade-stats-events/src",
             "projectType": "library",
@@ -1388,6 +1434,7 @@
             "tags": []
         },
         "trade-stats-worker": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "apps/trade-stats-worker",
             "sourceRoot": "apps/trade-stats-worker/src",
             "projectType": "application",
@@ -1441,6 +1488,7 @@
             "tags": []
         },
         "user": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "apps/user",
             "sourceRoot": "apps/user/src",
             "projectType": "application",
@@ -1494,6 +1542,7 @@
             "tags": []
         },
         "user-events": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/user-events",
             "sourceRoot": "libs/user-events/src",
             "projectType": "library",
@@ -1517,6 +1566,7 @@
             "tags": []
         },
         "user-robot": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/user-robot",
             "sourceRoot": "libs/user-robot/src",
             "projectType": "library",
@@ -1540,6 +1590,7 @@
             "tags": []
         },
         "user-robot-dedicated": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "apps/user-robot-dedicated",
             "sourceRoot": "apps/user-robot-dedicated/src",
             "projectType": "application",
@@ -1593,6 +1644,7 @@
             "tags": []
         },
         "user-robot-events": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/user-robot-events",
             "sourceRoot": "libs/user-robot-events/src",
             "projectType": "library",
@@ -1617,6 +1669,7 @@
             "tags": []
         },
         "user-robot-runner": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "apps/user-robot-runner",
             "sourceRoot": "apps/user-robot-runner/src",
             "projectType": "application",
@@ -1671,6 +1724,7 @@
             "tags": []
         },
         "user-robot-state": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/user-robot-state",
             "sourceRoot": "libs/user-robot-state/src",
             "projectType": "library",
@@ -1682,7 +1736,6 @@
                         "lintFilePatterns": ["libs/user-robot-state/**/*.ts"]
                     }
                 },
-
                 "test": {
                     "builder": "@nrwl/jest:jest",
                     "options": {
@@ -1696,6 +1749,7 @@
             "tags": []
         },
         "user-robot-worker": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "apps/user-robot-worker",
             "sourceRoot": "apps/user-robot-worker/src",
             "projectType": "application",
@@ -1750,6 +1804,7 @@
             "tags": []
         },
         "user-state": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/user-state",
             "sourceRoot": "libs/user-state/src",
             "projectType": "library",
@@ -1774,6 +1829,7 @@
             "tags": []
         },
         "user-sub-events": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/user-sub-events",
             "sourceRoot": "libs/user-sub-events/src",
             "projectType": "library",
@@ -1796,6 +1852,7 @@
             "tags": []
         },
         "user-types": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "libs/user-types",
             "sourceRoot": "libs/user-types/src",
             "projectType": "library",
@@ -1819,6 +1876,7 @@
             "tags": []
         },
         "utils": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "apps/utils",
             "sourceRoot": "apps/utils/src",
             "projectType": "application",
@@ -1874,6 +1932,7 @@
             "tags": []
         },
         "webhooks": {
+            "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "apps/webhooks",
             "sourceRoot": "apps/webhooks/src",
             "projectType": "application",
@@ -1925,5 +1984,6 @@
             },
             "tags": []
         }
-    }
+    },
+    "$schema": "./node_modules/nx/schemas/workspace-schema.json"
 }
