@@ -552,6 +552,8 @@ userSubscription:
     status: 💰 Subscription <b>${name}</b> is <b>${status}</b>${message}
     expiring: ${date}\n\nPlease renew you subscription.\n\nAfter subscription expires all robots will be <b>stopped</b>! If there are any <b>open positions</b> they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!
     expired: \n\nAll robots are <b>stopping</b> now! If there are any <b>open positions</b> they will be <b>canceled</b> (closed) with current market prices and potentially may cause profit <b>losses</b>!
+userPayment:
+    status: 🧾  Your charge <b>${code}</b> for subscription <b>${name}</b> is <b>${status}</b>${context}
 signalSubTrade:
     new: >
         🚨✅ New ${direction} ${asset}/${currency} Signal!\n
