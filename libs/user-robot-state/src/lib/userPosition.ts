@@ -940,7 +940,7 @@ export class UserPosition {
             // Exit hasn't any open signal orders
             if (!this.hasOpenExitOrders) {
                 if (canceledOrders.length > 5) {
-                    throw new BaseError("Can't close position. Please contact support");
+                    throw new BaseError("Can't close position.");
                 }
 
                 // Creating new exit order to close position
