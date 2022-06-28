@@ -1011,7 +1011,7 @@ export default class UserRobotRunnerService extends HTTPService {
         )
             await this.pause({
                 id: event.userRobotId,
-                message: `Order #${event.orderId} error - ${event.error}. Please contact support.`
+                message: `Order #${event.orderId} error - ${event.error}.`
             });
     }
 
