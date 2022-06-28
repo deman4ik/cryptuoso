@@ -1295,7 +1295,7 @@ export default class UserService extends HTTPService {
                             userId: savedUserPayment.userId,
                             subscriptionName: subscription.subscriptionName,
                             subscriptionOptionName: subscription.name,
-                            error: `New ${userPayment.status} payment ${userPayment.code} for ${subscription.subscriptionName} ${savedUserSub.status} subscription. Please contact support.`,
+                            error: `New ${userPayment.status} payment ${userPayment.code} for ${subscription.subscriptionName} ${savedUserSub.status} subscription.`,
                             timestamp: dayjs.utc().toISOString(),
                             userPayment
                         }
