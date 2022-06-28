@@ -54,10 +54,10 @@ export default class NotificationsService extends BaseService {
 
     async onServiceStart() {
         this.events.subscribe({
-            [UserRobotWorkerEvents.ERROR]: {
+            /* [UserRobotWorkerEvents.ERROR]: {
                 schema: UserRobotWorkerSchema[UserRobotWorkerEvents.ERROR],
                 handler: this.handleUserRobotError.bind(this)
-            },
+            },*/
             [UserTradeEvents.TRADE]: {
                 schema: UserTradeSchema[UserTradeEvents.TRADE],
                 handler: this.handleUserTrade.bind(this)
@@ -177,7 +177,7 @@ SELECT
 WHERE u.id = ${userId};
 `);
 
-    async handleUserRobotError(event: UserRobotWorkerError) {
+    /*  async handleUserRobotError(event: UserRobotWorkerError) {
         try {
             this.log.info(`Handling user robot error event`, event);
             const { userRobotId, error, timestamp } = event;
@@ -202,7 +202,7 @@ WHERE u.id = ${userId};
             this.log.error("Failed to handleUserRobotError", err, event);
             throw err;
         }
-    }
+    }*/
 
     async handleUserTrade(event: UserTradeEvent) {
         try {

@@ -160,14 +160,14 @@ export function handleOrderError(
         }
     > & { telegramId: string }
 ) {
-    const { userRobotId, error, orderId, robotCode: code } = notification.data;
+    const { userRobotId, error, orderId } = notification.data;
     //TODO: Set lang from DB
     const LANG = "en";
     return {
         telegramId: notification.telegramId,
         message: this.i18n.t(LANG, `userRobot.orderError`, {
             id: userRobotId,
-            code,
+
             orderId,
             error: error ? error.split("<html>")[0] : ""
         })
