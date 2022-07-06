@@ -43,7 +43,13 @@ import { Event } from "@cryptuoso/events";
 import { OrderStatus, SignalEvent, TradeAction } from "@cryptuoso/market";
 import { UserSub } from "@cryptuoso/billing";
 import { GA } from "@cryptuoso/analytics";
-import { PortfolioDB, PortfolioRobotDB, UserPortfolioDB, UserPortfolioState } from "@cryptuoso/portfolio-state";
+import {
+    PortfolioDB,
+    PortfolioRobotDB,
+    PortfolioSettings,
+    UserPortfolioDB,
+    UserPortfolioState
+} from "@cryptuoso/portfolio-state";
 import {
     PortfolioManagerBuildUserPortfolio,
     PortfolioManagerInEvents,
@@ -817,8 +823,8 @@ export default class UserRobotRunnerService extends HTTPService {
             if (!portfolio.base || portfolio.status !== "started") return;
 
             const { options } = portfolio.settings;
-            const userPortfolios = await this.db.pg.any<{ id: UserPortfolioDB["id"] }>(sql`
-            SELECT p.id
+            const userPortfolios = await this.db.pg.any<{ id: UserPortfolioDB["id"]; settings: PortfolioSettings }>(sql`
+            SELECT p.id, p.user_portfolio_settings as settings
             FROM v_user_portfolios p
             WHERE (p.user_portfolio_settings->>'custom')::boolean = false
             AND p.exchange = ${portfolio.exchange}
@@ -842,12 +848,20 @@ export default class UserRobotRunnerService extends HTTPService {
             }
 
             const stringifiedRobots = JSON.stringify(robots);
-            for (const { id } of userPortfolios) {
+            for (const { id, settings } of userPortfolios) {
                 try {
-                    await this.db.pg.query(sql`
-                update user_portfolio_settings set robots = ${stringifiedRobots}
-                WHERE user_portfolio_id = ${id} and active = true;
+                    await this.db.pg.transaction(async (t) => {
+                        await t.query(sql`UPDATE user_portfolio_settings 
+                SET active = ${false}
+                WHERE user_portfolio_id = ${id};
                 `);
+                        await t.query(sql`
+                insert into user_portfolio_settings (user_portfolio_id, active_from, user_portfolio_settings, robots, active)
+                values (${id}, ${dayjs.utc().toISOString()}, ${JSON.stringify(
+                            settings
+                        )}, ${stringifiedRobots}, ${true}); 
+                `);
+                    });
                     await this.syncUserPortfolioRobots({ userPortfolioId: id });
                 } catch (error) {
                     this.log.error(`Failed to update user portfolio's #${id} settings and sync`, error);
