@@ -1,19 +1,21 @@
 import { logger } from "./logger";
 import dayjs from "@cryptuoso/dayjs";
 import { v4 as uuid } from "uuid";
+import { groupBy } from "@cryptuoso/helpers";
 
+interface Trace {
+    message: string;
+    startedAt: dayjs.Dayjs;
+    endedAt?: dayjs.Dayjs;
+    duration?: number;
+}
 export class Tracer {
     #id: string;
 
     #meta: { [key: string]: any };
 
     #traces: {
-        [key: string]: {
-            message: string;
-            startedAt: dayjs.Dayjs;
-            endedAt?: dayjs.Dayjs;
-            duration?: number;
-        };
+        [key: string]: Trace;
     } = {};
     constructor(meta?: { [key: string]: any }) {
         this.#id = uuid();
@@ -54,5 +56,14 @@ export class Tracer {
             endedAt: t.endedAt.toISOString(),
             duration: t.duration
         }));
+    }
+
+    get summary() {
+        return Object.entries(groupBy(Object.values(this.#traces), ({ message }) => message)).map(
+            ([key, data]: [string, Trace[]]) => ({
+                trace: key,
+                duration: data.reduce((acc, { duration }) => acc + duration, 0)
+            })
+        );
     }
 }

@@ -53,3 +53,7 @@ migrations.json
 /testResults
 
 .bot
+
+rust
+rust/target/
+rust/index.node

@@ -49,4 +49,4 @@ migrations.json
 
 jest.config.js
 
-/apps/telegram-bot/src/app/legacy
+/rust
