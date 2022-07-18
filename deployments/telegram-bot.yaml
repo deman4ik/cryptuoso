@@ -85,7 +85,7 @@ spec:
                                 name: service-secrets
                                 key: BOT_HOST
                       - name: BOT_PORT
-                        value: 3333
+                        value: "3333"
                       - name: MAILGUN_API_KEY
                         valueFrom:
                             secretKeyRef:
