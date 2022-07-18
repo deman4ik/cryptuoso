@@ -39,6 +39,10 @@ import {
 import { startActions } from "./dialogs/start";
 import { Request, Response, Protocol } from "restana";
 import { listPortfoliosActions } from "./dialogs/listPortfolios";
+import express, { Express } from "express";
+import helmet from "helmet";
+import bodyParser from "body-parser";
+import http from "http";
 
 export type TelegramBotServiceConfig = HTTPServiceConfig;
 
@@ -47,6 +51,8 @@ const enum JobTypes {
 }
 
 export default class TelegramBotService extends HTTPService {
+    expressApp: Express;
+    expressServer: http.Server;
     bot: Bot;
     authUtils: Auth;
     gqlClient: GraphQLClient;
@@ -93,6 +99,10 @@ export default class TelegramBotService extends HTTPService {
                 plus: plusNum
             }
         });
+
+        this.expressApp = express();
+        this.expressApp.use(helmet());
+        this.expressApp.use(bodyParser.json());
 
         this.bot = new Bot<BotContext>(process.env.BOT_TOKEN);
 
@@ -261,7 +271,9 @@ export default class TelegramBotService extends HTTPService {
                 ctx.session?.user ? getMainKeyboard(ctx) : getStartKeyboard(ctx)
             );
         });
+
         this.addOnStartedHandler(this.onStarted);
+        this.addOnStopHandler(this.onStop);
     }
 
     async onStarted() {
@@ -281,7 +293,14 @@ export default class TelegramBotService extends HTTPService {
         });
 
         if (process.env.BOT_LOCAL) this.bot.start();
-        else await this.server.use(webhookCallback(this.bot, "express"));
+        else {
+            await this.expressApp.use(webhookCallback(this.bot, "express"));
+            this.expressServer = await this.expressApp.listen(+process.env.BOT_PORT, "0.0.0.0");
+        }
+    }
+
+    async onStop() {
+        if (!process.env.BOT_LOCAL) await this.expressServer.close();
     }
 
     async checkNotifications() {
