@@ -54,6 +54,5 @@ migrations.json
 
 .bot
 
-rust
-rust/target/
-rust/index.node
+.yarn
+

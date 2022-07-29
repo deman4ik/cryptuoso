@@ -69,8 +69,8 @@
         "build:portfolio-manager": "nx build portfolio-manager --prod",
         "serve:portfolio-manager": "nx serve portfolio-manager --watch=false",
         "workspace-generator": "nx workspace-generator",
-        "build-rust": "npm --prefix /rust run build",
-        "build-rust-release": "npm --prefix /rust run build-release"
+        "build-rs-debug": "npm --prefix rs-api run build:debug",
+        "build-rs": "npm --prefix rs-api run build"
     },
     "private": true,
     "dependencies": {
@@ -169,5 +169,6 @@
         "prettier": "2.7.1",
         "ts-jest": "27.1.4",
         "ts-node": "10.8.1"
-    }
+    },
+    "packageManager": "yarn@3.2.2"
 }

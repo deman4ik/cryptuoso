@@ -13,7 +13,7 @@
         "pretty": true,
         "target": "esnext",
         "module": "esnext",
-        "typeRoots": ["node_modules/@types", "@types"],
+        "typeRoots": ["node_modules/@types", "@types", "rs-api"],
         "skipLibCheck": true,
         "baseUrl": ".",
         "paths": {
@@ -60,7 +60,8 @@
             "@cryptuoso/user-robot-state": ["libs/user-robot-state/src/index.ts"],
             "@cryptuoso/user-state": ["libs/user-state/src/index.ts"],
             "@cryptuoso/user-sub-events": ["libs/user-sub-events/src/index.ts"],
-            "@cryptuoso/user-types": ["libs/user-types/src/index.ts"]
+            "@cryptuoso/user-types": ["libs/user-types/src/index.ts"],
+            "@cryptuoso/rs": ["rs-api/index"]
         },
         "resolveJsonModule": true
     },

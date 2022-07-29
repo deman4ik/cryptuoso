@@ -14,6 +14,8 @@ RUN \
     ssh-keyscan github.com >> ~/.ssh/known_hosts && \
     mkdir -p /usr/src/app
 
+RUN RUSTFLAGS="-C target-feature=-crt-static"
+
 WORKDIR /usr/src/app
 
 COPY . /usr/src/app/
