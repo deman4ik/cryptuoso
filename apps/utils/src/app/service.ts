@@ -3,7 +3,7 @@ import { Tracer } from "@cryptuoso/logger";
 import { sql } from "@cryptuoso/postgres";
 import { DBCandle } from "@cryptuoso/market";
 import { TulipIndicator } from "@cryptuoso/robot-indicators";
-import { sum } from "@cryptuoso/rs";
+import { StrategyType, T2TrendFriendRobot } from "@cryptuoso/rs";
 
 export type UtilsServiceConfig = HTTPServiceConfig;
 
@@ -18,10 +18,17 @@ export default class UtilsService extends HTTPService {
         }
     }
     async onStartRS() {
-        this.log.debug(sum(2, 3));
+        const robot = new T2TrendFriendRobot(1440, { state: "initial" });
+
+        const result = robot.run();
+
+        this.log.info(result);
+        this.log.info(robot.strategyType);
+        this.log.info(robot.timeframe);
+        this.log.info(robot.state);
     }
 
-    async onStart() {
+    /* async onStart() {
         const candles = await this.db.pg.many<DBCandle>(sql`SELECT open, high, low, close, volume 
         FROM candles
         WHERE exchange = 'binance_futures' and asset = 'BTC' and currency = 'USDT' and timeframe = 1440
@@ -62,5 +69,5 @@ export default class UtilsService extends HTTPService {
         // TULIP END
 
         this.log.info(tracer.state);
-    }
+    } */
 }
