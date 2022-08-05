@@ -181,16 +181,21 @@ export default class AuthService extends HTTPService {
     }
 
     async loginTelegram(req: RequestExtended, res: HttpResponse) {
-        const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.loginTg(req.body.input.data);
+        try {
+            const { accessToken, refreshToken, refreshTokenExpireAt } = await this.auth.loginTg(req.body.input.data);
 
-        res.setHeader(
-            "Set-Cookie",
-            Cookie.serialize("refresh_token", refreshToken, this._makeCookieProps(refreshTokenExpireAt))
-        );
-        res.send({
-            accessToken
-        });
-        res.end();
+            res.setHeader(
+                "Set-Cookie",
+                Cookie.serialize("refresh_token", refreshToken, this._makeCookieProps(refreshTokenExpireAt))
+            );
+            res.send({
+                accessToken
+            });
+            res.end();
+        } catch (err) {
+            this.log.error(err);
+            throw err;
+        }
     }
 
     async setTelegram(req: RequestExtended, res: HttpResponse) {
