@@ -323,8 +323,9 @@ export class Auth {
                 ${user.access},
                 ${JSON.stringify(user.settings)}
             );
-        GA.event(user.id, "auth", "register");
     `);
+
+            GA.event(user.id, "auth", "register");
         } else {
             if (user.status === UserStatus.enabled)
                 throw new ActionsHandlerError("User account already exists.", { email }, "CONFLICT", 409);
