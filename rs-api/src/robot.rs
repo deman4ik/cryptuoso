@@ -2,22 +2,30 @@ pub mod indicator;
 pub mod position;
 pub mod strategy;
 
+#[napi(object)]
+#[derive(Clone)]
+pub struct RobotSettings {
+  pub exchange: String,
+  pub timeframe: u32,
+  pub strategy_settings: strategy::StrategySettings,
+}
+
 pub struct Robot {
-  timeframe: u32,
-  strategy_type: strategy::StrategyType,
+  settings: RobotSettings,
   strategy: strategy::Strategy,
 }
 
 impl Robot {
   pub fn new(
-    timeframe: u32,
-    strategy_type: strategy::StrategyType,
+    settings: RobotSettings,
+    strategy_params: strategy::StrategyParams,
     strategy_state: strategy::StrategyState,
   ) -> Self {
+    let strategy_settings = settings.strategy_settings.clone();
+
     Robot {
-      timeframe,
-      strategy_type,
-      strategy: strategy::Strategy::new(strategy_type, strategy_state),
+      settings,
+      strategy: strategy::Strategy::new(strategy_settings, strategy_params, strategy_state),
     }
   }
 
@@ -29,11 +37,11 @@ impl Robot {
     self.strategy.state()
   }
 
-  pub fn timeframe(&self) -> u32 {
-    self.timeframe
+  pub fn strategy_params(&self) -> strategy::StrategyParams {
+    self.strategy.params()
   }
 
-  pub fn strategy_type(&self) -> strategy::StrategyType {
-    self.strategy_type
+  pub fn settings(&self) -> RobotSettings {
+    self.settings.clone()
   }
 }

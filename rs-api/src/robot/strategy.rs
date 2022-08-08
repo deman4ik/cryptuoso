@@ -1,6 +1,8 @@
-use dummy::{DummyStrategyState, Strategy as DummyStrategy};
+use dummy::{DummyStrategyParams, DummyStrategyState, Strategy as DummyStrategy};
 use napi::bindgen_prelude::ToNapiValue;
-use t2_trend_friend::{Strategy as T2TrendFriendStrategy, T2TrendFriendStrategyState};
+use t2_trend_friend::{
+  Strategy as T2TrendFriendStrategy, T2TrendFriendStrategyParams, T2TrendFriendStrategyState,
+};
 
 pub mod dummy;
 pub mod t2_trend_friend;
@@ -20,6 +22,27 @@ pub enum StrategyType {
   TrendlingShort,
 }
 
+#[napi(object)]
+#[derive(Clone, Copy)]
+pub struct StrategySettings {
+  pub strategy_type: StrategyType,
+  pub backtest: bool,
+}
+
+pub enum StrategyParams {
+  Breakout(DummyStrategyParams),
+  BreakoutV2(DummyStrategyParams),
+  Channels(DummyStrategyParams),
+  CounterCandle(DummyStrategyParams),
+  DoubleReverseMM(DummyStrategyParams),
+  FxCash(DummyStrategyParams),
+  IRSTS(DummyStrategyParams),
+  Parabolic(DummyStrategyParams),
+  T2TrendFriend(T2TrendFriendStrategyParams),
+  TrendlingLong(DummyStrategyParams),
+  TrendlingShort(DummyStrategyParams),
+}
+
 pub enum StrategyState {
   Breakout(DummyStrategyState),
   BreakoutV2(DummyStrategyState),
@@ -35,10 +58,12 @@ pub enum StrategyState {
 }
 
 pub trait BaseStrategy {
+  type Params;
   type State;
 
-  fn new(state: Self::State) -> Self;
+  fn new(settings: StrategySettings, params: Self::Params, state: Self::State) -> Self;
   fn run(&mut self) -> StrategyState;
+  fn params(&self) -> StrategyParams;
   fn state(&self) -> StrategyState;
 }
 
@@ -57,14 +82,25 @@ pub enum Strategy {
 }
 
 impl Strategy {
-  pub fn new(strategy_type: StrategyType, strategy_state: StrategyState) -> Self {
+  pub fn new(
+    strategy_settings: StrategySettings,
+    strategy_params: StrategyParams,
+    strategy_state: StrategyState,
+  ) -> Self {
     let state = match strategy_state {
       StrategyState::T2TrendFriend(state) => state,
       _ => panic!("Strategy not implemented"),
     };
 
-    match strategy_type {
-      StrategyType::T2TrendFriend => Self::T2TrendFriend(T2TrendFriendStrategy::new(state)),
+    let params = match strategy_params {
+      StrategyParams::T2TrendFriend(params) => params,
+      _ => panic!("Strategy not implemented"),
+    };
+
+    match strategy_settings.strategy_type {
+      StrategyType::T2TrendFriend => {
+        Self::T2TrendFriend(T2TrendFriendStrategy::new(strategy_settings, params, state))
+      }
       _ => panic!("Strategy not implemented"),
     }
   }
@@ -82,6 +118,22 @@ impl Strategy {
       Self::T2TrendFriend(strategy) => strategy.run(),
       Self::TrendlingLong(strategy) => strategy.run(),
       Self::TrendlingShort(strategy) => strategy.run(),
+    }
+  }
+
+  pub fn params(&self) -> StrategyParams {
+    match self {
+      Self::Breakout(strategy) => strategy.params(),
+      Self::BreakoutV2(strategy) => strategy.params(),
+      Self::Channels(strategy) => strategy.params(),
+      Self::CounterCandle(strategy) => strategy.params(),
+      Self::DoubleReverseMM(strategy) => strategy.params(),
+      Self::FxCash(strategy) => strategy.params(),
+      Self::IRSTS(strategy) => strategy.params(),
+      Self::Parabolic(strategy) => strategy.params(),
+      Self::T2TrendFriend(strategy) => strategy.params(),
+      Self::TrendlingLong(strategy) => strategy.params(),
+      Self::TrendlingShort(strategy) => strategy.params(),
     }
   }
 

@@ -6,12 +6,14 @@ pub struct Params {
   period: u8,
 }
 
+#[allow(non_snake_case)]
 pub struct SMA {
   params: Params,
   results: Option<Vec<f64>>,
   result: Option<f64>,
 }
 
+#[allow(dead_code)]
 impl SMA {
   fn new(params: Params, results: Option<Vec<f64>>) -> Self {
     SMA {

@@ -1,4 +1,6 @@
-use crate::robot::strategy::t2_trend_friend::T2TrendFriendStrategyState;
+use crate::robot::strategy::t2_trend_friend::{
+  T2TrendFriendStrategyParams, T2TrendFriendStrategyState,
+};
 use crate::robot::strategy::*;
 use crate::robot::*;
 
@@ -12,11 +14,15 @@ struct T2TrendFriendRobot {
 #[allow(dead_code)]
 impl T2TrendFriendRobot {
   #[napi(constructor)]
-  pub fn new(timeframe: u32, strategy_state: T2TrendFriendStrategyState) -> Self {
+  pub fn new(
+    settings: RobotSettings,
+    strategy_params: T2TrendFriendStrategyParams,
+    strategy_state: T2TrendFriendStrategyState,
+  ) -> Self {
     T2TrendFriendRobot {
       robot: Robot::new(
-        timeframe,
-        StrategyType::T2TrendFriend,
+        settings,
+        StrategyParams::T2TrendFriend(strategy_params),
         StrategyState::T2TrendFriend(strategy_state),
       ),
     }
@@ -32,13 +38,16 @@ impl T2TrendFriendRobot {
   }
 
   #[napi(getter)]
-  pub fn timeframe(&self) -> u32 {
-    self.robot.timeframe()
+  pub fn settings(&self) -> RobotSettings {
+    self.robot.settings()
   }
 
   #[napi(getter)]
-  pub fn strategy_type(&self) -> strategy::StrategyType {
-    self.robot.strategy_type()
+  pub fn strategy_params(&self) -> T2TrendFriendStrategyParams {
+    match self.robot.strategy_params() {
+      StrategyParams::T2TrendFriend(params) => params,
+      _ => panic!("Invalid strategy params"),
+    }
   }
 
   #[napi(getter)]

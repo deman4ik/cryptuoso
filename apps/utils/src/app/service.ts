@@ -3,7 +3,13 @@ import { Tracer } from "@cryptuoso/logger";
 import { sql } from "@cryptuoso/postgres";
 import { DBCandle } from "@cryptuoso/market";
 import { TulipIndicator } from "@cryptuoso/robot-indicators";
-import { StrategyType, T2TrendFriendRobot } from "@cryptuoso/rs";
+import {
+    RobotSettings,
+    StrategyType,
+    T2TrendFriendRobot,
+    T2TrendFriendStrategyParams,
+    T2TrendFriendStrategyState
+} from "@cryptuoso/rs";
 
 export type UtilsServiceConfig = HTTPServiceConfig;
 
@@ -18,13 +24,31 @@ export default class UtilsService extends HTTPService {
         }
     }
     async onStartRS() {
-        const robot = new T2TrendFriendRobot(1440, { state: "initial" });
+        const robotSettings: RobotSettings = {
+            exchange: "binance_futures",
+
+            timeframe: 60,
+            strategySettings: {
+                strategyType: StrategyType.T2TrendFriend,
+                backtest: false
+            }
+        };
+        const strategyParams: T2TrendFriendStrategyParams = {
+            sma1: 10,
+            sma2: 20,
+            sma3: 30,
+            minBarsToHold: 10
+        };
+        const strategyState: T2TrendFriendStrategyState = {
+            state: "idle"
+        };
+        const robot = new T2TrendFriendRobot(robotSettings, strategyParams, strategyState);
 
         const result = robot.run();
 
         this.log.info(result);
-        this.log.info(robot.strategyType);
-        this.log.info(robot.timeframe);
+        this.log.info(robot.settings);
+        this.log.info(robot.strategyParams);
         this.log.info(robot.state);
     }
 

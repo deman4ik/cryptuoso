@@ -167,6 +167,7 @@
         "node-loader": "^2.0.0",
         "nx": "14.3.6",
         "prettier": "2.7.1",
+        "ts-file-parser": "^0.0.21",
         "ts-jest": "27.1.4",
         "ts-node": "10.8.1"
     },
