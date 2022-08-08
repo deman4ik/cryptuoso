@@ -53,6 +53,7 @@ impl Robot {
 #[serde(rename_all = "camelCase")]
 pub struct Candle {
   pub time: i64,
+  pub timestamp: String,
   pub timeframe: u16,
   pub open: f64,
   pub high: f64,

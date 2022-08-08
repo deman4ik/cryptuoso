@@ -1,5 +1,5 @@
 use crate::robot::indicator::BaseIndicator;
-use crate::robot::indicator::SMA::{Params, SMA};
+use crate::robot::indicator::SMA::{Params, SMAResult, SMA};
 use crate::robot::strategy::*;
 use crate::robot::Candle;
 
@@ -17,9 +17,9 @@ pub struct T2TrendFriendStrategyParams {
 #[napi(object)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct T2TrendFriendStrategyState {
-  pub sma1_results: Option<Vec<f64>>,
-  pub sma2_results: Option<Vec<f64>>,
-  pub sma3_results: Option<Vec<f64>>,
+  pub sma1_result: Option<SMAResult>,
+  pub sma2_result: Option<SMAResult>,
+  pub sma3_result: Option<SMAResult>,
 }
 
 pub struct Indicators {
@@ -52,18 +52,18 @@ impl BaseStrategy for Strategy {
       period: params.sma3,
     };
 
-    let sma1_results = match &state.sma1_results {
-      Some(results) => Some(results.clone()),
+    let sma1_result = match &state.sma1_result {
+      Some(result) => Some(result.clone()),
       None => None,
     };
 
-    let sma2_results = match &state.sma2_results {
-      Some(results) => Some(results.clone()),
+    let sma2_result = match &state.sma2_result {
+      Some(result) => Some(result.clone()),
       None => None,
     };
 
-    let sma3_results = match &state.sma3_results {
-      Some(results) => Some(results.clone()),
+    let sma3_result = match &state.sma3_result {
+      Some(result) => Some(result.clone()),
       None => None,
     };
 
@@ -72,9 +72,9 @@ impl BaseStrategy for Strategy {
       params: params,
       state: state,
       indicators: Indicators {
-        sma1: SMA::new(sma1_params, sma1_results),
-        sma2: SMA::new(sma2_params, sma2_results),
-        sma3: SMA::new(sma3_params, sma3_results),
+        sma1: SMA::new(sma1_params, sma1_result),
+        sma2: SMA::new(sma2_params, sma2_result),
+        sma3: SMA::new(sma3_params, sma3_result),
       },
       candles: None,
     }
@@ -89,9 +89,9 @@ impl BaseStrategy for Strategy {
       } //TODO: parallelize
       None => panic!("candles is None"),
     }
-    self.state.sma1_results = self.indicators.sma1.results();
-    self.state.sma2_results = self.indicators.sma2.results();
-    self.state.sma3_results = self.indicators.sma3.results();
+    self.state.sma1_result = self.indicators.sma1.result().clone();
+    self.state.sma2_result = self.indicators.sma2.result().clone();
+    self.state.sma3_result = self.indicators.sma3.result().clone();
   }
 
   fn run_strategy(&mut self) {
@@ -127,9 +127,9 @@ mod test {
   #[test]
   fn should_create_new_strategy_instance() {
     let initial_state = T2TrendFriendStrategyState {
-      sma1_results: None,
-      sma2_results: None,
-      sma3_results: None,
+      sma1_result: None,
+      sma2_result: None,
+      sma3_result: None,
     };
     let strategy = Strategy::new(
       StrategySettings {
@@ -166,9 +166,9 @@ mod test {
       },
       params.clone(),
       T2TrendFriendStrategyState {
-        sma1_results: None,
-        sma2_results: None,
-        sma3_results: None,
+        sma1_result: None,
+        sma2_result: None,
+        sma3_result: None,
       },
     );
     let candles = load_candles();
@@ -179,8 +179,8 @@ mod test {
       _ => panic!("wrong strategy state"),
     };
 
-    assert!(raw_state.sma1_results.unwrap().len() > 0);
-    assert!(raw_state.sma2_results.unwrap().len() > 0);
-    assert!(raw_state.sma3_results.unwrap().len() > 0);
+    assert!(raw_state.sma1_result.unwrap().result > 0.0);
+    assert!(raw_state.sma2_result.unwrap().result > 0.0);
+    assert!(raw_state.sma3_result.unwrap().result > 0.0);
   }
 }

@@ -6,3 +6,4 @@ extern crate napi_derive;
 pub mod api;
 pub mod robot;
 pub mod test_utils;
+pub mod utils;
