@@ -40,11 +40,18 @@ export default class UtilsService extends HTTPService {
             minBarsToHold: 10
         };
         const strategyState: T2TrendFriendStrategyState = {
-            state: "idle"
+            sma1Results: undefined,
+            sma2Results: undefined,
+            sma3Results: undefined
         };
         const robot = new T2TrendFriendRobot(robotSettings, strategyParams, strategyState);
 
-        const result = robot.run();
+        const candles = await this.db.pg.many<DBCandle>(sql`SELECT time, timeframe, open, high, low, close, volume 
+        FROM candles
+        WHERE exchange = 'binance_futures' and asset = 'BTC' and currency = 'USDT' and timeframe = 1440
+        ORDER BY timestamp ASC LIMIT 300;`);
+
+        const result = robot.run([...candles]);
 
         this.log.info(result);
         this.log.info(robot.settings);

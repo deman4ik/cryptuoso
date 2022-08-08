@@ -1,3 +1,5 @@
+use serde::Deserialize;
+
 pub mod indicator;
 pub mod position;
 pub mod strategy;
@@ -6,7 +8,7 @@ pub mod strategy;
 #[derive(Clone)]
 pub struct RobotSettings {
   pub exchange: String,
-  pub timeframe: u32,
+  pub timeframe: u16,
   pub strategy_settings: strategy::StrategySettings,
 }
 
@@ -29,8 +31,8 @@ impl Robot {
     }
   }
 
-  pub fn run(&mut self) -> strategy::StrategyState {
-    self.strategy.run()
+  pub fn run(&mut self, candles: Vec<Candle>) -> strategy::StrategyState {
+    self.strategy.run(candles)
   }
 
   pub fn state(&self) -> strategy::StrategyState {
@@ -44,4 +46,17 @@ impl Robot {
   pub fn settings(&self) -> RobotSettings {
     self.settings.clone()
   }
+}
+
+#[napi(object)]
+#[derive(Debug, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Candle {
+  pub time: i64,
+  pub timeframe: u16,
+  pub open: f64,
+  pub high: f64,
+  pub low: f64,
+  pub close: f64,
+  pub volume: f64,
 }

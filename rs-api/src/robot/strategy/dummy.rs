@@ -7,7 +7,7 @@ pub struct DummyStrategyParams {
 }
 
 #[napi(object)]
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DummyStrategyState {
   pub state: String,
 }
@@ -30,8 +30,18 @@ impl BaseStrategy for Strategy {
     }
   }
 
-  fn run(&mut self) -> StrategyState {
-    self.state.state = "run completed".to_string();
+  fn calc_indicatos(&mut self) {
+    ()
+  }
+
+  fn run_strategy(&mut self) {
+    ()
+  }
+
+  fn run(&mut self, _candles: Vec<Candle>) -> StrategyState {
+    self.calc_indicatos();
+    self.run_strategy();
+
     StrategyState::Breakout(self.state.clone())
   }
 

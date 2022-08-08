@@ -29,8 +29,8 @@ impl T2TrendFriendRobot {
   }
 
   #[napi]
-  pub fn run(&mut self) -> T2TrendFriendStrategyState {
-    let state = self.robot.run();
+  pub fn run(&mut self, candles: Vec<Candle>) -> T2TrendFriendStrategyState {
+    let state = self.robot.run(candles);
     match state {
       StrategyState::T2TrendFriend(state) => state,
       _ => panic!("Invalid strategy state"),

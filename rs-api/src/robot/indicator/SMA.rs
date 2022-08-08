@@ -1,9 +1,10 @@
+use crate::robot::Candle;
 use yata::prelude::*;
 
 use super::BaseIndicator;
 
 pub struct Params {
-  period: u8,
+  pub period: u16,
 }
 
 #[allow(non_snake_case)]
@@ -15,7 +16,7 @@ pub struct SMA {
 
 #[allow(dead_code)]
 impl SMA {
-  fn new(params: Params, results: Option<Vec<f64>>) -> Self {
+  pub fn new(params: Params, results: Option<Vec<f64>>) -> Self {
     SMA {
       params,
       results: match &results {
@@ -29,17 +30,19 @@ impl SMA {
     }
   }
 
-  fn results(&self) -> Option<Vec<f64>> {
+  pub fn results(&self) -> Option<Vec<f64>> {
     self.results.clone()
   }
 
-  fn result(&self) -> Option<f64> {
+  pub fn result(&self) -> Option<f64> {
     self.result
   }
 }
 
 impl BaseIndicator for SMA {
   fn calc(&mut self, candles: &Vec<Candle>) -> Option<f64> {
+    let period = usize::try_from(self.params.period).unwrap();
+
     let mut sma = yata::methods::SMA::new(self.params.period, &candles[0].close).unwrap();
 
     let mut results = Vec::new();

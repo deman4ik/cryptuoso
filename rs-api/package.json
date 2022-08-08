@@ -9,7 +9,7 @@
     },
     "license": "MIT",
     "devDependencies": {
-        "@napi-rs/cli": "^2.10.3",
+        "@napi-rs/cli": "^2.11.0",
         "ava": "^4.3.0"
     },
     "engines": {
@@ -20,7 +20,9 @@
         "build": "napi build --release && node exports.js",
         "build:debug": "napi build && node exports.js",
         "prepublishOnly": "napi prepublish -t npm",
-        "test": "ava",
+        "test-js": "ava",
+        "test": "cargo test",
+        "test:debug": "cargo test -- --show-output",
         "version": "napi version"
     }
 }

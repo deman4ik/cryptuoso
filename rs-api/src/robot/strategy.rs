@@ -4,6 +4,8 @@ use t2_trend_friend::{
   Strategy as T2TrendFriendStrategy, T2TrendFriendStrategyParams, T2TrendFriendStrategyState,
 };
 
+use crate::robot::Candle;
+
 pub mod dummy;
 pub mod t2_trend_friend;
 
@@ -43,6 +45,7 @@ pub enum StrategyParams {
   TrendlingShort(DummyStrategyParams),
 }
 
+#[derive(Debug, PartialEq)]
 pub enum StrategyState {
   Breakout(DummyStrategyState),
   BreakoutV2(DummyStrategyState),
@@ -62,7 +65,9 @@ pub trait BaseStrategy {
   type State;
 
   fn new(settings: StrategySettings, params: Self::Params, state: Self::State) -> Self;
-  fn run(&mut self) -> StrategyState;
+  fn calc_indicatos(&mut self);
+  fn run_strategy(&mut self);
+  fn run(&mut self, candles: Vec<Candle>) -> StrategyState;
   fn params(&self) -> StrategyParams;
   fn state(&self) -> StrategyState;
 }
@@ -105,19 +110,19 @@ impl Strategy {
     }
   }
 
-  pub fn run(&mut self) -> StrategyState {
+  pub fn run(&mut self, candles: Vec<Candle>) -> StrategyState {
     match self {
-      Self::Breakout(strategy) => strategy.run(),
-      Self::BreakoutV2(strategy) => strategy.run(),
-      Self::Channels(strategy) => strategy.run(),
-      Self::CounterCandle(strategy) => strategy.run(),
-      Self::DoubleReverseMM(strategy) => strategy.run(),
-      Self::FxCash(strategy) => strategy.run(),
-      Self::IRSTS(strategy) => strategy.run(),
-      Self::Parabolic(strategy) => strategy.run(),
-      Self::T2TrendFriend(strategy) => strategy.run(),
-      Self::TrendlingLong(strategy) => strategy.run(),
-      Self::TrendlingShort(strategy) => strategy.run(),
+      Self::Breakout(strategy) => strategy.run(candles),
+      Self::BreakoutV2(strategy) => strategy.run(candles),
+      Self::Channels(strategy) => strategy.run(candles),
+      Self::CounterCandle(strategy) => strategy.run(candles),
+      Self::DoubleReverseMM(strategy) => strategy.run(candles),
+      Self::FxCash(strategy) => strategy.run(candles),
+      Self::IRSTS(strategy) => strategy.run(candles),
+      Self::Parabolic(strategy) => strategy.run(candles),
+      Self::T2TrendFriend(strategy) => strategy.run(candles),
+      Self::TrendlingLong(strategy) => strategy.run(candles),
+      Self::TrendlingShort(strategy) => strategy.run(candles),
     }
   }
 

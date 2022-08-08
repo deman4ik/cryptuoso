@@ -70,7 +70,9 @@
         "serve:portfolio-manager": "nx serve portfolio-manager --watch=false",
         "workspace-generator": "nx workspace-generator",
         "build-rs-debug": "npm --prefix rs-api run build:debug",
-        "build-rs": "npm --prefix rs-api run build"
+        "build-rs": "npm --prefix rs-api run build",
+        "test-rs-debug": "npm --prefix rs-api run test:debug",
+        "test-rs": "npm --prefix rs-api run test"
     },
     "private": true,
     "dependencies": {

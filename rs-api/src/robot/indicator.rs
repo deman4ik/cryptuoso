@@ -1,4 +1,4 @@
-use yata::prelude::*;
+use crate::robot::Candle;
 
 #[allow(non_snake_case)]
 pub mod SMA;
