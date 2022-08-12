@@ -24,6 +24,25 @@ pub enum StrategyType {
   TrendlingShort,
 }
 
+#[napi]
+impl StrategyType {
+  pub fn as_str(&self) -> &'static str {
+    match self {
+      StrategyType::Breakout => "breakout",
+      StrategyType::BreakoutV2 => "breakout_v2",
+      StrategyType::Channels => "channels",
+      StrategyType::CounterCandle => "counter_candle",
+      StrategyType::DoubleReverseMM => "double_reverse_mm",
+      StrategyType::FxCash => "fx_cash",
+      StrategyType::IRSTS => "irsts",
+      StrategyType::Parabolic => "parabolic",
+      StrategyType::T2TrendFriend => "t2_trend_friend",
+      StrategyType::TrendlingLong => "trendling_long",
+      StrategyType::TrendlingShort => "trendling_short",
+    }
+  }
+}
+
 #[napi(object)]
 #[derive(Clone, Copy)]
 pub struct StrategySettings {

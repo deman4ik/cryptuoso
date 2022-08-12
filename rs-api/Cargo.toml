@@ -7,8 +7,9 @@ version = "0.0.0"
 crate-type = ["cdylib"]
 
 [dependencies]
+chrono = "0.4.21"
 # Default enable napi4 feature, see https://nodejs.org/api/n-api.html#node-api-version-matrix
-napi = { version = "2.6.3", default-features = false, features = ["napi4", "napi6"] }
+napi = { version = "2.6.3", default-features = false, features = ["napi4", "napi6", "chrono_date"] }
 napi-derive = "2.6.0"
 rust_decimal = "1.26.1"
 rust_decimal_macros = "1.26.1"

@@ -44,9 +44,10 @@ impl BaseIndicator for SMA {
 
     let mut slice = candles.clone();
     if self.result.is_some() {
+      let time = self.result.as_ref().unwrap().time;
       slice = slice
         .iter()
-        .filter(|candle| candle.time > self.result.clone().unwrap().time)
+        .filter(|candle| candle.time > time)
         .cloned()
         .collect()
     }

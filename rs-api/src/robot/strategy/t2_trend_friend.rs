@@ -107,7 +107,7 @@ impl BaseStrategy for Strategy {
     self.calc_indicatos();
     self.run_strategy();
 
-    StrategyState::T2TrendFriend(self.state.clone())
+    self.state()
   }
 
   fn params(&self) -> StrategyParams {
