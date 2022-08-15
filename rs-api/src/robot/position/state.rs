@@ -194,6 +194,14 @@ pub struct TradeState {
 
 #[napi(object)]
 #[derive(Debug, Clone, PartialEq)]
+pub struct PositionInternalState {
+  pub highest_high: Option<f64>,
+  pub lowest_low: Option<f64>,
+  pub stop: Option<f64>,
+}
+
+#[napi(object)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PositionState {
   pub prefix: String,
   pub code: String,
@@ -221,4 +229,5 @@ pub struct PositionState {
   pub exit_action: Option<String>,
   pub exit_candle_timestamp: Option<String>,
   pub alerts: Vec<TradeState>,
+  pub internal_state: PositionInternalState,
 }

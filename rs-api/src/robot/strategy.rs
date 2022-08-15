@@ -1,7 +1,7 @@
 use std::error::Error;
 
 use dummy::{DummyStrategyParams, DummyStrategyState, Strategy as DummyStrategy};
-use napi::bindgen_prelude::ToNapiValue;
+
 use t2_trend_friend::{
   Strategy as T2TrendFriendStrategy, T2TrendFriendStrategyParams, T2TrendFriendStrategyState,
 };
@@ -10,8 +10,8 @@ use crate::robot::Candle;
 
 use super::{
   position::{
+    manager::PositionManager,
     state::{PositionState, TradeState},
-    Position, PositionManager,
   },
   RobotState,
 };
@@ -171,7 +171,11 @@ impl Strategy {
         strategy_own_settings,
         params,
         state,
-        PositionManager::new(&robot_state.positions, &robot_state.position_last_num),
+        PositionManager::new(
+          &robot_state.positions,
+          &robot_state.position_last_num,
+          strategy_settings.backtest,
+        ),
       )),
       _ => panic!("Strategy not implemented"),
     }

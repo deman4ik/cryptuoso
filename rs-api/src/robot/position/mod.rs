@@ -1,9 +1,10 @@
+pub mod manager;
 pub mod state;
-
-use std::collections::HashMap;
 
 use chrono::prelude::*;
 use state::*;
+
+use super::Candle;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Trade {
@@ -36,7 +37,16 @@ impl Trade {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct PositionInternal {
+  highest_high: Option<f64>,
+  lowest_low: Option<f64>,
+  stop: Option<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Position {
+  backtest: bool,
+  candle: Option<Candle>,
   prefix: String,
   code: String,
   parent_id: Option<String>,
@@ -55,11 +65,20 @@ pub struct Position {
   exit_action: Option<TradeAction>,
   exit_candle_timestamp: Option<DateTime<Utc>>,
   alerts: Vec<Trade>,
+  internal: PositionInternal,
 }
 
 impl Position {
-  pub fn new(prefix: &String, code: &String, parent_id: &Option<String>) -> Self {
+  pub fn new(
+    prefix: &String,
+    code: &String,
+    parent_id: &Option<String>,
+    candle: &Option<Candle>,
+    backtest: &bool,
+  ) -> Self {
     Position {
+      backtest: backtest.clone(),
+      candle: candle.clone(),
       prefix: prefix.clone(),
       code: code.clone(),
       parent_id: parent_id.clone(),
@@ -78,15 +97,197 @@ impl Position {
       exit_action: None,
       exit_candle_timestamp: None,
       alerts: Vec::new(),
+      internal: PositionInternal {
+        highest_high: None,
+        lowest_low: None,
+        stop: None,
+      },
     }
+  }
+
+  fn handle_candle(&mut self, candle: &Option<Candle>) {
+    self.candle = candle.clone();
+  }
+
+  fn check_open(&self) -> Result<(), String> {
+    if self.status == PositionStatus::Open {
+      return Err("Position is already open".to_string());
+    }
+    Ok(())
+  }
+
+  fn check_close(&self) -> Result<(), String> {
+    if self.status != PositionStatus::Open {
+      return Err("Position is not open".to_string());
+    } else if self.status == PositionStatus::Closed {
+      return Err("Position is already closed".to_string());
+    }
+    Ok(())
   }
 
   pub fn clear_alerts(&mut self) {
     self.alerts.clear();
   }
 
-  pub fn from_state(position_state: PositionState) -> Position {
+  fn add_alert(&mut self, action: TradeAction, price: f64, order_type: OrderType) {
+    self.alerts.push(Trade {
+      action,
+      order_type,
+      price: Some(price),
+      candle_timestamp: Utc::now(), //TODO: get candle timestamp
+    });
+  }
+
+  pub fn buy_at_market_price(&mut self, price: f64) {
+    self.check_open().expect("Position is already open"); //TODO: handle error
+    self.add_alert(TradeAction::Long, price, OrderType::Market);
+  }
+
+  pub fn buy_at_market(&mut self) {
+    self.buy_at_market_price(self.candle.as_ref().unwrap().close);
+  }
+
+  pub fn sell_at_market_price(&mut self, price: f64) {
+    self.check_close().expect("Position is already closed"); //TODO: handle error
+    self.add_alert(TradeAction::CloseLong, price, OrderType::Market);
+  }
+
+  pub fn sell_at_market(&mut self) {
+    self.sell_at_market_price(self.candle.as_ref().unwrap().close);
+  }
+
+  pub fn short_at_market_price(&mut self, price: f64) {
+    self.check_open().expect("Position is already open"); //TODO: handle error
+    self.add_alert(TradeAction::Short, price, OrderType::Market);
+  }
+
+  pub fn short_at_market(&mut self) {
+    self.short_at_market_price(self.candle.as_ref().unwrap().close);
+  }
+
+  pub fn cover_at_market_price(&mut self, price: f64) {
+    self.check_close().expect("Position is already closed"); //TODO: handle error
+    self.add_alert(TradeAction::CloseShort, price, OrderType::Market);
+  }
+
+  pub fn cover_at_market(&mut self) {
+    self.cover_at_market_price(self.candle.as_ref().unwrap().close);
+  }
+
+  pub fn buy_at_stop_price(&mut self, price: f64) {
+    self.check_open().expect("Position is already open"); //TODO: handle error
+    self.add_alert(TradeAction::Long, price, OrderType::Stop);
+  }
+
+  pub fn buy_at_stop(&mut self) {
+    self.buy_at_stop_price(self.candle.as_ref().unwrap().open);
+  }
+
+  pub fn sell_at_stop_price(&mut self, price: f64) {
+    self.check_close().expect("Position is already closed"); //TODO: handle error
+    self.add_alert(TradeAction::CloseLong, price, OrderType::Stop);
+  }
+
+  pub fn sell_at_stop(&mut self) {
+    self.sell_at_stop_price(self.candle.as_ref().unwrap().open);
+  }
+
+  pub fn sell_at_trailing_stop_price(&mut self, price: f64) {
+    self.check_close().expect("Position is already closed"); //TODO: handle error
+    self.internal.stop = match self.internal.stop {
+      Some(stop) => Some(stop.max(price)),
+      None => Some(price),
+    };
+    self.add_alert(
+      TradeAction::CloseLong,
+      self.internal.stop.unwrap(),
+      OrderType::Stop,
+    );
+  }
+
+  pub fn sell_at_trailing_stop(&mut self) {
+    self.sell_at_trailing_stop_price(self.candle.as_ref().unwrap().open);
+  }
+
+  pub fn short_at_stop_price(&mut self, price: f64) {
+    self.check_open().expect("Position is already open"); //TODO: handle error
+    self.add_alert(TradeAction::Short, price, OrderType::Stop);
+  }
+
+  pub fn short_at_stop(&mut self) {
+    self.short_at_stop_price(self.candle.as_ref().unwrap().open);
+  }
+
+  pub fn cover_at_stop_price(&mut self, price: f64) {
+    self.check_close().expect("Position is already closed"); //TODO: handle error
+    self.add_alert(TradeAction::CloseShort, price, OrderType::Stop);
+  }
+
+  pub fn cover_at_stop(&mut self) {
+    self.cover_at_stop_price(self.candle.as_ref().unwrap().open);
+  }
+
+  pub fn cover_at_trailing_stop_price(&mut self, price: f64) {
+    self.check_close().expect("Position is already closed"); //TODO: handle error
+    self.internal.stop = match self.internal.stop {
+      Some(stop) => Some(stop.min(price)),
+      None => Some(price),
+    };
+    self.add_alert(
+      TradeAction::CloseShort,
+      self.internal.stop.unwrap(),
+      OrderType::Stop,
+    );
+  }
+
+  pub fn cover_at_trailing_stop(&mut self) {
+    self.cover_at_trailing_stop_price(self.candle.as_ref().unwrap().open);
+  }
+
+  pub fn buy_at_limit_price(&mut self, price: f64) {
+    self.check_open().expect("Position is already open"); //TODO: handle error
+    self.add_alert(TradeAction::Long, price, OrderType::Limit);
+  }
+
+  pub fn buy_at_limit(&mut self) {
+    self.buy_at_limit_price(self.candle.as_ref().unwrap().open);
+  }
+
+  pub fn sell_at_limit_price(&mut self, price: f64) {
+    self.check_close().expect("Position is already closed"); //TODO: handle error
+    self.add_alert(TradeAction::CloseLong, price, OrderType::Limit);
+  }
+
+  pub fn sell_at_limit(&mut self) {
+    self.sell_at_limit_price(self.candle.as_ref().unwrap().open);
+  }
+
+  pub fn short_at_limit_price(&mut self, price: f64) {
+    self.check_open().expect("Position is already open"); //TODO: handle error
+    self.add_alert(TradeAction::Short, price, OrderType::Limit);
+  }
+
+  pub fn short_at_limit(&mut self) {
+    self.short_at_limit_price(self.candle.as_ref().unwrap().open);
+  }
+
+  pub fn cover_at_limit_price(&mut self, price: f64) {
+    self.check_close().expect("Position is already closed"); //TODO: handle error
+    self.add_alert(TradeAction::CloseShort, price, OrderType::Limit);
+  }
+
+  pub fn cover_at_limit(&mut self) {
+    self.cover_at_limit_price(self.candle.as_ref().unwrap().open);
+  }
+
+  pub fn from_state(
+    position_state: PositionState,
+    candle: &Option<Candle>,
+    backtest: &bool,
+  ) -> Position {
     Position {
+      backtest: backtest.clone(),
+      candle: candle.clone(),
       prefix: position_state.prefix,
       code: position_state.code,
       parent_id: position_state.parent_id,
@@ -122,6 +323,11 @@ impl Position {
         .iter()
         .map(|alert| Trade::from_state(alert.clone()))
         .collect(),
+      internal: PositionInternal {
+        highest_high: position_state.internal_state.highest_high,
+        lowest_low: position_state.internal_state.lowest_low,
+        stop: position_state.internal_state.stop,
+      },
     }
   }
 
@@ -179,98 +385,15 @@ impl Position {
         None => None,
       },
       alerts: self.alerts.iter().map(|alert| alert.state()).collect(),
+      internal_state: PositionInternalState {
+        highest_high: self.internal.highest_high,
+        lowest_low: self.internal.lowest_low,
+        stop: self.internal.stop,
+      },
     }
   }
 
   pub fn alerts_state(&self) -> Vec<TradeState> {
     self.alerts.iter().map(|alert| alert.state()).collect()
-  }
-}
-
-pub struct PositionManager {
-  last_position_num: u32,
-  positions: HashMap<String, Position>,
-}
-
-impl PositionManager {
-  pub fn new(positions: &Option<Vec<PositionState>>, last_position_num: &Option<u32>) -> Self {
-    let mut positions_map = HashMap::new();
-    match positions {
-      Some(positions) => {
-        for position in positions {
-          positions_map.insert(
-            position.code.clone(),
-            Position::from_state(position.clone()),
-          );
-        }
-      }
-      None => (),
-    }
-    PositionManager {
-      positions: positions_map,
-      last_position_num: match last_position_num {
-        Some(num) => num.clone(),
-        None => 0,
-      },
-    }
-  }
-
-  pub fn create(&mut self, preifx: Option<String>, parent_id: Option<String>) -> &Position {
-    self.last_position_num += 1;
-
-    let position_prefix = match preifx {
-      Some(prefix) => prefix,
-      None => "p".to_string(),
-    };
-    let position_code = format!("{}_{}", position_prefix, self.last_position_num);
-
-    self.positions.insert(
-      position_code.clone(),
-      Position::new(&position_prefix, &position_code, &parent_id),
-    );
-
-    self.positions.get(&position_code).unwrap()
-  }
-
-  pub fn has_active_position(&self) -> bool {
-    self
-      .positions
-      .values()
-      .any(|position| position.prefix == "p".to_string())
-  }
-
-  pub fn has_active_position_prefix(&self, prefix: &String) -> bool {
-    self
-      .positions
-      .values()
-      .any(|position| position.prefix == prefix.clone())
-  }
-
-  pub fn clear_closed_positions(&mut self) {
-    self
-      .positions
-      .retain(|_, position| position.status != PositionStatus::Closed);
-  }
-
-  pub fn clear_alerts(&mut self) {
-    for position in self.positions.values_mut() {
-      position.clear_alerts();
-    }
-  }
-
-  pub fn positions_state(&self) -> Vec<PositionState> {
-    self
-      .positions
-      .values()
-      .map(|position| position.state())
-      .collect()
-  }
-
-  pub fn alerts_state(&self) -> Vec<TradeState> {
-    let mut alerts = Vec::new();
-    for position in self.positions.values() {
-      alerts.extend(position.alerts_state());
-    }
-    alerts
   }
 }

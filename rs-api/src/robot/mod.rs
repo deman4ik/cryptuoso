@@ -61,7 +61,7 @@ impl Robot {
 }
 
 #[napi(object)]
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Candle {
   pub time: i64,

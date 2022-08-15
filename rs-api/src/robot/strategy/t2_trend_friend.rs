@@ -125,6 +125,11 @@ impl BaseStrategy for Strategy {
     if calc_indicators_result.is_err() {
       return Err(calc_indicators_result.err().unwrap());
     }
+
+    self
+      .positions
+      .handle_candle(self.candles.as_ref().unwrap().last().unwrap());
+
     let run_strategy_result = self.run_strategy();
     if run_strategy_result.is_err() {
       return Err(run_strategy_result.err().unwrap());
@@ -170,7 +175,7 @@ mod test {
         min_bars_to_hold: 10,
       },
       initial_state.clone(),
-      PositionManager::new(&None, &None),
+      PositionManager::new(&None, &None, false),
     );
 
     assert_eq!(
@@ -198,7 +203,7 @@ mod test {
         sma2_result: None,
         sma3_result: None,
       },
-      PositionManager::new(&None, &None),
+      PositionManager::new(&None, &None, false),
     );
     let candles = load_candles();
     let strategy_state = strategy.run(candles.clone()).unwrap();
