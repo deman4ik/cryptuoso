@@ -1,3 +1,6 @@
+use std::error::Error;
+
+use crate::robot::position::*;
 use crate::robot::strategy::*;
 
 #[napi(object)]
@@ -13,36 +16,43 @@ pub struct DummyStrategyState {
 }
 
 pub struct Strategy {
-  pub settings: StrategySettings,
-  pub params: DummyStrategyParams,
-  pub state: DummyStrategyState,
+  settings: StrategyOwnSettings,
+  params: DummyStrategyParams,
+  state: DummyStrategyState,
+  positions: PositionManager,
 }
 
 impl BaseStrategy for Strategy {
   type Params = DummyStrategyParams;
   type State = DummyStrategyState;
 
-  fn new(settings: StrategySettings, params: Self::Params, state: Self::State) -> Self {
+  fn new(
+    settings: StrategyOwnSettings,
+    params: Self::Params,
+    state: Self::State,
+    positions: PositionManager,
+  ) -> Self {
     Strategy {
       settings: settings,
       params: params,
       state: state,
+      positions: positions,
     }
   }
 
-  fn calc_indicatos(&mut self) {
-    ()
+  fn calc_indicatos(&mut self) -> Result<(), Box<dyn Error>> {
+    Ok(())
   }
 
-  fn run_strategy(&mut self) {
-    ()
+  fn run_strategy(&mut self) -> Result<(), Box<dyn Error>> {
+    Ok(())
   }
 
-  fn run(&mut self, _candles: Vec<Candle>) -> StrategyState {
+  fn run(&mut self, _candles: Vec<Candle>) -> Result<StrategyState, Box<dyn Error>> {
     self.calc_indicatos();
     self.run_strategy();
 
-    StrategyState::Breakout(self.state.clone())
+    Ok(StrategyState::Breakout(self.state.clone()))
   }
 
   fn params(&self) -> StrategyParams {
@@ -51,5 +61,9 @@ impl BaseStrategy for Strategy {
 
   fn state(&self) -> StrategyState {
     StrategyState::Breakout(self.state.clone())
+  }
+
+  fn positions(&self) -> &PositionManager {
+    &self.positions
   }
 }

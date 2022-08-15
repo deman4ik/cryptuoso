@@ -9,13 +9,15 @@ crate-type = ["cdylib"]
 [dependencies]
 chrono = "0.4.21"
 # Default enable napi4 feature, see https://nodejs.org/api/n-api.html#node-api-version-matrix
-napi = { version = "2.6.3", default-features = false, features = ["napi4", "napi6", "chrono_date"] }
+napi = { version = "2.6.3", default-features = false, features = ["napi4", "napi6", "chrono_date", "async"] }
 napi-derive = "2.6.0"
+rayon = "1.5.3"
 rust_decimal = "1.26.1"
 rust_decimal_macros = "1.26.1"
 serde = { version = "1.0.142", features = ["derive"] }
 serde_json = "1.0.83"
 ta-lib = "0.1.1"
+tokio = "1.20.1"
 yata = { version= "0.6.1", features = ["period_type_u16"] }
 
 [build-dependencies]

@@ -5,7 +5,7 @@ import { DBCandle } from "@cryptuoso/market";
 import { TulipIndicator } from "@cryptuoso/robot-indicators";
 import {
     RobotSettings,
-    StrategyType,
+    RobotState,
     T2TrendFriendRobot,
     T2TrendFriendStrategyParams,
     T2TrendFriendStrategyState
@@ -29,7 +29,7 @@ export default class UtilsService extends HTTPService {
 
             timeframe: 60,
             strategySettings: {
-                strategyType: StrategyType.T2TrendFriend,
+                strategyType: "t2_trend_friend",
                 backtest: false
             }
         };
@@ -40,18 +40,24 @@ export default class UtilsService extends HTTPService {
             minBarsToHold: 10
         };
         const strategyState: T2TrendFriendStrategyState = {
-            sma1Results: undefined,
-            sma2Results: undefined,
-            sma3Results: undefined
+            sma1Result: undefined,
+            sma2Result: undefined,
+            sma3Result: undefined
         };
-        const robot = new T2TrendFriendRobot(robotSettings, strategyParams, strategyState);
 
-        const candles = await this.db.pg.many<DBCandle>(sql`SELECT time, timeframe, open, high, low, close, volume 
+        const robotState: RobotState = {
+            positionLastNum: undefined,
+            positions: undefined
+        };
+        const robot = new T2TrendFriendRobot(robotSettings, strategyParams, strategyState, robotState);
+
+        const candles = await this.db.pg
+            .many<DBCandle>(sql`SELECT time, timestamp, timeframe, open, high, low, close, volume 
         FROM candles
         WHERE exchange = 'binance_futures' and asset = 'BTC' and currency = 'USDT' and timeframe = 1440
         ORDER BY timestamp ASC LIMIT 300;`);
 
-        const result = robot.run([...candles]);
+        const result = await robot.run([...candles]);
 
         this.log.info(result);
         this.log.info(robot.settings);

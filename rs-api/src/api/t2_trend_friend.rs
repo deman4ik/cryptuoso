@@ -3,6 +3,7 @@ use crate::robot::strategy::t2_trend_friend::{
 };
 use crate::robot::strategy::*;
 use crate::robot::*;
+use napi::bindgen_prelude::*;
 
 #[napi]
 #[allow(dead_code)]
@@ -18,10 +19,12 @@ impl T2TrendFriendRobot {
     settings: RobotSettings,
     strategy_params: T2TrendFriendStrategyParams,
     strategy_state: T2TrendFriendStrategyState,
+    robot_state: RobotState,
   ) -> Self {
     T2TrendFriendRobot {
       robot: Robot::new(
         settings,
+        robot_state,
         StrategyParams::T2TrendFriend(strategy_params),
         StrategyState::T2TrendFriend(strategy_state),
       ),
@@ -29,11 +32,15 @@ impl T2TrendFriendRobot {
   }
 
   #[napi]
-  pub fn run(&mut self, candles: Vec<Candle>) -> T2TrendFriendStrategyState {
+  pub async fn run(&mut self, candles: Vec<Candle>) -> Result<T2TrendFriendStrategyState> {
     let state = self.robot.run(candles);
+
     match state {
-      StrategyState::T2TrendFriend(state) => state,
-      _ => panic!("Invalid strategy state"),
+      Ok(state) => match state {
+        StrategyState::T2TrendFriend(state) => Ok(state),
+        _ => panic!("Invalid strategy state"),
+      },
+      Err(err) => Err(Error::new(Status::GenericFailure, err.to_string())), //TODO: better error handling
     }
   }
 

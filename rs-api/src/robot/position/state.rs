@@ -1,31 +1,32 @@
-use super::*;
-use chrono::prelude::*;
 use napi::bindgen_prelude::ToNapiValue;
 
-#[napi]
+#[derive(Debug, Clone, PartialEq)]
 pub enum PositionDirection {
   Long,
   Short,
 }
 
 impl PositionDirection {
-  pub fn from_str(s: &String) -> PositionDirection {
-    match s.as_str() {
-      "long" => PositionDirection::Long,
-      "short" => PositionDirection::Short,
-      _ => panic!("Invalid PositionDirection: {}", s),
+  pub fn from_str(s: &Option<String>) -> Option<PositionDirection> {
+    match s {
+      Some(s) => match s.as_ref() {
+        "long" => Some(PositionDirection::Long),
+        "short" => Some(PositionDirection::Short),
+        _ => None,
+      },
+      None => None,
     }
   }
 
-  pub fn to_str(&self) -> String {
+  pub fn to_str(&self) -> Option<String> {
     match self {
-      PositionDirection::Long => "long".to_string(),
-      PositionDirection::Short => "short".to_string(),
+      PositionDirection::Long => Some("long".to_string()),
+      PositionDirection::Short => Some("short".to_string()),
     }
   }
 }
 
-#[napi]
+#[derive(Debug, Clone, PartialEq)]
 pub enum PositionStatus {
   New,
   Open,
@@ -54,7 +55,7 @@ impl PositionStatus {
   }
 }
 
-#[napi]
+#[derive(Debug, Clone, PartialEq)]
 pub enum OrderType {
   Market,
   Limit,
@@ -82,7 +83,7 @@ impl OrderType {
   }
 }
 
-#[napi]
+#[derive(Debug, PartialEq)]
 pub enum OrderDirection {
   Buy,
   Sell,
@@ -104,7 +105,7 @@ impl OrderDirection {
   }
 }
 
-#[napi]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TradeAction {
   Long,
   Short,
@@ -158,7 +159,7 @@ impl TradeAction {
   }
 }
 
-#[napi]
+#[derive(Debug, Clone, PartialEq)]
 pub enum SignalType {
   Alert,
   Trade,
@@ -181,6 +182,7 @@ impl SignalType {
 }
 
 #[napi(object)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TradeState {
   #[napi(ts_type = "'long' | 'short' | 'closeLong' | 'closeShort'")]
   pub action: String,
@@ -191,12 +193,13 @@ pub struct TradeState {
 }
 
 #[napi(object)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PositionState {
   pub prefix: String,
   pub code: String,
   pub parent_id: Option<String>,
-  #[napi(ts_type = "'long' | 'short'")]
-  pub direction: String,
+  #[napi(ts_type = "'long' | 'short' | undefined")]
+  pub direction: Option<String>,
   #[napi(ts_type = "'new' | 'open' | 'closed'")]
   pub status: String,
   #[napi(ts_type = "'new' | 'open' | 'closed' | undefined")]
@@ -217,4 +220,5 @@ pub struct PositionState {
   #[napi(ts_type = "'closeLong' | 'closeShort'")]
   pub exit_action: Option<String>,
   pub exit_candle_timestamp: Option<String>,
+  pub alerts: Vec<TradeState>,
 }

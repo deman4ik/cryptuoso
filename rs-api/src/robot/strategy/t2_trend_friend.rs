@@ -1,5 +1,8 @@
+use rayon::prelude::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator};
+
 use crate::robot::indicator::BaseIndicator;
 use crate::robot::indicator::SMA::{Params, SMAResult, SMA};
+use crate::robot::position::*;
 use crate::robot::strategy::*;
 use crate::robot::Candle;
 
@@ -29,9 +32,10 @@ pub struct Indicators {
 }
 
 pub struct Strategy {
-  settings: StrategySettings,
+  settings: StrategyOwnSettings,
   params: T2TrendFriendStrategyParams,
   state: T2TrendFriendStrategyState,
+  positions: PositionManager,
   indicators: Indicators,
   candles: Option<Vec<Candle>>,
 }
@@ -41,7 +45,12 @@ impl BaseStrategy for Strategy {
   type State = T2TrendFriendStrategyState;
 
   #[allow(non_snake_case)]
-  fn new(settings: StrategySettings, params: Self::Params, state: Self::State) -> Self {
+  fn new(
+    settings: StrategyOwnSettings,
+    params: Self::Params,
+    state: Self::State,
+    positions: PositionManager,
+  ) -> Self {
     let sma1_params = Params {
       period: params.sma1,
     };
@@ -71,6 +80,7 @@ impl BaseStrategy for Strategy {
       settings: settings,
       params: params,
       state: state,
+      positions,
       indicators: Indicators {
         sma1: SMA::new(sma1_params, sma1_result),
         sma2: SMA::new(sma2_params, sma2_result),
@@ -80,34 +90,47 @@ impl BaseStrategy for Strategy {
     }
   }
 
-  fn calc_indicatos(&mut self) {
+  fn calc_indicatos(&mut self) -> Result<(), Box<dyn Error>> {
     match &self.candles {
       Some(candles) => {
-        self.indicators.sma1.calc(candles);
-        self.indicators.sma2.calc(candles);
-        self.indicators.sma3.calc(candles);
-      } //TODO: parallelize
+        let mut tasks = vec![
+          &mut self.indicators.sma1,
+          &mut self.indicators.sma2,
+          &mut self.indicators.sma3,
+        ];
+        tasks.par_iter_mut().for_each(|task| {
+          task.calc(candles);
+        });
+      }
       None => panic!("candles is None"),
     }
     self.state.sma1_result = self.indicators.sma1.result().clone();
     self.state.sma2_result = self.indicators.sma2.result().clone();
     self.state.sma3_result = self.indicators.sma3.result().clone();
+    Ok(())
   }
 
-  fn run_strategy(&mut self) {
-    ()
+  fn run_strategy(&mut self) -> Result<(), Box<dyn Error>> {
+    Ok(())
   }
 
-  fn run(&mut self, candles: Vec<Candle>) -> StrategyState {
+  fn run(&mut self, candles: Vec<Candle>) -> Result<StrategyState, Box<dyn Error>> {
     self.candles = match candles.len() {
       0 => panic!("candles is empty"),
       _ => Some(candles),
     };
 
-    self.calc_indicatos();
-    self.run_strategy();
+    let calc_indicators_result = self.calc_indicatos();
 
-    self.state()
+    if calc_indicators_result.is_err() {
+      return Err(calc_indicators_result.err().unwrap());
+    }
+    let run_strategy_result = self.run_strategy();
+    if run_strategy_result.is_err() {
+      return Err(run_strategy_result.err().unwrap());
+    }
+
+    Ok(self.state())
   }
 
   fn params(&self) -> StrategyParams {
@@ -116,6 +139,10 @@ impl BaseStrategy for Strategy {
 
   fn state(&self) -> StrategyState {
     StrategyState::T2TrendFriend(self.state.clone())
+  }
+
+  fn positions(&self) -> &PositionManager {
+    &self.positions
   }
 }
 
@@ -132,7 +159,7 @@ mod test {
       sma3_result: None,
     };
     let strategy = Strategy::new(
-      StrategySettings {
+      StrategyOwnSettings {
         strategy_type: StrategyType::T2TrendFriend,
         backtest: false,
       },
@@ -143,6 +170,7 @@ mod test {
         min_bars_to_hold: 10,
       },
       initial_state.clone(),
+      PositionManager::new(&None, &None),
     );
 
     assert_eq!(
@@ -160,7 +188,7 @@ mod test {
       min_bars_to_hold: 10,
     };
     let mut strategy = Strategy::new(
-      StrategySettings {
+      StrategyOwnSettings {
         strategy_type: StrategyType::T2TrendFriend,
         backtest: false,
       },
@@ -170,9 +198,10 @@ mod test {
         sma2_result: None,
         sma3_result: None,
       },
+      PositionManager::new(&None, &None),
     );
     let candles = load_candles();
-    let strategy_state = strategy.run(candles.clone());
+    let strategy_state = strategy.run(candles.clone()).unwrap();
 
     let raw_state = match strategy_state {
       StrategyState::T2TrendFriend(state) => state,

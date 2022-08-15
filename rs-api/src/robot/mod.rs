@@ -1,4 +1,8 @@
+use std::error::Error;
+
 use serde::Deserialize;
+
+use self::position::state::PositionState;
 
 pub mod indicator;
 pub mod position;
@@ -12,6 +16,13 @@ pub struct RobotSettings {
   pub strategy_settings: strategy::StrategySettings,
 }
 
+#[napi(object)]
+#[derive(Clone)]
+pub struct RobotState {
+  pub position_last_num: Option<u32>,
+  pub positions: Option<Vec<PositionState>>,
+}
+
 pub struct Robot {
   settings: RobotSettings,
   strategy: strategy::Strategy,
@@ -20,6 +31,7 @@ pub struct Robot {
 impl Robot {
   pub fn new(
     settings: RobotSettings,
+    state: RobotState,
     strategy_params: strategy::StrategyParams,
     strategy_state: strategy::StrategyState,
   ) -> Self {
@@ -27,11 +39,11 @@ impl Robot {
 
     Robot {
       settings,
-      strategy: strategy::Strategy::new(strategy_settings, strategy_params, strategy_state),
+      strategy: strategy::Strategy::new(strategy_settings, strategy_params, strategy_state, state),
     }
   }
 
-  pub fn run(&mut self, candles: Vec<Candle>) -> strategy::StrategyState {
+  pub fn run(&mut self, candles: Vec<Candle>) -> Result<strategy::StrategyState, Box<dyn Error>> {
     self.strategy.run(candles)
   }
 
