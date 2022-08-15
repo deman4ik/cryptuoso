@@ -597,18 +597,16 @@ export class TradeStatsCalc implements TradeStats {
         stats.avgTradesCountQuarters = average(...quarters.map(({ stats: { tradesCount } }) => tradesCount));
         stats.avgTradesCountMonths = average(...months.map(({ stats: { tradesCount } }) => tradesCount));
 
-        stats.avgTradesCountYearly = stats.avgTradesCountMonths * (12 / months.length);
+        stats.avgTradesCountYearly = stats.avgTradesCountMonths * 12;
 
         stats.avgPercentNetProfitYearly =
             sum(...months.map(({ stats: { percentNetProfit } }) => percentNetProfit)) * (12 / months.length);
 
-        stats.avgPercentMaxDrawdownYearly =
-            average(...months.map(({ stats: { percentMaxDrawdown } }) => percentMaxDrawdown)) * (12 / months.length);
+        stats.avgPercentMaxDrawdownYearly = stats.percentMaxDrawdown;
 
-        stats.avgWinRateYearly = average(...months.map(({ stats: { winRate } }) => winRate)) * (12 / months.length);
+        stats.avgWinRateYearly = stats.winRate;
 
-        stats.avgPayoffRatioYearly =
-            average(...months.map(({ stats: { payoffRatio } }) => payoffRatio)) * (12 / months.length);
+        stats.avgPayoffRatioYearly = stats.payoffRatio;
 
         stats.avgPercentNetProfitYears = average(...years.map(({ stats: { percentNetProfit } }) => percentNetProfit));
         stats.avgPercentNetProfitQuarters = average(
