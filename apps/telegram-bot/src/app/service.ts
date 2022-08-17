@@ -16,7 +16,7 @@ import { getDialogName } from "./utils/helpers";
 import { DialogsRouter } from "./utils/dialogsRouter";
 import { tradingActions } from "./dialogs/trading";
 import dayjs from "@cryptuoso/dayjs";
-import { capitalize, formatExchange, plusNum, round } from "@cryptuoso/helpers";
+import { capitalize, formatExchange, groupBy, plusNum, round, sleep } from "@cryptuoso/helpers";
 import { formatTgName, Notification, UserSettings } from "@cryptuoso/user-state";
 import { accountActions } from "./dialogs/account";
 import { supportActions } from "./dialogs/support";
@@ -305,7 +305,7 @@ export default class TelegramBotService extends HTTPService {
 
     async checkNotifications() {
         try {
-            const notifications = await this.db.pg.any<Notification<any> & { telegramId: string }[]>(sql`
+            const unreadNotifications = await this.db.pg.any<Notification<any> & { telegramId: string }[]>(sql`
             SELECT u.telegram_id, n.* FROM notifications n, users u
             WHERE n.user_id = u.id 
             AND n.send_telegram = true
@@ -315,68 +315,86 @@ export default class TelegramBotService extends HTTPService {
             ORDER BY timestamp; 
             `);
 
-            for (const notification of notifications) {
+            const grouped: { [key: string]: Notification<any>[] } = groupBy(
+                [...unreadNotifications],
+                (el) => el.telegramId
+            );
+
+            for (const [telegramId, notifications] of Object.entries(grouped)) {
                 try {
-                    let messageToSend;
-                    switch (notification.type) {
-                        case "user.trade":
-                            messageToSend = handleUserTrade.call(this, notification);
-                            break;
-                        case "signal_sub.trade":
-                            messageToSend = handleSignalSubscriptionTrade.call(this, notification);
-                            break;
-                        case "user_portfolio.builded":
-                            messageToSend = handleUserPortfolioBuilded.call(this, notification);
-                            break;
-                        case "user_portfolio.build_error":
-                            messageToSend = handleUserPortfolioBuildError.call(this, notification);
-                            break;
-                        case "user_portfolio.status":
-                            messageToSend = handleUserPortfolioStatus.call(this, notification);
-                            break;
-                        case "user_ex_acc.error":
-                            messageToSend = handleUserExAccError.call(this, notification);
-                            break;
-                        case "user-robot.error":
-                            messageToSend = handleUserRobotError.call(this, notification);
-                            break;
-                        case "order.error":
-                            messageToSend = handleOrderError.call(this, notification);
-                            break;
-                        case "message.broadcast":
-                            messageToSend = handleBroadcastMessage.call(this, notification);
-                            break;
-                        case "message.support-reply":
-                            messageToSend = handleMessageSupportReply.call(this, notification);
-                            break;
-                        case "user_sub.error":
-                            messageToSend = handleUserSubError.call(this, notification);
-                            break;
-                        case "user_payment.status":
-                            messageToSend = handlePaymentStatus.call(this, notification);
-                            break;
-                        case "user_sub.status":
-                            messageToSend = handleUserSubStatus.call(this, notification);
-                            break;
-                        default:
-                            await this.db.pg.query(sql`
+                    await this.redlock.using([`lock:telegram:${telegramId}`], 3000, async (signal) => {
+                        for (const notification of notifications) {
+                            try {
+                                if (signal.aborted) {
+                                    throw signal.error;
+                                }
+                                let messageToSend;
+                                switch (notification.type) {
+                                    case "user.trade":
+                                        messageToSend = handleUserTrade.call(this, notification);
+                                        break;
+                                    case "signal_sub.trade":
+                                        messageToSend = handleSignalSubscriptionTrade.call(this, notification);
+                                        break;
+                                    case "user_portfolio.builded":
+                                        messageToSend = handleUserPortfolioBuilded.call(this, notification);
+                                        break;
+                                    case "user_portfolio.build_error":
+                                        messageToSend = handleUserPortfolioBuildError.call(this, notification);
+                                        break;
+                                    case "user_portfolio.status":
+                                        messageToSend = handleUserPortfolioStatus.call(this, notification);
+                                        break;
+                                    case "user_ex_acc.error":
+                                        messageToSend = handleUserExAccError.call(this, notification);
+                                        break;
+                                    case "user-robot.error":
+                                        messageToSend = handleUserRobotError.call(this, notification);
+                                        break;
+                                    case "order.error":
+                                        messageToSend = handleOrderError.call(this, notification);
+                                        break;
+                                    case "message.broadcast":
+                                        messageToSend = handleBroadcastMessage.call(this, notification);
+                                        break;
+                                    case "message.support-reply":
+                                        messageToSend = handleMessageSupportReply.call(this, notification);
+                                        break;
+                                    case "user_sub.error":
+                                        messageToSend = handleUserSubError.call(this, notification);
+                                        break;
+                                    case "user_payment.status":
+                                        messageToSend = handlePaymentStatus.call(this, notification);
+                                        break;
+                                    case "user_sub.status":
+                                        messageToSend = handleUserSubStatus.call(this, notification);
+                                        break;
+                                    default:
+                                        await this.db.pg.query(sql`
                             UPDATE notifications 
                             SET send_telegram = false 
                             WHERE id = ${notification.id};`);
-                    }
+                                }
 
-                    if (messageToSend) {
-                        const { success } = await this.sendMessage(messageToSend);
-                        if (success) {
-                            await this.db.pg.query(sql`
+                                if (messageToSend) {
+                                    const { success } = await this.sendMessage(messageToSend);
+                                    if (success) {
+                                        await this.db.pg.query(sql`
                         UPDATE notifications 
                         SET send_telegram = false,
                         readed = true 
                         WHERE id = ${notification.id};`);
+                                    }
+                                }
+                            } catch (err) {
+                                this.log.error(`Failed to process notification`, err);
+                            }
+
+                            await sleep(1000);
                         }
-                    }
+                    });
                 } catch (err) {
-                    this.log.error(`Failed to process notification`, err);
+                    this.log.error(`Failed to process notifications for ${telegramId} - ${err.message}`, err);
                 }
             }
         } catch (error) {
