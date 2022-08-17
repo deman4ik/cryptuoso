@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use super::position::*;
 use super::state::*;
 use super::*;
 
@@ -49,7 +50,11 @@ impl PositionManager {
       });
   }
 
-  pub fn create(&mut self, preifx: Option<String>, parent_id: Option<String>) -> &Position {
+  pub fn create_position_ext(
+    &mut self,
+    preifx: Option<String>,
+    parent_id: Option<String>,
+  ) -> &mut Position {
     self.last_position_num += 1;
 
     let position_prefix = match preifx {
@@ -69,33 +74,61 @@ impl PositionManager {
       ),
     );
 
-    self.positions.get(&position_code).unwrap()
+    self.positions.get_mut(&position_code).unwrap()
+  }
+
+  pub fn create(&mut self) -> &mut Position {
+    self.create_position_ext(None, None)
   }
 
   pub fn has_active_position(&self) -> bool {
     self
       .positions
       .values()
-      .any(|position| position.prefix == "p".to_string())
+      .any(|position| *position.get_prefix() == "p".to_string())
   }
 
   pub fn has_active_position_prefix(&self, prefix: &String) -> bool {
     self
       .positions
       .values()
-      .any(|position| position.prefix == prefix.clone())
+      .any(|position| *position.get_prefix() == prefix.clone())
+  }
+
+  pub fn get_active_position(&mut self) -> Result<&mut Position, String> {
+    match self
+      .positions
+      .values_mut()
+      .find(|position| *position.get_prefix() == "p".to_string() && position.is_active())
+    {
+      Some(position) => Ok(position),
+      None => Err("No active position".to_string()),
+    }
   }
 
   pub fn clear_closed_positions(&mut self) {
     self
       .positions
-      .retain(|_, position| position.status != PositionStatus::Closed);
+      .retain(|_, position| *position.get_status() != PositionStatus::Closed);
   }
 
   pub fn clear_alerts(&mut self) {
     for position in self.positions.values_mut() {
       position.clear_alerts();
     }
+  }
+
+  pub fn clear_trades(&mut self) {
+    for position in self.positions.values_mut() {
+      position.clear_trades();
+    }
+  }
+
+  pub fn check_alerts(&mut self) -> Result<(), String> {
+    for position in self.positions.values_mut() {
+      position.check_alerts()?;
+    }
+    Ok(())
   }
 
   pub fn positions_state(&self) -> Vec<PositionState> {
@@ -106,11 +139,21 @@ impl PositionManager {
       .collect()
   }
 
-  pub fn alerts_state(&self) -> Vec<TradeState> {
+  pub fn alerts_state(&self) -> Vec<SignalState> {
     let mut alerts = Vec::new();
     for position in self.positions.values() {
       alerts.extend(position.alerts_state());
     }
     alerts
   }
+
+  pub fn trades_state(&self) -> Vec<SignalState> {
+    let mut trades = Vec::new();
+    for position in self.positions.values() {
+      trades.extend(position.trades_state());
+    }
+    trades
+  }
 }
+
+//TODO: tests

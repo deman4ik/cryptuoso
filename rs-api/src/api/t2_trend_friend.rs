@@ -44,6 +44,19 @@ impl T2TrendFriendRobot {
     }
   }
 
+  #[napi]
+  pub async fn check(&mut self, candle: Candle) -> Result<T2TrendFriendStrategyState> {
+    let state = self.robot.check(candle);
+
+    match state {
+      Ok(state) => match state {
+        StrategyState::T2TrendFriend(state) => Ok(state),
+        _ => panic!("Invalid strategy state"),
+      },
+      Err(err) => Err(Error::new(Status::GenericFailure, err.to_string())), //TODO: better error handling
+    }
+  }
+
   #[napi(getter)]
   pub fn settings(&self) -> RobotSettings {
     self.robot.settings()

@@ -1,5 +1,4 @@
 use crate::robot::Candle;
-use crate::utils::*;
 use yata::prelude::*;
 
 use super::BaseIndicator;
@@ -87,7 +86,7 @@ impl BaseIndicator for SMA {
 #[cfg(test)]
 mod test {
   use super::*;
-  use crate::test_utils::*;
+  use crate::{test_utils::*, utils::*};
 
   #[test]
   fn should_calc_sma() {

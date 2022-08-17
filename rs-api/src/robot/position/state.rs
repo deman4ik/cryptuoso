@@ -1,5 +1,3 @@
-use napi::bindgen_prelude::ToNapiValue;
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum PositionDirection {
   Long,
@@ -183,7 +181,28 @@ impl SignalType {
 
 #[napi(object)]
 #[derive(Debug, Clone, PartialEq)]
-pub struct TradeState {
+pub struct SignalState {
+  #[napi(ts_type = "'alert' | 'trade'")]
+  pub signal_type: String,
+  #[napi(ts_type = "'long' | 'short' | 'closeLong' | 'closeShort'")]
+  pub action: String,
+  #[napi(ts_type = "'market' | 'limit' | 'stop'")]
+  pub order_type: String,
+  pub price: f64,
+  pub candle_timestamp: String,
+}
+
+#[napi(object)]
+#[derive(Debug, Clone, PartialEq)]
+pub struct SignalEvent {
+  pub id: String,
+  pub timestamp: String,
+  pub position_id: String,
+  pub position_prefix: String,
+  pub position_code: String,
+  pub position_parent_id: String,
+  #[napi(ts_type = "'alert' | 'trade'")]
+  pub signal_type: String,
   #[napi(ts_type = "'long' | 'short' | 'closeLong' | 'closeShort'")]
   pub action: String,
   #[napi(ts_type = "'market' | 'limit' | 'stop'")]
@@ -228,6 +247,8 @@ pub struct PositionState {
   #[napi(ts_type = "'closeLong' | 'closeShort'")]
   pub exit_action: Option<String>,
   pub exit_candle_timestamp: Option<String>,
-  pub alerts: Vec<TradeState>,
+  pub alerts: Vec<SignalState>,
   pub internal_state: PositionInternalState,
 }
+
+//TODO: tests

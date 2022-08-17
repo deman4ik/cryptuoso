@@ -11,7 +11,7 @@ use crate::robot::Candle;
 use super::{
   position::{
     manager::PositionManager,
-    state::{PositionState, TradeState},
+    state::{PositionState, SignalState},
   },
   RobotState,
 };
@@ -19,7 +19,7 @@ use super::{
 pub mod dummy;
 pub mod t2_trend_friend;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum StrategyType {
   Breakout,
   BreakoutV2,
@@ -123,9 +123,11 @@ pub trait BaseStrategy {
     state: Self::State,
     positions: PositionManager,
   ) -> Self;
+  fn get_candle(&self) -> Result<Candle, String>;
   fn calc_indicatos(&mut self) -> Result<(), Box<dyn Error>>;
   fn run_strategy(&mut self) -> Result<(), Box<dyn Error>>;
   fn run(&mut self, candles: Vec<Candle>) -> Result<StrategyState, Box<dyn Error>>;
+  fn check(&mut self, candle: Candle) -> Result<StrategyState, Box<dyn Error>>;
   fn params(&self) -> StrategyParams;
   fn state(&self) -> StrategyState;
   fn positions(&self) -> &PositionManager;
@@ -197,6 +199,22 @@ impl Strategy {
     }
   }
 
+  pub fn check(&mut self, candle: Candle) -> Result<StrategyState, Box<dyn Error>> {
+    match self {
+      Self::Breakout(strategy) => strategy.check(candle),
+      Self::BreakoutV2(strategy) => strategy.check(candle),
+      Self::Channels(strategy) => strategy.check(candle),
+      Self::CounterCandle(strategy) => strategy.check(candle),
+      Self::DoubleReverseMM(strategy) => strategy.check(candle),
+      Self::FxCash(strategy) => strategy.check(candle),
+      Self::IRSTS(strategy) => strategy.check(candle),
+      Self::Parabolic(strategy) => strategy.check(candle),
+      Self::T2TrendFriend(strategy) => strategy.check(candle),
+      Self::TrendlingLong(strategy) => strategy.check(candle),
+      Self::TrendlingShort(strategy) => strategy.check(candle),
+    }
+  }
+
   pub fn params(&self) -> StrategyParams {
     match self {
       Self::Breakout(strategy) => strategy.params(),
@@ -247,7 +265,7 @@ impl Strategy {
     positions.positions_state()
   }
 
-  pub fn alerts(&self) -> Vec<TradeState> {
+  pub fn alerts(&self) -> Vec<SignalState> {
     let positions = match self {
       Self::Breakout(strategy) => strategy.positions(),
       Self::BreakoutV2(strategy) => strategy.positions(),

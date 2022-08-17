@@ -1,8 +1,7 @@
-use rayon::prelude::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator};
+use rayon::prelude::{IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::robot::indicator::BaseIndicator;
 use crate::robot::indicator::SMA::{Params, SMAResult, SMA};
-use crate::robot::position::*;
 use crate::robot::strategy::*;
 use crate::robot::Candle;
 
@@ -23,6 +22,7 @@ pub struct T2TrendFriendStrategyState {
   pub sma1_result: Option<SMAResult>,
   pub sma2_result: Option<SMAResult>,
   pub sma3_result: Option<SMAResult>,
+  pub bars_held: Option<u16>,
 }
 
 pub struct Indicators {
@@ -31,6 +31,7 @@ pub struct Indicators {
   sma3: SMA,
 }
 
+#[allow(dead_code)]
 pub struct Strategy {
   settings: StrategyOwnSettings,
   params: T2TrendFriendStrategyParams,
@@ -90,6 +91,22 @@ impl BaseStrategy for Strategy {
     }
   }
 
+  fn get_candle(&self) -> Result<Candle, String> {
+    match &self.candles {
+      Some(candles) => {
+        if candles.len() > 0 {
+          match candles.last() {
+            Some(candle) => Ok(candle.clone()),
+            None => Err("No candles".to_string()),
+          }
+        } else {
+          Err("No candles".to_string())
+        }
+      }
+      None => Err("No candles".to_string()),
+    }
+  }
+
   fn calc_indicatos(&mut self) -> Result<(), Box<dyn Error>> {
     match &self.candles {
       Some(candles) => {
@@ -102,7 +119,7 @@ impl BaseStrategy for Strategy {
           task.calc(candles);
         });
       }
-      None => panic!("candles is None"),
+      None => return Err("No candles to calc indicators".into()),
     }
     self.state.sma1_result = self.indicators.sma1.result().clone();
     self.state.sma2_result = self.indicators.sma2.result().clone();
@@ -111,30 +128,58 @@ impl BaseStrategy for Strategy {
   }
 
   fn run_strategy(&mut self) -> Result<(), Box<dyn Error>> {
+    let candle = self.get_candle()?;
+    let sma1 = match &self.state.sma1_result {
+      Some(result) => result.result,
+      None => return Err("sma1_result is None".into()),
+    };
+    let sma2 = match &self.state.sma2_result {
+      Some(result) => result.result,
+      None => return Err("sma2_result is None".into()),
+    };
+    let sma3 = match &self.state.sma3_result {
+      Some(result) => result.result,
+      None => return Err("sma3_result is None".into()),
+    };
+    if self.positions.has_active_position() {
+      let position = self.positions.get_active_position()?;
+      if position.is_long() {
+        self.state.bars_held = Some(self.state.bars_held.unwrap_or(0) + 1);
+        if candle.close < sma1 && self.state.bars_held.unwrap() > self.params.min_bars_to_hold {
+          self.state.bars_held = Some(0);
+          position.sell_at_market()?;
+        }
+      }
+    } else if candle.close > sma1 && sma1 > sma2 && sma1 > sma3 && sma2 > sma3 {
+      self.state.bars_held = Some(1);
+      let position = self.positions.create();
+      position.buy_at_market()?;
+    }
     Ok(())
   }
 
   fn run(&mut self, candles: Vec<Candle>) -> Result<StrategyState, Box<dyn Error>> {
     self.candles = match candles.len() {
-      0 => panic!("candles is empty"),
+      0 => return Err("candles is empty".into()),
       _ => Some(candles),
     };
 
-    let calc_indicators_result = self.calc_indicatos();
-
-    if calc_indicators_result.is_err() {
-      return Err(calc_indicators_result.err().unwrap());
-    }
+    self.calc_indicatos()?;
 
     self
       .positions
       .handle_candle(self.candles.as_ref().unwrap().last().unwrap());
 
-    let run_strategy_result = self.run_strategy();
-    if run_strategy_result.is_err() {
-      return Err(run_strategy_result.err().unwrap());
-    }
+    self.run_strategy()?;
 
+    self.positions.check_alerts()?;
+    Ok(self.state())
+  }
+
+  fn check(&mut self, candle: Candle) -> Result<StrategyState, Box<dyn Error>> {
+    self.positions.handle_candle(&candle);
+
+    self.positions.check_alerts()?;
     Ok(self.state())
   }
 
@@ -162,6 +207,7 @@ mod test {
       sma1_result: None,
       sma2_result: None,
       sma3_result: None,
+      bars_held: None,
     };
     let strategy = Strategy::new(
       StrategyOwnSettings {
@@ -202,6 +248,7 @@ mod test {
         sma1_result: None,
         sma2_result: None,
         sma3_result: None,
+        bars_held: None,
       },
       PositionManager::new(&None, &None, false),
     );

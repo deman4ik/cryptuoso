@@ -2,7 +2,7 @@ use std::error::Error;
 
 use serde::Deserialize;
 
-use self::position::state::PositionState;
+use self::position::state::{PositionState, SignalEvent};
 
 pub mod indicator;
 pub mod position;
@@ -19,8 +19,11 @@ pub struct RobotSettings {
 #[napi(object)]
 #[derive(Clone)]
 pub struct RobotState {
+  //TODO: export
   pub position_last_num: Option<u32>,
   pub positions: Option<Vec<PositionState>>,
+  pub alerts: Option<Vec<SignalEvent>>,
+  pub trades: Option<Vec<SignalEvent>>,
 }
 
 pub struct Robot {
@@ -45,6 +48,10 @@ impl Robot {
 
   pub fn run(&mut self, candles: Vec<Candle>) -> Result<strategy::StrategyState, Box<dyn Error>> {
     self.strategy.run(candles)
+  }
+
+  pub fn check(&mut self, candle: Candle) -> Result<strategy::StrategyState, Box<dyn Error>> {
+    self.strategy.check(candle)
   }
 
   pub fn state(&self) -> strategy::StrategyState {
@@ -73,3 +80,5 @@ pub struct Candle {
   pub close: f64,
   pub volume: f64,
 }
+
+//TODO: tests

@@ -1,6 +1,5 @@
 use std::error::Error;
 
-use crate::robot::position::*;
 use crate::robot::strategy::*;
 
 #[napi(object)]
@@ -15,11 +14,13 @@ pub struct DummyStrategyState {
   pub state: String,
 }
 
+#[allow(dead_code)]
 pub struct Strategy {
   settings: StrategyOwnSettings,
   params: DummyStrategyParams,
   state: DummyStrategyState,
   positions: PositionManager,
+  candles: Option<Vec<Candle>>,
 }
 
 impl BaseStrategy for Strategy {
@@ -37,6 +38,23 @@ impl BaseStrategy for Strategy {
       params: params,
       state: state,
       positions: positions,
+      candles: None,
+    }
+  }
+
+  fn get_candle(&self) -> Result<Candle, String> {
+    match &self.candles {
+      Some(candles) => {
+        if candles.len() > 0 {
+          match candles.last() {
+            Some(candle) => Ok(candle.clone()),
+            None => Err("No candles".to_string()),
+          }
+        } else {
+          Err("No candles".to_string())
+        }
+      }
+      None => Err("No candles".to_string()),
     }
   }
 
@@ -49,10 +67,17 @@ impl BaseStrategy for Strategy {
   }
 
   fn run(&mut self, _candles: Vec<Candle>) -> Result<StrategyState, Box<dyn Error>> {
-    self.calc_indicatos();
-    self.run_strategy();
+    self.calc_indicatos()?;
+    self.run_strategy()?;
 
     Ok(StrategyState::Breakout(self.state.clone()))
+  }
+
+  fn check(&mut self, candle: Candle) -> Result<StrategyState, Box<dyn Error>> {
+    self.positions.handle_candle(&candle);
+
+    self.positions.check_alerts()?;
+    Ok(self.state())
   }
 
   fn params(&self) -> StrategyParams {
