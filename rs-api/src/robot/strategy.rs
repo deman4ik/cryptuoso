@@ -8,13 +8,7 @@ use t2_trend_friend::{
 
 use crate::robot::Candle;
 
-use super::{
-  position::{
-    manager::PositionManager,
-    state::{PositionState, SignalState},
-  },
-  RobotState,
-};
+use super::{position::manager::PositionManager, RobotState};
 
 pub mod dummy;
 pub mod t2_trend_friend;
@@ -126,11 +120,10 @@ pub trait BaseStrategy {
   fn get_candle(&self) -> Result<Candle, String>;
   fn calc_indicatos(&mut self) -> Result<(), Box<dyn Error>>;
   fn run_strategy(&mut self) -> Result<(), Box<dyn Error>>;
-  fn run(&mut self, candles: Vec<Candle>) -> Result<StrategyState, Box<dyn Error>>;
-  fn check(&mut self, candle: Candle) -> Result<StrategyState, Box<dyn Error>>;
-  fn params(&self) -> StrategyParams;
-  fn state(&self) -> StrategyState;
-  fn positions(&self) -> &PositionManager;
+  fn run(&mut self, candles: Vec<Candle>) -> Result<(), Box<dyn Error>>;
+  fn check(&mut self, candle: Candle) -> Result<(), Box<dyn Error>>;
+  fn robot_state(&self) -> RobotState;
+  fn strategy_state(&self) -> StrategyState;
 }
 
 pub enum Strategy {
@@ -183,7 +176,7 @@ impl Strategy {
     }
   }
 
-  pub fn run(&mut self, candles: Vec<Candle>) -> Result<StrategyState, Box<dyn Error>> {
+  pub fn run(&mut self, candles: Vec<Candle>) -> Result<(), Box<dyn Error>> {
     match self {
       Self::Breakout(strategy) => strategy.run(candles),
       Self::BreakoutV2(strategy) => strategy.run(candles),
@@ -199,7 +192,7 @@ impl Strategy {
     }
   }
 
-  pub fn check(&mut self, candle: Candle) -> Result<StrategyState, Box<dyn Error>> {
+  pub fn check(&mut self, candle: Candle) -> Result<(), Box<dyn Error>> {
     match self {
       Self::Breakout(strategy) => strategy.check(candle),
       Self::BreakoutV2(strategy) => strategy.check(candle),
@@ -215,71 +208,35 @@ impl Strategy {
     }
   }
 
-  pub fn params(&self) -> StrategyParams {
+  pub fn strategy_state(&self) -> StrategyState {
     match self {
-      Self::Breakout(strategy) => strategy.params(),
-      Self::BreakoutV2(strategy) => strategy.params(),
-      Self::Channels(strategy) => strategy.params(),
-      Self::CounterCandle(strategy) => strategy.params(),
-      Self::DoubleReverseMM(strategy) => strategy.params(),
-      Self::FxCash(strategy) => strategy.params(),
-      Self::IRSTS(strategy) => strategy.params(),
-      Self::Parabolic(strategy) => strategy.params(),
-      Self::T2TrendFriend(strategy) => strategy.params(),
-      Self::TrendlingLong(strategy) => strategy.params(),
-      Self::TrendlingShort(strategy) => strategy.params(),
+      Self::Breakout(strategy) => strategy.strategy_state(),
+      Self::BreakoutV2(strategy) => strategy.strategy_state(),
+      Self::Channels(strategy) => strategy.strategy_state(),
+      Self::CounterCandle(strategy) => strategy.strategy_state(),
+      Self::DoubleReverseMM(strategy) => strategy.strategy_state(),
+      Self::FxCash(strategy) => strategy.strategy_state(),
+      Self::IRSTS(strategy) => strategy.strategy_state(),
+      Self::Parabolic(strategy) => strategy.strategy_state(),
+      Self::T2TrendFriend(strategy) => strategy.strategy_state(),
+      Self::TrendlingLong(strategy) => strategy.strategy_state(),
+      Self::TrendlingShort(strategy) => strategy.strategy_state(),
     }
   }
 
-  pub fn state(&self) -> StrategyState {
+  pub fn robot_state(&self) -> RobotState {
     match self {
-      Self::Breakout(strategy) => strategy.state(),
-      Self::BreakoutV2(strategy) => strategy.state(),
-      Self::Channels(strategy) => strategy.state(),
-      Self::CounterCandle(strategy) => strategy.state(),
-      Self::DoubleReverseMM(strategy) => strategy.state(),
-      Self::FxCash(strategy) => strategy.state(),
-      Self::IRSTS(strategy) => strategy.state(),
-      Self::Parabolic(strategy) => strategy.state(),
-      Self::T2TrendFriend(strategy) => strategy.state(),
-      Self::TrendlingLong(strategy) => strategy.state(),
-      Self::TrendlingShort(strategy) => strategy.state(),
+      Self::Breakout(strategy) => strategy.robot_state(),
+      Self::BreakoutV2(strategy) => strategy.robot_state(),
+      Self::Channels(strategy) => strategy.robot_state(),
+      Self::CounterCandle(strategy) => strategy.robot_state(),
+      Self::DoubleReverseMM(strategy) => strategy.robot_state(),
+      Self::FxCash(strategy) => strategy.robot_state(),
+      Self::IRSTS(strategy) => strategy.robot_state(),
+      Self::Parabolic(strategy) => strategy.robot_state(),
+      Self::T2TrendFriend(strategy) => strategy.robot_state(),
+      Self::TrendlingLong(strategy) => strategy.robot_state(),
+      Self::TrendlingShort(strategy) => strategy.robot_state(),
     }
-  }
-
-  pub fn positions(&self) -> Vec<PositionState> {
-    let positions = match self {
-      Self::Breakout(strategy) => strategy.positions(),
-      Self::BreakoutV2(strategy) => strategy.positions(),
-      Self::Channels(strategy) => strategy.positions(),
-      Self::CounterCandle(strategy) => strategy.positions(),
-      Self::DoubleReverseMM(strategy) => strategy.positions(),
-      Self::FxCash(strategy) => strategy.positions(),
-      Self::IRSTS(strategy) => strategy.positions(),
-      Self::Parabolic(strategy) => strategy.positions(),
-      Self::T2TrendFriend(strategy) => strategy.positions(),
-      Self::TrendlingLong(strategy) => strategy.positions(),
-      Self::TrendlingShort(strategy) => strategy.positions(),
-    };
-
-    positions.positions_state()
-  }
-
-  pub fn alerts(&self) -> Vec<SignalState> {
-    let positions = match self {
-      Self::Breakout(strategy) => strategy.positions(),
-      Self::BreakoutV2(strategy) => strategy.positions(),
-      Self::Channels(strategy) => strategy.positions(),
-      Self::CounterCandle(strategy) => strategy.positions(),
-      Self::DoubleReverseMM(strategy) => strategy.positions(),
-      Self::FxCash(strategy) => strategy.positions(),
-      Self::IRSTS(strategy) => strategy.positions(),
-      Self::Parabolic(strategy) => strategy.positions(),
-      Self::T2TrendFriend(strategy) => strategy.positions(),
-      Self::TrendlingLong(strategy) => strategy.positions(),
-      Self::TrendlingShort(strategy) => strategy.positions(),
-    };
-
-    positions.alerts_state()
   }
 }

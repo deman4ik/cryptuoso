@@ -1,10 +1,11 @@
+use super::Candle;
 use super::*;
 use chrono::prelude::*;
-
-use super::Candle;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Position {
+  id: Uuid,
   backtest: bool,
   candle: Option<Candle>,
   prefix: String,
@@ -38,6 +39,7 @@ impl Position {
     backtest: &bool,
   ) -> Self {
     Position {
+      id: Uuid::new_v4(),
       backtest: backtest.clone(),
       candle: candle.clone(),
       prefix: prefix.clone(),
@@ -531,6 +533,7 @@ impl Position {
     backtest: &bool,
   ) -> Position {
     Position {
+      id: Uuid::parse_str(&position_state.id).unwrap(),
       backtest: backtest.clone(),
       candle: candle.clone(),
       prefix: position_state.prefix,
@@ -579,6 +582,7 @@ impl Position {
 
   pub fn state(&self) -> PositionState {
     PositionState {
+      id: self.id.to_string(),
       prefix: self.prefix.clone(),
       code: self.code.clone(),
       parent_id: self.parent_id.clone(),
@@ -645,6 +649,52 @@ impl Position {
 
   pub fn trades_state(&self) -> Vec<SignalState> {
     self.trades.iter().map(|trade| trade.state()).collect()
+  }
+
+  pub fn alert_events(&self) -> Vec<SignalEvent> {
+    self
+      .alerts
+      .iter()
+      .map(|alert| SignalEvent {
+        id: Uuid::new_v4().to_string(),
+        timestamp: match self.backtest {
+          true => format!("{:?}", alert.candle_timestamp),
+          false => format!("{:?}", Utc::now()),
+        },
+        position_id: self.id.to_string(),
+        position_prefix: self.prefix.clone(),
+        position_code: self.code.clone(),
+        position_parent_id: self.parent_id.clone(),
+        signal_type: alert.signal_type.to_str(),
+        action: alert.action.to_str().unwrap(),
+        order_type: alert.order_type.to_str().unwrap(),
+        price: alert.price,
+        candle_timestamp: format!("{:?}", alert.candle_timestamp),
+      })
+      .collect()
+  }
+
+  pub fn trade_events(&self) -> Vec<SignalEvent> {
+    self
+      .trades
+      .iter()
+      .map(|trade| SignalEvent {
+        id: Uuid::new_v4().to_string(),
+        timestamp: match self.backtest {
+          true => format!("{:?}", trade.candle_timestamp),
+          false => format!("{:?}", Utc::now()),
+        },
+        position_id: self.id.to_string(),
+        position_prefix: self.prefix.clone(),
+        position_code: self.code.clone(),
+        position_parent_id: self.parent_id.clone(),
+        signal_type: trade.signal_type.to_str(),
+        action: trade.action.to_str().unwrap(),
+        order_type: trade.order_type.to_str().unwrap(),
+        price: trade.price,
+        candle_timestamp: format!("{:?}", trade.candle_timestamp),
+      })
+      .collect()
   }
 }
 

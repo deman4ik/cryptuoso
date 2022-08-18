@@ -200,14 +200,14 @@ pub struct SignalEvent {
   pub position_id: String,
   pub position_prefix: String,
   pub position_code: String,
-  pub position_parent_id: String,
+  pub position_parent_id: Option<String>,
   #[napi(ts_type = "'alert' | 'trade'")]
   pub signal_type: String,
   #[napi(ts_type = "'long' | 'short' | 'closeLong' | 'closeShort'")]
   pub action: String,
   #[napi(ts_type = "'market' | 'limit' | 'stop'")]
   pub order_type: String,
-  pub price: Option<f64>,
+  pub price: f64,
   pub candle_timestamp: String,
 }
 
@@ -222,6 +222,7 @@ pub struct PositionInternalState {
 #[napi(object)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct PositionState {
+  pub id: String,
   pub prefix: String,
   pub code: String,
   pub parent_id: Option<String>,

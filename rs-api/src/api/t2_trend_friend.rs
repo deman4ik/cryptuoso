@@ -32,27 +32,21 @@ impl T2TrendFriendRobot {
   }
 
   #[napi]
-  pub async fn run(&mut self, candles: Vec<Candle>) -> Result<T2TrendFriendStrategyState> {
-    let state = self.robot.run(candles);
+  pub async fn run(&mut self, candles: Vec<Candle>) -> Result<()> {
+    let result = self.robot.run(candles);
 
-    match state {
-      Ok(state) => match state {
-        StrategyState::T2TrendFriend(state) => Ok(state),
-        _ => panic!("Invalid strategy state"),
-      },
+    match result {
+      Ok(_) => Ok(()),
       Err(err) => Err(Error::new(Status::GenericFailure, err.to_string())), //TODO: better error handling
     }
   }
 
   #[napi]
-  pub async fn check(&mut self, candle: Candle) -> Result<T2TrendFriendStrategyState> {
-    let state = self.robot.check(candle);
+  pub async fn check(&mut self, candle: Candle) -> Result<()> {
+    let result = self.robot.check(candle);
 
-    match state {
-      Ok(state) => match state {
-        StrategyState::T2TrendFriend(state) => Ok(state),
-        _ => panic!("Invalid strategy state"),
-      },
+    match result {
+      Ok(_) => Ok(()),
       Err(err) => Err(Error::new(Status::GenericFailure, err.to_string())), //TODO: better error handling
     }
   }
@@ -63,18 +57,15 @@ impl T2TrendFriendRobot {
   }
 
   #[napi(getter)]
-  pub fn strategy_params(&self) -> T2TrendFriendStrategyParams {
-    match self.robot.strategy_params() {
-      StrategyParams::T2TrendFriend(params) => params,
-      _ => panic!("Invalid strategy params"),
+  pub fn strategy_state(&self) -> T2TrendFriendStrategyState {
+    match self.robot.strategy_state() {
+      StrategyState::T2TrendFriend(state) => state,
+      _ => panic!("Invalid strategy state"),
     }
   }
 
   #[napi(getter)]
-  pub fn state(&self) -> T2TrendFriendStrategyState {
-    match self.robot.state() {
-      StrategyState::T2TrendFriend(state) => state,
-      _ => panic!("Invalid strategy state"),
-    }
+  pub fn robot_state(&self) -> RobotState {
+    self.robot.robot_state()
   }
 }

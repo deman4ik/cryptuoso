@@ -124,11 +124,21 @@ impl PositionManager {
     }
   }
 
+  pub fn clear_all(&mut self) {
+    self.clear_alerts();
+    self.clear_trades();
+    self.clear_closed_positions();
+  }
+
   pub fn check_alerts(&mut self) -> Result<(), String> {
     for position in self.positions.values_mut() {
       position.check_alerts()?;
     }
     Ok(())
+  }
+
+  pub fn position_last_num(&self) -> u32 {
+    self.last_position_num
   }
 
   pub fn positions_state(&self) -> Vec<PositionState> {
@@ -153,6 +163,22 @@ impl PositionManager {
       trades.extend(position.trades_state());
     }
     trades
+  }
+
+  pub fn alert_events(&self) -> Vec<SignalEvent> {
+    let mut events = Vec::new();
+    for position in self.positions.values() {
+      events.extend(position.alert_events());
+    }
+    events
+  }
+
+  pub fn trade_events(&self) -> Vec<SignalEvent> {
+    let mut events = Vec::new();
+    for position in self.positions.values() {
+      events.extend(position.trade_events());
+    }
+    events
   }
 }
 

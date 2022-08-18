@@ -158,11 +158,13 @@ impl BaseStrategy for Strategy {
     Ok(())
   }
 
-  fn run(&mut self, candles: Vec<Candle>) -> Result<StrategyState, Box<dyn Error>> {
+  fn run(&mut self, candles: Vec<Candle>) -> Result<(), Box<dyn Error>> {
     self.candles = match candles.len() {
       0 => return Err("candles is empty".into()),
       _ => Some(candles),
     };
+
+    self.positions.clear_all();
 
     self.calc_indicatos()?;
 
@@ -173,26 +175,30 @@ impl BaseStrategy for Strategy {
     self.run_strategy()?;
 
     self.positions.check_alerts()?;
-    Ok(self.state())
+    Ok(())
   }
 
-  fn check(&mut self, candle: Candle) -> Result<StrategyState, Box<dyn Error>> {
+  fn check(&mut self, candle: Candle) -> Result<(), Box<dyn Error>> {
+    self.positions.clear_closed_positions();
+    self.positions.clear_trades();
+
     self.positions.handle_candle(&candle);
 
     self.positions.check_alerts()?;
-    Ok(self.state())
+    Ok(())
   }
 
-  fn params(&self) -> StrategyParams {
-    StrategyParams::T2TrendFriend(self.params.clone())
-  }
-
-  fn state(&self) -> StrategyState {
+  fn strategy_state(&self) -> StrategyState {
     StrategyState::T2TrendFriend(self.state.clone())
   }
 
-  fn positions(&self) -> &PositionManager {
-    &self.positions
+  fn robot_state(&self) -> RobotState {
+    RobotState {
+      position_last_num: Some(self.positions.position_last_num()),
+      positions: Some(self.positions.positions_state()),
+      alerts: Some(self.positions.alert_events()),
+      trades: Some(self.positions.trade_events()),
+    }
   }
 }
 
@@ -225,7 +231,7 @@ mod test {
     );
 
     assert_eq!(
-      strategy.state(),
+      strategy.strategy_state(),
       StrategyState::T2TrendFriend(initial_state)
     );
   }
@@ -253,9 +259,9 @@ mod test {
       PositionManager::new(&None, &None, false),
     );
     let candles = load_candles();
-    let strategy_state = strategy.run(candles.clone()).unwrap();
+    strategy.run(candles.clone()).unwrap();
 
-    let raw_state = match strategy_state {
+    let raw_state = match strategy.strategy_state() {
       StrategyState::T2TrendFriend(state) => state,
       _ => panic!("wrong strategy state"),
     };

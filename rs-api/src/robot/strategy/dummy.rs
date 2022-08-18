@@ -66,29 +66,30 @@ impl BaseStrategy for Strategy {
     Ok(())
   }
 
-  fn run(&mut self, _candles: Vec<Candle>) -> Result<StrategyState, Box<dyn Error>> {
+  fn run(&mut self, _candles: Vec<Candle>) -> Result<(), Box<dyn Error>> {
     self.calc_indicatos()?;
     self.run_strategy()?;
 
-    Ok(StrategyState::Breakout(self.state.clone()))
+    Ok(())
   }
 
-  fn check(&mut self, candle: Candle) -> Result<StrategyState, Box<dyn Error>> {
+  fn check(&mut self, candle: Candle) -> Result<(), Box<dyn Error>> {
     self.positions.handle_candle(&candle);
 
     self.positions.check_alerts()?;
-    Ok(self.state())
+    Ok(())
   }
 
-  fn params(&self) -> StrategyParams {
-    StrategyParams::Breakout(self.params.clone())
-  }
-
-  fn state(&self) -> StrategyState {
+  fn strategy_state(&self) -> StrategyState {
     StrategyState::Breakout(self.state.clone())
   }
 
-  fn positions(&self) -> &PositionManager {
-    &self.positions
+  fn robot_state(&self) -> RobotState {
+    RobotState {
+      position_last_num: Some(self.positions.position_last_num()),
+      positions: Some(self.positions.positions_state()),
+      alerts: Some(self.positions.alert_events()),
+      trades: Some(self.positions.trade_events()),
+    }
   }
 }

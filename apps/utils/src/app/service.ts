@@ -57,12 +57,10 @@ export default class UtilsService extends HTTPService {
         WHERE exchange = 'binance_futures' and asset = 'BTC' and currency = 'USDT' and timeframe = 1440
         ORDER BY timestamp ASC LIMIT 300;`);
 
-        const result = await robot.run([...candles]);
+        await robot.run([...candles]);
 
-        this.log.info(result);
-        this.log.info(robot.settings);
-        this.log.info(robot.strategyParams);
-        this.log.info(robot.state);
+        this.log.info(robot.strategyState);
+        this.log.info(robot.robotState);
     }
 
     /* async onStart() {

@@ -19,7 +19,6 @@ pub struct RobotSettings {
 #[napi(object)]
 #[derive(Clone)]
 pub struct RobotState {
-  //TODO: export
   pub position_last_num: Option<u32>,
   pub positions: Option<Vec<PositionState>>,
   pub alerts: Option<Vec<SignalEvent>>,
@@ -46,20 +45,20 @@ impl Robot {
     }
   }
 
-  pub fn run(&mut self, candles: Vec<Candle>) -> Result<strategy::StrategyState, Box<dyn Error>> {
+  pub fn run(&mut self, candles: Vec<Candle>) -> Result<(), Box<dyn Error>> {
     self.strategy.run(candles)
   }
 
-  pub fn check(&mut self, candle: Candle) -> Result<strategy::StrategyState, Box<dyn Error>> {
+  pub fn check(&mut self, candle: Candle) -> Result<(), Box<dyn Error>> {
     self.strategy.check(candle)
   }
 
-  pub fn state(&self) -> strategy::StrategyState {
-    self.strategy.state()
+  pub fn robot_state(&self) -> RobotState {
+    self.strategy.robot_state()
   }
 
-  pub fn strategy_params(&self) -> strategy::StrategyParams {
-    self.strategy.params()
+  pub fn strategy_state(&self) -> strategy::StrategyState {
+    self.strategy.strategy_state()
   }
 
   pub fn settings(&self) -> RobotSettings {
