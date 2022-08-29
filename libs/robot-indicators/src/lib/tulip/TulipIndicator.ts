@@ -30,8 +30,8 @@ export class TulipIndicator extends BaseIndicator {
     }
 
     async calc() {
-        const { candlesLength } = this.parameters;
-        const candlesProps = this.prepareCandles(this.candles.slice(-candlesLength));
+        const { candlesLength, optInTimePeriod } = this.parameters;
+        const candlesProps = this.prepareCandles(this.candles.slice(-optInTimePeriod || candlesLength));
         const result = await this.calculate(candlesProps);
         const resultKeys = Object.keys(result);
         if (resultKeys.length > 0) {

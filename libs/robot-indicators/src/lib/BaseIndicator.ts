@@ -17,7 +17,7 @@ export class BaseIndicator {
     };
     _candle: DBCandle;
     _candles: DBCandle[];
-    _candlesProps: CandleProps;
+
     _indicators: {
         [key: string]: any;
     };
@@ -38,13 +38,7 @@ export class BaseIndicator {
         this._parameters = state.parameters || {};
         this._candle = null;
         this._candles = [];
-        this._candlesProps = {
-            open: [],
-            high: [],
-            low: [],
-            close: [],
-            volume: []
-        };
+
         this._indicators = {
             tulip: {}
             /*  tech: {},
@@ -304,24 +298,16 @@ export class BaseIndicator {
     }
     */
 
-    _handleCandles(candle: DBCandle, candles: DBCandle[], candlesProps: CandleProps) {
-        if (
-            !candle ||
-            !candles ||
-            !candlesProps ||
-            !Array.isArray(candles) ||
-            candles.length === 0 ||
-            Object.keys(candlesProps).length === 0
-        ) {
+    _handleCandles(candle: DBCandle, candles: DBCandle[]) {
+        if (!candle || !candles || !Array.isArray(candles) || candles.length === 0) {
             this.log(`Indicator ${this._name} wrong input candles`);
             this.log(candle);
             this.log(candles);
-            this.log(candlesProps);
+
             throw new Error(`Indicator ${this._name} wrong input candles`);
         }
         this._candle = candle;
         this._candles = candles;
-        this._candlesProps = candlesProps;
     }
 
     get initialized() {

@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{collections::HashMap, error::Error};
 
 use serde::Deserialize;
 
@@ -45,12 +45,20 @@ impl Robot {
     }
   }
 
-  pub fn run(&mut self, candles: Vec<Candle>) -> Result<(), Box<dyn Error>> {
-    self.strategy.run(candles)
+  pub fn handle_candles(&mut self, candles: Vec<Candle>) -> Result<(), String> {
+    self.strategy.handle_candles(candles)
   }
 
-  pub fn check(&mut self, candle: Candle) -> Result<(), Box<dyn Error>> {
-    self.strategy.check(candle)
+  pub fn handle_candle(&mut self, candle: Candle) -> Result<(), String> {
+    self.strategy.handle_candle(candle)
+  }
+
+  pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
+    self.strategy.run()
+  }
+
+  pub fn check(&mut self) -> Result<(), Box<dyn Error>> {
+    self.strategy.check()
   }
 
   pub fn robot_state(&self) -> RobotState {
@@ -78,6 +86,23 @@ pub struct Candle {
   pub low: f64,
   pub close: f64,
   pub volume: f64,
+  pub indicators: Option<HashMap<String, f64>>,
 }
 
+impl Candle {
+  pub fn add_inidicator_result(&mut self, name: &String, value: f64) {
+    if self.indicators.is_none() {
+      self.indicators = Some(HashMap::new());
+    }
+    self
+      .indicators
+      .as_mut()
+      .unwrap()
+      .insert(name.clone(), value);
+  }
+
+  pub fn get_indicator_result(&self, name: &String) -> Option<f64> {
+    self.indicators.as_ref().unwrap().get(name).cloned()
+  }
+}
 //TODO: tests

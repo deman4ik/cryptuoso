@@ -74,23 +74,23 @@ impl Position {
     if self.status == PositionStatus::Open {
       self.internal.highest_high = match self.internal.highest_high {
         Some(highest_high) => {
-          if candle.as_ref().unwrap().high > highest_high {
-            Some(candle.as_ref().unwrap().high)
+          if self.candle.as_ref().unwrap().high > highest_high {
+            Some(self.candle.as_ref().unwrap().high)
           } else {
             Some(highest_high)
           }
         }
-        None => Some(candle.as_ref().unwrap().high),
+        None => Some(self.candle.as_ref().unwrap().high),
       };
       self.internal.lowest_low = match self.internal.lowest_low {
         Some(lowest_low) => {
-          if candle.as_ref().unwrap().low < lowest_low {
-            Some(candle.as_ref().unwrap().low)
+          if self.candle.as_ref().unwrap().low < lowest_low {
+            Some(self.candle.as_ref().unwrap().low)
           } else {
             Some(lowest_low)
           }
         }
-        None => Some(candle.as_ref().unwrap().low),
+        None => Some(self.candle.as_ref().unwrap().low),
       };
     }
   }

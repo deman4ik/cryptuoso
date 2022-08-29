@@ -13,7 +13,7 @@ import {
 import { ValidTimeframe, Candle, DBCandle, SignalEvent, CandleType, ActiveAlert } from "@cryptuoso/market";
 import { sortAsc, chunkArray } from "@cryptuoso/helpers";
 import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
-import logger, { Logger } from "@cryptuoso/logger";
+import logger, { Logger, Tracer } from "@cryptuoso/logger";
 import { sql, pg, pgUtil, makeChunksGenerator } from "@cryptuoso/postgres";
 import Redis from "ioredis";
 import Cache from "ioredis-cache";
@@ -243,13 +243,31 @@ class BacktesterWorker {
                         ${position.exitAction || null},
                         ${position.exitCandleTimestamp || null},
                         ${JSON.stringify(position.alerts)},
-                        ${position.barsHeld || null},
+                        ${
+                            //position.barsHeld ||
+                            null
+                        },
                         ${JSON.stringify(position.internalState)},
-                        ${position.emulated || false},
-                        ${position.margin || null},
-                        ${position.volume || null},
-                        ${position.profit || null},
-                        ${position.maxPrice || null}
+                        ${
+                            //position.emulated ||
+                            false
+                        },
+                        ${
+                            //position.margin ||
+                            null
+                        },
+                        ${
+                            //position.volume ||
+                            null
+                        },
+                        ${
+                            //position.profit ||
+                            null
+                        },
+                        ${
+                            //position.maxPrice ||
+                            null
+                        }
                     )`);
                 }
             }
@@ -600,7 +618,7 @@ class BacktesterWorker {
                 this.backtester.initIndicators();
 
                 // Load required history candles
-                const requiredHistoryMaxBars = this.backtester.robotInstancesArray[0].requiredHistoryMaxBars;
+                const requiredHistoryMaxBars = 300; //this.backtester.robotInstancesArray[0].requiredHistoryMaxBars;
                 const historyCandles: Candle[] = await this.#loadHistoryCandles(
                     this.backtester.exchange,
                     this.backtester.asset,
@@ -653,7 +671,7 @@ class BacktesterWorker {
                SELECT COUNT(1) ${query}`));
             this.backtester.init(candlesCount);
 
-            await DataStream.from(
+            /*   await DataStream.from(
                 makeChunksGenerator(
                     this.db.pg,
                     sql`SELECT * ${query} ORDER BY timestamp`,
@@ -671,19 +689,23 @@ class BacktesterWorker {
                     this.log.error(`Backtester #${this.backtester.id} - Error`, err.message);
                     throw new BaseError(err.message, err);
                 })
-                .whenEnd();
+                .whenEnd();*/
 
-            /* const candles = await this.db.pg.many<Candle>(
-                sql`SELECT time, timestamp, open, high, low, close ${query} ORDER BY timestamp`
+            const candles = await this.db.pg.many<Candle>(
+                sql`SELECT time, timestamp, timeframe, open, high, low, close, volume ${query} ORDER BY timestamp`
             );
+
+            const tracer = new Tracer();
+            const trace = tracer.start("BACKTEST");
 
             for (let i = 0; i < candles.length; i += 1) {
                 await this.backtester.handleCandle(candles[i]);
-                const percentUpdated = this.backtester.incrementProgress();
-                if (percentUpdated) subject.next(this.backtester.completedPercent);
-            }*/
-
-            await this.backtester.calcStats();
+                this.backtester.incrementProgress();
+                //  if (percentUpdated) subject.next(this.backtester.completedPercent);
+            }
+            tracer.end(trace);
+            this.log.info(tracer.state);
+            /*    await this.backtester.calcStats();
 
             if (this.backtester.settings.populateHistory) {
                 const robot = this.backtester.robots[this.backtester.robotId];
@@ -719,7 +741,7 @@ class BacktesterWorker {
                         robotId: robot.instance.id
                     });
                 }
-            }
+            } */
         } catch (err) {
             this.log.error(`Backtester #${this.backtester.id} - Failed`, err.message);
             throw err;

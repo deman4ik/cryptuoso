@@ -40,6 +40,8 @@
         "serve:importer-worker": "nx serve importer-worker --watch=false",
         "build:backtester-worker": "nx build backtester-worker --prod",
         "serve:backtester-worker": "nx serve backtester-worker --watch=false",
+        "build:backtester-worker-rs": "nx build backtester-worker-rs --prod",
+        "serve:backtester-worker-rs": "nx serve backtester-worker-rs --watch=false",
         "build:auth": "nx build auth --prod",
         "serve:auth": "nx serve auth --watch=false",
         "build:trade-stats-worker": "nx build trade-stats-worker --prod",

@@ -22,6 +22,7 @@
             "@cryptuoso/auth-utils": ["libs/auth-utils/src/index.ts"],
             "@cryptuoso/backtester-events": ["libs/backtester-events/src/index.ts"],
             "@cryptuoso/backtester-state": ["libs/backtester-state/src/index.ts"],
+            "@cryptuoso/backtester-state-rs": ["libs/backtester-state-rs/src/index.ts"],
             "@cryptuoso/billing": ["libs/billing/src/index.ts"],
             "@cryptuoso/ccxt-private": ["libs/ccxt-private/src/index.ts"],
             "@cryptuoso/ccxt-public": ["libs/ccxt-public/src/index.ts"],
@@ -49,6 +50,7 @@
             "@cryptuoso/robot-state": ["libs/robot-state/src/index.ts"],
             "@cryptuoso/robot-thread": ["libs/robot-thread/src/index.ts"],
             "@cryptuoso/robot-types": ["libs/robot-types/src/index.ts"],
+            "@cryptuoso/rs": ["rs-api/index"],
             "@cryptuoso/service": ["libs/service/src/index.ts"],
             "@cryptuoso/signal-subscription-events": ["libs/signal-subscription-events/src/index.ts"],
             "@cryptuoso/test-helpers": ["libs/test-helpers/src/index.ts"],
@@ -60,8 +62,7 @@
             "@cryptuoso/user-robot-state": ["libs/user-robot-state/src/index.ts"],
             "@cryptuoso/user-state": ["libs/user-state/src/index.ts"],
             "@cryptuoso/user-sub-events": ["libs/user-sub-events/src/index.ts"],
-            "@cryptuoso/user-types": ["libs/user-types/src/index.ts"],
-            "@cryptuoso/rs": ["rs-api/index"]
+            "@cryptuoso/user-types": ["libs/user-types/src/index.ts"]
         },
         "resolveJsonModule": true
     },

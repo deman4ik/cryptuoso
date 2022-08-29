@@ -52,13 +52,7 @@ export class BaseStrategy {
     _stats?: TradeStats;
     _candle: Candle;
     _candles: Candle[] = [];
-    _candlesProps: CandleProps = {
-        open: [],
-        high: [],
-        low: [],
-        close: [],
-        volume: []
-    };
+
     _indicators: {
         [key: string]: IndicatorState; //TODO generic types
     };
@@ -336,10 +330,10 @@ export class BaseStrategy {
         });
     }
 
-    _handleCandles(candle: Candle, candles: Candle[], candlesProps: CandleProps) {
+    _handleCandles(candle: Candle, candles: Candle[]) {
         this._candle = candle;
         this._candles = candles;
-        this._candlesProps = candlesProps;
+
         this._positionsHandleCandle(candle);
     }
 
@@ -381,6 +375,14 @@ export class BaseStrategy {
         return this._addTulipIndicator;
     }
 
+    _addRsIndicator(name: string, indicatorName: string, parameters: { [key: string]: any }) {
+        this._addIndicator(name, indicatorName, parameters);
+        this._indicators[name].type = IndicatorType.rs;
+    }
+
+    get addRsIndicator() {
+        return this._addRsIndicator;
+    }
     /*
     _addTalibIndicator(name, indicatorName, parameters) {
       this._addIndicator(name, indicatorName, parameters);

@@ -400,6 +400,7 @@ export class Backtester {
         robot.instance.positionsToSave.forEach((pos) => {
             robot.data.positions[pos.id] = { ...pos, backtestId: this.#id };
         });
+        logger.info(`Positions: ${Object.keys(robot.data.positions).length}`);
     };
 
     async handleCandle(candle: Candle) {
@@ -413,7 +414,7 @@ export class Backtester {
             robot.instance.clearEvents();
             robot.instance.checkAlerts();
             //await robot.instance.calcStats();
-            this.#saveLogs(id);
+            // this.#saveLogs(id);
             this.#saveSignals(id);
             this.#savePositions(id);
             robot.instance.clearEvents();
@@ -421,7 +422,7 @@ export class Backtester {
             robot.instance.runStrategy();
             robot.instance.finalize();
             //await robot.instance.calcStats();
-            this.#saveLogs(id);
+            // this.#saveLogs(id);
             this.#saveSignals(id);
             this.#savePositions(id);
         }

@@ -436,7 +436,7 @@ export default class BacktesterWorkerService extends HTTPService {
                     this.log.info(
                         `Backtester #${backtester.id} finished in ${dayjs
                             .utc(backtester.finishedAt)
-                            .to(backtester.startedAt)}`
+                            .diff(backtester.startedAt, "milliseconds")} ms`
                     );
                 }
 

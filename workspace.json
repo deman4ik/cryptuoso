@@ -154,6 +154,29 @@
             },
             "tags": []
         },
+        "backtester-state-rs": {
+            "root": "libs/backtester-state-rs",
+            "sourceRoot": "libs/backtester-state-rs/src",
+            "projectType": "library",
+            "architect": {
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "outputs": ["{options.outputFile}"],
+                    "options": {
+                        "lintFilePatterns": ["libs/backtester-state-rs/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/libs/backtester-state-rs"],
+                    "options": {
+                        "jestConfig": "libs/backtester-state-rs/jest.config.ts",
+                        "passWithNoTests": true
+                    }
+                }
+            },
+            "tags": []
+        },
         "backtester-worker": {
             "$schema": "../../node_modules/nx/schemas/project-schema.json",
             "root": "apps/backtester-worker",
@@ -206,6 +229,59 @@
                         "tsConfig": "apps/backtester-worker/tsconfig.spec.json"
                     },
                     "outputs": ["coverage/apps/backtester-worker"]
+                }
+            },
+            "tags": []
+        },
+        "backtester-worker-rs": {
+            "root": "apps/backtester-worker-rs",
+            "sourceRoot": "apps/backtester-worker-rs/src",
+            "projectType": "application",
+            "architect": {
+                "build": {
+                    "builder": "@nrwl/node:webpack",
+                    "outputs": ["{options.outputPath}"],
+                    "options": {
+                        "outputPath": "dist/apps/backtester-worker-rs",
+                        "main": "apps/backtester-worker-rs/src/main.ts",
+                        "tsConfig": "apps/backtester-worker-rs/tsconfig.app.json",
+                        "assets": ["apps/backtester-worker-rs/src/assets"],
+                        "webpackConfig": "apps/backtester-worker-rs/webpack.config.js"
+                    },
+                    "configurations": {
+                        "production": {
+                            "optimization": true,
+                            "extractLicenses": true,
+                            "inspect": false,
+                            "fileReplacements": [
+                                {
+                                    "replace": "apps/backtester-worker-rs/src/environments/environment.ts",
+                                    "with": "apps/backtester-worker-rs/src/environments/environment.prod.ts"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "serve": {
+                    "builder": "@nrwl/node:node",
+                    "options": {
+                        "buildTarget": "backtester-worker-rs:build"
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "outputs": ["{options.outputFile}"],
+                    "options": {
+                        "lintFilePatterns": ["apps/backtester-worker-rs/**/*.ts"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/apps/backtester-worker-rs"],
+                    "options": {
+                        "jestConfig": "apps/backtester-worker-rs/jest.config.ts",
+                        "passWithNoTests": true
+                    }
                 }
             },
             "tags": []

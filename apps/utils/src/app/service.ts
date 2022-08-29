@@ -2,7 +2,7 @@ import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
 import { Tracer } from "@cryptuoso/logger";
 import { sql } from "@cryptuoso/postgres";
 import { DBCandle } from "@cryptuoso/market";
-import { TulipIndicator } from "@cryptuoso/robot-indicators";
+import { RsIndicator, TulipIndicator } from "@cryptuoso/robot-indicators";
 import {
     RobotSettings,
     RobotState,
@@ -24,43 +24,70 @@ export default class UtilsService extends HTTPService {
         }
     }
     async onStartRS() {
-        const robotSettings: RobotSettings = {
+        /*   const robotSettings: RobotSettings = {
             exchange: "binance_futures",
 
-            timeframe: 60,
+            timeframe: 30,
             strategySettings: {
                 strategyType: "t2_trend_friend",
-                backtest: false
+                backtest: true
             }
         };
         const strategyParams: T2TrendFriendStrategyParams = {
-            sma1: 10,
-            sma2: 20,
-            sma3: 30,
-            minBarsToHold: 10
+            sma1: 50,
+            sma2: 175,
+            sma3: 100,
+            minBarsToHold: 5
         };
         const strategyState: T2TrendFriendStrategyState = {
             sma1Result: undefined,
             sma2Result: undefined,
-            sma3Result: undefined
+            sma3Result: undefined,
+            barsHeld: undefined
         };
 
         const robotState: RobotState = {
             positionLastNum: undefined,
             positions: undefined
-        };
-        const robot = new T2TrendFriendRobot(robotSettings, strategyParams, strategyState, robotState);
+        }; */
+        //const robot = new T2TrendFriendRobot(robotSettings, strategyParams, strategyState, robotState);
 
-        const candles = await this.db.pg
+        const candlesDB = await this.db.pg
             .many<DBCandle>(sql`SELECT time, timestamp, timeframe, open, high, low, close, volume 
         FROM candles
-        WHERE exchange = 'binance_futures' and asset = 'BTC' and currency = 'USDT' and timeframe = 1440
-        ORDER BY timestamp ASC LIMIT 300;`);
+        WHERE exchange = 'binance_futures' and asset = 'REN' and currency = 'USDT' and timeframe = 30
+        ORDER BY time ASC limit 10000;`);
+        const candles = [...candlesDB];
 
-        await robot.run([...candles]);
+        const tulip = new RsIndicator({
+            exchange: "binance_futures",
+            asset: "REM",
+            currency: "USDT",
+            name: "sma",
+            indicatorName: "sma",
+            parameters: {
+                optInTimePeriod: 30
+            }
+        });
 
-        this.log.info(robot.strategyState);
-        this.log.info(robot.robotState);
+        const tracer = new Tracer();
+        const traceRust = tracer.start("BACKTEST");
+
+        const currentCandles = [];
+        for (const candle of candles) {
+            currentCandles.push(candle);
+            currentCandles.slice(-30);
+            tulip._handleCandles(
+                currentCandles[currentCandles.length - 1],
+                currentCandles
+                //   tulip.prepareCandles(currentCandles)
+            );
+            await tulip.calc();
+            //  this.log.info(candle.timestamp, tulip.result);
+        }
+
+        tracer.end(traceRust);
+        this.log.info(tracer.state);
     }
 
     /* async onStart() {

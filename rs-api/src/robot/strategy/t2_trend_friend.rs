@@ -1,9 +1,12 @@
+use std::collections::HashMap;
+
 use rayon::prelude::{IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::robot::indicator::BaseIndicator;
 use crate::robot::indicator::SMA::{Params, SMAResult, SMA};
 use crate::robot::strategy::*;
 use crate::robot::Candle;
+use crate::utils::merge_indicator_results;
 
 #[napi(object)]
 #[derive(Clone)]
@@ -107,7 +110,29 @@ impl BaseStrategy for Strategy {
     }
   }
 
-  fn calc_indicatos(&mut self) -> Result<(), Box<dyn Error>> {
+  fn handle_candles(&mut self, candles: Vec<Candle>) -> Result<(), String> {
+    self.candles = match candles.len() {
+      0 => return Err("candles is empty".into()),
+      _ => Some(candles),
+    };
+    self
+      .positions
+      .handle_candle(&self.candles.as_ref().unwrap().last().unwrap());
+    Ok(())
+  }
+
+  fn handle_candle(&mut self, candle: Candle) -> Result<(), String> {
+    self.candles = self.candles.clone().map(|mut candles| {
+      candles.remove(0);
+      candles.push(candle.clone());
+      candles
+    }); //TODO: check length and timestamp
+
+    self.positions.handle_candle(&candle);
+    Ok(())
+  }
+
+  fn calc_indicators(&mut self) -> Result<(), Box<dyn Error>> {
     match &self.candles {
       Some(candles) => {
         let mut tasks = vec![
@@ -116,7 +141,7 @@ impl BaseStrategy for Strategy {
           &mut self.indicators.sma3,
         ];
         tasks.par_iter_mut().for_each(|task| {
-          task.calc(candles);
+          task.calc(&candles[candles.len() - 1]);
         });
       }
       None => return Err("No candles to calc indicators".into()),
@@ -158,19 +183,10 @@ impl BaseStrategy for Strategy {
     Ok(())
   }
 
-  fn run(&mut self, candles: Vec<Candle>) -> Result<(), Box<dyn Error>> {
-    self.candles = match candles.len() {
-      0 => return Err("candles is empty".into()),
-      _ => Some(candles),
-    };
-
+  fn run(&mut self) -> Result<(), Box<dyn Error>> {
     self.positions.clear_all();
 
-    self.calc_indicatos()?;
-
-    self
-      .positions
-      .handle_candle(self.candles.as_ref().unwrap().last().unwrap());
+    self.calc_indicators()?;
 
     self.run_strategy()?;
 
@@ -178,11 +194,9 @@ impl BaseStrategy for Strategy {
     Ok(())
   }
 
-  fn check(&mut self, candle: Candle) -> Result<(), Box<dyn Error>> {
+  fn check(&mut self) -> Result<(), Box<dyn Error>> {
     self.positions.clear_closed_positions();
     self.positions.clear_trades();
-
-    self.positions.handle_candle(&candle);
 
     self.positions.check_alerts()?;
     Ok(())
@@ -259,7 +273,8 @@ mod test {
       PositionManager::new(&None, &None, false),
     );
     let candles = load_candles();
-    strategy.run(candles.clone()).unwrap();
+    strategy.handle_candles(candles.clone()).unwrap();
+    strategy.run().unwrap();
 
     let raw_state = match strategy.strategy_state() {
       StrategyState::T2TrendFriend(state) => state,

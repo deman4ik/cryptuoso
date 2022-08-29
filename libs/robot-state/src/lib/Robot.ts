@@ -1,5 +1,5 @@
 import dayjs from "@cryptuoso/dayjs";
-import { BaseIndicator, TulipIndicator, indicators } from "@cryptuoso/robot-indicators";
+import { BaseIndicator, TulipIndicator, RsIndicator, indicators } from "@cryptuoso/robot-indicators";
 import {
     ValidTimeframe,
     CandleProps,
@@ -368,6 +368,22 @@ export class Robot {
                     });
                     break;
                 }
+                case IndicatorType.rs: {
+                    // Если внешний индикатор Tulip
+
+                    // Создаем новый инстанc индикатора Tulip
+                    this._indicatorInstances[key] = new RsIndicator({
+                        exchange: this._exchange,
+                        asset: this._asset,
+                        currency: this._currency,
+                        timeframe: this._timeframe,
+                        robotId: this._id,
+                        strategySettings: this._settings.strategySettings,
+                        parameters: indicator.parameters,
+                        ...indicator // стейт индикатора
+                    });
+                    break;
+                }
                 /* case INDICATORS_TALIB: {
               // Если внешний индикатор Talib
   
@@ -454,7 +470,7 @@ export class Robot {
         await Promise.all(
             Object.keys(this._state.indicators).map(async (key) => {
                 this._indicatorInstances[key]._eventsToSend = [];
-                this._indicatorInstances[key]._handleCandles(this._candle, this._candles, this._candlesProps);
+                this._indicatorInstances[key]._handleCandles(this._candle, this._candles);
                 await this._indicatorInstances[key].calc();
             })
         );
@@ -468,11 +484,11 @@ export class Robot {
      */
     runStrategy() {
         // Передать свечу и значения индикаторов в инстанс стратегии
-        this._strategyInstance._handleCandles(this._candle, this._candles, this._candlesProps);
+        this._strategyInstance._handleCandles(this._candle, this._candles);
         this._strategyInstance._handleIndicators(this._state.indicators);
-        this._strategyInstance._handleEmulation(this.emulateNextPosition);
-        this._strategyInstance._handleMargin(this.marginNextPosition);
-        this._strategyInstance._handleStats(this._emulatedStats);
+        //  this._strategyInstance._handleEmulation(this.emulateNextPosition);
+        //this._strategyInstance._handleMargin(this.marginNextPosition);
+        //this._strategyInstance._handleStats(this._emulatedStats);
         // Очищаем предыдущие  задачи у позиций
         this._strategyInstance._clearAlerts();
         // Запустить проверку стратегии
@@ -483,7 +499,7 @@ export class Robot {
 
     checkAlerts() {
         // Передать свечу и значения индикаторов в инстанс стратегии
-        this._strategyInstance._handleCandles(this._candle, this._candles, this._candlesProps);
+        this._strategyInstance._handleCandles(this._candle, this._candles);
         // Запустить проверку стратегии
         this._strategyInstance._checkAlerts();
         this.getStrategyState();
@@ -527,14 +543,14 @@ export class Robot {
         this._candles = this._candles.slice(-this.requiredHistoryMaxBars);
         this._candle = candle;
         if (!this._lastCandle && this._candles.length > 1) this._lastCandle = this._candles[this._candles.length - 2];
-        this._prepareCandles();
+        //  this._prepareCandles();
         if (
             !this._candle ||
             !this._candles ||
-            !this._candlesProps ||
+            //  !this._candlesProps ||
             !Array.isArray(this._candles) ||
-            this._candles.length === 0 ||
-            Object.keys(this._candlesProps).length === 0
+            this._candles.length === 0
+            //  || Object.keys(this._candlesProps).length === 0
         ) {
             logger.error(`Robot #${this._id} wrong input candles`);
             return false;

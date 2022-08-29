@@ -4,5 +4,5 @@ use crate::robot::Candle;
 pub mod SMA;
 
 pub trait BaseIndicator {
-  fn calc(&mut self, candles: &Vec<Candle>) -> Option<f64>;
+  fn calc(&mut self, candle: &Candle) -> Option<f64>;
 }

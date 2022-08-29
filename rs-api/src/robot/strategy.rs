@@ -8,7 +8,7 @@ use t2_trend_friend::{
 
 use crate::robot::Candle;
 
-use super::{position::manager::PositionManager, RobotState};
+use super::{indicator::BaseIndicator, position::manager::PositionManager, RobotState};
 
 pub mod dummy;
 pub mod t2_trend_friend;
@@ -118,10 +118,12 @@ pub trait BaseStrategy {
     positions: PositionManager,
   ) -> Self;
   fn get_candle(&self) -> Result<Candle, String>;
-  fn calc_indicatos(&mut self) -> Result<(), Box<dyn Error>>;
+  fn handle_candles(&mut self, candles: Vec<Candle>) -> Result<(), String>;
+  fn handle_candle(&mut self, candle: Candle) -> Result<(), String>;
+  fn calc_indicators(&mut self) -> Result<(), Box<dyn Error>>;
   fn run_strategy(&mut self) -> Result<(), Box<dyn Error>>;
-  fn run(&mut self, candles: Vec<Candle>) -> Result<(), Box<dyn Error>>;
-  fn check(&mut self, candle: Candle) -> Result<(), Box<dyn Error>>;
+  fn run(&mut self) -> Result<(), Box<dyn Error>>;
+  fn check(&mut self) -> Result<(), Box<dyn Error>>;
   fn robot_state(&self) -> RobotState;
   fn strategy_state(&self) -> StrategyState;
 }
@@ -176,35 +178,67 @@ impl Strategy {
     }
   }
 
-  pub fn run(&mut self, candles: Vec<Candle>) -> Result<(), Box<dyn Error>> {
+  pub fn handle_candles(&mut self, candles: Vec<Candle>) -> Result<(), String> {
     match self {
-      Self::Breakout(strategy) => strategy.run(candles),
-      Self::BreakoutV2(strategy) => strategy.run(candles),
-      Self::Channels(strategy) => strategy.run(candles),
-      Self::CounterCandle(strategy) => strategy.run(candles),
-      Self::DoubleReverseMM(strategy) => strategy.run(candles),
-      Self::FxCash(strategy) => strategy.run(candles),
-      Self::IRSTS(strategy) => strategy.run(candles),
-      Self::Parabolic(strategy) => strategy.run(candles),
-      Self::T2TrendFriend(strategy) => strategy.run(candles),
-      Self::TrendlingLong(strategy) => strategy.run(candles),
-      Self::TrendlingShort(strategy) => strategy.run(candles),
+      Self::Breakout(strategy) => strategy.handle_candles(candles),
+      Self::BreakoutV2(strategy) => strategy.handle_candles(candles),
+      Self::Channels(strategy) => strategy.handle_candles(candles),
+      Self::CounterCandle(strategy) => strategy.handle_candles(candles),
+      Self::DoubleReverseMM(strategy) => strategy.handle_candles(candles),
+      Self::FxCash(strategy) => strategy.handle_candles(candles),
+      Self::IRSTS(strategy) => strategy.handle_candles(candles),
+      Self::Parabolic(strategy) => strategy.handle_candles(candles),
+      Self::T2TrendFriend(strategy) => strategy.handle_candles(candles),
+      Self::TrendlingLong(strategy) => strategy.handle_candles(candles),
+      Self::TrendlingShort(strategy) => strategy.handle_candles(candles),
     }
   }
 
-  pub fn check(&mut self, candle: Candle) -> Result<(), Box<dyn Error>> {
+  pub fn handle_candle(&mut self, candle: Candle) -> Result<(), String> {
     match self {
-      Self::Breakout(strategy) => strategy.check(candle),
-      Self::BreakoutV2(strategy) => strategy.check(candle),
-      Self::Channels(strategy) => strategy.check(candle),
-      Self::CounterCandle(strategy) => strategy.check(candle),
-      Self::DoubleReverseMM(strategy) => strategy.check(candle),
-      Self::FxCash(strategy) => strategy.check(candle),
-      Self::IRSTS(strategy) => strategy.check(candle),
-      Self::Parabolic(strategy) => strategy.check(candle),
-      Self::T2TrendFriend(strategy) => strategy.check(candle),
-      Self::TrendlingLong(strategy) => strategy.check(candle),
-      Self::TrendlingShort(strategy) => strategy.check(candle),
+      Self::Breakout(strategy) => strategy.handle_candle(candle),
+      Self::BreakoutV2(strategy) => strategy.handle_candle(candle),
+      Self::Channels(strategy) => strategy.handle_candle(candle),
+      Self::CounterCandle(strategy) => strategy.handle_candle(candle),
+      Self::DoubleReverseMM(strategy) => strategy.handle_candle(candle),
+      Self::FxCash(strategy) => strategy.handle_candle(candle),
+      Self::IRSTS(strategy) => strategy.handle_candle(candle),
+      Self::Parabolic(strategy) => strategy.handle_candle(candle),
+      Self::T2TrendFriend(strategy) => strategy.handle_candle(candle),
+      Self::TrendlingLong(strategy) => strategy.handle_candle(candle),
+      Self::TrendlingShort(strategy) => strategy.handle_candle(candle),
+    }
+  }
+
+  pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
+    match self {
+      Self::Breakout(strategy) => strategy.run(),
+      Self::BreakoutV2(strategy) => strategy.run(),
+      Self::Channels(strategy) => strategy.run(),
+      Self::CounterCandle(strategy) => strategy.run(),
+      Self::DoubleReverseMM(strategy) => strategy.run(),
+      Self::FxCash(strategy) => strategy.run(),
+      Self::IRSTS(strategy) => strategy.run(),
+      Self::Parabolic(strategy) => strategy.run(),
+      Self::T2TrendFriend(strategy) => strategy.run(),
+      Self::TrendlingLong(strategy) => strategy.run(),
+      Self::TrendlingShort(strategy) => strategy.run(),
+    }
+  }
+
+  pub fn check(&mut self) -> Result<(), Box<dyn Error>> {
+    match self {
+      Self::Breakout(strategy) => strategy.check(),
+      Self::BreakoutV2(strategy) => strategy.check(),
+      Self::Channels(strategy) => strategy.check(),
+      Self::CounterCandle(strategy) => strategy.check(),
+      Self::DoubleReverseMM(strategy) => strategy.check(),
+      Self::FxCash(strategy) => strategy.check(),
+      Self::IRSTS(strategy) => strategy.check(),
+      Self::Parabolic(strategy) => strategy.check(),
+      Self::T2TrendFriend(strategy) => strategy.check(),
+      Self::TrendlingLong(strategy) => strategy.check(),
+      Self::TrendlingShort(strategy) => strategy.check(),
     }
   }
 

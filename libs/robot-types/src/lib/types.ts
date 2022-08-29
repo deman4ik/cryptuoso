@@ -30,7 +30,8 @@ export interface IndicatorCode {
 
 export const enum IndicatorType {
     base = "base",
-    tulip = "tulip"
+    tulip = "tulip",
+    rs = "rs"
     /*talib = "talib",
     techind = "techind"*/
 }

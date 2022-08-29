@@ -49,13 +49,13 @@ export class T2TF extends BaseStrategy {
     init() {
         this.log("T2TF Parameters", this.parameters);
         this.heldEnoughBars = 0;
-        this.addTulipIndicator("sma1", "sma", {
+        this.addRsIndicator("sma1", "sma", {
             optInTimePeriod: this.parameters.sma1
         });
-        this.addTulipIndicator("sma2", "sma", {
+        this.addRsIndicator("sma2", "sma", {
             optInTimePeriod: this.parameters.sma2
         });
-        this.addTulipIndicator("sma3", "sma", {
+        this.addRsIndicator("sma3", "sma", {
             optInTimePeriod: this.parameters.sma3
         });
     }

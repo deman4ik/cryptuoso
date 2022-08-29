@@ -58,7 +58,27 @@ impl BaseStrategy for Strategy {
     }
   }
 
-  fn calc_indicatos(&mut self) -> Result<(), Box<dyn Error>> {
+  fn handle_candles(&mut self, candles: Vec<Candle>) -> Result<(), String> {
+    self.candles = match candles.len() {
+      0 => return Err("candles is empty".into()),
+      _ => Some(candles),
+    };
+
+    Ok(())
+  }
+
+  fn handle_candle(&mut self, candle: Candle) -> Result<(), String> {
+    self.candles = self.candles.clone().map(|mut candles| {
+      candles.remove(0);
+      candles.push(candle.clone());
+      candles
+    }); //TODO: check length and timestamp
+
+    self.positions.handle_candle(&candle);
+    Ok(())
+  }
+
+  fn calc_indicators(&mut self) -> Result<(), Box<dyn Error>> {
     Ok(())
   }
 
@@ -66,15 +86,20 @@ impl BaseStrategy for Strategy {
     Ok(())
   }
 
-  fn run(&mut self, _candles: Vec<Candle>) -> Result<(), Box<dyn Error>> {
-    self.calc_indicatos()?;
+  fn run(&mut self) -> Result<(), Box<dyn Error>> {
+    self.positions.clear_all();
+
+    self.calc_indicators()?;
+
     self.run_strategy()?;
 
+    self.positions.check_alerts()?;
     Ok(())
   }
 
-  fn check(&mut self, candle: Candle) -> Result<(), Box<dyn Error>> {
-    self.positions.handle_candle(&candle);
+  fn check(&mut self) -> Result<(), Box<dyn Error>> {
+    self.positions.clear_closed_positions();
+    self.positions.clear_trades();
 
     self.positions.check_alerts()?;
     Ok(())

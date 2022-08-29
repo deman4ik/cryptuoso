@@ -1,8 +1,11 @@
+use std::result;
+
 use crate::robot::Candle;
 use yata::prelude::*;
 
 use super::BaseIndicator;
 
+#[derive(Debug, Clone)]
 pub struct Params {
   pub period: u16,
 }
@@ -17,15 +20,21 @@ pub struct SMAResult {
 #[allow(non_snake_case)]
 pub struct SMA {
   params: Params,
+  indicator: yata::methods::SMA,
   result: Option<SMAResult>,
 }
 
 #[allow(dead_code)]
 impl SMA {
   pub fn new(params: Params, result: Option<SMAResult>) -> Self {
+    let initial = match result {
+      Some(ref result) => result.result,
+      None => 0.0,
+    };
     SMA {
-      params,
+      params: params.clone(),
       result: result,
+      indicator: yata::methods::SMA::new(params.period, &initial).unwrap(),
     }
   }
 
@@ -35,51 +44,14 @@ impl SMA {
 }
 
 impl BaseIndicator for SMA {
-  fn calc(&mut self, candles: &Vec<Candle>) -> Option<f64> {
-    let period = usize::try_from(self.params.period).unwrap();
-    if candles.len() < &period + 1 {
-      panic!("Not enough candles");
-    }
+  fn calc(&mut self, candle: &Candle) -> Option<f64> {
+    let result = self.indicator.next(&candle.close);
 
-    let mut slice = candles.clone();
-    if self.result.is_some() {
-      let time = self.result.as_ref().unwrap().time;
-      slice = slice
-        .iter()
-        .filter(|candle| candle.time > time)
-        .cloned()
-        .collect()
-    }
-
-    let initial = match &self.result {
-      Some(result) => result.result,
-      None => candles[&candles.len() - period - 1].close,
-    };
-
-    let mut sma = yata::methods::SMA::new(self.params.period, &initial).unwrap();
-
-    let mut results = Vec::new();
-
-    for candle in &slice {
-      results.push(sma.next(&candle.close));
-    }
-
-    match &results.len() {
-      0 => {
-        self.result = None;
-      }
-      _ => {
-        self.result = Some(SMAResult {
-          result: results[&results.len() - 1],
-          time: slice[&slice.len() - 1].time,
-        });
-      }
-    };
-
-    match &self.result {
-      Some(result) => Some(result.result),
-      None => None,
-    }
+    self.result = Some(SMAResult {
+      result,
+      time: candle.time,
+    });
+    Some(self.result.as_ref().unwrap().result.clone())
   }
 }
 
@@ -93,7 +65,7 @@ mod test {
     let candles = load_candles();
     let mut sma = SMA::new(Params { period: 30 }, Option::None);
     assert!(sma.result().is_none());
-    let result = sma.calc(&candles);
+    let result = sma.calc(&candles[0]);
     assert!(result.is_some());
     assert!(sma.result().is_some());
     assert!(sma.result().unwrap().time > 0);
@@ -101,12 +73,12 @@ mod test {
     println!("{:?}", sma.result().unwrap());
   }
 
-  #[test]
+  /*#[test]
   fn should_calc_sma_with_prev_result() {
     let candles = load_candles();
 
     let mut sma = SMA::new(Params { period: 10 }, Option::None);
-    let result = sma.calc(&candles);
+    let result = sma.calc(&candles[0]);
 
     let mut sma1 = SMA::new(Params { period: 10 }, Option::None);
     sma1.calc(&candles[..=250].to_vec());
@@ -115,5 +87,5 @@ mod test {
 
     assert_eq!(round(result2.unwrap()), round(result.unwrap()));
     println!("{:?} {:?}", round(result2.unwrap()), round(result.unwrap()));
-  }
+  }*/
 }
