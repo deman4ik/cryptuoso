@@ -14,7 +14,7 @@ import { ValidTimeframe, Candle, DBCandle, SignalEvent, CandleType, ActiveAlert 
 import { sortAsc, chunkArray } from "@cryptuoso/helpers";
 import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 import logger, { Logger } from "@cryptuoso/logger";
-import { sql, pg, pgUtil, makeChunksGenerator } from "@cryptuoso/postgres";
+import { sql, createPgPool, DatabasePool, pgUtil, makeChunksGenerator } from "@cryptuoso/postgres";
 import Redis from "ioredis";
 import Cache from "ioredis-cache";
 import { RobotPositionState, RobotState, RobotStatus } from "@cryptuoso/robot-types";
@@ -25,18 +25,14 @@ let backtesterWorker: BacktesterWorker;
 class BacktesterWorker {
     #log: Logger;
     #backtester: Backtester;
-    #db: { sql: typeof sql; pg: typeof pg; util: typeof pgUtil };
+    #db: { sql: typeof sql; pg: DatabasePool; util: typeof pgUtil };
     #cache: Cache;
 
     defaultChunkSize = 10000;
     defaultInsertChunkSize = 10000;
     constructor(state: BacktesterState) {
         this.#log = logger;
-        this.#db = {
-            sql,
-            pg: pg,
-            util: pgUtil
-        };
+
         this.#backtester = new Backtester(state);
         this.#cache = new Cache(
             new Redis(process.env.REDISCS, {
@@ -45,6 +41,15 @@ class BacktesterWorker {
                 connectTimeout: 60000
             })
         );
+    }
+
+    async pg() {
+        if (!this.#db)
+            this.#db = {
+                sql,
+                pg: await createPgPool(),
+                util: pgUtil
+            };
     }
 
     get log() {
@@ -730,6 +735,7 @@ class BacktesterWorker {
 const worker = {
     async init(state: BacktesterState) {
         backtesterWorker = new BacktesterWorker(state);
+        await backtesterWorker.pg();
         return backtesterWorker.backtester.state;
     },
     async process() {

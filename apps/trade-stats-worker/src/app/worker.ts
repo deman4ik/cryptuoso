@@ -20,24 +20,29 @@ import {
     TradeStatsTest
 } from "@cryptuoso/trade-stats";
 import logger, { Logger } from "@cryptuoso/logger";
-import { sql, pg, pgUtil, makeChunksGenerator } from "@cryptuoso/postgres";
+import { sql, createPgPool, DatabasePool, pgUtil, makeChunksGenerator } from "@cryptuoso/postgres";
 import { PortfolioDB, PortfolioSettings } from "@cryptuoso/portfolio-state";
 import { equals, round } from "@cryptuoso/helpers";
 import dayjs from "@cryptuoso/dayjs";
 
 class StatsCalcWorker {
     #log: Logger;
-    #db: { sql: typeof sql; pg: typeof pg; util: typeof pgUtil };
+    #db: { sql: typeof sql; pg: DatabasePool; util: typeof pgUtil };
     defaultChunkSize = 1000;
 
     constructor() {
         this.#log = logger;
-        this.#db = {
-            sql,
-            pg: pg,
-            util: pgUtil
-        };
     }
+
+    async pg() {
+        if (!this.#db)
+            this.#db = {
+                sql,
+                pg: await createPgPool(),
+                util: pgUtil
+            };
+    }
+
     get log() {
         return this.#log;
     }
@@ -991,6 +996,7 @@ const statsCalcWorker = new StatsCalcWorker();
 
 const worker = {
     async process(job: TradeStatsJob) {
+        await statsCalcWorker.pg();
         const result = await statsCalcWorker.process(job);
         return result;
     }

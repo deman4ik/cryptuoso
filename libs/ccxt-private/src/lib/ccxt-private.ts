@@ -14,7 +14,7 @@ import {
     OrderType,
     UnknownOrder
 } from "@cryptuoso/market";
-import { pg, sql } from "@cryptuoso/postgres";
+import { createPgPool, DatabasePool, sql } from "@cryptuoso/postgres";
 import { UserExchangeAccBalances, UserExchangeAccount } from "@cryptuoso/user-state";
 import { Priority } from "@cryptuoso/connector-state";
 import { createProxyAgent } from "@cryptuoso/ccxt-public";
@@ -36,6 +36,7 @@ export class PrivateConnector {
     };
     agent = process.env.PROXY_ENDPOINT ? createProxyAgent(process.env.PROXY_ENDPOINT) : null;
     config: { [key: string]: any } = {};
+    #pg: DatabasePool;
     constructor({
         exchange,
         keys,
@@ -67,6 +68,11 @@ export class PrivateConnector {
         }
         this.exchange = exchange;
         this.log = logger;
+    }
+
+    async pg() {
+        if (!this.#pg) this.#pg = await createPgPool();
+        return this.#pg;
     }
 
     getSymbol(asset: string, currency: string): string {
@@ -207,6 +213,7 @@ export class PrivateConnector {
             const balances = await this.getBalances(this.connector, this.exchange);
             const asset = "ETH";
             const currency = ["binance_futures", "kucoin", "huobipro"].includes(this.exchange) ? "USDT" : "USD";
+            const pg = await this.pg();
             const market = await pg.one<{ limits: Market["limits"] }>(sql`SELECT limits 
             FROM markets 
             WHERE exchange = ${this.exchange} 
@@ -775,6 +782,7 @@ export class PrivateConnector {
             if (!similarOrders || !Array.isArray(similarOrders) || similarOrders.length === 0) return null;
             const unknownOrders: ccxt.Order[] = [];
             for (const similarOrder of similarOrders) {
+                const pg = await this.pg();
                 const ordersInDB = await pg.any(sql`SELECT id 
                 FROM user_orders 
                 WHERE user_ex_acc_id = ${userExAccId}

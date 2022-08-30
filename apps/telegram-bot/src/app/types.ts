@@ -8,6 +8,7 @@ import { Router } from "@grammyjs/router";
 import { Context, NextFunction } from "grammy";
 import type { ParseModeContext } from "@grammyjs/parse-mode";
 import { GraphQLClient } from "./utils/graphql-client";
+import { DatabasePool } from "@cryptuoso/postgres";
 
 export type defaultHandler = (ctx: BotContext) => Promise<void>;
 export type defaultMiddleHandler = (ctx: BotContext, next: NextFunction) => Promise<void>;
@@ -31,6 +32,7 @@ export interface ContextExt extends Context {
     utils: {
         [key: string]: any;
     };
+    pg: DatabasePool;
 }
 
 export interface DialogMethods {

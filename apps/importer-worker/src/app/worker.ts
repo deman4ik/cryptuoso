@@ -10,7 +10,7 @@ import {
     handleCandleGaps
 } from "@cryptuoso/market";
 import logger, { Logger } from "@cryptuoso/logger";
-import { sql, pg, pgUtil } from "@cryptuoso/postgres";
+import { sql, createPgPool, DatabasePool, pgUtil } from "@cryptuoso/postgres";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
 import { uniqueElementsBy, sortAsc } from "@cryptuoso/helpers";
 
@@ -18,18 +18,23 @@ class ImporterWorker {
     #connector: PublicConnector;
     #log: Logger;
     #importer: Importer;
-    #db: { sql: typeof sql; pg: typeof pg; util: typeof pgUtil };
+    #db: { sql: typeof sql; pg: DatabasePool; util: typeof pgUtil };
     defaultChunkSize = 1000;
     defaultInsertChunkSize = 1000;
     constructor(state: ImporterState) {
         this.#connector = new PublicConnector();
         this.#log = logger;
-        this.#db = {
-            sql,
-            pg: pg,
-            util: pgUtil
-        };
+
         this.#importer = new Importer(state);
+    }
+
+    async pg() {
+        if (!this.#db)
+            this.#db = {
+                sql,
+                pg: await createPgPool(),
+                util: pgUtil
+            };
     }
 
     get log() {
@@ -46,6 +51,7 @@ class ImporterWorker {
 
     #saveState = async (state: ImporterState) => {
         try {
+            await this.pg();
             const {
                 id,
                 exchange,
@@ -303,6 +309,7 @@ class ImporterWorker {
     async upsertCandles(candles: ExchangeCandle[]): Promise<void> {
         try {
             if (candles && Array.isArray(candles) && candles.length > 0) {
+                await this.pg();
                 await this.db.pg.query(sql`
                 insert into candles
                 (exchange, asset, currency, timeframe, open, high, low, close, volume, time, timestamp, type)
