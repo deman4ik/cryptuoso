@@ -27,12 +27,12 @@ export type TimeframesInfo = {
 
 export class Timeframe {
     private static _timeframes: TimeframesInfo = {
-        /*  1: {
-      str: "1m",
-      value: 1,
-      unit: "minute",
-      amountInUnit: 1
-    },*/ // exclude 1 minute
+        1: {
+            str: "1m",
+            value: 1,
+            unit: "minute",
+            amountInUnit: 1
+        },
         5: {
             str: "5m",
             value: 5,

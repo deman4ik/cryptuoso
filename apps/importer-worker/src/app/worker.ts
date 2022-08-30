@@ -45,21 +45,22 @@ class ImporterWorker {
     }
 
     #saveState = async (state: ImporterState) => {
-        const {
-            id,
-            exchange,
-            asset,
-            currency,
-            params,
-            status,
-            startedAt,
-            endedAt,
-            type,
-            progress,
-            error,
-            currentState
-        } = state;
-        await this.db.pg.query(sql`
+        try {
+            const {
+                id,
+                exchange,
+                asset,
+                currency,
+                params,
+                status,
+                startedAt,
+                endedAt,
+                type,
+                progress,
+                error,
+                currentState
+            } = state;
+            await this.db.pg.query(sql`
         INSERT INTO importers
         (id, exchange, asset, currency, 
         params, 
@@ -82,6 +83,11 @@ class ImporterWorker {
         error = excluded.error,
         current_state = excluded.current_state;
         `);
+        } catch (e) {
+            this.log.error(e);
+            this.log.debug(state);
+            throw e;
+        }
     };
 
     async process() {

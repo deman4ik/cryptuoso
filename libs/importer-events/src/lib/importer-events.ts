@@ -38,6 +38,7 @@ export const ImporterRunnerSchema = {
         },
         timeframes: {
             type: "array",
+            items: { type: "number", positive: true, integer: true },
             enum: Timeframe.validArray,
             empty: false,
             optional: true
@@ -101,7 +102,7 @@ export interface ImporterRunnerStart {
     asset: string;
     currency: string;
     type: ImportType;
-    timeframes?: ValidTimeframe[];
+    timeframes?: number[];
     dateFrom?: string;
     dateTo?: string;
     amount?: number;
