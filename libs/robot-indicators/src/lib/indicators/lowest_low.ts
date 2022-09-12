@@ -1,6 +1,8 @@
 import { BaseIndicator } from "../BaseIndicator";
 import { IndicatorState } from "@cryptuoso/robot-types";
+import { DBCandle } from "@cryptuoso/market";
 export class LowestLow extends BaseIndicator {
+    declare result: number;
     constructor(state: IndicatorState) {
         super(state);
     }
@@ -20,31 +22,24 @@ export class LowestLow extends BaseIndicator {
             max: 100
         }
     };
-    init() {
+    async init(candles: DBCandle[]) {
         this.result = 0;
         this.lowestSeries = [];
-    }
-    calc() {
-        this.result = 0;
-        // if we have cached candles working with array
-        if (this.candlesProps.low.length > 1) {
-            const lowestSeries = this.candlesProps.low.slice(-this.parameters.seriesSize);
-            // if we have enough cache returning result, otherwise leave null
-            if (lowestSeries.length === this.parameters.seriesSize) {
-                this.result = Math.min(...lowestSeries); // save lowest low of XX items including(!) current item
-            }
+        for (const candle of candles) {
+            await this.calc(candle);
         }
-        // without cache working with 1 candle
-        else if (this.parameters.seriesSize) {
-            // collecting required items count
-            if (this.lowestSeries.length < this.parameters.seriesSize) {
-                this.lowestSeries.push(this.candle.low);
-            }
-            if (this.lowestSeries.length === this.parameters.seriesSize) {
-                this.result = Math.min(...this.lowestSeries); // save lowest low of XX items including(!) current item
-                // remove first item
-                this.lowestSeries.shift();
-            }
+    }
+    async calc(candle: DBCandle) {
+        this.result = 0;
+
+        // collecting required items count
+        if (this.lowestSeries.length < this.parameters.seriesSize) {
+            this.lowestSeries.push(candle.low);
+        }
+        if (this.lowestSeries.length === this.parameters.seriesSize) {
+            this.result = Math.min(...this.lowestSeries); // save lowest low of XX items including(!) current item
+            // remove first item
+            this.lowestSeries.shift();
         }
     }
 }

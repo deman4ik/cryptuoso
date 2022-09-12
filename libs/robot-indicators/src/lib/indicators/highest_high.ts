@@ -1,6 +1,8 @@
 import { BaseIndicator } from "../BaseIndicator";
 import { IndicatorState } from "@cryptuoso/robot-types";
+import { DBCandle } from "@cryptuoso/market";
 export class HighestHigh extends BaseIndicator {
+    declare result: number;
     constructor(state: IndicatorState) {
         super(state);
     }
@@ -19,31 +21,24 @@ export class HighestHigh extends BaseIndicator {
             max: 100
         }
     };
-    init() {
+    async init(candles: DBCandle[]) {
         this.result = 0;
         this.highestSeries = [];
-    }
-    calc() {
-        this.result = 0;
-        // if we have cached candles working with array
-        if (this.candlesProps.high.length > 1) {
-            const highestSeries = this.candlesProps.high.slice(-this.parameters.seriesSize);
-            // if we have enough cache returning result, otherwise leave null
-            if (highestSeries.length === this.parameters.seriesSize) {
-                this.result = Math.max(...highestSeries); // save higest high of XX items including(!) current item
-            }
+        for (const candle of candles) {
+            await this.calc(candle);
         }
-        // without cache working with 1 candle
-        else if (this.parameters.seriesSize) {
-            // collecting required items count
-            if (this.highestSeries.length < this.parameters.seriesSize) {
-                this.highestSeries.push(this.candle.high);
-            }
-            if (this.highestSeries.length === this.parameters.seriesSize) {
-                this.result = Math.max(...this.highestSeries); // save higest high of XX items including(!) current item
-                // remove first item
-                this.highestSeries.shift();
-            }
+    }
+    async calc(candle: DBCandle) {
+        this.result = 0;
+
+        // collecting required items count
+        if (this.highestSeries.length < this.parameters.seriesSize) {
+            this.highestSeries.push(candle.high);
+        }
+        if (this.highestSeries.length === this.parameters.seriesSize) {
+            this.result = Math.max(...this.highestSeries); // save higest high of XX items including(!) current item
+            // remove first item
+            this.highestSeries.shift();
         }
     }
 }

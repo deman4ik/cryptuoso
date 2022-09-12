@@ -133,8 +133,8 @@ export class TrendlineLong extends BaseStrategy {
             const slope = this.slope(
                 anchorBar,
                 n,
-                this.candlesProps.high[this.candlesProps.high.length - 1 - (this.bar - anchorBar)],
-                this.candlesProps.high[this.candlesProps.high.length - 1 - (this.bar - n)]
+                this.candles[this.candles.length - 1 - (this.bar - anchorBar)].high,
+                this.candles[this.candles.length - 1 - (this.bar - n)].high
             );
 
             if (slope > 0 && slope < loSlope) {
@@ -176,8 +176,8 @@ export class TrendlineLong extends BaseStrategy {
                     idBar: this.bar,
                     bar1: anchorBar,
                     bar2: pt,
-                    high1: this.candlesProps.high[this.candlesProps.high.length - 1 - (this.bar - anchorBar)],
-                    high2: this.candlesProps.high[this.candlesProps.high.length - 1 - (this.bar - pt)]
+                    high1: this.candles[this.candles.length - 1 - (this.bar - anchorBar)].high,
+                    high2: this.candles[this.candles.length - 1 - (this.bar - pt)].high
                 });
                 if (this.bar < tL.barOut) TLs.push(tL);
             }
@@ -197,8 +197,8 @@ export class TrendlineLong extends BaseStrategy {
                     idBar: this.bar,
                     bar1: tL.bar2,
                     bar2: pt2,
-                    high1: this.candlesProps.high[this.candlesProps.high.length - 1 - (this.bar - tL.bar2)],
-                    high2: this.candlesProps.high[this.candlesProps.high.length - 1 - (this.bar - pt2)]
+                    high1: this.candles[this.candles.length - 1 - (this.bar - tL.bar2)].high,
+                    high2: this.candles[this.candles.length - 1 - (this.bar - pt2)].high
                 });
                 if (this.bar < tnew.barOut && tnew.extend(this.bar) > this.candle.close) {
                     newTLs.push(tnew);

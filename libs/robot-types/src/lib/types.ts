@@ -30,9 +30,7 @@ export interface IndicatorCode {
 
 export const enum IndicatorType {
     base = "base",
-    tulip = "tulip"
-    /*talib = "talib",
-    techind = "techind"*/
+    rs = "rs"
 }
 
 export interface IndicatorState {
@@ -40,7 +38,7 @@ export interface IndicatorState {
     name: string;
     indicatorName: string;
     initialized?: boolean;
-    parameters?: { [key: string]: number };
+    parameters?: { [key: string]: number | string };
     variables?: { [key: string]: any };
     indicatorFunctions?: { [key: string]: () => any };
 }

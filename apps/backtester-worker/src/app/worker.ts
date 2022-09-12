@@ -602,7 +602,6 @@ class BacktesterWorker {
                 this.backtester.feeRate = feeRate;
 
                 this.backtester.initRobots();
-                this.backtester.initIndicators();
 
                 // Load required history candles
                 const requiredHistoryMaxBars = this.backtester.robotInstancesArray[0].requiredHistoryMaxBars;
@@ -625,6 +624,7 @@ class BacktesterWorker {
                 this.log.info(`Backtester #${this.backtester.id} - History from ${historyCandles[0].timestamp}`);
                 this.backtester.handleHistoryCandles(historyCandles);
 
+                await this.backtester.initIndicators();
                 await this.#saveState(this.backtester.state);
 
                 await this.run();

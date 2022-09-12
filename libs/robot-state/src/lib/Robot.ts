@@ -1,8 +1,7 @@
 import dayjs from "@cryptuoso/dayjs";
-import { BaseIndicator, TulipIndicator, indicators } from "@cryptuoso/robot-indicators";
+import { BaseIndicator, RsIndicator, indicators } from "@cryptuoso/robot-indicators";
 import {
     ValidTimeframe,
-    CandleProps,
     RobotPositionStatus,
     Candle,
     calcPositionProfit,
@@ -50,7 +49,6 @@ export class Robot {
     _baseIndicatorsCode: { [key: string]: IndicatorCode };
     _candle: Candle;
     _candles: Candle[];
-    _candlesProps: CandleProps;
     _status: RobotStatus;
     _startedAt: string;
     _stoppedAt: string;
@@ -342,26 +340,16 @@ export class Robot {
                     // Создаем новый инстанc базового индикатора
 
                     this._indicatorInstances[key] = new indicators[indicator.indicatorName]({
-                        exchange: this._exchange,
-                        asset: this._asset,
-                        currency: this._currency,
-                        timeframe: this._timeframe,
-                        robotId: this._id,
                         strategySettings: this._settings.strategySettings,
                         ...indicator // стейт индикатора
                     });
                     break;
                 }
-                case IndicatorType.tulip: {
-                    // Если внешний индикатор Tulip
+                case IndicatorType.rs: {
+                    // Если внешний индикатор Rs
 
-                    // Создаем новый инстанc индикатора Tulip
-                    this._indicatorInstances[key] = new TulipIndicator({
-                        exchange: this._exchange,
-                        asset: this._asset,
-                        currency: this._currency,
-                        timeframe: this._timeframe,
-                        robotId: this._id,
+                    // Создаем новый инстанc индикатора Rs
+                    this._indicatorInstances[key] = new RsIndicator({
                         strategySettings: this._settings.strategySettings,
                         parameters: indicator.parameters,
                         ...indicator // стейт индикатора
@@ -414,18 +402,19 @@ export class Robot {
      *
      * @memberof Robot
      */
-    initStrategy() {
+    async initStrategy() {
         this.setStrategyState();
         // Если стратегия еще не проинициализирована
         if (!this._strategyInstance.initialized) {
             // Инициализируем
             this._strategyInstance._checkParameters();
+            this._strategyInstance._handleHistoryCandles(this._candles);
             this._strategyInstance.init();
             this._strategyInstance.initialized = true;
             // Считываем настройки индикаторов
             this._state.indicators = this._strategyInstance.indicators;
-            this.getStrategyState();
         }
+        this.getStrategyState();
     }
 
     /**
@@ -433,15 +422,17 @@ export class Robot {
      *
      * @memberof Robot
      */
-    initIndicators() {
+    async initIndicators() {
         this.setIndicatorsState();
-        Object.keys(this._state.indicators).forEach((key) => {
-            if (!this._indicatorInstances[key].initialized) {
-                this._indicatorInstances[key]._checkParameters();
-                this._indicatorInstances[key].init();
-                this._indicatorInstances[key].initialized = true;
-            }
-        });
+        await Promise.all(
+            Object.keys(this._state.indicators).map(async (key) => {
+                if (!this._indicatorInstances[key].initialized) {
+                    this._indicatorInstances[key]._checkParameters();
+                    logger.debug(`Init indicator ${key} ${this._candles.length}`);
+                    await this._indicatorInstances[key].init(this._candles);
+                }
+            })
+        );
         this.getIndicatorsState();
     }
 
@@ -454,8 +445,7 @@ export class Robot {
         await Promise.all(
             Object.keys(this._state.indicators).map(async (key) => {
                 this._indicatorInstances[key]._eventsToSend = [];
-                this._indicatorInstances[key]._handleCandles(this._candle, this._candles, this._candlesProps);
-                await this._indicatorInstances[key].calc();
+                await this._indicatorInstances[key].calc(this._candle);
             })
         );
         this.getIndicatorsState();
@@ -468,7 +458,7 @@ export class Robot {
      */
     runStrategy() {
         // Передать свечу и значения индикаторов в инстанс стратегии
-        this._strategyInstance._handleCandles(this._candle, this._candles, this._candlesProps);
+        this._strategyInstance._handleCandle(this._candle);
         this._strategyInstance._handleIndicators(this._state.indicators);
         this._strategyInstance._handleEmulation(this.emulateNextPosition);
         this._strategyInstance._handleMargin(this.marginNextPosition);
@@ -483,36 +473,17 @@ export class Robot {
 
     checkAlerts() {
         // Передать свечу и значения индикаторов в инстанс стратегии
-        this._strategyInstance._handleCandles(this._candle, this._candles, this._candlesProps);
+        this._strategyInstance._handleCandle(this._candle);
         // Запустить проверку стратегии
         this._strategyInstance._checkAlerts();
         this.getStrategyState();
     }
 
     handleHistoryCandles(candles: Candle[]) {
-        this._candles = candles;
-    }
-
-    /**
-     * Преобразование свечей для индикаторов
-     *
-     * @memberof Robot
-     */
-    _prepareCandles() {
-        this._candlesProps = {
-            open: [],
-            high: [],
-            low: [],
-            close: [],
-            volume: []
-        };
-        this._candles.forEach((candle) => {
-            this._candlesProps.open.push(candle.open);
-            this._candlesProps.high.push(candle.high);
-            this._candlesProps.low.push(candle.low);
-            this._candlesProps.close.push(candle.close);
-            this._candlesProps.volume.push(candle.volume);
-        });
+        this._candles = [...candles];
+        if (this._strategyInstance) {
+            this._strategyInstance._handleHistoryCandles(candles);
+        }
     }
 
     handleCandle(candle: Candle) {
@@ -527,15 +498,8 @@ export class Robot {
         this._candles = this._candles.slice(-this.requiredHistoryMaxBars);
         this._candle = candle;
         if (!this._lastCandle && this._candles.length > 1) this._lastCandle = this._candles[this._candles.length - 2];
-        this._prepareCandles();
-        if (
-            !this._candle ||
-            !this._candles ||
-            !this._candlesProps ||
-            !Array.isArray(this._candles) ||
-            this._candles.length === 0 ||
-            Object.keys(this._candlesProps).length === 0
-        ) {
+
+        if (!this._candle || !this._candles || !Array.isArray(this._candles) || this._candles.length === 0) {
             logger.error(`Robot #${this._id} wrong input candles`);
             return false;
         }

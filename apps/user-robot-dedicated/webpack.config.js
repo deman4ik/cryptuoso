@@ -8,6 +8,21 @@ module.exports = function (config, context) {
         output: {
             ...config.output,
             filename: "[name].js"
+        },
+        target: "node",
+        node: {
+            ...config.node,
+            __dirname: false
+        },
+        module: {
+            ...config.module,
+            rules: [
+                {
+                    test: /\.node$/,
+                    loader: "node-loader"
+                },
+                ...config.module.rules
+            ]
         }
     };
 };

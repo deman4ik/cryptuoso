@@ -1,4 +1,4 @@
-import { logger, Logger } from "./lib/logger";
+import { logger, Logger, LeveledLogMethod } from "./lib/logger";
 export { Tracer } from "./lib/tracer";
 export default logger;
-export { Logger };
+export { Logger, LeveledLogMethod };

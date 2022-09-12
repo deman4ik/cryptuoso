@@ -46,14 +46,15 @@ export class Channels extends BaseStrategy {
     };
     init() {
         this.log("Channels Parameters", this.parameters);
-        this.addIndicator("channelADX", "channel_adx", {
-            optInTimePeriod: this.parameters.adx,
-            seriesSize: this.parameters.seriesSize,
+        this.addRsIndicator("channelADX", "ChanADX", {
+            adxPeriod: this.parameters.adx,
+            period: this.parameters.seriesSize,
             ratio: this.parameters.ratio
         });
     }
     check() {
         const { tick } = this.parameters;
+        this.log(this.indicators.channelADX.result);
         const { high: channelADXHigh, low: channelADXLow } = this.indicators.channelADX.result;
         if (this.hasActivePositions) {
             const lastPosition = this.getPosition();
