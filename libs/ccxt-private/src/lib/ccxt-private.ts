@@ -526,6 +526,43 @@ export class PrivateConnector {
         }
     }
 
+    async getOrderBookPrice(order: Order): Promise<number | null> {
+        const { asset, currency, direction } = order;
+        const call = async (bail: (e: Error) => void) => {
+            try {
+                return await this.connector.fetchOrderBook(this.getSymbol(asset, currency), 5);
+            } catch (e) {
+                const message = e.message?.toLowerCase();
+                if (
+                    (e instanceof ccxt.NetworkError &&
+                        !(e instanceof ccxt.InvalidNonce) &&
+                        !(e instanceof ccxt.DDoSProtection)) ||
+                    message.includes("gateway") ||
+                    message.includes("getaddrinfo") ||
+                    message.includes("network") ||
+                    message.includes("econnreset")
+                ) {
+                    await this.initConnector();
+                    throw e;
+                }
+                bail(e);
+            }
+        };
+        const response: ccxt.OrderBook = await retry(call, this.retryOptions);
+
+        if (!response || !response.asks || !response.bids || !response.asks.length || !response.bids.length) {
+            return null;
+        }
+
+        if (direction === "buy" && response.bids.length) {
+            return response.bids[0][0];
+        } else if (direction === "sell" && response.asks.length) {
+            return response.asks[0][0];
+        } else {
+            return null;
+        }
+    }
+
     async createOrder(order: Order): Promise<{
         order: Order;
         nextJob?: {
@@ -545,9 +582,14 @@ export class PrivateConnector {
                     ? OrderType.market
                     : OrderType.limit;
 
+            //TODO: if (order.params.useOrderBookPrice)
+            const orderBookPrice = await this.getOrderBookPrice(order);
+
             let signalPrice: number;
 
-            if (order.price && order.price > 0) {
+            if (orderBookPrice) {
+                signalPrice = orderBookPrice;
+            } else if (order.price && order.price > 0) {
                 signalPrice = order.price;
             } else if (order.signalPrice && order.signalPrice > 0) {
                 signalPrice = order.signalPrice;

@@ -37,6 +37,7 @@ export interface OrderJob {
 
 export interface OrderParams {
     orderTimeout: number;
+    useOrderBookPrice?: boolean;
     kraken?: {
         leverage?: number;
     };
