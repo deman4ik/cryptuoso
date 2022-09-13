@@ -3,10 +3,11 @@ import logger from "@cryptuoso/logger";
 import { Candle } from "@cryptuoso/market";
 import { Robot } from "../lib/Robot";
 import candles from "./data/binance_futures-BTC-USDT-1440.json";
+jest.setTimeout(40000);
 global.setImmediate = jest.useRealTimers as unknown as typeof setImmediate;
 describe("Test 'Robot'", () => {
     describe("Test persistance", () => {
-        it("Should run Breakout", async () => {
+        it("Should run Breakout v1", async () => {
             const robot = new Robot({
                 id: "some_id",
                 exchange: "binance_futures",
@@ -29,12 +30,13 @@ describe("Test 'Robot'", () => {
                     activeFrom: "2020-01-01T00:00:00.000Z"
                 }
             });
-
-            robot.initStrategy();
-            robot.initIndicators();
             const historyCandles: Candle[] = candles.slice(0, 300) as Candle[];
+
             const newCandles: Candle[] = candles.slice(300) as Candle[];
+
             robot.handleHistoryCandles(historyCandles);
+            robot.initStrategy();
+            await robot.initIndicators();
 
             robot.handleCandle(newCandles[0]);
             await robot.calcIndicators();
@@ -80,11 +82,13 @@ describe("Test 'Robot'", () => {
                 }
             });
 
-            robot.initStrategy();
-            robot.initIndicators();
             const historyCandles: Candle[] = candles.slice(0, 300) as Candle[];
+
             const newCandles: Candle[] = candles.slice(300) as Candle[];
+
             robot.handleHistoryCandles(historyCandles);
+            robot.initStrategy();
+            await robot.initIndicators();
 
             robot.handleCandle(newCandles[0]);
             await robot.calcIndicators();
@@ -116,7 +120,7 @@ describe("Test 'Robot'", () => {
                         adx: 10,
                         tick: 0.01,
                         ratio: 150,
-                        seriesSize: 50,
+                        seriesSize: 10,
                         requiredHistoryMaxBars: 300
                     },
                     robotSettings: {
@@ -127,11 +131,13 @@ describe("Test 'Robot'", () => {
                 }
             });
 
-            robot.initStrategy();
-            robot.initIndicators();
             const historyCandles: Candle[] = candles.slice(0, 300) as Candle[];
+
             const newCandles: Candle[] = candles.slice(300) as Candle[];
+
             robot.handleHistoryCandles(historyCandles);
+            robot.initStrategy();
+            await robot.initIndicators();
 
             robot.handleCandle(newCandles[0]);
             await robot.calcIndicators();
@@ -173,11 +179,13 @@ describe("Test 'Robot'", () => {
                 }
             });
 
-            robot.initStrategy();
-            robot.initIndicators();
             const historyCandles: Candle[] = candles.slice(0, 300) as Candle[];
+
             const newCandles: Candle[] = candles.slice(300) as Candle[];
+
             robot.handleHistoryCandles(historyCandles);
+            robot.initStrategy();
+            await robot.initIndicators();
 
             robot.handleCandle(newCandles[0]);
             await robot.calcIndicators();
@@ -217,11 +225,13 @@ describe("Test 'Robot'", () => {
                 }
             });
 
-            robot.initStrategy();
-            robot.initIndicators();
             const historyCandles: Candle[] = candles.slice(0, 300) as Candle[];
+
             const newCandles: Candle[] = candles.slice(300) as Candle[];
+
             robot.handleHistoryCandles(historyCandles);
+            robot.initStrategy();
+            await robot.initIndicators();
 
             robot.handleCandle(newCandles[0]);
             await robot.calcIndicators();
@@ -265,11 +275,13 @@ describe("Test 'Robot'", () => {
                 }
             });
 
-            robot.initStrategy();
-            robot.initIndicators();
             const historyCandles: Candle[] = candles.slice(0, 300) as Candle[];
+
             const newCandles: Candle[] = candles.slice(300) as Candle[];
+
             robot.handleHistoryCandles(historyCandles);
+            robot.initStrategy();
+            await robot.initIndicators();
 
             robot.handleCandle(newCandles[0]);
             await robot.calcIndicators();
@@ -286,7 +298,7 @@ describe("Test 'Robot'", () => {
             expect(round(robot.state.indicators["fxSignal"].result, 2)).toEqual(round(68.59019235653186, 2));
             expect(round(robot.state.indicators["fxHighB"].result, 2)).toEqual(round(72.08858199355669, 2));
             expect(round(robot.state.indicators["fxLowB"].result, 2)).toEqual(round(33.03057341242341, 2));
-            expect(round(robot.state.indicators["macd"].macdHistogram, 2)).toEqual(round(-803.6571054979397, 2));
+            expect(round(robot.state.indicators["macd"].result.histogram, 0)).toEqual(round(-803.6571054979397, 0));
         });
 
         it("Should run IRSTS", async () => {
@@ -312,11 +324,13 @@ describe("Test 'Robot'", () => {
                 }
             });
 
-            robot.initStrategy();
-            robot.initIndicators();
             const historyCandles: Candle[] = candles.slice(0, 300) as Candle[];
+
             const newCandles: Candle[] = candles.slice(300) as Candle[];
+
             robot.handleHistoryCandles(historyCandles);
+            robot.initStrategy();
+            await robot.initIndicators();
 
             robot.handleCandle(newCandles[0]);
             await robot.calcIndicators();
@@ -363,11 +377,13 @@ describe("Test 'Robot'", () => {
                 }
             });
 
-            robot.initStrategy();
-            robot.initIndicators();
             const historyCandles: Candle[] = candles.slice(0, 300) as Candle[];
+
             const newCandles: Candle[] = candles.slice(300) as Candle[];
+
             robot.handleHistoryCandles(historyCandles);
+            robot.initStrategy();
+            await robot.initIndicators();
 
             robot.handleCandle(newCandles[0]);
             await robot.calcIndicators();
@@ -382,7 +398,7 @@ describe("Test 'Robot'", () => {
             robot.finalize();
 
             expect(round(robot.state.indicators["sma"].result, 2)).toEqual(round(11236.480199999998, 2));
-            expect(round(robot.state.indicators["atr"].result, 2)).toEqual(round(428.142582625723, 2));
+            expect(round(robot.state.indicators["atr"].result, 0)).toEqual(round(428.142582625723, 0));
             expect(round(robot.state.indicators["highestHigh"].result, 2)).toEqual(round(13863, 2));
             expect(round(robot.state.indicators["lowestLow"].result, 2)).toEqual(round(10818.44, 2));
         });
@@ -411,11 +427,13 @@ describe("Test 'Robot'", () => {
                 }
             });
 
-            robot.initStrategy();
-            robot.initIndicators();
             const historyCandles: Candle[] = candles.slice(0, 300) as Candle[];
+
             const newCandles: Candle[] = candles.slice(300) as Candle[];
+
             robot.handleHistoryCandles(historyCandles);
+            robot.initStrategy();
+            await robot.initIndicators();
 
             robot.handleCandle(newCandles[0]);
             await robot.calcIndicators();
@@ -457,11 +475,13 @@ describe("Test 'Robot'", () => {
                 }
             });
 
-            robot.initStrategy();
-            robot.initIndicators();
             const historyCandles: Candle[] = candles.slice(0, 300) as Candle[];
+
             const newCandles: Candle[] = candles.slice(300) as Candle[];
+
             robot.handleHistoryCandles(historyCandles);
+            robot.initStrategy();
+            await robot.initIndicators();
 
             robot.handleCandle(newCandles[0]);
             await robot.calcIndicators();

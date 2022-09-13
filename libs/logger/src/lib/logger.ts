@@ -26,7 +26,7 @@ const logger = new Logger(loggerConfig);
 export { logger, Logger };
  */
 
-import { Logger, format, createLogger, LoggerOptions, transports } from "winston";
+import { Logger, format, createLogger, LoggerOptions, transports, LeveledLogMethod } from "winston";
 import { TransformableInfo } from "logform";
 import { MESSAGE, LEVEL, SPLAT } from "triple-beam";
 import { inspect } from "util";
@@ -102,4 +102,4 @@ const loggerConfig: LoggerOptions =
 
 const logger = createLogger(loggerConfig);
 
-export { logger, Logger };
+export { logger, Logger, LeveledLogMethod };

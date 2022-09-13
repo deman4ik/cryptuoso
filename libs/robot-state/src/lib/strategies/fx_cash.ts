@@ -66,23 +66,25 @@ export class FXCash extends BaseStrategy {
     };
     init() {
         this.log("FXCash Parameters", this.parameters);
-        this.addTulipIndicator("fxSignal", "rsiLow", {
-            optInTimePeriod: this.parameters.fxSignal
+        this.addRsIndicator("fxSignal", "RSI", {
+            period: this.parameters.fxSignal,
+            candleProp: "low"
         });
-        this.addIndicator("fxHighB", "fx_high_band", {
-            seriesSize: 30,
-            optInTimePeriod: 8,
-            mod: this.parameters.fxHighB
+        this.addRsIndicator("fxHighB", "FXHighBand", {
+            period: 30,
+            rsiPeriod: 8,
+            modifier: this.parameters.fxHighB
         });
-        this.addIndicator("fxLowB", "fx_low_band", {
-            seriesSize: 30,
-            optInTimePeriod: 8,
-            mod: this.parameters.fxLowB
+        this.addRsIndicator("fxLowB", "FXLowBand", {
+            period: 30,
+            rsiPeriod: 8,
+            modifier: this.parameters.fxLowB
         });
-        this.addTulipIndicator("macd", "macd", {
-            optInFastPeriod: this.parameters.macdFE,
-            optInSlowPeriod: this.parameters.macdSE,
-            optInSignalPeriod: this.parameters.macdSignal
+        this.addRsIndicator("macd", "TaMACD", {
+            fastPeriod: this.parameters.macdFE,
+            slowPeriod: this.parameters.macdSE,
+            signalPeriod: this.parameters.macdSignal,
+            candleProp: "close"
         });
 
         this.prevInds = {
@@ -145,11 +147,11 @@ export class FXCash extends BaseStrategy {
                 );
 
                 const signalFilterBuy =
-                    this.crossUnder(this.prevInds.macd, 0, this.indicators.macd.macdHistogram, 0) ||
-                    this.indicators.macd.macdHistogram < 0;
+                    this.crossUnder(this.prevInds.macd, 0, this.indicators.macd.result.histogram, 0) ||
+                    this.indicators.macd.result.histogram < 0;
                 const signalFilterSell =
-                    this.crossOver(this.prevInds.macd, 0, this.indicators.macd.macdHistogram, 0) ||
-                    this.indicators.macd.macdHistogram > 0;
+                    this.crossOver(this.prevInds.macd, 0, this.indicators.macd.result.histogram, 0) ||
+                    this.indicators.macd.result.histogram > 0;
 
                 if (signalBuy && signalFilterBuy) {
                     const position = this.createPosition();
@@ -161,7 +163,7 @@ export class FXCash extends BaseStrategy {
             }
         }
 
-        this.prevInds.macd = this.indicators.macd.macdHistogram;
+        this.prevInds.macd = this.indicators.macd.result.histogram;
         this.prevInds.fxSignal = this.indicators.fxSignal.result;
         this.prevInds.fxHighB = this.indicators.fxHighB.result;
         this.prevInds.fxLowB = this.indicators.fxLowB.result;

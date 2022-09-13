@@ -608,7 +608,8 @@ export class UserPosition {
                 : this._settings.volume,
             executed: 0,
             params: {
-                orderTimeout: this._tradeSettings.orderTimeout || ORDER_OPEN_TIMEOUT
+                orderTimeout: this._tradeSettings.orderTimeout || ORDER_OPEN_TIMEOUT,
+                useOrderBookPrice: this._tradeSettings.useOrderBookPrice || false
             },
             createdAt: dayjs.utc().toISOString(),
             status: OrderStatus.new,

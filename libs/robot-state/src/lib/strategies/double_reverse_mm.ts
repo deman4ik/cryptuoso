@@ -30,11 +30,14 @@ export class DoubleReverseMM extends BaseStrategy {
     };
     init() {
         this.log("DoubleReverseMM Parameters", this.parameters);
-        this.addIndicator("highestHigh", "highest_high", {
-            seriesSize: this.parameters.periodHigh
+
+        this.addRsIndicator("highestHigh", "TaMaximum", {
+            period: this.parameters.periodHigh,
+            candleProp: "high"
         });
-        this.addIndicator("lowestLow", "lowest_low", {
-            seriesSize: this.parameters.periodLow
+        this.addRsIndicator("lowestLow", "TaMinimum", {
+            period: this.parameters.periodLow,
+            candleProp: "low"
         });
     }
     check() {
@@ -53,9 +56,9 @@ export class DoubleReverseMM extends BaseStrategy {
             const position = this.createPosition();
 
             if (
-                this.stats?.fullStats?.lastPosition &&
-                this.stats?.fullStats?.lastPosition.direction === this.CONSTS.LONG &&
-                this.stats?.fullStats?.lastPosition.profit < 0
+                this.lastClosedPosition &&
+                this.lastClosedPosition?.direction === this.CONSTS.LONG &&
+                this.lastClosedPosition?.profit < 0
             ) {
                 position.shortAtMarket();
             } else {

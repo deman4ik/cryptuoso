@@ -7,6 +7,7 @@ interface MinMax {
 
 export interface TradeSettings {
     orderTimeout: number;
+    useOrderBookPrice?: boolean;
     slippage?: {
         entry?: {
             stepPercent: number;

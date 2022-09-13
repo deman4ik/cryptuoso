@@ -1,5 +1,6 @@
 import { BaseIndicator } from "../BaseIndicator";
 import { IndicatorState } from "@cryptuoso/robot-types";
+import { DBCandle } from "@cryptuoso/market";
 export class Trough extends BaseIndicator {
     constructor(state: IndicatorState) {
         super(state);
@@ -25,7 +26,7 @@ export class Trough extends BaseIndicator {
         }
     };
     candleProp: "open" | "high" | "low" | "close";
-    init() {
+    async init(candles: DBCandle[]) {
         this.prevTrough = {
             candle: null,
             result: 0
@@ -41,18 +42,19 @@ export class Trough extends BaseIndicator {
         this.targetValue = 0;
         this.updated = false;
         this.candleProp = this.parameters.candleProp || "close";
+        this.initialized = true;
     }
-    async calc() {
+    async calc(candle: DBCandle) {
         this.updated = false;
-        if (this.targetValue && this.candle[this.candleProp] > this.targetValue) {
+        if (this.targetValue && candle[this.candleProp] > this.targetValue) {
             this.prevTrough = {
                 ...this.trough
             };
             this.trough = { ...this.lowest };
 
             this.lowest = {
-                candle: this.candle,
-                result: this.candle[this.candleProp]
+                candle: candle,
+                result: candle[this.candleProp]
             };
             this.targetValue = 0;
             this.updated = true;
@@ -63,13 +65,13 @@ export class Trough extends BaseIndicator {
             this.targetValue = this.utils.addPercent(this.lowest.result, this.parameters.reversalAmount);
         }
 
-        if ((!this.targetValue && !this.lowest.result) || this.lowest.result > this.candle[this.candleProp]) {
+        if ((!this.targetValue && !this.lowest.result) || this.lowest.result > candle[this.candleProp]) {
             this.lowest = {
-                candle: this.candle,
-                result: this.candle[this.candleProp]
+                candle: candle,
+                result: candle[this.candleProp]
             };
             this.targetValue = this.utils.addPercent(this.lowest.result, this.parameters.reversalAmount);
-            if (!this.trough.result) this.trough.result = this.candle[this.candleProp];
+            if (!this.trough.result) this.trough.result = candle[this.candleProp];
         }
     }
 }

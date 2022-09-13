@@ -341,17 +341,19 @@ export class Backtester {
         }
     }
 
-    initIndicators() {
-        Object.keys(this.#robots).forEach((id) => {
-            try {
-                logger.debug(`Backtester #${this.#id} - Initializing robot's #${id} indicators`);
+    async initIndicators() {
+        await Promise.all(
+            Object.keys(this.#robots).map(async (id) => {
+                try {
+                    logger.debug(`Backtester #${this.#id} - Initializing robot's #${id} indicators`);
 
-                this.#robots[id].instance.initIndicators();
-            } catch (err) {
-                logger.error(`Backtester #${this.#id} - Failed to init robot's #${id} indicators`, err);
-                throw err;
-            }
-        });
+                    await this.#robots[id].instance.initIndicators();
+                } catch (err) {
+                    logger.error(`Backtester #${this.#id} - Failed to init robot's #${id} indicators`, err);
+                    throw err;
+                }
+            })
+        );
     }
 
     handleHistoryCandles(candles: Candle[]) {

@@ -69,7 +69,7 @@ export interface RobotBaseServiceConfig extends HTTPServiceConfig {
 export class RobotBaseService extends HTTPService {
     #exchange: string;
     #userPortfolioId: string;
-    #pool: Pool<any>;
+
     #connector: any;
     #publicConnector: PublicConnector;
     #subscriptions: { [key: string]: Exwatcher } = {};
@@ -148,15 +148,7 @@ export class RobotBaseService extends HTTPService {
                 }
             });
         }
-        this.#pool = await Pool(
-            async () => await spawn<RobotWorker>(new ThreadsWorker("./worker"), { timeout: 60000 }),
-            {
-                name: "worker",
-                concurrency: this.workerConcurrency,
-                size: this.workerThreads
-            }
-        );
-        await sleep(3000);
+
         await this.initConnector();
     }
 
@@ -180,7 +172,7 @@ export class RobotBaseService extends HTTPService {
             this.#cronRunRobots.stop();
             await this.unsubscribeAll();
             await sleep(5000);
-            await this.#pool.terminate();
+
             await this.#connector.close();
         } catch (e) {
             this.log.error(e);
@@ -208,7 +200,7 @@ export class RobotBaseService extends HTTPService {
                 const robot = this.robots[robotId].robot;
                 robot.stop();
 
-                await this.db.pg.transaction(async (t) => {
+                /*FIXME:   await this.db.pg.transaction(async (t) => {
                     await this.saveRobotState(t, robot.robotState);
                 });
 
@@ -216,7 +208,7 @@ export class RobotBaseService extends HTTPService {
                     robot.eventsToSend.map(async (event) => {
                         await this.events.emit(event);
                     })
-                );
+                ); */
 
                 robot.clearEvents();
 
@@ -1367,13 +1359,20 @@ export class RobotBaseService extends HTTPService {
 
             if (!this.robots[robot.id].robot.state.initialized) {
                 this.robots[robot.id].robot.initStrategy();
-                this.robots[robot.id].robot.initIndicators();
-                await this.db.pg.query(sql`
-                UPDATE robots 
-                SET state = ${JSON.stringify(this.robots[robot.id].robot.state)}
-                WHERE id = ${robot.id};
-                `);
             }
+            const prevTime = Timeframe.getPrevSince(dayjs.utc().toISOString(), robot.timeframe);
+            const exwatcherId = this.createExwatcherId(robot.asset, robot.currency);
+
+            const candles = this.#candlesHistory[exwatcherId][robot.timeframe].filter((c) => c.time <= prevTime);
+            this.robots[robot.id].robot.handleHistoryCandles(candles);
+            await this.robots[robot.id].robot.initIndicators();
+
+            await this.db.pg.query(sql`
+            UPDATE robots 
+            SET state = ${JSON.stringify(this.robots[robot.id].robot.state)}
+            WHERE id = ${robot.id};
+            `);
+
             this.initActiveRobotAlerts(robot.id);
             if (this.robots[robot.id].robot.status !== RobotStatus.started) {
                 this.robots[robot.id].robot.start();
@@ -1535,14 +1534,14 @@ export class RobotBaseService extends HTTPService {
                                     }
 
                                     if (this.isRobotService) {
-                                        if (robot.eventsToSend.length)
+                                        /*FIXME:    if (robot.eventsToSend.length)
                                             await Promise.all(
                                                 robot.eventsToSend.map(async (event) => {
                                                     await this.events.emit(event);
                                                 })
                                             );
 
-                                        await this.db.pg.transaction(async (t) => {
+                                         await this.db.pg.transaction(async (t) => {
                                             if (robot.positionsToSave.length)
                                                 await this.#saveRobotPositions(t, robot.positionsToSave);
 
@@ -1554,7 +1553,7 @@ export class RobotBaseService extends HTTPService {
                                             }
 
                                             await this.saveRobotState(t, robot.robotState);
-                                        });
+                                        }); 
 
                                         if (robot.hasClosedPositions) {
                                             await this.events.emit<TradeStatsRunnerRobot>({
@@ -1570,7 +1569,7 @@ export class RobotBaseService extends HTTPService {
                                                     robotId
                                                 }
                                             });
-                                        }
+                                        }*/
                                     } else if (robot.hasTradesToSave) {
                                         await this.handleSignal(robot.tradesToSave[0]);
                                     }
@@ -1657,28 +1656,39 @@ export class RobotBaseService extends HTTPService {
                             const prevTime = Timeframe.getPrevSince(currentDate, timeframe);
                             const exwatcherId = this.createExwatcherId(asset, currency);
 
-                            const robotState = await this.robotWorker({
-                                state: robot.robotState,
-                                candles: this.#candlesHistory[exwatcherId][timeframe].filter((c) => c.time <= prevTime)
-                            });
-                            const { state, positionsToSave, eventsToSend } = robotState;
-                            this.robots[robotId].robot = new Robot(state);
+                            const candles = this.#candlesHistory[exwatcherId][timeframe].filter(
+                                (c) => c.time <= prevTime
+                            );
+                            const processed = robot.handleCandle(candles[candles.length - 1]);
+                            if (processed) {
+                                await robot.calcIndicators();
+                                robot.runStrategy();
+                                robot.finalize();
+                            }
 
-                            if (this.isRobotService) {
-                                if (eventsToSend && Array.isArray(eventsToSend) && eventsToSend.length) {
+                            /*FIXME:   if (this.isRobotService) {
+                              if (
+                                    robot.eventsToSend &&
+                                    Array.isArray(robot.eventsToSend) &&
+                                    robot.eventsToSend.length
+                                ) {
                                     await Promise.all(
-                                        eventsToSend.map(async (event) => {
+                                        robot.eventsToSend.map(async (event) => {
                                             await this.events.emit(event);
                                         })
                                     );
                                 }
                             }
-                            await this.db.pg.transaction(async (t) => {
+                             await this.db.pg.transaction(async (t) => {
                                 if (this.isRobotService) {
-                                    if (positionsToSave && Array.isArray(positionsToSave) && positionsToSave.length)
-                                        await this.#saveRobotPositions(t, positionsToSave);
+                                    if (
+                                        robot.positionsToSave &&
+                                        Array.isArray(robot.positionsToSave) &&
+                                        robot.positionsToSave.length
+                                    )
+                                        await this.#saveRobotPositions(t, robot.positionsToSave);
 
-                                    const signals = eventsToSend?.filter(({ type }) =>
+                                    const signals = robot.eventsToSend?.filter(({ type }) =>
                                         [SignalEvents.ALERT, SignalEvents.TRADE].includes(type as SignalEvents)
                                     );
                                     if (signals && signals.length) {
@@ -1688,8 +1698,8 @@ export class RobotBaseService extends HTTPService {
                                         );
                                     }
                                 }
-                                await this.saveRobotState(t, state);
-                            });
+                                await this.saveRobotState(t, robot.robotState);
+                            }); */
 
                             // this.log.info(`Cleaning robot's #${robotId} alerts`);
                             const alerts = Object.values(this.#robotAlerts)
@@ -1699,9 +1709,9 @@ export class RobotBaseService extends HTTPService {
                                 delete this.#robotAlerts[id];
                             }
 
-                            const alertsToSave = eventsToSend?.filter(({ type }) => type === SignalEvents.ALERT);
+                            const alertsToSave = robot.eventsToSend?.filter(({ type }) => type === SignalEvents.ALERT);
 
-                            const { amountInUnit, unit } = Timeframe.get(state.timeframe);
+                            const { amountInUnit, unit } = Timeframe.get(robot.timeframe);
                             for (const { data } of alertsToSave as { data: SignalEvent }[]) {
                                 //  this.log.info(`Saving robot's #${robotId} alert`);
 
@@ -1716,11 +1726,12 @@ export class RobotBaseService extends HTTPService {
                                 };
                             }
 
-                            if (
+                            /*FIXME:    if (
                                 this.isRobotService &&
-                                positionsToSave &&
-                                Array.isArray(positionsToSave) &&
-                                positionsToSave.filter(({ status }) => status === RobotPositionStatus.closed).length > 0
+                                robot.positionsToSave &&
+                                Array.isArray(robot.positionsToSave) &&
+                                robot.positionsToSave.filter(({ status }) => status === RobotPositionStatus.closed)
+                                    .length > 0
                             ) {
                                 await this.events.emit<TradeStatsRunnerRobot>({
                                     type: TradeStatsRunnerEvents.ROBOT,
@@ -1735,7 +1746,7 @@ export class RobotBaseService extends HTTPService {
                                         robotId
                                     }
                                 });
-                            }
+                            } */
                         } catch (err) {
                             const error = `Failed to run robot's #${robotId} strategy - ${err.message}`;
                             this.log.error(error);
@@ -1766,10 +1777,6 @@ export class RobotBaseService extends HTTPService {
             await beacon.die();
             tracer.end(trace);
         }
-    }
-
-    async robotWorker(robotState: RobotStateBuffer): Promise<RobotStateBuffer> {
-        return await this.#pool.queue(async (worker: RobotWorker) => worker.runStrategy(robotState));
     }
 
     #saveRobotPositions = async (transaction: DatabaseTransactionConnection, positions: RobotPositionState[]) => {

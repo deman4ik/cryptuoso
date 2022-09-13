@@ -999,7 +999,7 @@ export class UserRobotBaseService extends RobotBaseService {
                     }
                 });
                 this.robots[robotId].robot.initStrategy();
-                this.robots[robotId].robot.initIndicators();
+                await this.robots[robotId].robot.initIndicators();
             } else {
                 this.robots[robotId].robot = new Robot(userRobot.robotState);
             }

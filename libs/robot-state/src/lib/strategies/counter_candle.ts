@@ -55,11 +55,13 @@ export class CounterCandle extends BaseStrategy {
     };
     init() {
         this.log("CounterCandle Parameters", this.parameters);
-        this.addIndicator("highestHigh", "highest_high", {
-            seriesSize: this.parameters.highest
+        this.addRsIndicator("highestHigh", "TaMaximum", {
+            period: this.parameters.highest,
+            candleProp: "high"
         });
-        this.addIndicator("lowestLow", "lowest_low", {
-            seriesSize: this.parameters.highest
+        this.addRsIndicator("lowestLow", "TaMinimum", {
+            period: this.parameters.highest,
+            candleProp: "low"
         });
     }
     check() {
