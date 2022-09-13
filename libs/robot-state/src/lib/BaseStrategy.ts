@@ -32,6 +32,7 @@ export interface StrategyState extends StrategyProps {
     emulateNextPosition?: boolean;
     marginNextPosition?: number;
     stats?: TradeStats;
+    lastClosedPosition?: RobotPositionState;
 }
 
 export class BaseStrategy {
@@ -55,6 +56,7 @@ export class BaseStrategy {
     _indicators: {
         [key: string]: IndicatorState; //TODO generic types
     };
+    _lastClosedPosition: RobotPositionState;
     _consts: { [key: string]: string } = {
         LONG: TradeAction.long,
         CLOSE_LONG: TradeAction.closeLong,
@@ -79,6 +81,7 @@ export class BaseStrategy {
         this._robotId = state.robotId;
         this._posLastNumb = state.posLastNumb || {};
         this._positions = {};
+        this._lastClosedPosition = state.lastClosedPosition;
         this._setPositions(state.positions);
         this._backtest = state.backtest;
         this._emulateNextPosition = nvl(state.emulateNextPosition, false);
@@ -292,6 +295,10 @@ export class BaseStrategy {
             .map((pos) => pos.state);
     }
 
+    get lastClosedPosition() {
+        return this._lastClosedPosition;
+    }
+
     _checkAlerts() {
         Object.keys(this._positions)
             .sort((a, b) => sortAsc(this._positions[a].code.split("_")[1], this._positions[b].code.split("_")[1]))
@@ -355,6 +362,10 @@ export class BaseStrategy {
 
     _handleStats(stats: TradeStats) {
         this._stats = stats;
+    }
+
+    _handleLastClosedPosition(position: RobotPositionState) {
+        this._lastClosedPosition = position;
     }
 
     _addIndicator(name: string, indicatorName: string, parameters: { [key: string]: any }) {

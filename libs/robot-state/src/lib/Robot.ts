@@ -323,7 +323,7 @@ export class Robot {
             emulateNextPosition: this.emulateNextPosition,
             marginNextPosition: this.marginNextPosition,
             stats: this._emulatedStats,
-            ...this._state // предыдущий стейт стратегии)
+            ...this._state // предыдущий стейт стратегии
         });
     }
 
@@ -335,10 +335,6 @@ export class Robot {
                 case IndicatorType.base: {
                     // Если базовый индикатор
 
-                    // Считываем объект индикатора
-
-                    // Создаем новый инстанc базового индикатора
-
                     this._indicatorInstances[key] = new indicators[indicator.indicatorName]({
                         strategySettings: this._settings.strategySettings,
                         ...indicator // стейт индикатора
@@ -348,7 +344,6 @@ export class Robot {
                 case IndicatorType.rs: {
                     // Если внешний индикатор Rs
 
-                    // Создаем новый инстанc индикатора Rs
                     this._indicatorInstances[key] = new RsIndicator({
                         strategySettings: this._settings.strategySettings,
                         parameters: indicator.parameters,
@@ -356,42 +351,7 @@ export class Robot {
                     });
                     break;
                 }
-                /* case INDICATORS_TALIB: {
-              // Если внешний индикатор Talib
-  
-              // Создаем новый инстанc индикатора Talib
-              this._indicatorInstances[key] = new TalibIndicatorClass({
-                exchange: this._exchange,
-                asset: this._asset,
-                currency: this._currency,
-                timeframe: this._timeframe,
-                robotId: this._id,
-                strategySettings: this._settings.strategySettings,
-                parameters: indicator.parameters,
-                ...indicator // стейт индикатора
-              });
-  
-              break;
-            }
-            case INDICATORS_TECH: {
-              // Если внешний индикатор Tech
-  
-              // Создаем новый инстанc индикатора Tech
-              this._indicatorInstances[key] = new TechInicatatorClass({
-                exchange: this._exchange,
-                asset: this._asset,
-                currency: this._currency,
-                timeframe: this._timeframe,
-                robotId: this._id,
-                strategySettings: this._settings.strategySettings,
-                parameters: indicator.parameters,
-                ...indicator // стейт индикатора
-              });
-  
-              break;
-            } */
                 default:
-                    // Неизвестный тип индикатора - ошибка
                     throw new Error(`Unknown indicator type ${indicator.type}`);
             }
         });
@@ -670,9 +630,14 @@ export class Robot {
                 worstProfit
             };
         });
+        if (this.hasClosedPositions) {
+            this._strategyInstance._handleLastClosedPosition(this.closedPositions[this.closedPositions.length - 1]);
+        }
+        this._state.lastClosedPosition = this._strategyInstance.lastClosedPosition;
         this._state.initialized = this._strategyInstance.initialized;
         this._state.positions = this._strategyInstance.validPositions;
         this._state.posLastNumb = this._strategyInstance.posLastNumb;
+
         this._hasAlerts = this._strategyInstance.hasAlerts;
         // Все свойства инстанса стратегии
         Object.keys(this._strategyInstance)

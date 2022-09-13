@@ -51,6 +51,7 @@ export interface StrategyProps {
         [key: string]: IndicatorState;
     };
     variables: { [key: string]: any };
+    lastClosedPosition?: RobotPositionState;
 }
 
 export interface RobotPostionInternalState {

@@ -56,9 +56,9 @@ export class DoubleReverseMM extends BaseStrategy {
             const position = this.createPosition();
 
             if (
-                this.stats?.fullStats?.lastPosition &&
-                this.stats?.fullStats?.lastPosition.direction === this.CONSTS.LONG &&
-                this.stats?.fullStats?.lastPosition.profit < 0
+                this.lastClosedPosition &&
+                this.lastClosedPosition?.direction === this.CONSTS.LONG &&
+                this.lastClosedPosition?.profit < 0
             ) {
                 position.shortAtMarket();
             } else {
