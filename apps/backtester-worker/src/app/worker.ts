@@ -657,8 +657,8 @@ class BacktesterWorker {
             const candlesCount: number = +(await this.db.pg.oneFirst(sql`
                SELECT COUNT(1) ${query}`));
             this.backtester.init(candlesCount);
-
-            await DataStream.from(
+            if (candlesCount === 0) throw new Error("No candles found");
+            /* await DataStream.from(
                 makeChunksGenerator(
                     this.db.pg,
                     sql`SELECT * ${query} ORDER BY timestamp`,
@@ -676,9 +676,9 @@ class BacktesterWorker {
                     this.log.error(`Backtester #${this.backtester.id} - Error`, err.message);
                     throw new BaseError(err.message, err);
                 })
-                .whenEnd();
+                .whenEnd();*/
 
-            /* const candles = await this.db.pg.many<Candle>(
+            const candles = await this.db.pg.many<Candle>(
                 sql`SELECT time, timestamp, open, high, low, close ${query} ORDER BY timestamp`
             );
 
@@ -686,7 +686,7 @@ class BacktesterWorker {
                 await this.backtester.handleCandle(candles[i]);
                 const percentUpdated = this.backtester.incrementProgress();
                 if (percentUpdated) subject.next(this.backtester.completedPercent);
-            }*/
+            }
 
             await this.backtester.calcStats();
 

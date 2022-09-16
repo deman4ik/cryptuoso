@@ -219,7 +219,7 @@ export class Timeframe {
         return getValidDate(newDate, unit);
     }
 
-    static timeframesByDate(inputDate: string): ValidTimeframe[] {
+    static timeframesByDate(inputDate: string, timeframes = this.validArray): ValidTimeframe[] {
         const date = dayjs.utc(inputDate || undefined);
 
         if (date.second() !== 0) return [];
@@ -230,7 +230,7 @@ export class Timeframe {
         const minute = date.minute();
 
         /* Проверяем все таймфреймы */
-        let currentTimeframes: ValidTimeframe[] = this.validArray.filter((timeframe) =>
+        let currentTimeframes: ValidTimeframe[] = timeframes.filter((timeframe) =>
             this.checkTimeframeByDate(hour, minute, timeframe)
         );
         /* Если есть хотя бы один подходящий таймфрейм */

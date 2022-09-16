@@ -102,7 +102,7 @@ export interface ImporterRunnerStart {
     asset: string;
     currency: string;
     type: ImportType;
-    timeframes?: number[];
+    timeframes?: ValidTimeframe[];
     dateFrom?: string;
     dateTo?: string;
     amount?: number;

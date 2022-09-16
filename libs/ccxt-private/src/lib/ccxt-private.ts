@@ -584,7 +584,7 @@ export class PrivateConnector {
 
             //TODO: if (order.params.useOrderBookPrice)
             const orderBookPrice = await this.getOrderBookPrice(order);
-
+            logger.debug(`ORDER BOOK PRICE ${orderBookPrice}`);
             let signalPrice: number;
 
             if (orderBookPrice) {

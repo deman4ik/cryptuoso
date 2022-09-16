@@ -1,5 +1,6 @@
 //TODO: DEPRECATE!
 import { ISO_DATE_REGEX } from "@cryptuoso/helpers";
+import { ValidTimeframe } from "@cryptuoso/market";
 
 export const IN_EXWATCHER_TOPIC = "in-exwatcher";
 export const OUT_EXWATCHER_TOPIC = "out-exwatcher";
@@ -66,6 +67,7 @@ export interface ExwatcherSubscribe {
     exchange: string;
     asset: string;
     currency: string;
+    timeframes: ValidTimeframe[];
 }
 
 export interface ExwatcherSubscribeAll {
