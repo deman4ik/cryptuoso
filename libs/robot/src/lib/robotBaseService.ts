@@ -419,7 +419,9 @@ export class RobotBaseService extends HTTPService {
             if (Object.keys(this.#robotsToStart).length) {
                 for (const robot of Object.values(this.#robotsToStart)) {
                     delete this.#robotsToStart[robot.id];
-                    await this.#subscribeRobot(robot);
+                    if (!this.robots[robot.id]) {
+                        await this.#subscribeRobot(robot);
+                    }
                 }
             }
         } catch (e) {
@@ -1367,6 +1369,7 @@ export class RobotBaseService extends HTTPService {
                 this.#subscriptions[exwatcherId].status !== ExwatcherStatus.subscribed
             ) {
                 this.#robotsToStart[robot.id] = robot;
+                return;
             }
             this.robots[robot.id] = {
                 robot: new Robot(robot),
