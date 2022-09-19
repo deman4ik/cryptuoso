@@ -200,7 +200,7 @@ export class RobotBaseService extends HTTPService {
                 const robot = this.robots[robotId].robot;
                 robot.stop();
 
-                /*FIXME:   await this.db.pg.transaction(async (t) => {
+                await this.db.pg.transaction(async (t) => {
                     await this.saveRobotState(t, robot.robotState);
                 });
 
@@ -208,7 +208,7 @@ export class RobotBaseService extends HTTPService {
                     robot.eventsToSend.map(async (event) => {
                         await this.events.emit(event);
                     })
-                ); */
+                );
 
                 robot.clearEvents();
 
@@ -691,11 +691,12 @@ export class RobotBaseService extends HTTPService {
                 this.#candlesCurrent[id] = {};
                 await this.subscribeCCXT(id);
 
+                await this.initCandlesHistory(this.#subscriptions[id]);
+
                 this.#subscriptions[id].status = ExwatcherStatus.subscribed;
                 this.#subscriptions[id].importStartedAt = null;
                 this.#subscriptions[id].error = null;
 
-                await this.initCandlesHistory(this.#subscriptions[id]);
                 this.log.info(
                     `Subscribed ${id} Total ${
                         Object.values(this.#subscriptions).filter(({ status }) => status === ExwatcherStatus.subscribed)
@@ -1299,13 +1300,23 @@ export class RobotBaseService extends HTTPService {
         ${existedRobotsCondition};`);
 
         if (robots && Array.isArray(robots) && robots.length) {
-            await Promise.all(
-                robots.map(async (robot) => {
-                    if (!this.robots[robot.id]) {
-                        await this.#subscribeRobot(robot);
+            for (const robot of robots) {
+                if (!this.robots[robot.id]) {
+                    const exwatcherId = this.createExwatcherId(robot.asset, robot.currency);
+
+                    await this.addSubscription({
+                        exchange: this.#exchange,
+                        asset: robot.asset,
+                        currency: robot.currency,
+                        timeframes: [robot.timeframe]
+                    });
+
+                    while (this.#subscriptions[exwatcherId].status !== ExwatcherStatus.subscribed) {
+                        await sleep(2000);
                     }
-                })
-            );
+                    await this.#subscribeRobot(robot);
+                }
+            }
         }
     }
 
@@ -1333,13 +1344,13 @@ export class RobotBaseService extends HTTPService {
         AND r.id = ${robotId};`);
 
         const exwatcherId = this.createExwatcherId(robot.asset, robot.currency);
-        if (!this.#subscriptions[exwatcherId] || this.#subscriptions[exwatcherId].status !== ExwatcherStatus.subscribed)
-            await this.addSubscription({
-                exchange: this.#exchange,
-                asset: robot.asset,
-                currency: robot.currency,
-                timeframes: [robot.timeframe]
-            });
+
+        await this.addSubscription({
+            exchange: this.#exchange,
+            asset: robot.asset,
+            currency: robot.currency,
+            timeframes: [robot.timeframe]
+        });
 
         while (this.#subscriptions[exwatcherId].status !== ExwatcherStatus.subscribed) {
             await sleep(2000);
@@ -1535,14 +1546,14 @@ export class RobotBaseService extends HTTPService {
                                     }
 
                                     if (this.isRobotService) {
-                                        /*FIXME:    if (robot.eventsToSend.length)
+                                        if (robot.eventsToSend.length)
                                             await Promise.all(
                                                 robot.eventsToSend.map(async (event) => {
                                                     await this.events.emit(event);
                                                 })
                                             );
 
-                                         await this.db.pg.transaction(async (t) => {
+                                        await this.db.pg.transaction(async (t) => {
                                             if (robot.positionsToSave.length)
                                                 await this.#saveRobotPositions(t, robot.positionsToSave);
 
@@ -1554,7 +1565,7 @@ export class RobotBaseService extends HTTPService {
                                             }
 
                                             await this.saveRobotState(t, robot.robotState);
-                                        }); 
+                                        });
 
                                         if (robot.hasClosedPositions) {
                                             await this.events.emit<TradeStatsRunnerRobot>({
@@ -1570,7 +1581,7 @@ export class RobotBaseService extends HTTPService {
                                                     robotId
                                                 }
                                             });
-                                        }*/
+                                        }
                                     } else if (robot.hasTradesToSave) {
                                         await this.handleSignal(robot.tradesToSave[0]);
                                     }
@@ -1667,8 +1678,8 @@ export class RobotBaseService extends HTTPService {
                                 robot.finalize();
                             }
 
-                            /*FIXME:   if (this.isRobotService) {
-                              if (
+                            if (this.isRobotService) {
+                                if (
                                     robot.eventsToSend &&
                                     Array.isArray(robot.eventsToSend) &&
                                     robot.eventsToSend.length
@@ -1680,7 +1691,7 @@ export class RobotBaseService extends HTTPService {
                                     );
                                 }
                             }
-                             await this.db.pg.transaction(async (t) => {
+                            await this.db.pg.transaction(async (t) => {
                                 if (this.isRobotService) {
                                     if (
                                         robot.positionsToSave &&
@@ -1700,7 +1711,7 @@ export class RobotBaseService extends HTTPService {
                                     }
                                 }
                                 await this.saveRobotState(t, robot.robotState);
-                            }); */
+                            });
 
                             // this.log.info(`Cleaning robot's #${robotId} alerts`);
                             const alerts = Object.values(this.#robotAlerts)
@@ -1727,7 +1738,7 @@ export class RobotBaseService extends HTTPService {
                                 };
                             }
 
-                            /*FIXME:    if (
+                            if (
                                 this.isRobotService &&
                                 robot.positionsToSave &&
                                 Array.isArray(robot.positionsToSave) &&
@@ -1747,7 +1758,7 @@ export class RobotBaseService extends HTTPService {
                                         robotId
                                     }
                                 });
-                            } */
+                            }
                         } catch (err) {
                             const error = `Failed to run robot's #${robotId} strategy - ${err.message}`;
                             this.log.error(error);
