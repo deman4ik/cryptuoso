@@ -1395,7 +1395,7 @@ export class RobotBaseService extends HTTPService {
                     })
                 );
                 this.robots[robot.id].robot.clearEvents();
-                await this.db.pg.query(sql`UPDATE robot SET status = 'started' WHERE id = ${robot.id}`);
+                await this.db.pg.query(sql`UPDATE robots SET status = 'started' WHERE id = ${robot.id}`);
             }
             this.robots[robot.id].locked = false;
             this.log.info(
