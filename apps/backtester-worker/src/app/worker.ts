@@ -361,7 +361,8 @@ class BacktesterWorker {
         WHERE id = ${robotId}
         `);
 
-        if (status !== RobotStatus.starting) throw new Error(`Failed to start Robot #${robotId}. Robot is ${status}`);
+        if (status !== RobotStatus.starting) return false;
+        return true;
     };
 
     #saveRobotState = async (state: RobotState) => {
@@ -693,15 +694,17 @@ class BacktesterWorker {
             if (this.backtester.settings.populateHistory) {
                 const robot = this.backtester.robots[this.backtester.robotId];
 
-                await this.#checkRobotStatus(this.backtester.robotId);
-                await this.#saveRobotState(robot.instance.robotState);
-                //await this.#saveRobotSettings(backtester.robotId, Object.values(robot.data.settings));
-                await this.#saveRobotTrades(this.backtester.robotId, robot.data.trades);
-                if (robot.instance.alertsToSave.length)
-                    await this.#saveRobotActiveAlerts(this.backtester.robotId, robot.instance.alertsToSave);
-                await this.#saveRobotPositions(this.backtester.robotId, Object.values(robot.data.positions));
-                await this.#cache.deleteCache(`cache:robot:${this.backtester.robotId}`);
-                await this.#startRobot(this.backtester.robotId, this.backtester.dateFrom);
+                const starting = await this.#checkRobotStatus(this.backtester.robotId);
+                if (starting) {
+                    await this.#saveRobotState(robot.instance.robotState);
+                    //await this.#saveRobotSettings(backtester.robotId, Object.values(robot.data.settings));
+                    await this.#saveRobotTrades(this.backtester.robotId, robot.data.trades);
+                    if (robot.instance.alertsToSave.length)
+                        await this.#saveRobotActiveAlerts(this.backtester.robotId, robot.instance.alertsToSave);
+                    await this.#saveRobotPositions(this.backtester.robotId, Object.values(robot.data.positions));
+                    await this.#cache.deleteCache(`cache:robot:${this.backtester.robotId}`);
+                    await this.#startRobot(this.backtester.robotId, this.backtester.dateFrom);
+                }
             } else {
                 for (const robot of Object.values(this.backtester.robots)) {
                     if (this.backtester.settings.saveSignals) {
