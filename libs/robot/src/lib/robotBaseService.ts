@@ -1332,13 +1332,18 @@ export class RobotBaseService extends HTTPService {
         WHERE rs.robot_id = r.id AND r.exchange = ${this.#exchange}
         AND r.id = ${robotId};`);
 
-        if (!this.#subscriptions[this.createExwatcherId(robot.asset, robot.currency)])
+        const exwatcherId = this.createExwatcherId(robot.asset, robot.currency);
+        if (!this.#subscriptions[exwatcherId] || this.#subscriptions[exwatcherId].status !== ExwatcherStatus.subscribed)
             await this.addSubscription({
                 exchange: this.#exchange,
                 asset: robot.asset,
                 currency: robot.currency,
                 timeframes: [robot.timeframe]
             });
+
+        while (this.#subscriptions[exwatcherId].status !== ExwatcherStatus.subscribed) {
+            await sleep(2000);
+        }
 
         await this.#subscribeRobot(robot);
     }
