@@ -85,7 +85,7 @@
         "bcrypt": "^5.0.0",
         "body-parser": "^1.20.0",
         "bullmq": "^1.91.0",
-        "ccxt": "^1.93.59",
+        "ccxt": "^1.90.89",
         "ccxt.pro": "github:cryptuoso/ccxt.pro",
         "cloudevents": "^6.0.2",
         "coinbase-commerce-node": "^1.0.4",
