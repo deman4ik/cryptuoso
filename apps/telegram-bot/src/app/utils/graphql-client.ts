@@ -1,6 +1,5 @@
-import { GraphQLClient as Client, gql } from "graphql-request";
+import { GraphQLClient as Client, gql, Variables } from "graphql-request";
 import logger from "@cryptuoso/logger";
-import { GenericObject } from "@cryptuoso/helpers";
 import { BotContext } from "../types";
 
 export { gql };
@@ -21,9 +20,9 @@ export class GraphQLClient {
         return this.#client;
     }
 
-    async request<T = any, V = GenericObject<any>>(ctx: BotContext, query: any, variables?: V) {
+    async request<T = any>(ctx: BotContext, query: any, variables?: Variables) {
         try {
-            const response = await this.#client.request<T, V>(query, variables, {
+            const response = await this.#client.request<T>(query, variables, {
                 authorization: `Bearer ${ctx.session?.user?.accessToken}`
             });
             logger.debug("GraphQLClient.request response", response);
@@ -33,7 +32,7 @@ export class GraphQLClient {
                 //logger.info(`Retrying to get refresh token for ${ctx.session?.user?.telegramId}`);
                 const { user, accessToken } = await this.#refreshToken({ telegramId: ctx.session?.user?.telegramId });
                 ctx.session.user = { ...user, accessToken };
-                return this.#client.request<T, V>(query, variables, {
+                return this.#client.request<T>(query, variables, {
                     authorization: `Bearer ${accessToken}`
                 });
             }
