@@ -16,8 +16,6 @@ import { sql } from "@cryptuoso/postgres";
 import { v4 as uuid } from "uuid";
 import retry from "async-retry";
 import { HTTPService, HTTPServiceConfig } from "@cryptuoso/service";
-import { spawn, Pool, Worker as ThreadsWorker } from "threads";
-import { RobotStateBuffer, RobotWorker } from "@cryptuoso/robot-thread";
 import { Robot, RobotPosition } from "@cryptuoso/robot-state";
 import { RobotPositionState, RobotState, RobotStatus } from "@cryptuoso/robot-types";
 import { PublicConnector } from "@cryptuoso/ccxt-public";
@@ -416,6 +414,7 @@ export class RobotBaseService extends HTTPService {
                 })
             );
 
+            this.log.debug(`Checking ${Object.keys(this.#robotsToStart).length} robots to start`);
             if (Object.keys(this.#robotsToStart).length) {
                 for (const robot of Object.values(this.#robotsToStart)) {
                     delete this.#robotsToStart[robot.id];
@@ -1312,12 +1311,6 @@ export class RobotBaseService extends HTTPService {
         if (robots && Array.isArray(robots) && robots.length) {
             for (const robot of robots) {
                 if (!this.robots[robot.id]) {
-                    await this.addSubscription({
-                        exchange: this.#exchange,
-                        asset: robot.asset,
-                        currency: robot.currency,
-                        timeframes: [robot.timeframe]
-                    });
                     await this.#subscribeRobot(robot);
                 }
             }
@@ -1366,8 +1359,22 @@ export class RobotBaseService extends HTTPService {
             const exwatcherId = this.createExwatcherId(robot.asset, robot.currency);
             if (
                 !this.#subscriptions[exwatcherId] ||
-                this.#subscriptions[exwatcherId].status !== ExwatcherStatus.subscribed
+                (this.#subscriptions[exwatcherId] &&
+                    this.#subscriptions[exwatcherId].status !== ExwatcherStatus.subscribed) ||
+                (this.#subscriptions[exwatcherId] &&
+                    !this.#subscriptions[exwatcherId].timeframes.includes(robot.timeframe))
             ) {
+                if (
+                    this.#subscriptions[exwatcherId] &&
+                    !this.#subscriptions[exwatcherId].timeframes.includes(robot.timeframe)
+                ) {
+                    await this.addSubscription({
+                        exchange: this.#exchange,
+                        asset: robot.asset,
+                        currency: robot.currency,
+                        timeframes: [robot.timeframe]
+                    });
+                }
                 this.#robotsToStart[robot.id] = robot;
                 return;
             }
