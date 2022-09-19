@@ -93,6 +93,7 @@ export class RobotBaseService extends HTTPService {
     robots: {
         [id: string]: { robot: Robot; locked: boolean };
     } = {};
+    #robotsToStart: { [id: string]: RobotState } = {};
     #retryOptions = {
         retries: 10,
         minTimeout: 5000,
@@ -414,6 +415,13 @@ export class RobotBaseService extends HTTPService {
                     if (exwatcherSubscribed) await this.subscribeRobots(subscription);
                 })
             );
+
+            if (Object.keys(this.#robotsToStart).length) {
+                for (const robot of Object.values(this.#robotsToStart)) {
+                    delete this.#robotsToStart[robot.id];
+                    await this.#subscribeRobot(robot);
+                }
+            }
         } catch (e) {
             this.log.error(e);
         } finally {
@@ -515,7 +523,7 @@ export class RobotBaseService extends HTTPService {
         const markets = await this.db.pg.any<{ asset: string; currency: string; timeframe: number }>(
             sql`select distinct asset, currency, timeframe from robots where exchange = ${
                 this.#exchange
-            } and status = 'started'`
+            } and status in ('started','starting')`
         );
         const subscriptions: { [key: string]: Exwatcher } = {};
         for (const { asset, currency, timeframe } of markets) {
@@ -1302,18 +1310,12 @@ export class RobotBaseService extends HTTPService {
         if (robots && Array.isArray(robots) && robots.length) {
             for (const robot of robots) {
                 if (!this.robots[robot.id]) {
-                    const exwatcherId = this.createExwatcherId(robot.asset, robot.currency);
-
                     await this.addSubscription({
                         exchange: this.#exchange,
                         asset: robot.asset,
                         currency: robot.currency,
                         timeframes: [robot.timeframe]
                     });
-
-                    while (this.#subscriptions[exwatcherId].status !== ExwatcherStatus.subscribed) {
-                        await sleep(2000);
-                    }
                     await this.#subscribeRobot(robot);
                 }
             }
@@ -1343,18 +1345,12 @@ export class RobotBaseService extends HTTPService {
         WHERE rs.robot_id = r.id AND r.exchange = ${this.#exchange}
         AND r.id = ${robotId};`);
 
-        const exwatcherId = this.createExwatcherId(robot.asset, robot.currency);
-
         await this.addSubscription({
             exchange: this.#exchange,
             asset: robot.asset,
             currency: robot.currency,
             timeframes: [robot.timeframe]
         });
-
-        while (this.#subscriptions[exwatcherId].status !== ExwatcherStatus.subscribed) {
-            await sleep(2000);
-        }
 
         await this.#subscribeRobot(robot);
     }
@@ -1364,6 +1360,14 @@ export class RobotBaseService extends HTTPService {
             this.log.info(
                 `Subscribing #${robot.id} ${robot.strategy}/${robot.asset}/${robot.currency}/${robot.timeframe} robot`
             );
+
+            const exwatcherId = this.createExwatcherId(robot.asset, robot.currency);
+            if (
+                !this.#subscriptions[exwatcherId] ||
+                this.#subscriptions[exwatcherId].status !== ExwatcherStatus.subscribed
+            ) {
+                this.#robotsToStart[robot.id] = robot;
+            }
             this.robots[robot.id] = {
                 robot: new Robot(robot),
                 locked: true
@@ -1373,7 +1377,6 @@ export class RobotBaseService extends HTTPService {
                 this.robots[robot.id].robot.initStrategy();
             }
             const prevTime = Timeframe.getPrevSince(dayjs.utc().toISOString(), robot.timeframe);
-            const exwatcherId = this.createExwatcherId(robot.asset, robot.currency);
 
             const candles = this.#candlesHistory[exwatcherId][robot.timeframe].filter((c) => c.time <= prevTime);
             this.robots[robot.id].robot.handleHistoryCandles(candles);
