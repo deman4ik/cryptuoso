@@ -1,5 +1,5 @@
 import { sleep } from "@cryptuoso/helpers";
-import { pg, sql } from "@cryptuoso/postgres";
+import { sql } from "@cryptuoso/postgres";
 import Validator from "fastest-validator";
 import { InlineKeyboard } from "grammy";
 import { BotContext } from "../types";
@@ -83,7 +83,7 @@ const input = async (ctx: BotContext) => {
             ctx.dialog.next(registrationActions.input);
             return;
         }
-        const accountExists = await pg.maybeOne<{ id: string; telegramId: string }>(sql`
+        const accountExists = await ctx.pg.maybeOne<{ id: string; telegramId: string }>(sql`
         SELECT id, telegram_id FROM users
         WHERE email = ${data.email}
     `);

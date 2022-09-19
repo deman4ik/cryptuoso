@@ -14,7 +14,7 @@ import { ValidTimeframe, Candle, DBCandle, SignalEvent, CandleType, ActiveAlert 
 import { sortAsc, chunkArray } from "@cryptuoso/helpers";
 import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
 import logger, { Logger } from "@cryptuoso/logger";
-import { sql, pg, pgUtil, makeChunksGenerator } from "@cryptuoso/postgres";
+import { sql, createPgPool, DatabasePool, pgUtil, makeChunksGenerator } from "@cryptuoso/postgres";
 import Redis from "ioredis";
 import Cache from "ioredis-cache";
 import { RobotPositionState, RobotState, RobotStatus } from "@cryptuoso/robot-types";
@@ -25,18 +25,14 @@ let backtesterWorker: BacktesterWorker;
 class BacktesterWorker {
     #log: Logger;
     #backtester: Backtester;
-    #db: { sql: typeof sql; pg: typeof pg; util: typeof pgUtil };
+    #db: { sql: typeof sql; pg: DatabasePool; util: typeof pgUtil };
     #cache: Cache;
 
     defaultChunkSize = 10000;
     defaultInsertChunkSize = 10000;
     constructor(state: BacktesterState) {
         this.#log = logger;
-        this.#db = {
-            sql,
-            pg: pg,
-            util: pgUtil
-        };
+
         this.#backtester = new Backtester(state);
         this.#cache = new Cache(
             new Redis(process.env.REDISCS, {
@@ -45,6 +41,15 @@ class BacktesterWorker {
                 connectTimeout: 60000
             })
         );
+    }
+
+    async pg() {
+        if (!this.#db)
+            this.#db = {
+                sql,
+                pg: await createPgPool(),
+                util: pgUtil
+            };
     }
 
     get log() {
@@ -597,7 +602,6 @@ class BacktesterWorker {
                 this.backtester.feeRate = feeRate;
 
                 this.backtester.initRobots();
-                this.backtester.initIndicators();
 
                 // Load required history candles
                 const requiredHistoryMaxBars = this.backtester.robotInstancesArray[0].requiredHistoryMaxBars;
@@ -620,6 +624,7 @@ class BacktesterWorker {
                 this.log.info(`Backtester #${this.backtester.id} - History from ${historyCandles[0].timestamp}`);
                 this.backtester.handleHistoryCandles(historyCandles);
 
+                await this.backtester.initIndicators();
                 await this.#saveState(this.backtester.state);
 
                 await this.run();
@@ -652,8 +657,8 @@ class BacktesterWorker {
             const candlesCount: number = +(await this.db.pg.oneFirst(sql`
                SELECT COUNT(1) ${query}`));
             this.backtester.init(candlesCount);
-
-            await DataStream.from(
+            if (candlesCount === 0) throw new Error("No candles found");
+            /* await DataStream.from(
                 makeChunksGenerator(
                     this.db.pg,
                     sql`SELECT * ${query} ORDER BY timestamp`,
@@ -671,9 +676,9 @@ class BacktesterWorker {
                     this.log.error(`Backtester #${this.backtester.id} - Error`, err.message);
                     throw new BaseError(err.message, err);
                 })
-                .whenEnd();
+                .whenEnd();*/
 
-            /* const candles = await this.db.pg.many<Candle>(
+            const candles = await this.db.pg.many<Candle>(
                 sql`SELECT time, timestamp, open, high, low, close ${query} ORDER BY timestamp`
             );
 
@@ -681,7 +686,7 @@ class BacktesterWorker {
                 await this.backtester.handleCandle(candles[i]);
                 const percentUpdated = this.backtester.incrementProgress();
                 if (percentUpdated) subject.next(this.backtester.completedPercent);
-            }*/
+            }
 
             await this.backtester.calcStats();
 
@@ -730,6 +735,7 @@ class BacktesterWorker {
 const worker = {
     async init(state: BacktesterState) {
         backtesterWorker = new BacktesterWorker(state);
+        await backtesterWorker.pg();
         return backtesterWorker.backtester.state;
     },
     async process() {

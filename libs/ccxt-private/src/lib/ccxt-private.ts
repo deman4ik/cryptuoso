@@ -14,7 +14,7 @@ import {
     OrderType,
     UnknownOrder
 } from "@cryptuoso/market";
-import { pg, sql } from "@cryptuoso/postgres";
+import { createPgPool, DatabasePool, sql } from "@cryptuoso/postgres";
 import { UserExchangeAccBalances, UserExchangeAccount } from "@cryptuoso/user-state";
 import { Priority } from "@cryptuoso/connector-state";
 import { createProxyAgent } from "@cryptuoso/ccxt-public";
@@ -36,6 +36,7 @@ export class PrivateConnector {
     };
     agent = process.env.PROXY_ENDPOINT ? createProxyAgent(process.env.PROXY_ENDPOINT) : null;
     config: { [key: string]: any } = {};
+    #pg: DatabasePool;
     constructor({
         exchange,
         keys,
@@ -67,6 +68,11 @@ export class PrivateConnector {
         }
         this.exchange = exchange;
         this.log = logger;
+    }
+
+    async pg() {
+        if (!this.#pg) this.#pg = await createPgPool();
+        return this.#pg;
     }
 
     getSymbol(asset: string, currency: string): string {
@@ -207,6 +213,7 @@ export class PrivateConnector {
             const balances = await this.getBalances(this.connector, this.exchange);
             const asset = "ETH";
             const currency = ["binance_futures", "kucoin", "huobipro"].includes(this.exchange) ? "USDT" : "USD";
+            const pg = await this.pg();
             const market = await pg.one<{ limits: Market["limits"] }>(sql`SELECT limits 
             FROM markets 
             WHERE exchange = ${this.exchange} 
@@ -519,6 +526,43 @@ export class PrivateConnector {
         }
     }
 
+    async getOrderBookPrice(order: Order): Promise<number | null> {
+        const { asset, currency, direction } = order;
+        const call = async (bail: (e: Error) => void) => {
+            try {
+                return await this.connector.fetchOrderBook(this.getSymbol(asset, currency), 5);
+            } catch (e) {
+                const message = e.message?.toLowerCase();
+                if (
+                    (e instanceof ccxt.NetworkError &&
+                        !(e instanceof ccxt.InvalidNonce) &&
+                        !(e instanceof ccxt.DDoSProtection)) ||
+                    message.includes("gateway") ||
+                    message.includes("getaddrinfo") ||
+                    message.includes("network") ||
+                    message.includes("econnreset")
+                ) {
+                    await this.initConnector();
+                    throw e;
+                }
+                bail(e);
+            }
+        };
+        const response: ccxt.OrderBook = await retry(call, this.retryOptions);
+
+        if (!response || !response.asks || !response.bids || !response.asks.length || !response.bids.length) {
+            return null;
+        }
+
+        if (direction === "buy" && response.bids.length) {
+            return response.bids[0][0];
+        } else if (direction === "sell" && response.asks.length) {
+            return response.asks[0][0];
+        } else {
+            return null;
+        }
+    }
+
     async createOrder(order: Order): Promise<{
         order: Order;
         nextJob?: {
@@ -538,9 +582,14 @@ export class PrivateConnector {
                     ? OrderType.market
                     : OrderType.limit;
 
+            //TODO: if (order.params.useOrderBookPrice)
+            const orderBookPrice = await this.getOrderBookPrice(order);
+            logger.debug(`ORDER BOOK PRICE ${orderBookPrice}`);
             let signalPrice: number;
 
-            if (order.price && order.price > 0) {
+            if (orderBookPrice) {
+                signalPrice = orderBookPrice;
+            } else if (order.price && order.price > 0) {
                 signalPrice = order.price;
             } else if (order.signalPrice && order.signalPrice > 0) {
                 signalPrice = order.signalPrice;
@@ -775,6 +824,7 @@ export class PrivateConnector {
             if (!similarOrders || !Array.isArray(similarOrders) || similarOrders.length === 0) return null;
             const unknownOrders: ccxt.Order[] = [];
             for (const similarOrder of similarOrders) {
+                const pg = await this.pg();
                 const ordersInDB = await pg.any(sql`SELECT id 
                 FROM user_orders 
                 WHERE user_ex_acc_id = ${userExAccId}

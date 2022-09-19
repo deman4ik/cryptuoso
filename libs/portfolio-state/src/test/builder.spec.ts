@@ -1,4 +1,4 @@
-import positions from "./data/positions";
+/*import positions from "./data/positions";
 import { PortfolioBuilder, PortfolioCalculated, PortoflioRobotState } from "../lib/builder";
 import { PortfolioState } from "../lib/types";
 import { amounts } from "./data/amountsResults";
@@ -143,3 +143,5 @@ describe("Test portfolio state", () => {
         });
     });
 });
+*/
+//TODO: rewrite  portfolio builder in rust and test with real data

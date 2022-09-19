@@ -45,14 +45,6 @@ export interface Candle extends DBCandle {
     id?: string;
 }
 
-export interface CandleProps {
-    open: number[];
-    high: number[];
-    low: number[];
-    close: number[];
-    volume: number[];
-}
-
 export interface ExchangeCandlesInTimeframes {
     [key: string]: ExchangeCandle[];
 }

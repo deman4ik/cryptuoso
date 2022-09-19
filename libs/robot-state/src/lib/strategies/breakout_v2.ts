@@ -54,22 +54,17 @@ export class Breakoutv2 extends BaseStrategy {
         }
     };
     init() {
-        this.log("Breakoutv2 Parameters", this.parameters);
-        this.adxPeriod = this.parameters.adxPeriod; // ADX period
-        this.adxHigh = this.parameters.adxHigh; // ADX upper limit value
-        this.lookback = this.parameters.lookback; // ADX below the limit within the lookback
-        this.orderStopLoss = this.parameters.orderStopLoss; // stoppunkt
-        this.orderTakeProfit = this.parameters.orderTakeProfit; // profitpunkt
-        // indicators
-        this.addIndicator("highestHighLookback", "highest_high", {
-            seriesSize: this.lookback
+        this.addRsIndicator("highestHighLookback", "TaMaximum", {
+            period: this.parameters.lookback,
+            candleProp: "high"
         });
-        this.addIndicator("lowestLowLookback", "lowest_low", {
-            seriesSize: this.lookback
+        this.addRsIndicator("lowestLowLookback", "TaMinimum", {
+            period: this.parameters.lookback,
+            candleProp: "low"
         });
-        this.addIndicator("highestADX", "highest_adx", {
-            seriesSize: this.lookback,
-            optInTimePeriod: this.adxPeriod
+        this.addRsIndicator("highestADX", "MaxADX", {
+            period: this.parameters.lookback,
+            adxPeriod: this.parameters.adxPeriod
         });
     }
     check() {
@@ -79,13 +74,13 @@ export class Breakoutv2 extends BaseStrategy {
         if (this.hasActivePositions) {
             const lastPosition = this.getPosition();
             if (lastPosition.direction === this.CONSTS.LONG) {
-                lastPosition.sellAtStop(lastPosition.entryPrice - this.orderStopLoss);
-                lastPosition.sellAtLimit(lastPosition.entryPrice + this.orderTakeProfit);
+                lastPosition.sellAtStop(lastPosition.entryPrice - this.parameters.orderStopLoss);
+                lastPosition.sellAtLimit(lastPosition.entryPrice + this.parameters.orderTakeProfit);
             } else {
-                lastPosition.coverAtStop(lastPosition.entryPrice + this.orderStopLoss);
-                lastPosition.coverAtLimit(lastPosition.entryPrice - this.orderTakeProfit); //TODO: if lastPosition.entryPrice - this.orderTakeProfit < 0 then market
+                lastPosition.coverAtStop(lastPosition.entryPrice + this.parameters.orderStopLoss);
+                lastPosition.coverAtLimit(lastPosition.entryPrice - this.parameters.orderTakeProfit); //TODO: if lastPosition.entryPrice - this.orderTakeProfit < 0 then market
             }
-        } else if (highestADX < this.adxHigh) {
+        } else if (highestADX < this.parameters.adxHigh) {
             const position = this.createPosition();
             position.buyAtStop(highestHighLookback);
             position.shortAtStop(lowestLowLookback);

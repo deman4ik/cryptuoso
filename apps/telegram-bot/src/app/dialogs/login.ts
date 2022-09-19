@@ -1,7 +1,7 @@
 import { InlineKeyboard } from "grammy";
 import { BotContext } from "../types";
 import Validator from "fastest-validator";
-import { pg, sql } from "@cryptuoso/postgres";
+import { sql } from "@cryptuoso/postgres";
 import { sleep } from "@cryptuoso/helpers";
 import { getMainKeyboard, getStartKeyboard } from "../utils/keyboard";
 import { Router } from "../utils/dialogsRouter";
@@ -59,7 +59,7 @@ const input = async (ctx: BotContext) => {
             );
             return;
         }
-        const accountExists = await pg.maybeOne<{ id: string; telegramId: string }>(sql`
+        const accountExists = await ctx.pg.maybeOne<{ id: string; telegramId: string }>(sql`
             SELECT id, telegram_id FROM users
             WHERE email = ${data.email};
         `);

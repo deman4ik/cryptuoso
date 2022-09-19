@@ -96,12 +96,13 @@ export default class ImporterWorkerService extends HTTPService {
 
     async start({ id, exchange, asset, currency, type, timeframes, dateFrom, dateTo, amount }: ImporterRunnerStart) {
         try {
-            const params: ImporterParams = {
-                timeframes:
-                    timeframes || type === "history"
-                        ? [1440, 720, 480, 240, 120, 60, 30]
-                        : [1440, 720, 480, 240, 120, 60, 30, 15, 5]
-            };
+            const params: ImporterParams = { timeframes: [1440, 720, 480, 240, 120, 60, 30, 15, 5] };
+            if (timeframes && Array.isArray(timeframes) && timeframes.length) {
+                params.timeframes = timeframes;
+            } else if (type === "history") {
+                params.timeframes = [1440, 720, 480, 240, 120, 60, 30];
+            }
+
             const market = await this.db.pg.maybeOne<{ loadFrom: string }>(sql`
             select load_from from markets 
             where exchange = ${exchange} 
@@ -130,7 +131,17 @@ export default class ImporterWorkerService extends HTTPService {
                 status: Status.queued
             });
             importer.init();
-            this.log.debug("Starting", { id, exchange, asset, currency, type, timeframes, dateFrom, dateTo, amount });
+            this.log.debug("Starting", {
+                id,
+                exchange,
+                asset,
+                currency,
+                type,
+                timeframes: params.timeframes,
+                dateFrom,
+                dateTo,
+                amount
+            });
             await this.addJob("importCandles", importer.type, importer.state, {
                 jobId: importer.id,
                 removeOnComplete: true,

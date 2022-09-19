@@ -4,7 +4,6 @@ import { v4 as uuid } from "uuid";
 import { validate, sortAsc, nvl } from "@cryptuoso/helpers";
 import { RobotPosition } from "./RobotPosition";
 import {
-    CandleProps,
     OrderType,
     TradeAction,
     ValidTimeframe,
@@ -19,6 +18,7 @@ import logger from "@cryptuoso/logger";
 import { RobotPositionState, StrategyProps, IndicatorState, IndicatorType } from "@cryptuoso/robot-types";
 import { StrategySettings } from "@cryptuoso/robot-settings";
 import { TradeStats } from "@cryptuoso/trade-stats";
+import { RsNames } from "@cryptuoso/robot-indicators";
 
 export interface StrategyState extends StrategyProps {
     strategySettings: StrategySettings;
@@ -32,6 +32,7 @@ export interface StrategyState extends StrategyProps {
     emulateNextPosition?: boolean;
     marginNextPosition?: number;
     stats?: TradeStats;
+    lastClosedPosition?: RobotPositionState;
 }
 
 export class BaseStrategy {
@@ -52,16 +53,10 @@ export class BaseStrategy {
     _stats?: TradeStats;
     _candle: Candle;
     _candles: Candle[] = [];
-    _candlesProps: CandleProps = {
-        open: [],
-        high: [],
-        low: [],
-        close: [],
-        volume: []
-    };
     _indicators: {
         [key: string]: IndicatorState; //TODO generic types
     };
+    _lastClosedPosition: RobotPositionState;
     _consts: { [key: string]: string } = {
         LONG: TradeAction.long,
         CLOSE_LONG: TradeAction.closeLong,
@@ -86,6 +81,7 @@ export class BaseStrategy {
         this._robotId = state.robotId;
         this._posLastNumb = state.posLastNumb || {};
         this._positions = {};
+        this._lastClosedPosition = state.lastClosedPosition;
         this._setPositions(state.positions);
         this._backtest = state.backtest;
         this._emulateNextPosition = nvl(state.emulateNextPosition, false);
@@ -299,6 +295,10 @@ export class BaseStrategy {
             .map((pos) => pos.state);
     }
 
+    get lastClosedPosition() {
+        return this._lastClosedPosition;
+    }
+
     _checkAlerts() {
         Object.keys(this._positions)
             .sort((a, b) => sortAsc(this._positions[a].code.split("_")[1], this._positions[b].code.split("_")[1]))
@@ -336,10 +336,17 @@ export class BaseStrategy {
         });
     }
 
-    _handleCandles(candle: Candle, candles: Candle[], candlesProps: CandleProps) {
-        this._candle = candle;
+    _handleHistoryCandles(candles: Candle[]) {
+        this._candle = candles[candles.length - 1];
         this._candles = candles;
-        this._candlesProps = candlesProps;
+        this._candles.slice(-this._strategySettings.requiredHistoryMaxBars);
+        this._positionsHandleCandle(this._candle);
+    }
+
+    _handleCandle(candle: Candle) {
+        this._candle = candle;
+        this._candles.push(candle);
+        this._candles.slice(-this._strategySettings.requiredHistoryMaxBars);
         this._positionsHandleCandle(candle);
     }
 
@@ -357,6 +364,10 @@ export class BaseStrategy {
         this._stats = stats;
     }
 
+    _handleLastClosedPosition(position: RobotPositionState) {
+        this._lastClosedPosition = position;
+    }
+
     _addIndicator(name: string, indicatorName: string, parameters: { [key: string]: any }) {
         this._indicators[name] = {
             name,
@@ -372,27 +383,18 @@ export class BaseStrategy {
         return this._addIndicator;
     }
 
-    _addTulipIndicator(name: string, indicatorName: string, parameters: { [key: string]: any }) {
+    _addRsIndicator(
+        name: string,
+        indicatorName: RsNames,
+        parameters: { [key: string]: any; candleProp?: "open" | "high" | "low" | "close" | "volume" }
+    ) {
         this._addIndicator(name, indicatorName, parameters);
-        this._indicators[name].type = IndicatorType.tulip;
+        this._indicators[name].type = IndicatorType.rs;
     }
 
-    get addTulipIndicator() {
-        return this._addTulipIndicator;
+    get addRsIndicator() {
+        return this._addRsIndicator;
     }
-
-    /*
-    _addTalibIndicator(name, indicatorName, parameters) {
-      this._addIndicator(name, indicatorName, parameters);
-      this._indicators[name].type = INDICATORS_TALIB;
-    }
-  
-    _addTechIndicator(name, indicatorName, parameters) {
-      this._addIndicator(name, indicatorName, parameters);
-      this._indicators[name].type = INDICATORS_TECH;
-    }
-  
-  */
 
     /** GETTERS  */
     get initialized() {
@@ -429,10 +431,6 @@ export class BaseStrategy {
 
     get candles() {
         return this._candles;
-    }
-
-    get candlesProps() {
-        return this._candlesProps;
     }
 
     get indicators() {

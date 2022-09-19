@@ -1,5 +1,6 @@
 import { BaseIndicator } from "../BaseIndicator";
 import { IndicatorState } from "@cryptuoso/robot-types";
+import { DBCandle } from "@cryptuoso/market";
 
 export class Peak extends BaseIndicator {
     constructor(state: IndicatorState) {
@@ -26,7 +27,7 @@ export class Peak extends BaseIndicator {
         }
     };
     candleProp: "open" | "high" | "low" | "close";
-    init() {
+    async init(candles: DBCandle[]) {
         this.prevPeak = {
             candle: null,
             result: 0
@@ -42,18 +43,19 @@ export class Peak extends BaseIndicator {
         this.targetValue = 0;
         this.updated = false;
         this.candleProp = this.parameters.candleProp || "close";
+        this.initialized = true;
     }
-    async calc() {
+    async calc(candle: DBCandle) {
         this.updated = false;
-        if (this.targetValue && this.candle[this.candleProp] < this.targetValue) {
+        if (this.targetValue && candle[this.candleProp] < this.targetValue) {
             this.prevPeak = {
                 ...this.peak
             };
             this.peak = { ...this.highest };
 
             this.highest = {
-                candle: this.candle,
-                result: this.candle[this.candleProp]
+                candle: candle,
+                result: candle[this.candleProp]
             };
             this.targetValue = 0;
             this.updated = true;
@@ -64,14 +66,14 @@ export class Peak extends BaseIndicator {
             this.targetValue = this.utils.addPercent(this.highest.result, -this.parameters.reversalAmount);
         }
 
-        if ((!this.targetValue && !this.highest.result) || this.highest.result < this.candle[this.candleProp]) {
+        if ((!this.targetValue && !this.highest.result) || this.highest.result < candle[this.candleProp]) {
             this.highest = {
-                candle: this.candle,
-                result: this.candle[this.candleProp]
+                candle: candle,
+                result: candle[this.candleProp]
             };
 
             this.targetValue = this.utils.addPercent(this.highest.result, -this.parameters.reversalAmount);
-            if (!this.peak.result) this.peak.result = this.candle[this.candleProp];
+            if (!this.peak.result) this.peak.result = candle[this.candleProp];
         }
     }
 }

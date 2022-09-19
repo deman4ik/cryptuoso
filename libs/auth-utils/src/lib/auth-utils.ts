@@ -7,14 +7,14 @@ import mailUtil from "@cryptuoso/mail";
 import { User, UserStatus, UserRoles, UserAccessValues, UserSettings, formatTgName } from "@cryptuoso/user-state";
 import { Bcrypt } from "./types";
 import bcrypt from "bcrypt";
-import { pg, sql } from "@cryptuoso/postgres";
+import { DatabasePool, createPgPool, sql } from "@cryptuoso/postgres";
 import crypto from "crypto";
 import { GA } from "@cryptuoso/analytics";
 
 export class Auth {
     #bcrypt: Bcrypt;
     #mailUtil: typeof mailUtil;
-
+    #pg: DatabasePool;
     constructor(/*, bcrypt: Bcrypt */) {
         try {
             this.#bcrypt = bcrypt;
@@ -22,6 +22,11 @@ export class Auth {
         } catch (e) {
             logger.error("Failed to init Auth instance!", e);
         }
+    }
+
+    async pg() {
+        if (!this.#pg) this.#pg = await createPgPool();
+        return this.#pg;
     }
 
     async checkTgLogin(
@@ -55,6 +60,8 @@ export class Auth {
     }
 
     async login(params: { email: string; password: string }) {
+        const pg = await this.pg();
+
         const { email, password } = params;
 
         const user: User = await pg.maybeOne<User>(sql`
@@ -156,6 +163,8 @@ export class Auth {
         auth_date: number;
         hash: string;
     }) {
+        const pg = await this.pg();
+
         const loginData = await this.checkTgLogin(params, process.env.BOT_TOKEN);
         if (!loginData) throw new ActionsHandlerError("Invalid login data.", null, "FORBIDDEN", 403);
 
@@ -213,6 +222,8 @@ export class Auth {
             hash: string;
         }
     ) {
+        const pg = await this.pg();
+
         const loginData = await this.checkTgLogin(params, process.env.BOT_TOKEN);
         if (!loginData) throw new ActionsHandlerError("Invalid login data.", null, "FORBIDDEN", 403);
 
@@ -268,6 +279,8 @@ export class Auth {
     }
 
     async register(params: { email: string; password: string; name: string }) {
+        const pg = await this.pg();
+
         const { email, password, name } = params;
 
         let user: User = await pg.maybeOne<User>(sql`
@@ -382,6 +395,8 @@ export class Auth {
     }
 
     async registerTg(params: { telegramId: string; telegramUsername: string; name: string }) {
+        const pg = await this.pg();
+
         const { telegramId, telegramUsername, name } = params;
 
         const userExists: User = await pg.maybeOne<User>(sql`
@@ -440,6 +455,7 @@ export class Auth {
     }
 
     async registerTgWithEmail(params: { email: string; telegramId: string; telegramUsername: string; name: string }) {
+        const pg = await this.pg();
         const { email, telegramId, telegramUsername, name } = params;
 
         const userExistsWithEmail: User = await pg.maybeOne<User>(sql`
@@ -583,6 +599,7 @@ export class Auth {
     }
 
     async setTelegramWithEmail(params: { email: string; telegramId: string; telegramUsername: string; name: string }) {
+        const pg = await this.pg();
         const { email, telegramId, telegramUsername, name } = params;
         const userExists: User = await pg.maybeOne<User>(sql`
         SELECT id, email FROM users
@@ -644,6 +661,7 @@ export class Auth {
     }
 
     async refreshToken(params: { refreshToken: string }) {
+        const pg = await this.pg();
         const user: User = await pg.maybeOne<User>(sql`
         SELECT id, roles, access, status, refresh_token, refresh_token_expire_at FROM users
         WHERE refresh_token = ${params.refreshToken} AND refresh_token_expire_at > ${dayjs.utc().toISOString()};
@@ -670,6 +688,7 @@ export class Auth {
     }
 
     async refreshTokenTg(params: { telegramId: string }) {
+        const pg = await this.pg();
         const { telegramId } = params;
         const user: User = await pg.maybeOne<User>(sql`
         SELECT id, email, name, telegram_id, telegram_username, roles, access, status, settings FROM users
@@ -687,6 +706,7 @@ export class Auth {
     }
 
     async activateAccount(params: { email: string; secretCode: string }) {
+        const pg = await this.pg();
         const { email, secretCode } = params;
 
         const user: User = await pg.maybeOne<User>(sql`
@@ -744,6 +764,7 @@ export class Auth {
     }
 
     async changePassword(reqUser: User, params: { password: string; oldPassword?: string }) {
+        const pg = await this.pg();
         const { password, oldPassword } = params;
         const { id: userId } = reqUser;
 
@@ -785,6 +806,7 @@ export class Auth {
     }
 
     async passwordReset(params: { email: string }) {
+        const pg = await this.pg();
         const { email } = params;
         const user: User = await pg.maybeOne<User>(sql`
         SELECT id, email, roles, access, status, secret_code, secret_code_expire_at FROM users
@@ -835,6 +857,7 @@ export class Auth {
     }
 
     async confirmPasswordReset(params: { email: string; secretCode: string; password: string }) {
+        const pg = await this.pg();
         const { email, secretCode, password } = params;
 
         const user: User = await pg.maybeOne<User>(sql`
@@ -894,6 +917,7 @@ export class Auth {
     }
 
     async changeEmail(params: { userId: string; email: string }) {
+        const pg = await this.pg();
         const { userId, email } = params;
         const userExists: User = await pg.maybeOne<User>(sql`
         SELECT id FROM users
@@ -946,6 +970,7 @@ export class Auth {
     }
 
     async confirmChangeEmail(params: { userId: string; secretCode: string }) {
+        const pg = await this.pg();
         const { userId, secretCode } = params;
         const user: User = await pg.maybeOne<User>(sql`
         SELECT id, email, roles, access, status, email_new, secret_code, secret_code_expire_at
@@ -1002,6 +1027,7 @@ export class Auth {
     }
 
     async confirmEmailFromTg(params: { telegramId: string; secretCode: string }) {
+        const pg = await this.pg();
         const { telegramId, secretCode } = params;
         const user: User = await pg.maybeOne<User>(sql`
         SELECT id, email, roles, access, status, email_new, secret_code, secret_code_expire_at FROM users
@@ -1067,3 +1093,4 @@ export class Auth {
         return Buffer.from(JSON.stringify(data)).toString("base64");
     }
 }
+//TODO: merge with auth service

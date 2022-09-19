@@ -56,24 +56,27 @@ export class Parabolic extends BaseStrategy {
     init() {
         this.log("Parabolic Parameters", this.parameters);
         this.dist = this.parameters.distInit;
-        this.addTulipIndicator("sma", "sma", {
-            optInTimePeriod: this.parameters.smaSize
+        this.addRsIndicator("sma", "TaSMA", {
+            period: this.parameters.smaSize,
+            candleProp: "close"
         });
-        this.addTulipIndicator("atr", "atr", {
-            optInTimePeriod: this.parameters.atrPeriod
+        this.addRsIndicator("atr", "ATR", {
+            period: this.parameters.atrPeriod
         });
-        this.addIndicator("highestHigh", "highest_high", {
-            seriesSize: this.parameters.lookback
+        this.addRsIndicator("highestHigh", "TaMaximum", {
+            period: this.parameters.lookback,
+            candleProp: "high"
         });
-        this.addIndicator("lowestLow", "lowest_low", {
-            seriesSize: this.parameters.lookback
+        this.addRsIndicator("lowestLow", "TaMinimum", {
+            period: this.parameters.lookback,
+            candleProp: "low"
         });
     }
     calcKER() {
         let a = 0;
         let b = 0;
         const per = this.parameters.atrPeriod + 2; // +1 т.к. так же реализовано в параболике из WL
-        const series = this.candlesProps.close.slice(-per);
+        const series = this.candles.slice(-per).map((c) => c.close);
         a = Math.abs(series[series.length - 1] - series[1]); // series[1] т.к. так же реализовано в параболике из WL
         for (let i = 1; i < series.length; i += 1) {
             b += Math.abs(series[i] - series[i - 1]);

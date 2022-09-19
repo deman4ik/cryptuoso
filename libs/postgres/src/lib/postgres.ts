@@ -52,10 +52,10 @@ const config: ClientConfigurationInput = {
     maximumPoolSize: +process.env.PG_MAX_POOL_SIZE || 2
 };
 
-const pg = createPool(process.env.PGCS, config);
+const createPgPool = async () => createPool(process.env.PGCS, config);
 
 const pgUtil = {
     prepareUnnest
 };
 
-export { pg, sql, pgUtil, DatabasePool, DatabaseTransactionConnection };
+export { createPgPool, sql, pgUtil, DatabasePool, DatabaseTransactionConnection };

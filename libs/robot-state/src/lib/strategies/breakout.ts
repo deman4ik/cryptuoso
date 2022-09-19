@@ -49,21 +49,25 @@ export class Breakout extends BaseStrategy {
     };
     init() {
         this.log("Breakout Parameters", this.parameters);
-        this.addIndicator("highestHigh", "highest_high", {
-            seriesSize: this.parameters.trailBars
+        this.addRsIndicator("highestHigh", "TaMaximum", {
+            period: this.parameters.trailBars,
+            candleProp: "high"
         });
-        this.addIndicator("lowestLow", "lowest_low", {
-            seriesSize: this.parameters.trailBars
+        this.addRsIndicator("lowestLow", "TaMinimum", {
+            period: this.parameters.trailBars,
+            candleProp: "low"
         });
-        this.addIndicator("highestHighLookback", "highest_high", {
-            seriesSize: this.parameters.lookback
+        this.addRsIndicator("highestHighLookback", "TaMaximum", {
+            period: this.parameters.lookback,
+            candleProp: "high"
         });
-        this.addIndicator("lowestLowLookback", "lowest_low", {
-            seriesSize: this.parameters.lookback
+        this.addRsIndicator("lowestLowLookback", "TaMinimum", {
+            period: this.parameters.lookback,
+            candleProp: "low"
         });
-        this.addIndicator("highestADX", "highest_adx", {
-            seriesSize: this.parameters.lookback,
-            optInTimePeriod: this.parameters.adxPeriod
+        this.addRsIndicator("highestADX", "MaxADX", {
+            period: this.parameters.lookback,
+            adxPeriod: this.parameters.adxPeriod
         });
     }
     check() {

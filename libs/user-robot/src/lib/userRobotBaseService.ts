@@ -1,7 +1,15 @@
 import { DatabaseTransactionConnection, sql } from "@cryptuoso/postgres";
 import { Exwatcher, ExwatcherStatus, RobotBaseService, RobotBaseServiceConfig } from "@cryptuoso/robot";
 import { UserPortfolioState } from "@cryptuoso/portfolio-state";
-import { ExchangeCandle, Order, OrderJobType, OrderStatus, SignalEvent } from "@cryptuoso/market";
+import {
+    ExchangeCandle,
+    Order,
+    OrderJobType,
+    OrderStatus,
+    SignalEvent,
+    Timeframe,
+    ValidTimeframe
+} from "@cryptuoso/market";
 import {
     saveUserPositions,
     saveUserRobotState,
@@ -125,13 +133,6 @@ export class UserRobotBaseService extends RobotBaseService {
     }
 
     //#region Overrides
-    async saveSubscription(subscription: Exwatcher): Promise<void> {
-        return;
-    }
-
-    async deleteSubscription(id: string): Promise<void> {
-        return;
-    }
 
     saveCandles(candles: ExchangeCandle[]) {
         for (const { ...props } of candles) {
@@ -158,9 +159,12 @@ export class UserRobotBaseService extends RobotBaseService {
         return this.robots[robotId].userRobot.id;
     }
 
-    getCurrentPrice(asset: string, currency: string) {
+    async getCurrentPrice(asset: string, currency: string) {
         const exwatcherId = this.createExwatcherId(asset, currency);
-        return this.candlesCurrent[exwatcherId][1440].close;
+        while (!this.candlesCurrent[exwatcherId] || Object.keys(this.candlesCurrent[exwatcherId]).length === 0) {
+            await sleep(200);
+        }
+        return Object.values(this.candlesCurrent[exwatcherId])[0].close;
     }
 
     //#endregion
@@ -251,23 +255,34 @@ export class UserRobotBaseService extends RobotBaseService {
     }
 
     async getExwatcherSubscriptions(): Promise<Exwatcher[]> {
-        const markets = await this.db.pg.any<{ asset: string; currency: string }>(sql`
-        SELECT DISTINCT r.asset, r.currency 
+        const markets = await this.db.pg.any<{ asset: string; currency: string; timeframe: ValidTimeframe }>(sql`
+        SELECT DISTINCT r.asset, r.currency, r.timeframe 
         FROM user_robots ur, robots r
         WHERE ur.robot_id = r.id
         AND ur.status in ('started','stopping')
         AND ur.allocation = 'dedicated'
         AND ur.user_portfolio_id = ${this.userPortfolioId};`);
 
-        return markets.map((m) => ({
-            ...m,
-            id: this.createExwatcherId(m.asset, m.currency),
-            exchange: this.exchange,
-            status: ExwatcherStatus.pending,
-            importerId: null,
-            importStartedAt: null,
-            error: null
-        }));
+        const subscriptions: { [key: string]: Exwatcher } = {};
+        for (const { asset, currency, timeframe } of markets) {
+            const id = this.createExwatcherId(asset, currency);
+
+            if (!subscriptions[id]) {
+                subscriptions[id] = {
+                    id,
+                    exchange: this.exchange,
+                    asset,
+                    currency,
+                    status: ExwatcherStatus.pending,
+                    timeframes: [timeframe],
+                    importerId: null,
+                    importStartedAt: null
+                };
+            } else {
+                subscriptions[id].timeframes.push(timeframe);
+            }
+        }
+        return Object.values(subscriptions);
     }
 
     async getOrderByPrevId(orderId: string) {
@@ -999,10 +1014,16 @@ export class UserRobotBaseService extends RobotBaseService {
                     }
                 });
                 this.robots[robotId].robot.initStrategy();
-                this.robots[robotId].robot.initIndicators();
             } else {
                 this.robots[robotId].robot = new Robot(userRobot.robotState);
             }
+            const { asset, currency, timeframe } = this.robots[robotId].robot;
+            const prevTime = Timeframe.getPrevSince(dayjs.utc().toISOString(), timeframe);
+            const exwatcherId = this.createExwatcherId(asset, currency);
+
+            const candles = this.candlesHistory[exwatcherId][timeframe].filter((c) => c.time <= prevTime);
+            this.robots[robotId].robot.handleHistoryCandles(candles);
+            await this.robots[robotId].robot.initIndicators();
 
             if (userRobot.positions && Array.isArray(userRobot.positions) && userRobot.positions.length) {
                 for (const { entryOrders, exitOrders } of userRobot.positions) {
@@ -1112,6 +1133,7 @@ export class UserRobotBaseService extends RobotBaseService {
                 await Promise.all(userRobotIds.map((userRobotId) => this.processUserRobotJobs(userRobotId)));
             }
         } catch (err) {
+            this.log.error(err);
             this.log.error(`Failed to run user robot jobs - ${err.message}`);
         } finally {
             await beacon.die();
@@ -1149,7 +1171,7 @@ export class UserRobotBaseService extends RobotBaseService {
         const userRobot = this.robots[robotId].userRobot;
         const userRobotSettings = getCurrentUserRobotSettings({
             settings: userRobot._settings,
-            currentPrice: this.getCurrentPrice(userRobot._asset, userRobot._currency),
+            currentPrice: await this.getCurrentPrice(userRobot._asset, userRobot._currency),
             totalBalanceUsd: this.#userExAcc.balances.totalUSD,
             userPortfolioId: this.userPortfolioId,
             userPortfolio: {

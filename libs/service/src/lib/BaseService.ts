@@ -15,7 +15,7 @@ import {
 import Redis from "ioredis";
 import Cache from "ioredis-cache";
 import logger, { Logger } from "@cryptuoso/logger";
-import { sql, pg, pgUtil } from "@cryptuoso/postgres";
+import { sql, createPgPool, DatabasePool, pgUtil } from "@cryptuoso/postgres";
 import { Events, EventsConfig } from "@cryptuoso/events";
 import { GenericObject } from "@cryptuoso/helpers";
 import cron from "node-cron";
@@ -38,7 +38,7 @@ export class BaseService {
     #redisConnectionSettings: GenericObject<string | number | boolean>;
     #redlock: Redlock;
     #cache: Cache;
-    #db: { sql: typeof sql; pg: typeof pg; util: typeof pgUtil };
+    #db: { sql: typeof sql; pg: DatabasePool; util: typeof pgUtil };
     #events: Events;
     #queues: { [key: string]: { instance: Queue<any>; scheduler: QueueScheduler; events?: QueueEvents } } = {};
     #workers: { [key: string]: Worker } = {};
@@ -68,11 +68,7 @@ export class BaseService {
             this.#log = logger;
 
             this.#name = config?.name || process.env.SERVICE;
-            this.#db = {
-                sql,
-                pg: pg,
-                util: pgUtil
-            };
+
             if (process.env.REDISCS) this.#redisConnectionSettings = parseURL(process.env.REDISCS);
             this.#redisConnection = new Redis(process.env.REDISCS, {
                 maxRetriesPerRequest: null,
@@ -170,6 +166,11 @@ export class BaseService {
                 detectKubernetes: process.env.NODE_ENV === "production",
                 signals: process.env.NODE_ENV === "production" ? ["SIGTERM", "SIGHUP", "SIGINT"] : ["SIGTERM", "SIGHUP"]
             });
+            this.#db = {
+                sql,
+                pg: await createPgPool(),
+                util: pgUtil
+            };
             this.#lightship.registerShutdownHandler(this.#stopService.bind(this));
             this.#events = new Events(this.#redisConnection, this.#lightship, this.#config?.eventsConfig);
             if (this.#onServiceStart.length > 0) {

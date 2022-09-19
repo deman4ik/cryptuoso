@@ -1,3 +1,5 @@
+import { ValidTimeframe } from "@cryptuoso/market";
+
 export const enum ExwatcherStatus {
     pending = "pending",
     importing = "importing",
@@ -14,6 +16,7 @@ export interface Exwatcher {
     asset: string;
     currency: string;
     status: ExwatcherStatus;
+    timeframes: ValidTimeframe[];
     importerId: string;
     importStartedAt: string;
     error?: string;

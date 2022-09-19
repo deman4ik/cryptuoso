@@ -1,4 +1,4 @@
-import { TradeStatsCalc } from "../lib/trade-stats";
+/*import { TradeStatsCalc } from "../lib/trade-stats";
 import { positions } from "./data/positions";
 import { robotStatsResult } from "./data/results";
 //import util from "util";
@@ -97,3 +97,5 @@ describe("Test 'trade-stats'", () => {
         });
     });
 });
+*/
+//TODO: rewrite trade stats in Rust and test with real data

@@ -20,7 +20,7 @@ import { capitalize, formatExchange, groupBy, plusNum, round, sleep } from "@cry
 import { formatTgName, Notification, UserSettings } from "@cryptuoso/user-state";
 import { accountActions } from "./dialogs/account";
 import { supportActions } from "./dialogs/support";
-import { sql } from "@cryptuoso/postgres";
+import { createPgPool, sql } from "@cryptuoso/postgres";
 import {
     handleBroadcastMessage,
     handleMessageSupportReply,
@@ -154,6 +154,7 @@ export default class TelegramBotService extends HTTPService {
                     formatTgName(ctx.from.username, ctx.from.first_name, ctx.from.last_name)
             };
             ctx.authUtils = this.authUtils;
+            ctx.pg = this.db.pg;
             await next();
         });
 
