@@ -679,7 +679,7 @@ class BacktesterWorker {
                 .whenEnd();*/
 
             const candles = await this.db.pg.many<Candle>(
-                sql`SELECT time, timestamp, open, high, low, close ${query} ORDER BY timestamp`
+                sql`SELECT time, timestamp, open, high, low, close, volume ${query} ORDER BY timestamp`
             );
 
             for (let i = 0; i < candles.length; i += 1) {
