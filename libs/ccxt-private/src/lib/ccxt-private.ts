@@ -183,7 +183,8 @@ export class PrivateConnector {
                         e.message?.toLowerCase().includes("gateway") ||
                         e.message?.toLowerCase().includes("getaddrinfo") ||
                         e.message?.toLowerCase().includes("network") ||
-                        e.message?.toLowerCase().includes("econnreset")
+                        e.message?.toLowerCase().includes("econnreset") ||
+                        e.message?.toLowerCase().includes("unable to process your request")
                     )
                         throw e;
                     bail(e);
@@ -295,7 +296,8 @@ export class PrivateConnector {
                         e.message?.toLowerCase().includes("gateway") ||
                         e.message?.toLowerCase().includes("getaddrinfo") ||
                         e.message?.toLowerCase().includes("network") ||
-                        e.message?.toLowerCase().includes("econnreset")
+                        e.message?.toLowerCase().includes("econnreset") ||
+                        e.message?.toLowerCase().includes("unable to process your request")
                     ) {
                         this.initConnector();
                         throw e;
@@ -350,7 +352,8 @@ export class PrivateConnector {
                         e.message?.toLowerCase().includes("gateway") ||
                         e.message?.toLowerCase().includes("getaddrinfo") ||
                         e.message?.toLowerCase().includes("network") ||
-                        e.message?.toLowerCase().includes("econnreset")
+                        e.message?.toLowerCase().includes("econnreset") ||
+                        e.message?.toLowerCase().includes("unable to process your request")
                     ) {
                         this.connector = new ccxt.huobipro(this.config);
                         throw e;
@@ -382,7 +385,8 @@ export class PrivateConnector {
                     e.message?.toLowerCase().includes("gateway") ||
                     e.message?.toLowerCase().includes("getaddrinfo") ||
                     e.message?.toLowerCase().includes("network") ||
-                    e.message?.toLowerCase().includes("econnreset")
+                    e.message?.toLowerCase().includes("econnreset") ||
+                    e.message?.toLowerCase().includes("unable to process your request")
                 ) {
                     throw e;
                 }
@@ -478,7 +482,8 @@ export class PrivateConnector {
                     e.message?.toLowerCase().includes("gateway") ||
                     e.message?.toLowerCase().includes("getaddrinfo") ||
                     e.message?.toLowerCase().includes("network") ||
-                    e.message?.toLowerCase().includes("econnreset")
+                    e.message?.toLowerCase().includes("econnreset") ||
+                    e.message?.toLowerCase().includes("unable to process your request")
                 ) {
                     await this.initConnector();
                     throw e;
@@ -508,7 +513,8 @@ export class PrivateConnector {
                     e.message?.toLowerCase().includes("gateway") ||
                     e.message?.toLowerCase().includes("getaddrinfo") ||
                     e.message?.toLowerCase().includes("network") ||
-                    e.message?.toLowerCase().includes("econnreset")
+                    e.message?.toLowerCase().includes("econnreset") ||
+                    e.message?.toLowerCase().includes("unable to process your request")
                 ) {
                     await this.initConnector();
                     throw e;
@@ -540,7 +546,8 @@ export class PrivateConnector {
                     message.includes("gateway") ||
                     message.includes("getaddrinfo") ||
                     message.includes("network") ||
-                    message.includes("econnreset")
+                    message.includes("econnreset") ||
+                    message.includes("unable to process your request")
                 ) {
                     await this.initConnector();
                     throw e;
@@ -645,7 +652,8 @@ export class PrivateConnector {
                         err.message?.toLowerCase().includes("gateway") ||
                         err.message?.toLowerCase().includes("getaddrinfo") ||
                         err.message?.toLowerCase().includes("network") ||
-                        err.message?.toLowerCase().includes("econnreset")
+                        err.message?.toLowerCase().includes("econnreset") ||
+                        err.message?.toLowerCase().includes("unable to process your request")
                     ) {
                         if (err instanceof ccxt.RequestTimeout) {
                             const existedOrder = await this.checkIfOrderExists(order, creationDate);
@@ -752,7 +760,8 @@ export class PrivateConnector {
                             e.message?.toLowerCase().includes("gateway") ||
                             e.message?.toLowerCase().includes("getaddrinfo") ||
                             e.message?.toLowerCase().includes("network") ||
-                            e.message?.toLowerCase().includes("econnreset")
+                            e.message?.toLowerCase().includes("econnreset") ||
+                            e.message?.toLowerCase().includes("unable to process your request")
                         ) {
                             await this.initConnector();
                             throw e;
@@ -773,7 +782,8 @@ export class PrivateConnector {
                             e.message?.toLowerCase().includes("gateway") ||
                             e.message?.toLowerCase().includes("getaddrinfo") ||
                             e.message?.toLowerCase().includes("network") ||
-                            e.message?.toLowerCase().includes("econnreset")
+                            e.message?.toLowerCase().includes("econnreset") ||
+                            e.message?.toLowerCase().includes("unable to process your request")
                         ) {
                             await this.initConnector();
                             throw e;
@@ -792,7 +802,8 @@ export class PrivateConnector {
                             e.message?.toLowerCase().includes("gateway") ||
                             e.message?.toLowerCase().includes("getaddrinfo") ||
                             e.message?.toLowerCase().includes("network") ||
-                            e.message?.toLowerCase().includes("econnreset")
+                            e.message?.toLowerCase().includes("econnreset") ||
+                            e.message?.toLowerCase().includes("unable to process your request")
                         ) {
                             await this.initConnector();
                             throw e;
@@ -864,7 +875,8 @@ export class PrivateConnector {
                             e.message?.toLowerCase().includes("gateway") ||
                             e.message?.toLowerCase().includes("getaddrinfo") ||
                             e.message?.toLowerCase().includes("network") ||
-                            e.message?.toLowerCase().includes("econnreset")
+                            e.message?.toLowerCase().includes("econnreset") ||
+                            e.message?.toLowerCase().includes("unable to process your request")
                         ) {
                             await this.initConnector();
                             throw e;
@@ -885,7 +897,8 @@ export class PrivateConnector {
                             e.message?.toLowerCase().includes("gateway") ||
                             e.message?.toLowerCase().includes("getaddrinfo") ||
                             e.message?.toLowerCase().includes("network") ||
-                            e.message?.toLowerCase().includes("econnreset")
+                            e.message?.toLowerCase().includes("econnreset") ||
+                            e.message?.toLowerCase().includes("unable to process your request")
                         ) {
                             await this.initConnector();
                             throw e;
@@ -904,7 +917,8 @@ export class PrivateConnector {
                             e.message?.toLowerCase().includes("gateway") ||
                             e.message?.toLowerCase().includes("getaddrinfo") ||
                             e.message?.toLowerCase().includes("network") ||
-                            e.message?.toLowerCase().includes("econnreset")
+                            e.message?.toLowerCase().includes("econnreset") ||
+                            e.message?.toLowerCase().includes("unable to process your request")
                         ) {
                             await this.initConnector();
                             throw e;
@@ -946,7 +960,8 @@ export class PrivateConnector {
                             e.message?.toLowerCase().includes("gateway") ||
                             e.message?.toLowerCase().includes("getaddrinfo") ||
                             e.message?.toLowerCase().includes("network") ||
-                            e.message?.toLowerCase().includes("econnreset")
+                            e.message?.toLowerCase().includes("econnreset") ||
+                            e.message?.toLowerCase().includes("unable to process your request")
                         ) {
                             await this.initConnector();
                             throw e;
@@ -967,7 +982,8 @@ export class PrivateConnector {
                             e.message?.toLowerCase().includes("gateway") ||
                             e.message?.toLowerCase().includes("getaddrinfo") ||
                             e.message?.toLowerCase().includes("network") ||
-                            e.message?.toLowerCase().includes("econnreset")
+                            e.message?.toLowerCase().includes("econnreset") ||
+                            e.message?.toLowerCase().includes("unable to process your request")
                         ) {
                             await this.initConnector();
                             throw e;
@@ -986,7 +1002,8 @@ export class PrivateConnector {
                             e.message?.toLowerCase().includes("gateway") ||
                             e.message?.toLowerCase().includes("getaddrinfo") ||
                             e.message?.toLowerCase().includes("network") ||
-                            e.message?.toLowerCase().includes("econnreset")
+                            e.message?.toLowerCase().includes("econnreset") ||
+                            e.message?.toLowerCase().includes("unable to process your request")
                         ) {
                             await this.initConnector();
                             throw e;
@@ -1069,7 +1086,8 @@ export class PrivateConnector {
                         message.includes("gateway") ||
                         message.includes("getaddrinfo") ||
                         message.includes("network") ||
-                        message.includes("econnreset")
+                        message.includes("econnreset") ||
+                        message.includes("unable to process your request")
                     ) {
                         await this.initConnector();
                         throw e;
@@ -1141,6 +1159,7 @@ export class PrivateConnector {
                 message.includes("network") ||
                 message.includes("request") ||
                 message.includes("econnreset") ||
+                message.includes("unable to process your request") ||
                 message.includes("order does not exist") ||
                 !order.nextJob?.retries ||
                 order.nextJob?.retries < 5
@@ -1188,7 +1207,8 @@ export class PrivateConnector {
                         e.message?.toLowerCase().includes("gateway") ||
                         e.message?.toLowerCase().includes("getaddrinfo") ||
                         e.message?.toLowerCase().includes("network") ||
-                        e.message?.toLowerCase().includes("econnreset")
+                        e.message?.toLowerCase().includes("econnreset") ||
+                        e.message?.toLowerCase().includes("unable to process your request")
                     ) {
                         await this.initConnector();
                         throw e;
@@ -1216,7 +1236,8 @@ export class PrivateConnector {
                 e.message?.toLowerCase().includes("gateway") ||
                 e.message?.toLowerCase().includes("getaddrinfo") ||
                 e.message?.toLowerCase().includes("network") ||
-                e.message?.toLowerCase().includes("econnreset")
+                e.message?.toLowerCase().includes("econnreset") ||
+                e.message?.toLowerCase().includes("unable to process your request")
             ) {
                 return {
                     order: {
