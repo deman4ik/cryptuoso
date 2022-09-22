@@ -33,12 +33,14 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:webpack",
+                    "builder": "@nrwl/webpack:webpack",
                     "options": {
                         "outputPath": "dist/apps/auth",
                         "main": "apps/auth/src/main.ts",
                         "tsConfig": "apps/auth/tsconfig.app.json",
-                        "assets": ["apps/auth/src/assets"]
+                        "assets": ["apps/auth/src/assets"],
+                        "target": "node",
+                        "compiler": "tsc"
                     },
                     "configurations": {
                         "production": {
@@ -163,13 +165,15 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:webpack",
+                    "builder": "@nrwl/webpack:webpack",
                     "options": {
                         "outputPath": "dist/apps/backtester-worker",
                         "main": "apps/backtester-worker/src/main.ts",
                         "tsConfig": "apps/backtester-worker/tsconfig.app.json",
                         "assets": ["apps/backtester-worker/src/assets"],
-                        "webpackConfig": "apps/backtester-worker/webpack.config.js"
+                        "webpackConfig": "apps/backtester-worker/webpack.config.js",
+                        "target": "node",
+                        "compiler": "tsc"
                     },
                     "configurations": {
                         "production": {
@@ -342,13 +346,15 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:webpack",
+                    "builder": "@nrwl/webpack:webpack",
                     "options": {
                         "outputPath": "dist/apps/connector-worker",
                         "main": "apps/connector-worker/src/main.ts",
                         "tsConfig": "apps/connector-worker/tsconfig.app.json",
                         "assets": ["apps/connector-worker/src/assets"],
-                        "webpackConfig": "apps/connector-worker/webpack.config.js"
+                        "webpackConfig": "apps/connector-worker/webpack.config.js",
+                        "target": "node",
+                        "compiler": "tsc"
                     },
                     "configurations": {
                         "production": {
@@ -473,12 +479,14 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:webpack",
+                    "builder": "@nrwl/webpack:webpack",
                     "options": {
                         "outputPath": "dist/apps/events-manager",
                         "main": "apps/events-manager/src/main.ts",
                         "tsConfig": "apps/events-manager/tsconfig.app.json",
-                        "assets": ["apps/events-manager/src/assets"]
+                        "assets": ["apps/events-manager/src/assets"],
+                        "target": "node",
+                        "compiler": "tsc"
                     },
                     "configurations": {
                         "production": {
@@ -652,13 +660,15 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:webpack",
+                    "builder": "@nrwl/webpack:webpack",
                     "options": {
                         "outputPath": "dist/apps/importer-worker",
                         "main": "apps/importer-worker/src/main.ts",
                         "tsConfig": "apps/importer-worker/tsconfig.app.json",
                         "assets": ["apps/importer-worker/src/assets"],
-                        "webpackConfig": "apps/importer-worker/webpack.config.js"
+                        "webpackConfig": "apps/importer-worker/webpack.config.js",
+                        "target": "node",
+                        "compiler": "tsc"
                     },
                     "configurations": {
                         "production": {
@@ -783,12 +793,14 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:webpack",
+                    "builder": "@nrwl/webpack:webpack",
                     "options": {
                         "outputPath": "dist/apps/notifications",
                         "main": "apps/notifications/src/main.ts",
                         "tsConfig": "apps/notifications/tsconfig.app.json",
-                        "assets": ["apps/notifications/src/assets"]
+                        "assets": ["apps/notifications/src/assets"],
+                        "target": "node",
+                        "compiler": "tsc"
                     },
                     "configurations": {
                         "production": {
@@ -860,14 +872,16 @@
             "prefix": "portfolio-manager",
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:webpack",
+                    "builder": "@nrwl/webpack:webpack",
                     "outputs": ["{options.outputPath}"],
                     "options": {
                         "outputPath": "dist/apps/portfolio-manager",
                         "main": "apps/portfolio-manager/src/main.ts",
                         "tsConfig": "apps/portfolio-manager/tsconfig.app.json",
                         "assets": ["apps/portfolio-manager/src/assets"],
-                        "webpackConfig": "apps/portfolio-manager/webpack.config.js"
+                        "webpackConfig": "apps/portfolio-manager/webpack.config.js",
+                        "target": "node",
+                        "compiler": "tsc"
                     },
                     "configurations": {
                         "production": {
@@ -1008,14 +1022,16 @@
             "projectType": "application",
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:webpack",
+                    "builder": "@nrwl/webpack:webpack",
                     "outputs": ["{options.outputPath}"],
                     "options": {
                         "outputPath": "dist/apps/robot-binance",
                         "main": "apps/robot-binance/src/main.ts",
                         "tsConfig": "apps/robot-binance/tsconfig.app.json",
                         "assets": ["apps/robot-binance/src/assets"],
-                        "webpackConfig": "apps/robot-binance/webpack.config.js"
+                        "webpackConfig": "apps/robot-binance/webpack.config.js",
+                        "target": "node",
+                        "compiler": "tsc"
                     },
                     "configurations": {
                         "production": {
@@ -1114,12 +1130,14 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:webpack",
+                    "builder": "@nrwl/webpack:webpack",
                     "options": {
                         "outputPath": "dist/apps/robot-runner",
                         "main": "apps/robot-runner/src/main.ts",
                         "tsConfig": "apps/robot-runner/tsconfig.app.json",
-                        "assets": ["apps/robot-runner/src/assets"]
+                        "assets": ["apps/robot-runner/src/assets"],
+                        "target": "node",
+                        "compiler": "tsc"
                     },
                     "configurations": {
                         "production": {
@@ -1316,12 +1334,14 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:webpack",
+                    "builder": "@nrwl/webpack:webpack",
                     "options": {
                         "outputPath": "dist/apps/telegram-bot",
                         "main": "apps/telegram-bot/src/main.ts",
                         "tsConfig": "apps/telegram-bot/tsconfig.app.json",
-                        "assets": ["apps/telegram-bot/src/assets"]
+                        "assets": ["apps/telegram-bot/src/assets"],
+                        "target": "node",
+                        "compiler": "tsc"
                     },
                     "configurations": {
                         "production": {
@@ -1441,14 +1461,16 @@
             "prefix": "trade-stats-worker",
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:webpack",
+                    "builder": "@nrwl/webpack:webpack",
                     "outputs": ["{options.outputPath}"],
                     "options": {
                         "outputPath": "dist/apps/trade-stats-worker",
                         "main": "apps/trade-stats-worker/src/main.ts",
                         "tsConfig": "apps/trade-stats-worker/tsconfig.app.json",
                         "assets": ["apps/trade-stats-worker/src/assets"],
-                        "webpackConfig": "apps/trade-stats-worker/webpack.config.js"
+                        "webpackConfig": "apps/trade-stats-worker/webpack.config.js",
+                        "target": "node",
+                        "compiler": "tsc"
                     },
                     "configurations": {
                         "production": {
@@ -1494,14 +1516,16 @@
             "projectType": "application",
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:webpack",
+                    "builder": "@nrwl/webpack:webpack",
                     "outputs": ["{options.outputPath}"],
                     "options": {
                         "outputPath": "dist/apps/user",
                         "main": "apps/user/src/main.ts",
                         "tsConfig": "apps/user/tsconfig.app.json",
                         "assets": ["apps/user/src/assets"],
-                        "webpackConfig": "apps/user/webpack.config.js"
+                        "webpackConfig": "apps/user/webpack.config.js",
+                        "target": "node",
+                        "compiler": "tsc"
                     },
                     "configurations": {
                         "production": {
@@ -1596,14 +1620,16 @@
             "projectType": "application",
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:webpack",
+                    "builder": "@nrwl/webpack:webpack",
                     "outputs": ["{options.outputPath}"],
                     "options": {
                         "outputPath": "dist/apps/user-robot-dedicated",
                         "main": "apps/user-robot-dedicated/src/main.ts",
                         "tsConfig": "apps/user-robot-dedicated/tsconfig.app.json",
                         "assets": ["apps/user-robot-dedicated/src/assets"],
-                        "webpackConfig": "apps/user-robot-dedicated/webpack.config.js"
+                        "webpackConfig": "apps/user-robot-dedicated/webpack.config.js",
+                        "target": "node",
+                        "compiler": "tsc"
                     },
                     "configurations": {
                         "production": {
@@ -1677,12 +1703,14 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:webpack",
+                    "builder": "@nrwl/webpack:webpack",
                     "options": {
                         "outputPath": "dist/apps/user-robot-runner",
                         "main": "apps/user-robot-runner/src/main.ts",
                         "tsConfig": "apps/user-robot-runner/tsconfig.app.json",
-                        "assets": ["apps/user-robot-runner/src/assets"]
+                        "assets": ["apps/user-robot-runner/src/assets"],
+                        "target": "node",
+                        "compiler": "tsc"
                     },
                     "configurations": {
                         "production": {
@@ -1757,12 +1785,14 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:webpack",
+                    "builder": "@nrwl/webpack:webpack",
                     "options": {
                         "outputPath": "dist/apps/user-robot-worker",
                         "main": "apps/user-robot-worker/src/main.ts",
                         "tsConfig": "apps/user-robot-worker/tsconfig.app.json",
-                        "assets": ["apps/user-robot-worker/src/assets"]
+                        "assets": ["apps/user-robot-worker/src/assets"],
+                        "target": "node",
+                        "compiler": "tsc"
                     },
                     "configurations": {
                         "production": {
@@ -1884,13 +1914,15 @@
             "schematics": {},
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:webpack",
+                    "builder": "@nrwl/webpack:webpack",
                     "options": {
                         "outputPath": "dist/apps/utils",
                         "main": "apps/utils/src/main.ts",
                         "tsConfig": "apps/utils/tsconfig.app.json",
                         "assets": ["apps/utils/src/assets"],
-                        "webpackConfig": "apps/utils/webpack.config.js"
+                        "webpackConfig": "apps/utils/webpack.config.js",
+                        "target": "node",
+                        "compiler": "tsc"
                     },
                     "configurations": {
                         "production": {
@@ -1939,13 +1971,15 @@
             "prefix": "webhooks",
             "architect": {
                 "build": {
-                    "builder": "@nrwl/node:webpack",
+                    "builder": "@nrwl/webpack:webpack",
                     "outputs": ["{options.outputPath}"],
                     "options": {
                         "outputPath": "dist/apps/webhooks",
                         "main": "apps/webhooks/src/main.ts",
                         "tsConfig": "apps/webhooks/tsconfig.app.json",
-                        "assets": ["apps/webhooks/src/assets"]
+                        "assets": ["apps/webhooks/src/assets"],
+                        "target": "node",
+                        "compiler": "tsc"
                     },
                     "configurations": {
                         "production": {
