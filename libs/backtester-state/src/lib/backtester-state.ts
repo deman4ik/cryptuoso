@@ -408,36 +408,38 @@ export class Backtester {
         logger.info(`Backtester #${this.id} - Handling ${this.#processedBars + 1} bar of ${this.#totalBars}`);
 
         const robots = Object.keys(this.#robots);
-        for (const id of robots) {
-            const robot = this.#robots[id];
-            robot.instance.handleCandle(candle);
+        await Promise.all(
+            robots.map(async (id) => {
+                const robot = this.#robots[id];
+                robot.instance.handleCandle(candle);
 
-            robot.instance.clearEvents();
-            robot.instance.checkAlerts();
-            //await robot.instance.calcStats();
-            this.#saveLogs(id);
-            this.#saveSignals(id);
-            this.#savePositions(id);
-            robot.instance.clearEvents();
-            await robot.instance.calcIndicators();
-            robot.instance.runStrategy();
-            robot.instance.finalize();
-            //await robot.instance.calcStats();
-            this.#saveLogs(id);
-            this.#saveSignals(id);
-            this.#savePositions(id);
-        }
+                robot.instance.clearEvents();
+                robot.instance.checkAlerts();
+                //await robot.instance.calcStats();
+                this.#saveLogs(id);
+                this.#saveSignals(id);
+                this.#savePositions(id);
+                robot.instance.clearEvents();
+                await robot.instance.calcIndicators();
+                robot.instance.runStrategy();
+                robot.instance.finalize();
+                //await robot.instance.calcStats();
+                this.#saveLogs(id);
+                this.#saveSignals(id);
+                this.#savePositions(id);
+            })
+        );
     }
 
     async calcStats() {
         logger.info(`Backtester #${this.id} - Calculating stats`);
         const robots = Object.keys(this.#robots);
-        for (const id of robots) {
-            const robot = this.#robots[id];
-            if (robot.data.positions.length) {
-                const tradeStatsCalc = new TradeStatsCalc(
-                    Object.values(robot.data.positions).filter(({ status }) => status === "closed"),
-                    {
+        await Promise.all(
+            robots.map(async (id) => {
+                const robot = this.#robots[id];
+                const closedPositions = Object.values(robot.data.positions).filter(({ status }) => status === "closed");
+                if (closedPositions.length) {
+                    const tradeStatsCalc = new TradeStatsCalc(closedPositions, {
                         job: {
                             type: "robot",
                             robotId: id,
@@ -446,12 +448,13 @@ export class Backtester {
                             margin: robot.instance._settings.robotSettings.margin
                         },
                         initialBalance: robot.instance._settings.robotSettings.initialBalance
-                    }
-                );
-                robot.instance._emulatedStats = await tradeStatsCalc.calculate();
-                robot.instance._stats = robot.instance._emulatedStats;
-            }
-        }
+                    });
+                    robot.instance._emulatedStats = await tradeStatsCalc.calculate();
+
+                    robot.instance._stats = robot.instance._emulatedStats;
+                }
+            })
+        );
     }
 
     finish(cancel = false) {

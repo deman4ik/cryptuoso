@@ -281,7 +281,7 @@ export class TradeStatsCalc implements TradeStats {
         if (!stats.firstPosition) stats.firstPosition = positions[0];
         if (stats.initialBalance === null || stats.initialBalance === undefined) {
             stats.initialBalance =
-                this.meta.initialBalance || stats.firstPosition.volume * stats.firstPosition.entryPrice;
+                this.meta.initialBalance || stats.firstPosition?.volume * stats.firstPosition?.entryPrice;
             stats.currentBalance = stats.initialBalance;
         }
 

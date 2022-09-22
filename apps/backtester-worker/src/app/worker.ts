@@ -1,23 +1,19 @@
+import {
+    Backtester,
+    BacktesterLogs,
+    BacktesterPositionState,
+    BacktesterSignals,
+    BacktesterState
+} from "@cryptuoso/backtester-state";
+import dayjs from "@cryptuoso/dayjs";
+import { chunkArray, sortAsc } from "@cryptuoso/helpers";
+import logger, { Logger } from "@cryptuoso/logger";
+import { ActiveAlert, Candle, CandleType, DBCandle, SignalEvent, ValidTimeframe } from "@cryptuoso/market";
+import { createPgPool, DatabasePool, pgUtil, sql } from "@cryptuoso/postgres";
+import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
+import { RobotPositionState, RobotState, RobotStatus } from "@cryptuoso/robot-types";
 import { Observable, Subject } from "threads/observable";
 import { expose } from "threads/worker";
-import { DataStream } from "scramjet";
-import dayjs from "@cryptuoso/dayjs";
-import { BaseError } from "@cryptuoso/errors";
-import {
-    BacktesterState,
-    Backtester,
-    BacktesterSignals,
-    BacktesterPositionState,
-    BacktesterLogs
-} from "@cryptuoso/backtester-state";
-import { ValidTimeframe, Candle, DBCandle, SignalEvent, CandleType, ActiveAlert } from "@cryptuoso/market";
-import { sortAsc, chunkArray } from "@cryptuoso/helpers";
-import { RobotSettings, StrategySettings } from "@cryptuoso/robot-settings";
-import logger, { Logger } from "@cryptuoso/logger";
-import { sql, createPgPool, DatabasePool, pgUtil, makeChunksGenerator } from "@cryptuoso/postgres";
-import Redis from "ioredis";
-import Cache from "ioredis-cache";
-import { RobotPositionState, RobotState, RobotStatus } from "@cryptuoso/robot-types";
 
 const subject = new Subject();
 let backtesterWorker: BacktesterWorker;
@@ -26,7 +22,7 @@ class BacktesterWorker {
     #log: Logger;
     #backtester: Backtester;
     #db: { sql: typeof sql; pg: DatabasePool; util: typeof pgUtil };
-    #cache: Cache;
+    // #cache: Cache;
 
     defaultChunkSize = 10000;
     defaultInsertChunkSize = 10000;
@@ -34,13 +30,13 @@ class BacktesterWorker {
         this.#log = logger;
 
         this.#backtester = new Backtester(state);
-        this.#cache = new Cache(
+        /*     this.#cache = new Cache(
             new Redis(process.env.REDISCS, {
                 maxRetriesPerRequest: null,
                 enableReadyCheck: false,
                 connectTimeout: 60000
             })
-        );
+        );*/
     }
 
     async pg() {
@@ -295,9 +291,9 @@ class BacktesterWorker {
         }
     };
 
-    #saveStats = async (stats: RobotState & { backtestId: string }) => {
+    #saveStats = async (state: RobotState & { backtestId: string }) => {
         try {
-            if (stats) {
+            if (state) {
                 const {
                     backtestId,
                     id: robotId,
@@ -305,7 +301,7 @@ class BacktesterWorker {
                     periodStats,
                     emulatedFullStats,
                     emulatedPeriodStats
-                } = stats;
+                } = state;
 
                 this.log.info(`Backtester #${backtestId} - Saving robot's #${robotId} stats`);
                 await this.db.pg.query(sql`
@@ -321,6 +317,7 @@ class BacktesterWorker {
             }
         } catch (err) {
             this.log.error(`Failed to save backtester stats`, err);
+            this.log.error(`${state.backtestId} ${state.id}`);
             throw err;
         }
     };
@@ -630,6 +627,7 @@ class BacktesterWorker {
 
                 await this.run();
             } catch (err) {
+                this.log.error(err);
                 this.backtester.fail(err.message);
                 this.log.warn(`Backtester #${this.backtester.id}`, err.message);
             }
@@ -702,7 +700,7 @@ class BacktesterWorker {
                     if (robot.instance.alertsToSave.length)
                         await this.#saveRobotActiveAlerts(this.backtester.robotId, robot.instance.alertsToSave);
                     await this.#saveRobotPositions(this.backtester.robotId, Object.values(robot.data.positions));
-                    await this.#cache.deleteCache(`cache:robot:${this.backtester.robotId}`);
+                    //   await this.#cache.deleteCache(`cache:robot:${this.backtester.robotId}`);
                     await this.#startRobot(this.backtester.robotId, this.backtester.dateFrom);
                 }
             } else {

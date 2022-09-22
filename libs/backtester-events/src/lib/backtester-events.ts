@@ -106,15 +106,13 @@ export const BacktesterRunnerSchema = {
                 }
             }
         },
-        strategySettings: [
-            {
-                type: "object",
-                optional: true,
-                props: {
-                    requiredHistoryMaxBars: { type: "number", integer: true, default: CANDLES_RECENT_AMOUNT }
-                }
+        strategySettings: {
+            type: "object",
+            optional: true,
+            props: {
+                requiredHistoryMaxBars: { type: "number", integer: true, default: CANDLES_RECENT_AMOUNT }
             }
-        ],
+        },
         robotSettings: RobotSettingsSchema.map((s) => ({ ...s, optional: true }))
     },
     [BacktesterRunnerEvents.STOP]: {
