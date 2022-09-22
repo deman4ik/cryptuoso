@@ -9,6 +9,7 @@ import { IRSTS } from "./irsts";
 import { Parabolic } from "./parabolic";
 import { T2TF } from "./t2_trend_friend";
 import { TrendlineLong } from "./trendline_long";
+import { RSuperTrend } from "./r_super_trend";
 
 export const strategies: { [key: string]: typeof BaseStrategy } = {
     breakout: Breakout,
@@ -20,5 +21,6 @@ export const strategies: { [key: string]: typeof BaseStrategy } = {
     irsts: IRSTS,
     parabolic: Parabolic,
     t2_trend_friend: T2TF,
-    trendline_long: TrendlineLong
+    trendline_long: TrendlineLong,
+    r_super_trend: RSuperTrend
 };

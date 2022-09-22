@@ -501,5 +501,47 @@ describe("Test 'Robot'", () => {
 
             expect(round(robot.state.indicators["peak"].peak.result, 2)).toEqual(round(13787.83, 2));
         });
+
+        it("Should run RSuperTrend", async () => {
+            const robot = new Robot({
+                id: "some_id",
+                exchange: "binance_futures",
+                asset: "BTC",
+                currency: "USDT",
+                timeframe: 1440,
+                strategy: "r_super_trend",
+                settings: {
+                    strategySettings: {
+                        period: 7,
+                        factor: 3
+                    },
+                    robotSettings: {
+                        volumeType: "currencyDynamic",
+                        volumeInCurrency: 1000
+                    },
+                    activeFrom: "2020-01-01T00:00:00.000Z"
+                }
+            });
+
+            const limit = 56;
+            const historyCandles: Candle[] = candles.slice(0, limit) as Candle[];
+
+            const newCandles: Candle[] = candles.slice(limit) as Candle[];
+
+            robot.handleHistoryCandles(historyCandles);
+            robot.initStrategy();
+            await robot.initIndicators();
+
+            robot.handleCandle(newCandles[1]);
+            robot.clearEvents();
+            robot.checkAlerts();
+
+            await robot.calcIndicators();
+            robot.runStrategy();
+            robot.finalize();
+
+            expect(robot.state.indicators.RST.result.buy).toEqual(0);
+            expect(robot.state.indicators.RST.result.sell).toEqual(1);
+        });
     });
 });
