@@ -1242,7 +1242,7 @@ export class UserRobotBaseService extends RobotBaseService {
                 if (userRobot.hasCanceledPositions) {
                     this.log.warn(`User Robot #${userRobot.id} has canceled positions!`);
                     for (const pos of userRobot.canceledPositions) {
-                        this.robots[robotId].robot.handleTradeCancelation(pos.code);
+                        this.robots[robotId].robot.handleTradeCancelation(pos.positionCode);
                     }
                 }
 
