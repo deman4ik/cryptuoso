@@ -1772,6 +1772,8 @@ export class RobotBaseService extends HTTPService {
                                     }
                                 });
                             }
+
+                            robot.clearEvents();
                         } catch (err) {
                             const error = `Failed to run robot's #${robotId} strategy - ${err.message}`;
                             this.log.error(error);
