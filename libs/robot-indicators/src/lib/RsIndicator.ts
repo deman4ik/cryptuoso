@@ -13,7 +13,9 @@ import {
     TaMACDOutput,
     TaMaximum,
     TaMinimum,
-    ChanADXOutput
+    ChanADXOutput,
+    RachSupTrend,
+    RachSupTrendOutput
 } from "ta-rs";
 import { DBCandle } from "@cryptuoso/market";
 
@@ -28,11 +30,24 @@ export type RsNames =
     | "FXLowBand"
     | "MaxADX"
     | "TaMaximum"
-    | "TaMinimum";
+    | "TaMinimum"
+    | "RachSupTrend";
 
 export class RsIndicator extends BaseIndicator {
-    indicator: TaSMA | RSI | ADX | ATR | TaMACD | ChanADX | FXHighBand | FXLowBand | MaxADX | TaMaximum | TaMinimum;
-    declare result: number | TaMACDOutput | ChanADXOutput;
+    indicator:
+        | TaSMA
+        | RSI
+        | ADX
+        | ATR
+        | TaMACD
+        | ChanADX
+        | FXHighBand
+        | FXLowBand
+        | MaxADX
+        | TaMaximum
+        | TaMinimum
+        | RachSupTrend;
+    declare result: number | TaMACDOutput | ChanADXOutput | RachSupTrendOutput;
     declare _indicatorName: RsNames;
 
     constructor(state: IndicatorState) {
@@ -116,6 +131,10 @@ export class RsIndicator extends BaseIndicator {
                 this.indicator = new MaxADX(this.parameters.period, this.parameters.adxPeriod);
                 break;
             }
+            case "RachSupTrend": {
+                this.indicator = new RachSupTrend(this.parameters.period, this.parameters.factor);
+                break;
+            }
             default:
                 throw new Error(`Indicator ${this._indicatorName} is not supported`);
         }
@@ -128,7 +147,9 @@ export class RsIndicator extends BaseIndicator {
     }
 
     async calc(candle: DBCandle) {
-        if (["ATR", "ChanADX", "FXHighBand", "FXLowBand", "ADX", "MaxADX"].includes(this._indicatorName)) {
+        if (
+            ["ATR", "ChanADX", "FXHighBand", "FXLowBand", "ADX", "MaxADX", "RachSupTrend"].includes(this._indicatorName)
+        ) {
             this.result = await (this.indicator as ATR | ChanADX | FXHighBand | FXLowBand | ADX | MaxADX).next(candle);
         } else {
             this.result = await (this.indicator as TaSMA | RSI | TaMACD | TaMaximum | TaMinimum).next(

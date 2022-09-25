@@ -120,7 +120,7 @@ export default class BacktesterWorkerService extends HTTPService {
             if (!params.robotId && !params.robotParams)
                 throw new BaseError("Wrong parameters: robotId or robotParams must be specified", null, "VALIDATION");
 
-            if (!params.robotId && (!params.robotSettings || !params.strategySettings))
+            if (!params.robotId && (!params.robotSettings || (!params.strategySettings && !params.settingsRange)))
                 throw new BaseError(
                     "Wrong parameters: robotId or strategy and robot settings must be specified",
                     null,

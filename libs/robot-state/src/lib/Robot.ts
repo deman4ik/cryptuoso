@@ -388,7 +388,7 @@ export class Robot {
             Object.keys(this._state.indicators).map(async (key) => {
                 if (!this._indicatorInstances[key].initialized) {
                     this._indicatorInstances[key]._checkParameters();
-                    logger.debug(`Init indicator ${key} ${this._candles.length}`);
+
                     await this._indicatorInstances[key].init(this._candles);
                 }
             })

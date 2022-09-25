@@ -622,7 +622,6 @@ export class RobotBaseService extends HTTPService {
                 } else if (!this.isRobotService) {
                     const exwatcherSubscribed = await this.subscribe(this.#subscriptions[id]);
                     if (exwatcherSubscribed) {
-                        this.#subscriptions[id].status = ExwatcherStatus.subscribed;
                         await this.subscribeRobots(this.#subscriptions[id]);
                     }
                 }
@@ -1365,8 +1364,9 @@ export class RobotBaseService extends HTTPService {
                     !this.#subscriptions[exwatcherId].timeframes.includes(robot.timeframe))
             ) {
                 if (
-                    this.#subscriptions[exwatcherId] &&
-                    !this.#subscriptions[exwatcherId].timeframes.includes(robot.timeframe)
+                    !this.#subscriptions[exwatcherId] ||
+                    (this.#subscriptions[exwatcherId] &&
+                        !this.#subscriptions[exwatcherId].timeframes.includes(robot.timeframe))
                 ) {
                     await this.addSubscription({
                         exchange: this.#exchange,
@@ -1772,6 +1772,8 @@ export class RobotBaseService extends HTTPService {
                                     }
                                 });
                             }
+
+                            robot.clearEvents();
                         } catch (err) {
                             const error = `Failed to run robot's #${robotId} strategy - ${err.message}`;
                             this.log.error(error);
